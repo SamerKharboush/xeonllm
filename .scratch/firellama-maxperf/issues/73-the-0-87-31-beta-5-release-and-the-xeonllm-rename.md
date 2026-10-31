@@ -57,5 +57,15 @@ was fast-forwarded to `phase1-metal-d700-optimization`.
 - The tag `v0.87.31-beta.5` is annotated, not signed.
 
 Not covered: a 32-lane GPU, the drafter and threshold numbers on the bundled engine (both were
-measured on the dev tree build of the same source), an eye check of the DMG window, and the
-other-engines survey.
+measured on the dev tree build of the same source), and the other-engines survey.
+
+The DMG window, checked 2026-10-31 without Finder (this Mac runs headless: "No Display
+Connected", so Finder opens no window and its AppleEvents time out). Read from the shipped
+DMG's `.DS_Store`: window 640 x 428 (a 400-pixel content area under the title bar, the same
+height as the 640 x 400 background), icons 128 px, XeonLLM.app at (165, 194) and Applications
+at (475, 194). In the background the two cards span x 88-242 and 398-552, and their label pills
+sit at y ≈ 275, so both icons are centred on their cards. The background says "XeonLLM", and
+the app and volume icons show the X chip. Every entry has the same values as the beta.4
+template (`ToshLLM.app` → `XeonLLM.app` is the only difference). The background bookmark
+`pBBk` points to `/Volumes/XeonLLM/.background/background.tiff`. Not checked: how Finder
+draws the window on a real display.
