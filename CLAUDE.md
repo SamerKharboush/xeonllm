@@ -14,6 +14,12 @@ Five default roles. See `docs/agents/triage-labels.md`.
 
 Single-context. See `docs/agents/domain.md`.
 
+## Releases
+
+Every release, and every brief that builds or ships one, follows `specs/release-contract.md`:
+identity, the optimisations that must be present, engine gates on the shipped binaries, the
+stress test of the app's real launch, app gates, and the delegation rules.
+
 ## Performance claims
 
 `docs/bench-baseline-2026-09-30.md` is the reference table. Two rules, both learned the hard way:
