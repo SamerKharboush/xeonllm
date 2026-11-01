@@ -70,6 +70,33 @@ fi
 # upstream commit (which is unchanged across releases that only touch the patch).
 TOSH_VERSION="$(tr -d '[:space:]' < "$(dirname "$0")/../VERSION")"
 
+# CMAKE_CXX_FLAGS lives in the build cache, so a VERSION bump with no configure leaves the
+# previous -DTOSH_VERSION on every object CMake recompiles. beta.5 shipped reporting beta.4
+# exactly this way. Rewrite the cached flag from VERSION before every build.
+sync_tosh_version() {
+    local dir="$1"
+    local cache="$dir/CMakeCache.txt"
+    [ -f "$cache" ] || return 0
+    local want="-DTOSH_VERSION=$TOSH_VERSION"
+    local cur
+    cur=$(sed -n 's/^CMAKE_CXX_FLAGS:STRING=//p' "$cache")
+    if [ "$cur" != "$want" ]; then
+        echo "version stamp stale in $dir ('$cur' -> '$want'); reconfiguring"
+        cmake -B "$dir" -DCMAKE_CXX_FLAGS="$want" >/dev/null
+    fi
+}
+
+# A binary that names another version is a release blocker, not a warning: it cannot be
+# told apart from an older engine in a log.
+check_tosh_version() {
+    local bin="$1"
+    [ -x "$bin" ] || return 0
+    if ! strings "$bin" | grep -Fqx "$TOSH_VERSION"; then
+        echo "BUILD CHECK FAILED: $bin does not carry the version string '$TOSH_VERSION' from VERSION"
+        exit 1
+    fi
+}
+
 # CI runners drop DNS or reset a transfer now and then, and a release build should not lose
 # minutes of compilation to it, so every networked git operation retries with backoff.
 retry_git() {
@@ -182,8 +209,11 @@ build_engine() {
     done
 
     reset_stale_cmake_cache build-static
+    sync_tosh_version build-static
     cmake -B build-static "${CMAKE_FLAGS[@]}"
     cmake --build build-static --config Release -j "$(sysctl -n hw.ncpu)" -t llama-server llama-bench llama-perplexity test-backend-ops
+    check_tosh_version build-static/bin/llama-server
+    check_tosh_version build-static/bin/llama-bench
 
     # One library per kernel source, with the same defines the runtime would use on an Intel/AMD
     # GPU. They cannot be linked into one metallib: the sources share helper names.

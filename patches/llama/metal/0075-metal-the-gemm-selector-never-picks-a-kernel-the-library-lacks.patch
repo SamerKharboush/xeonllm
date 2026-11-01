@@ -1,0 +1,401 @@
+diff --git a/common/common.cpp b/common/common.cpp
+index f1e9ed21b..bd956b03f 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -425,7 +425,7 @@ void common_params_print_info(const common_params & params, bool print_devices)
+     // releases that only touch the patch. No env var means a direct CLI run.
+     {
+         const char * app_version = std::getenv("TOSH_APP_VERSION");
+-        COM_INF("%s: ToshLLM engine %s (app %s)\n", __func__, common_tosh_version(),
++        COM_INF("%s: XeonLLM engine %s (app %s)\n", __func__, common_tosh_version(),
+                 app_version ? app_version : "standalone");
+     }
+ 
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.cpp b/ggml/src/ggml-metal/ggml-metal-device.cpp
+index e7bf010a7..54b418b6e 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -6,10 +6,17 @@
+ 
+ #include "ggml-impl.h"
+ 
++#include <algorithm>
+ #include <cassert>
+ #include <memory>
+ #include <string>
+ #include <unordered_map>
++#include <vector>
++
++// TOSH_METAL_CHECK_KERNELS=1: walk the MUL_MAT and MUL_MAT_ID selectors without compiling and
++// fail on a composed name the library lacks. scripts/check-kernel-coverage.sh runs this.
++static bool g_metal_check_kernels = false;
++static std::vector<std::string> g_metal_check_missing;
+ 
+ struct ggml_metal_device_deleter {
+     void operator()(ggml_metal_device_t ctx) {
+@@ -1278,11 +1285,37 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm(ggml_meta
+     const int w64_floor = w64_floor_env ? w64_floor_env :
+                           (tsrc0 == GGML_TYPE_IQ4_NL ? 384 : 0);
+ 
+-    const bool w64 = simd_width == 64 && use_mm_manual && !has_tensor &&
+-                     op->ne[1] >= w64_floor &&
+-                     TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
++    bool w64 = simd_width == 64 && use_mm_manual && !has_tensor &&
++               op->ne[1] >= w64_floor &&
++               TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
+ 
+-    snprintf(base, 256, "kernel_mul_mm_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "");
++    auto compose_base = [&]() {
++        snprintf(base, 256, "kernel_mul_mm_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "");
++    };
++    compose_base();
++
++    // wide and w64 are decided separately, but not every type has both twins: bf16 has a
++    // `_w64` kernel and no `_w` or `_w_w64` one. Ask the library instead of trusting the two
++    // lists to stay in step, and fall back to the plainer tile (wide first, then the 64-lane
++    // one) so a missing kernel is never dereferenced.
++    if (wide && !ggml_metal_library_has_function(lib, base)) {
++        static bool logged_wide[GGML_TYPE_COUNT] = {false};
++        if (!logged_wide[tsrc0]) {
++            logged_wide[tsrc0] = true;
++            GGML_LOG_DEBUG("%s: %s is not in the library; dropping the wide suffix\n", __func__, base);
++        }
++        wide = false;
++        compose_base();
++    }
++    if (w64 && !ggml_metal_library_has_function(lib, base)) {
++        static bool logged_w64[GGML_TYPE_COUNT] = {false};
++        if (!logged_w64[tsrc0]) {
++            logged_w64[tsrc0] = true;
++            GGML_LOG_DEBUG("%s: %s is not in the library; dropping the 64-lane suffix\n", __func__, base);
++        }
++        w64 = false;
++        compose_base();
++    }
+     // measured on 32 lanes only; the 64-lane tile lives in its own kernel
+     const bool uniform_scale = (tsrc0 == GGML_TYPE_Q4_K || tsrc0 == GGML_TYPE_Q5_K) && wide && !w64 &&
+                                use_mm_manual && !has_tensor && simd_width == 32 &&
+@@ -1291,6 +1324,14 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm(ggml_meta
+     snprintf(name, 256, "%s_bci=%d_bco=%d_ne12=%d_ne13=%d_r2=%d_r3=%d_mm=%d_db=%d_af=%d_us=%d",
+              base, bc_inp, bc_out, ne12, ne13, r2, r3, use_mm_manual + 2*narrow, use_mm_double_buffer, acc_f32, uniform_scale);
+ 
++    if (g_metal_check_kernels) {
++        if (!ggml_metal_library_has_function(lib, base)) {
++            g_metal_check_missing.push_back(base);
++        }
++        ggml_metal_pipeline_with_params none = {};
++        return none;
++    }
++
+     ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
+     if (!res.pipeline) {
+         ggml_metal_cv_t cv = ggml_metal_cv_init();
+@@ -1312,6 +1353,10 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm(ggml_meta
+         ggml_metal_cv_free(cv);
+     }
+ 
++    if (!res.pipeline) {
++        GGML_ABORT("%s: the selector picked kernel '%s' (base '%s') but the library has no such pipeline", __func__, name, base);
++    }
++
+     if (has_tensor) {
+         res.nr0 = NRA;
+         res.nr1 = NRB;
+@@ -2236,8 +2281,8 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id(ggml_m
+ 
+     // the 64-lane twin lives in mul_mm_w64.metal, beside the dense one; it has no src1 rescale
+     const int simd_width_id = ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width;
+-    const bool w64 = simd_width_id == 64 && use_mm_manual && !amax &&
+-                     TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
++    bool w64 = simd_width_id == 64 && use_mm_manual && !amax &&
++               TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
+ 
+     // the narrow mxfp4 kernel is bfloat when the device has the type, and the manual path keeps
+     // its packed sums in that type; the wide and 64-lane variants are already half, and so is the
+@@ -2246,9 +2291,41 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id(ggml_m
+                          ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->has_bfloat &&
+                          TOSH_ENV("TOSH_MMID_HALF_DISABLE") == nullptr;
+ 
+-    snprintf(base, 256, "kernel_mul_mm_id_%s_%s%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "", half_id ? "_h" : "");
++    auto compose_base = [&]() {
++        snprintf(base, 256, "kernel_mul_mm_id_%s_%s%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "", half_id ? "_h" : "");
++    };
++    compose_base();
++
++    // same rule as the dense selector: drop the optional suffixes the library does not have
++    if (wide && !ggml_metal_library_has_function(lib, base)) {
++        static bool logged_wide[GGML_TYPE_COUNT] = {false};
++        if (!logged_wide[tsrc0]) {
++            logged_wide[tsrc0] = true;
++            GGML_LOG_DEBUG("%s: %s is not in the library; dropping the wide suffix\n", __func__, base);
++        }
++        wide = false;
++        compose_base();
++    }
++    if (w64 && !ggml_metal_library_has_function(lib, base)) {
++        static bool logged_w64[GGML_TYPE_COUNT] = {false};
++        if (!logged_w64[tsrc0]) {
++            logged_w64[tsrc0] = true;
++            GGML_LOG_DEBUG("%s: %s is not in the library; dropping the 64-lane suffix\n", __func__, base);
++        }
++        w64 = false;
++        compose_base();
++    }
++
+     snprintf(name, 256, "%s_bci=%d_mm=%d_af=%d_amax=%d", base, bc_inp, use_mm_manual, acc_f32, amax);
+ 
++    if (g_metal_check_kernels) {
++        if (!ggml_metal_library_has_function(lib, base)) {
++            g_metal_check_missing.push_back(base);
++        }
++        ggml_metal_pipeline_with_params none = {};
++        return none;
++    }
++
+     ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
+     if (!res.pipeline) {
+         ggml_metal_cv_t cv = ggml_metal_cv_init();
+@@ -2263,6 +2340,10 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id(ggml_m
+         ggml_metal_cv_free(cv);
+     }
+ 
++    if (!res.pipeline) {
++        GGML_ABORT("%s: the selector picked kernel '%s' (base '%s') but the library has no such pipeline", __func__, name, base);
++    }
++
+     res.smem = 8192;
+     res.nr0  = 64;
+     res.nr1  = wide ? 64 : 32;
+@@ -3875,3 +3956,101 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_count_equal(ggml
+ 
+     return res;
+ }
++
++//
++// kernel coverage
++//
++
++static void ggml_metal_check_fill(ggml_tensor * t, ggml_type type, int64_t ne0, int64_t ne1, int64_t ne2) {
++    memset(t, 0, sizeof(*t));
++    t->type  = type;
++    t->ne[0] = ne0;
++    t->ne[1] = ne1;
++    t->ne[2] = ne2;
++    t->ne[3] = 1;
++    t->nb[0] = ggml_type_size(type);
++    for (int i = 1; i < GGML_MAX_DIMS; ++i) {
++        t->nb[i] = t->nb[i-1]*(t->ne[i-1] > 0 ? t->ne[i-1] : 1);
++    }
++}
++
++void ggml_metal_library_check_kernels(ggml_metal_library_t lib) {
++    if (TOSH_ENV("TOSH_METAL_CHECK_KERNELS") == nullptr) {
++        return;
++    }
++
++    // below and above every row floor (2048, 4096) and the dense token floors (192, 256, 448)
++    static const int64_t rows[] = { 512, 1024, 2047, 2048, 2049, 4095, 4096, 8192 };
++    static const int64_t toks[] = { 1, 2, 8, 9, 32, 33, 191, 192, 255, 256, 447, 448, 1023, 1024, 2048 };
++    const int64_t k = 2560;
++
++    g_metal_check_kernels = true;
++    g_metal_check_missing.clear();
++
++    for (int t = 0; t < GGML_TYPE_COUNT; ++t) {
++        const ggml_type type = (ggml_type) t;
++        if (ggml_type_size(type) == 0) {
++            continue;
++        }
++
++        char plain[256];
++        snprintf(plain, 256, "kernel_mul_mm_%s_f32", ggml_metal_tname_pair(lib, type, GGML_TYPE_F32));
++        if (ggml_metal_library_has_function(lib, plain)) {
++            for (int64_t m : rows) {
++                for (int64_t n : toks) {
++                    ggml_tensor a = {};
++                    ggml_tensor b = {};
++                    ggml_tensor out = {};
++                    ggml_metal_check_fill(&a,   type,              k, m, 1);
++                    ggml_metal_check_fill(&b,   GGML_TYPE_F32,     k, n, 1);
++                    ggml_metal_check_fill(&out, GGML_TYPE_F32,     m, n, 1);
++                    out.op     = GGML_OP_MUL_MAT;
++                    out.src[0] = &a;
++                    out.src[1] = &b;
++                    ggml_metal_library_get_pipeline_mul_mm(lib, &out);
++                }
++            }
++        }
++
++        snprintf(plain, 256, "kernel_mul_mm_id_%s_f32", ggml_metal_tname_pair(lib, type, GGML_TYPE_F32));
++        if (ggml_metal_library_has_function(lib, plain)) {
++            const int64_t n_expert = 8;
++            for (int64_t m : rows) {
++                for (int64_t n : toks) {
++                    ggml_tensor as = {};
++                    ggml_tensor b  = {};
++                    ggml_tensor ids = {};
++                    ggml_tensor out = {};
++                    ggml_metal_check_fill(&as,  type,          k, m, n_expert);
++                    ggml_metal_check_fill(&b,   GGML_TYPE_F32, k, n, 1);
++                    ggml_metal_check_fill(&ids, GGML_TYPE_I32, n_expert, n, 1);
++                    ggml_metal_check_fill(&out, GGML_TYPE_F32, m, n, 1);
++                    out.op     = GGML_OP_MUL_MAT_ID;
++                    out.src[0] = &as;
++                    out.src[1] = &b;
++                    out.src[2] = &ids;
++                    ggml_metal_library_get_pipeline_mul_mm_id(lib, &out);
++                }
++            }
++        }
++    }
++
++    g_metal_check_kernels = false;
++
++    std::sort(g_metal_check_missing.begin(), g_metal_check_missing.end());
++    g_metal_check_missing.erase(std::unique(g_metal_check_missing.begin(), g_metal_check_missing.end()),
++                                g_metal_check_missing.end());
++
++    if (g_metal_check_missing.empty()) {
++        GGML_LOG_INFO("%s: every composed MUL_MAT and MUL_MAT_ID kernel is in the library\n", __func__);
++        return;
++    }
++
++    for (const std::string & name : g_metal_check_missing) {
++        GGML_LOG_ERROR("%s: kernel missing: %s\n", __func__, name.c_str());
++    }
++    GGML_LOG_ERROR("%s: %zu composed kernel names are not in the library\n", __func__,
++                   g_metal_check_missing.size());
++
++    exit(1);
++}
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.h b/ggml/src/ggml-metal/ggml-metal-device.h
+index d3ec40553..6776d393b 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.h
++++ b/ggml/src/ggml-metal/ggml-metal-device.h
+@@ -122,6 +122,13 @@ void ggml_metal_library_free(ggml_metal_library_t lib);
+ 
+ ggml_metal_device_t ggml_metal_library_get_device(ggml_metal_library_t lib);
+ 
++// true if a kernel function with this name is in one of the compiled libraries
++bool ggml_metal_library_has_function(ggml_metal_library_t lib, const char * name);
++
++// TOSH_METAL_CHECK_KERNELS=1: check every pipeline name the MUL_MAT and MUL_MAT_ID selectors
++// can compose; print each missing name and exit non-zero. No-op otherwise.
++void ggml_metal_library_check_kernels(ggml_metal_library_t lib);
++
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline    (ggml_metal_library_t lib, const char * name);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_compile_pipeline(ggml_metal_library_t lib, const char * base, const char * name, ggml_metal_cv_t cv);
+ // same, but a kernel the driver refuses to build is not logged: the caller has a fallback
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.m b/ggml/src/ggml-metal/ggml-metal-device.m
+index 066ea9281..94dc2c2cd 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.m
++++ b/ggml/src/ggml-metal/ggml-metal-device.m
+@@ -222,6 +222,9 @@ int ggml_metal_pipeline_max_theads_per_threadgroup(struct ggml_metal_pipeline_wi
+     // kernels from a second metallib, resolved ahead of the combined library
+     NSSet<NSString *> * override_fns;
+ 
++    // objs[0]'s function names, built on the first has_function query in single_library mode
++    NSSet<NSString *> * fn_names;
++
+     ggml_metal_device_t dev;
+     ggml_metal_pipelines_t pipelines; // cache of compiled pipelines
+ 
+@@ -826,6 +829,10 @@ void ggml_metal_library_free(ggml_metal_library_t lib) {
+         [lib->override_fns release];
+     }
+ 
++    if (lib->fn_names) {
++        [lib->fn_names release];
++    }
++
+     ggml_metal_pipelines_free(lib->pipelines);
+ 
+     [lib->lock release];
+@@ -837,6 +844,31 @@ ggml_metal_device_t ggml_metal_library_get_device(ggml_metal_library_t lib) {
+     return lib->dev;
+ }
+ 
++bool ggml_metal_library_has_function(ggml_metal_library_t lib, const char * name) {
++    @autoreleasepool {
++        NSString * fname = [NSString stringWithUTF8String:name];
++
++        [lib->lock lock];
++
++        bool found = lib->override_fns && [lib->override_fns containsObject:fname];
++        if (!found && lib->fn_to_lib) {
++            found = lib->fn_to_lib[fname] != nil;
++        }
++        if (!found && !lib->fn_to_lib && lib->objs[0]) {
++            // from-source and precompiled single-library builds carry no routing table; the
++            // selectors ask on every matmul, so the name list is read once and kept
++            if (!lib->fn_names) {
++                lib->fn_names = [[NSSet alloc] initWithArray:[lib->objs[0] functionNames]];
++            }
++            found = [lib->fn_names containsObject:fname];
++        }
++
++        [lib->lock unlock];
++
++        return found;
++    }
++}
++
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline(ggml_metal_library_t lib, const char * name) {
+     [lib->lock lock];
+ 
+@@ -2187,6 +2219,8 @@ ggml_metal_device_t ggml_metal_device_init(int device, int n_devices) {
+                 dev->library = ggml_metal_library_init(dev);
+                 if (!dev->library) {
+                     GGML_LOG_ERROR("%s: error: failed to create library\n", __func__);
++                } else {
++                    ggml_metal_library_check_kernels(dev->library);
+                 }
+ 
+                 if (dev->props.use_residency_sets) {
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+index 832904c23..fcf2fea87 100644
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -10469,6 +10469,29 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+     }
+     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_MXFP4, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
+ 
++    // Every type the Metal selector marks wide-capable, past its row floor (4096) at the batch
++    // sizes around the 64-lane tile floors. beta.5 composed the wide suffix for bf16 and no such
++    // kernel existed, so this matrix is the shape space its gates never entered.
++    for (ggml_type type_a : {GGML_TYPE_BF16, GGML_TYPE_F16, GGML_TYPE_Q8_0, GGML_TYPE_Q5_0, GGML_TYPE_Q5_1,
++                             GGML_TYPE_Q2_K, GGML_TYPE_Q3_K, GGML_TYPE_Q4_K, GGML_TYPE_Q5_K, GGML_TYPE_PQ2_0,
++                             GGML_TYPE_PTQ1_0, GGML_TYPE_Q6_K, GGML_TYPE_Q4_0, GGML_TYPE_Q4_1, GGML_TYPE_MXFP4,
++                             GGML_TYPE_IQ4_NL, GGML_TYPE_IQ4_XS, GGML_TYPE_IQ3_S, GGML_TYPE_IQ2_S, GGML_TYPE_IQ1_S,
++                             GGML_TYPE_IQ1_M, GGML_TYPE_IQ2_XXS, GGML_TYPE_IQ2_XS, GGML_TYPE_IQ3_XXS}) {
++        for (int64_t n : {448, 512, 1024}) {
++            test_cases.emplace_back(new test_mul_mat(type_a, GGML_TYPE_F32, 4096, n, 2560, {1, 1}, {1, 1}));
++        }
++    }
++    // the same matrix on the expert path; its wide list differs from the dense one
++    for (ggml_type type_a : {GGML_TYPE_F16, GGML_TYPE_Q8_0, GGML_TYPE_Q5_0, GGML_TYPE_Q5_1, GGML_TYPE_Q2_K,
++                             GGML_TYPE_Q3_K, GGML_TYPE_Q4_K, GGML_TYPE_Q5_K, GGML_TYPE_Q6_K, GGML_TYPE_Q4_0,
++                             GGML_TYPE_Q4_1, GGML_TYPE_MXFP4, GGML_TYPE_IQ4_NL, GGML_TYPE_IQ4_XS, GGML_TYPE_IQ3_S,
++                             GGML_TYPE_IQ2_S, GGML_TYPE_IQ1_S, GGML_TYPE_IQ1_M, GGML_TYPE_IQ2_XXS, GGML_TYPE_IQ2_XS,
++                             GGML_TYPE_IQ3_XXS}) {
++        for (int64_t n : {448, 512, 1024}) {
++            test_cases.emplace_back(new test_mul_mat_id(type_a, GGML_TYPE_F32, 8, 8, false, 4096, n, 2560));
++        }
++    }
++
+     // m == 1, with n on both sides of MMVF_MAX_BATCH_SIZE (8): mmvf below, operand swap above
+     for (int64_t n : {1, 7, 8, 9, 16, 127, 128, 511, 512}) {
+         test_cases.emplace_back(new test_mul_mat(GGML_TYPE_F32, GGML_TYPE_F32, 1, n, 2048, {1, 1}, {1, 1}));
+diff --git a/tools/llama-bench/llama-bench.cpp b/tools/llama-bench/llama-bench.cpp
+index 35d101eda..5a7a3ae14 100644
+--- a/tools/llama-bench/llama-bench.cpp
++++ b/tools/llama-bench/llama-bench.cpp
+@@ -2126,7 +2126,7 @@ struct markdown_printer : public printer {
+ 
+     void print_footer() override {
+         // the build number only tracks upstream, so name the engine version too
+-        fprintf(fout, "\nbuild: %s (%d), ToshLLM engine %s\n", test::build_commit.c_str(), test::build_number,
++        fprintf(fout, "\nbuild: %s (%d), XeonLLM engine %s\n", test::build_commit.c_str(), test::build_number,
+                 common_tosh_version());
+     }
+ };

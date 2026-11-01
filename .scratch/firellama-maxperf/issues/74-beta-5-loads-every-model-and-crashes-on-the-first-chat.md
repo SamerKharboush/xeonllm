@@ -86,3 +86,36 @@ The ToshLLM credit row stays.
 Follow `specs/release-contract.md`. Briefs R3 (engine) and R4 (app), then the release.
 
 ## Comments
+
+### 2026-11-01, the engine half (R3, Mocca, reviewed and re-gated by the orchestrator)
+
+- `metal/0075`: the MUL_MAT and MUL_MAT_ID selectors ask the library for the composed name
+  (`ggml_metal_library_has_function`) and drop `_w`, then `_w64`, when it is absent; a pipeline
+  that is still null aborts with the kernel's name instead of a segfault. The single-library
+  path reads `functionNames` once (orchestrator change; Mocca's version compiled a function
+  lookup per matmul). `TOSH_METAL_CHECK_KERNELS=1` walks both selectors over every type x batch
+  class x row count at init and exits non-zero on a missing name. New test_mul_mat /
+  test_mul_mat_id cases at m 4096, n {448, 512, 1024}, k 2560 for every wide-capable type.
+  Banner: `XeonLLM engine <VERSION>`.
+- A `kernel_mul_mm_bf16e_f32_w_w64` was tried and removed: Nemotron-3.5-Bolt-E4B pp512 79.09
+  +- 0.66 with it against 79.00 +- 0.74 on the fallback (dev build, card 1, `-r 2`), inside
+  the noise.
+- Gates, dev build `build-static` (llama-server sha256 `607fc6964658d3a5`), orchestrator run:
+  MUL_MAT 1832/1832 and MUL_MAT_ID 936/936 on cards 0 and 1; FLASH_ATTN_EXT 1993/1993 on card 1
+  with and without `TOSH_FA_AMD=1`; every op on card 1 13983/13983;
+  `scripts/check-kernel-coverage.sh` 0 missing on both cards, and 3 missing on the shipped
+  beta.5 (`kernel_mul_mm_bf16_f32_w`, `_bf16_f32_w_w64`, `_bf16e_f32_w_w64`). 85 of 85 patches
+  apply to the pin.
+- Prefill cost of the lookup: Qwen3-4B-Q4_K_M `llama-bench -p 512 -n 0 -r 3 -fa 1`, card 1,
+  shipped beta.5 against the dev build, alternated twice: 82.49 / 82.50 and 82.44 / 82.48 t/s
+  (sd <= 0.05). The user's idle app server was holding both cards during the run.
+- Stress (`scripts/stress-release.sh`, Mocca's run on the dev build, app flags without the
+  drafter): 17-18 PASS of 19 cells per model for Qwen3-0.6B/4B Q4_K_M/4B Q6_K/8B and
+  Nemotron-E4B, tensor and layer; the one FAIL is Nemotron making no tool call. The shipped
+  beta.5 segfaults on Nemotron at the 450-token band. Not run: the drafter, the 35B, the IQ2
+  27B, `-ngl 0`. LFM3-1.7B cannot load (`unknown model architecture: 'lfm3'`), and
+  Ternary-Bonsai PQ2_0 refuses tensor split (`RESHAPE cannot be tensor-split`).
+- Version stamp: `scripts/build-engines.sh` and `scripts/llama-incremental-build.sh` re-stamp
+  `-DTOSH_VERSION` from VERSION and fail the build if the binary does not carry it.
+- The FA refusal is already logged once per kernel name (`ggml-metal-ops.cpp`, the refused
+  set); no change.
