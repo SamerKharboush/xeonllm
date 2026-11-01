@@ -47,7 +47,7 @@ actor MCPStdioTransport {
         process.standardError = stderr
 
         var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = Self.augmentedPath(environment["PATH"])
+        environment["PATH"] = Self.searchPath(environment["PATH"])
         for (key, value) in server.environment { environment[key] = value }
         process.environment = environment
 
@@ -59,16 +59,17 @@ actor MCPStdioTransport {
         _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
     }
 
-    private static let extraPaths = ["/opt/homebrew/bin", "/usr/local/bin",
-                                     "/opt/homebrew/sbin", "/usr/local/sbin"]
+    /// System tools a server may call even when the login shell does not list them.
+    private static let extraPaths = ["/opt/homebrew/sbin", "/usr/local/sbin"]
 
-    private static func augmentedPath(_ path: String?) -> String {
-        let existing = (path ?? "").split(separator: ":").map(String.init)
-        return (existing + extraPaths.filter { !existing.contains($0) }).joined(separator: ":")
+    private static func searchPath(_ path: String?) -> String {
+        var values = UserShellPath.merged(path).split(separator: ":").map(String.init)
+        for extra in extraPaths where !values.contains(extra) { values.append(extra) }
+        return values.joined(separator: ":")
     }
 
     private static func resolve(_ command: String) -> String {
-        let search = (augmentedPath(ProcessInfo.processInfo.environment["PATH"]))
+        let search = searchPath(ProcessInfo.processInfo.environment["PATH"])
             .split(separator: ":").map(String.init)
         for directory in search {
             let candidate = (directory as NSString).appendingPathComponent(command)

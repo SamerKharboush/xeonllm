@@ -221,7 +221,6 @@
   "Base size": "Dimensione base",
   "Basic": "Base",
   "Batch": "Lotto",
-  "Become a sponsor": "Diventa un sostenitore",
   "Benchmark configuration": "Configurazione del benchmark",
   "Benchmark identity": "Identità benchmark",
   "Benchmark running…": "Benchmark in corso…",
@@ -1496,7 +1495,6 @@
   "Save…": "Salva…",
   "Say which method you want.": "Indica quale metodo vuoi.",
   "Scale": "Scala",
-  "Scan from the Binance app to send, or search the alias in Binance Pay.": "Scansiona dall'app Binance per inviare, oppure cerca l'alias in Binance Pay.",
   "Scientific computing (NumPy and SciPy)": "Calcolo scientifico (NumPy e SciPy)",
   "Scope": "Ambito",
   "Search": "Cerca",
@@ -2051,6 +2049,5 @@
   "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.": "“Locale (stdio)” esegue un programma su questo Mac e comunica tramite le sue pipe. Gli altri trasporti si collegano a un URL.",
   "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.": "≈: stimato dal testo e dagli allegati, perché il server non ha contato questo turno; il prossimo turno dà la cifra esatta.",
   "⌘↩ to add": "⌘↩ per aggiungere",
-  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Sperimentale e non validato su AMD/Metal: la divisione cross-GPU è un percorso diverso che potrebbe produrre output errati o bloccare il motore. Verifica che la generazione sia coerente e monitora la stabilità. Necessita di ulteriori test.",
-  "⚠️ Send only USDT on the TRON network (TRC-20).": "⚠️ Invia solo USDT sulla rete TRON (TRC-20)."
+  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Sperimentale e non validato su AMD/Metal: la divisione cross-GPU è un percorso diverso che potrebbe produrre output errati o bloccare il motore. Verifica che la generazione sia coerente e monitora la stabilità. Necessita di ulteriori test."
 }

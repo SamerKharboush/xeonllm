@@ -221,7 +221,6 @@
   "Base size": "Базовый размер",
   "Basic": "Базовый",
   "Batch": "Пакет",
-  "Become a sponsor": "Стать спонсором",
   "Benchmark configuration": "Конфигурация бенчмарка",
   "Benchmark identity": "Идентификатор бенчмарка",
   "Benchmark running…": "Бенчмарк выполняется...",
@@ -1496,7 +1495,6 @@
   "Save…": "Сохранить…",
   "Say which method you want.": "Укажите метод.",
   "Scale": "Масштаб",
-  "Scan from the Binance app to send, or search the alias in Binance Pay.": "Отсканируйте код из приложения Binance для отправки либо найдите псевдоним в Binance Pay.",
   "Scientific computing (NumPy and SciPy)": "Научные вычисления (NumPy и SciPy)",
   "Scope": "Область",
   "Search": "Поиск",
@@ -2051,6 +2049,5 @@
   "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.": "«Локально (stdio)» запускает программу на этом Mac и обменивается данными через каналы (pipes). Остальные варианты транспорта подключаются к URL.",
   "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.": "≈: оценка по тексту и вложениям, так как сервер не посчитал этот ход; следующий ход даст точную цифру.",
   "⌘↩ to add": "⌘↩ — добавить",
-  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Экспериментальная функция, не проверенная на AMD/Metal: разделение между несколькими GPU — это другой путь выполнения, который может приводить к некорректным результатам или зависанию движка. Проверяйте, что генерация остаётся связной, и следите за стабильностью работы. Требуется дополнительное тестирование.",
-  "⚠️ Send only USDT on the TRON network (TRC-20).": "⚠️ Отправляйте только USDT в сети TRON (TRC‑20)."
+  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Экспериментальная функция, не проверенная на AMD/Metal: разделение между несколькими GPU — это другой путь выполнения, который может приводить к некорректным результатам или зависанию движка. Проверяйте, что генерация остаётся связной, и следите за стабильностью работы. Требуется дополнительное тестирование."
 }

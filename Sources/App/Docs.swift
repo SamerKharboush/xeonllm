@@ -299,13 +299,13 @@ La generación de modelos MoE híbridos está limitada por el ancho de banda de 
 **Desde VS Code u otro cliente se queda "pensando"** — El modelo está razonando o procesando un prompt enorme; el cliente no muestra esa fase. Ver la sección "API para desarrolladores".
 """),
         DocSection(title: "Créditos y licencias", icon: "heart", body: """
-XeonLLM es desarrollado por **Engelbert Delgado** ([@engeldlgado](https://github.com/engeldlgado)).
+XeonLLM es desarrollado por **Samer Kharboush** ([@SamerKharboush](https://github.com/SamerKharboush)).
 
 Construido sobre el trabajo de:
 - **llama.cpp** (ggml-org) — el motor de inferencia
 - **iRon-Llama** (Basten7) — investigación de parches Metal para GPU AMD en Mac Intel
 
-Si la app te resulta útil, puedes apoyar el desarrollo desde **Acerca de → Donar** (Binance Pay).
+Si la app te resulta útil, puedes apoyar el desarrollo desde **Acerca de → Donar**.
 """),
     ]
 
@@ -568,13 +568,13 @@ Hybrid MoE generation is RAM-bandwidth-bound: a faster GPU won't improve it, but
 **It hangs "thinking" from VS Code or another client** — The model is reasoning or processing a huge prompt; the client doesn't display that phase. See the "API for developers" section.
 """),
         DocSection(title: "Credits & licenses", icon: "heart", body: """
-XeonLLM is developed by **Engelbert Delgado** ([@engeldlgado](https://github.com/engeldlgado)).
+XeonLLM is developed by **Samer Kharboush** ([@SamerKharboush](https://github.com/SamerKharboush)).
 
 Built on the work of:
 - **llama.cpp** (ggml-org) — the inference engine
 - **iRon-Llama** (Basten7) — Metal patch research for AMD GPUs on Intel Macs
 
-If the app is useful to you, you can support development from **About → Donate** (Binance Pay).
+If the app is useful to you, you can support development from **About → Donate**.
 """),
     ]
 }

@@ -39,6 +39,22 @@ final class IdentityMigrationTests: XCTestCase {
         return old
     }
 
+    private func makeNewDataFolder() throws -> URL {
+        let new = supportDir.appendingPathComponent("XeonLLM", isDirectory: true)
+        try FileManager.default.createDirectory(at: new, withIntermediateDirectories: true)
+        return new
+    }
+
+    private func writeJSON(_ object: Any, to url: URL) throws {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        try data.write(to: url)
+    }
+
+    private func readJSON(_ url: URL) throws -> [[String: Any]] {
+        let data = try Data(contentsOf: url)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+    }
+
     func testCopiesSettingsAndDataFolder() throws {
         let old = makeOldDataFolder()
         IdentityMigration.run(defaults: defaults,
@@ -64,20 +80,98 @@ final class IdentityMigrationTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "theme"), "already-set")
     }
 
-    func testDoesNotTouchAnExistingNewDataFolder() throws {
-        _ = makeOldDataFolder()
-        let newFolder = supportDir.appendingPathComponent("XeonLLM", isDirectory: true)
-        try FileManager.default.createDirectory(at: newFolder, withIntermediateDirectories: true)
-        FileManager.default.createFile(atPath: newFolder.appendingPathComponent("mine.txt").path,
-                                       contents: Data("new".utf8))
+    func testMergesMissingItemsIntoAnExistingNewDataFolder() throws {
+        let old = makeOldDataFolder()
+        let oldSub = old.appendingPathComponent("dynamic-moe", isDirectory: true)
+        try FileManager.default.createDirectory(at: oldSub, withIntermediateDirectories: true)
+        try Data("old-other".utf8).write(to: oldSub.appendingPathComponent("other.json"))
+        try Data("old-shared".utf8).write(to: old.appendingPathComponent("shared.txt"))
+
+        let newFolder = try makeNewDataFolder()
+        try Data("new".utf8).write(to: newFolder.appendingPathComponent("mine.txt"))
+        try Data("new-shared".utf8).write(to: newFolder.appendingPathComponent("shared.txt"))
+        let newSub = newFolder.appendingPathComponent("dynamic-moe", isDirectory: true)
+        try FileManager.default.createDirectory(at: newSub, withIntermediateDirectories: true)
+        try Data("new-child".utf8).write(to: newSub.appendingPathComponent("child.json"))
+
         IdentityMigration.run(defaults: defaults,
-                              oldDomain: ["k": "v"], supportDir: supportDir,
+                              oldDomain: [:], supportDir: supportDir,
                               newDataFolder: "XeonLLM", keychain: false)
-        // The pre-existing new folder keeps its own content unchanged.
-        XCTAssertTrue(FileManager.default.fileExists(
-            atPath: newFolder.appendingPathComponent("mine.txt").path))
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: newFolder.appendingPathComponent("marker.txt").path))
+
+        // An item missing in the new folder is copied.
+        XCTAssertEqual(try String(contentsOf: newFolder.appendingPathComponent("marker.txt"), encoding: .utf8), "old")
+        // An existing file is never overwritten.
+        XCTAssertEqual(try String(contentsOf: newFolder.appendingPathComponent("shared.txt"), encoding: .utf8), "new-shared")
+        // Directories gain the missing children and keep their own.
+        XCTAssertEqual(try String(contentsOf: newSub.appendingPathComponent("other.json"), encoding: .utf8), "old-other")
+        XCTAssertEqual(try String(contentsOf: newSub.appendingPathComponent("child.json"), encoding: .utf8), "new-child")
+        // The old folder is untouched.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: old.appendingPathComponent("shared.txt").path))
+        XCTAssertTrue(defaults.bool(forKey: IdentityMigration.folderMarkerKey))
+    }
+
+    func testConversationsAndProjectsAreMergedByID() throws {
+        let old = makeOldDataFolder()
+        let newFolder = try makeNewDataFolder()
+        try writeJSON([["id": "a", "title": "old-a"], ["id": "b", "title": "old-b"]],
+                      to: old.appendingPathComponent("conversations.json"))
+        try writeJSON([["id": "b", "title": "new-b"], ["id": "c", "title": "new-c"]],
+                      to: newFolder.appendingPathComponent("conversations.json"))
+        try writeJSON([["id": "p1", "name": "old-project"]],
+                      to: old.appendingPathComponent("projects.json"))
+        try writeJSON([["id": "p2", "name": "new-project"]],
+                      to: newFolder.appendingPathComponent("projects.json"))
+
+        IdentityMigration.run(defaults: defaults,
+                              oldDomain: [:], supportDir: supportDir,
+                              newDataFolder: "XeonLLM", keychain: false)
+
+        let conversations = try readJSON(newFolder.appendingPathComponent("conversations.json"))
+        XCTAssertEqual(conversations.compactMap { $0["id"] as? String }, ["b", "c", "a"])
+        // The new copy wins on a conflicting id.
+        XCTAssertEqual(conversations.first { $0["id"] as? String == "b" }?["title"] as? String, "new-b")
+
+        let projects = try readJSON(newFolder.appendingPathComponent("projects.json"))
+        XCTAssertEqual(projects.compactMap { $0["id"] as? String }, ["p2", "p1"])
+    }
+
+    func testASecondRunChangesNothing() throws {
+        let old = makeOldDataFolder()
+        let newFolder = try makeNewDataFolder()
+        try writeJSON([["id": "a", "title": "old-a"]],
+                      to: old.appendingPathComponent("conversations.json"))
+        try writeJSON([["id": "b", "title": "new-b"]],
+                      to: newFolder.appendingPathComponent("conversations.json"))
+
+        IdentityMigration.run(defaults: defaults,
+                              oldDomain: [:], supportDir: supportDir,
+                              newDataFolder: "XeonLLM", keychain: false)
+        let first = try Data(contentsOf: newFolder.appendingPathComponent("conversations.json"))
+        let firstItems = try FileManager.default.contentsOfDirectory(atPath: newFolder.path).sorted()
+
+        IdentityMigration.run(defaults: defaults,
+                              oldDomain: [:], supportDir: supportDir,
+                              newDataFolder: "XeonLLM", keychain: false)
+        XCTAssertEqual(try Data(contentsOf: newFolder.appendingPathComponent("conversations.json")), first)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: newFolder.path).sorted(), firstItems)
+        // Nothing was removed from the old folder either.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: old.appendingPathComponent("conversations.json").path))
+    }
+
+    func testFolderMergeRunsOnceForBeta5MigratedUsers() throws {
+        let old = makeOldDataFolder()
+        let newFolder = try makeNewDataFolder()
+        try Data("new".utf8).write(to: newFolder.appendingPathComponent("mine.txt"))
+        // beta.5 already set the first marker but skipped the folder copy.
+        defaults.set(true, forKey: IdentityMigration.markerKey)
+
+        IdentityMigration.run(defaults: defaults,
+                              oldDomain: ["second": "2"], supportDir: supportDir,
+                              newDataFolder: "XeonLLM", keychain: false)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: newFolder.appendingPathComponent("marker.txt").path))
+        XCTAssertNil(defaults.string(forKey: "second"))
+        XCTAssertTrue(defaults.bool(forKey: IdentityMigration.folderMarkerKey))
     }
 
     func testNeverDeletesTheOldDataFolder() throws {

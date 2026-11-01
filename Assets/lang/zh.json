@@ -221,7 +221,6 @@
   "Base size": "基础大小",
   "Basic": "基础",
   "Batch": "批次",
-  "Become a sponsor": "成为赞助者",
   "Benchmark configuration": "基准测试配置",
   "Benchmark identity": "跑分标识",
   "Benchmark running…": "基准测试运行中…",
@@ -1496,7 +1495,6 @@
   "Save…": "保存…",
   "Say which method you want.": "请说明你想用哪种方法。",
   "Scale": "放大倍数",
-  "Scan from the Binance app to send, or search the alias in Binance Pay.": "用 Binance 应用扫码转账，或在 Binance Pay 中搜索该别名。",
   "Scientific computing (NumPy and SciPy)": "科学计算（NumPy 和 SciPy）",
   "Scope": "范围",
   "Search": "搜索",
@@ -2051,6 +2049,5 @@
   "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.": "“本地 (stdio)”会在这台 Mac 上运行程序，并通过其管道通信。其他传输方式则连接到 URL。",
   "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.": "≈：根据文本和附件估算，因为服务器没有统计这一轮；下一轮会给出精确数值。",
   "⌘↩ to add": "⌘↩ 添加",
-  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ 在 AMD/Metal 上属实验性且未经验证：跨 GPU 拆分走的是另一条路径，可能产生错误输出或让引擎卡死。请确认生成结果连贯，并留意稳定性。仍需更多测试。",
-  "⚠️ Send only USDT on the TRON network (TRC-20).": "⚠️ 请仅通过 TRON 网络（TRC-20）转入 USDT。"
+  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ 在 AMD/Metal 上属实验性且未经验证：跨 GPU 拆分走的是另一条路径，可能产生错误输出或让引擎卡死。请确认生成结果连贯，并留意稳定性。仍需更多测试。"
 }

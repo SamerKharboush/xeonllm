@@ -221,7 +221,6 @@
   "Base size": "",
   "Basic": "",
   "Batch": "",
-  "Become a sponsor": "",
   "Benchmark configuration": "",
   "Benchmark identity": "",
   "Benchmark running…": "",
@@ -1496,7 +1495,6 @@
   "Save…": "",
   "Say which method you want.": "",
   "Scale": "",
-  "Scan from the Binance app to send, or search the alias in Binance Pay.": "",
   "Scientific computing (NumPy and SciPy)": "",
   "Scope": "",
   "Search": "",
@@ -2051,6 +2049,5 @@
   "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.": "",
   "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.": "",
   "⌘↩ to add": "",
-  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "",
-  "⚠️ Send only USDT on the TRON network (TRC-20).": ""
+  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": ""
 }

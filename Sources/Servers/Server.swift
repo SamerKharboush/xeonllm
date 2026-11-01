@@ -777,9 +777,10 @@ struct ServerSettings {
         var env = ProcessInfo.processInfo.environment
         env.merge(EngineExtensions.environment()) { $1 }
         env.merge(SymPyToolsService.engineEnvironment(MCPServerStore.load())) { $1 }
-        // Finder-launched apps inherit a minimal PATH. Video input is decoded by
-        // llama.cpp through ffmpeg/ffprobe, so expose their standard macOS locations.
-        env["PATH"] = VideoRuntimeAvailability.augmentedPath(env["PATH"])
+        // Finder-launched apps inherit a minimal PATH. Take the user's login-shell PATH
+        // (npx, uvx, node) plus the usual install locations; video input also needs
+        // ffmpeg/ffprobe, which the bundled locations add.
+        env["PATH"] = UserShellPath.merged(VideoRuntimeAvailability.augmentedPath(env["PATH"]))
         // The engine logs this, so a log pasted from a bug report identifies the
         // app build even when the engine binary is older than the app.
         env["TOSH_APP_VERSION"] = AppInfo.version
@@ -1832,6 +1833,8 @@ final class ServerController: ObservableObject {
     @Published var autoPlanNote: String?
     /// Set when the engine's --fit gave up and continued with the parameters as given.
     @Published var fitNote: String?
+    /// Engine MCP servers the engine said it could not spawn, by engine name -> command.
+    @Published private(set) var mcpSpawnFailures: [String: String] = [:]
     private var fitNoteText: String {
         (UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en") == "es"
             ? "El ajuste de memoria no se aplicó"
@@ -2000,6 +2003,7 @@ final class ServerController: ObservableObject {
         autoRuntime = nil
         autoPlanNote = nil
         fitNote = nil
+        mcpSpawnFailures = [:]
         Task { [weak self] in
             if let pid = previousPID {
                 for _ in 0..<24 where kill(pid, 0) == 0 {
@@ -2349,6 +2353,16 @@ final class ServerController: ObservableObject {
         return "El motor terminó con código \(exitCode) — revisa el registro en Ajustes / engine exited with code \(exitCode) — see the log in Settings"
     }
 
+    /// `MCP '<name>': failed to spawn '<command>'` from the engine's server-mcp.cpp.
+    nonisolated static func spawnFailure(_ line: Substring) -> (name: String, command: String)? {
+        guard let start = line.range(of: "MCP '"),
+              let middle = line.range(of: "': failed to spawn '", range: start.upperBound..<line.endIndex),
+              let end = line.range(of: "'", range: middle.upperBound..<line.endIndex) else { return nil }
+        let name = String(line[start.upperBound..<middle.lowerBound])
+        let command = String(line[middle.upperBound..<end.lowerBound])
+        return name.isEmpty ? nil : (name, command)
+    }
+
     /// Router mode spawns one child engine per loaded model. They hold the weights
     /// (mlock'd), so a survivor keeps the RAM until it is killed by hand.
     nonisolated static func reapChildren(of parent: pid_t) {
@@ -2689,7 +2703,10 @@ final class ServerController: ObservableObject {
             }
             if line.contains("draft acceptance ="),
                let m = line.range(of: #"draft acceptance = ([0-9]+\.[0-9]+)"#, options: .regularExpression) {
-                dflashAcceptance = Double(line[m].split(separator: "=")[1].trimmingCharacters(in: .whitespaces))
+                dflashAcceptance = Double(String(line[m].split(separator: "=")[1].trimmingCharacters(in: .whitespaces)))
+            }
+            if let failure = Self.spawnFailure(line) {
+                mcpSpawnFailures[failure.name] = failure.command
             }
             guard line.contains("tokens per second"), line.contains("eval time") else { continue }
             guard let match = line.range(of: #"([0-9]+\.[0-9]+) tokens per second"#, options: .regularExpression) else { continue }

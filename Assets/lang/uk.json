@@ -221,7 +221,6 @@
   "Base size": "Базовий розмір",
   "Basic": "Базовий",
   "Batch": "Пакет",
-  "Become a sponsor": "Стати спонсором",
   "Benchmark configuration": "Конфігурація бенчмарку",
   "Benchmark identity": "Ідентифікатор бенчмарку",
   "Benchmark running…": "Бенчмарк виконується…",
@@ -1496,7 +1495,6 @@
   "Save…": "Зберегти…",
   "Say which method you want.": "Вкажіть, який спосіб ви бажаєте.",
   "Scale": "Масштаб",
-  "Scan from the Binance app to send, or search the alias in Binance Pay.": "Відскануйте із застосунку Binance для надсилання або знайдіть псевдонім у Binance Pay.",
   "Scientific computing (NumPy and SciPy)": "Наукові обчислення (NumPy та SciPy)",
   "Scope": "Область дії",
   "Search": "Пошук",
@@ -2051,6 +2049,5 @@
   "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.": "“Local (stdio)” запускає програму на цьому Mac і взаємодіє через її канали. Інші транспорти підключаються до URL-адреси.",
   "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.": "≈: оцінка за текстом і вкладеннями, бо сервер не порахував цей хід; наступний хід дасть точну цифру.",
   "⌘↩ to add": "⌘↩, щоб додати",
-  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Експериментально та неперевірено на AMD/Metal: розподіл між GPU — це окремий шлях, який може призвести до неправильного виводу або зависання рушія. Переконайтеся, що генерація є зв'язною, та стежте за стабільністю. Потребує додаткового тестування.",
-  "⚠️ Send only USDT on the TRON network (TRC-20).": "⚠️ Надсилайте лише USDT у мережі TRON (TRC-20)."
+  "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing.": "⚠️ Експериментально та неперевірено на AMD/Metal: розподіл між GPU — це окремий шлях, який може призвести до неправильного виводу або зависання рушія. Переконайтеся, що генерація є зв'язною, та стежте за стабільністю. Потребує додаткового тестування."
 }

@@ -11,18 +11,15 @@ enum AppInfo {
     /// True for the pre-AVX2 legacy build (Info.plist TOSHNoAVX2). Kept on its own
     /// update channel so it never pulls an AVX2 DMG that would SIGILL on those CPUs.
     static let isNoAVX2 = Bundle.main.object(forInfoDictionaryKey: "TOSHNoAVX2") as? Bool ?? false
-    static let developerName = "Engelbert Delgado"
-    static let developerHandle = "engeldlgado"
-    static let githubURL = "https://github.com/engeldlgado"
-    static let repositoryURL = "https://github.com/engeldlgado/toshllm"
+    static let developerName = "Samer Kharboush"
+    static let developerHandle = "SamerKharboush"
+    static let githubURL = "https://github.com/SamerKharboush"
+    static let repositoryURL = "https://github.com/SamerKharboush/xeonllm"
     static let issuesURL = repositoryURL + "/issues"
     static let featureRequestURL = repositoryURL + "/issues/new?template=feature_request.yml"
     static let discussionsURL = repositoryURL + "/discussions"
-    static let sponsorURL = "https://youpay.me/engeldlgado/bio"
-    static let binancePayID = "engeldlgado"
-    static let usdtTRC20 = "TFUG271bbbQEmFu4wkFHyvNNkYRZC5JDUf"
-    static let donateNoteES = "Si XeonLLM te resulta útil, puedes apoyar el desarrollo con una donación."
-    static let donateNoteEN = "If XeonLLM is useful to you, you can support development with a donation."
+    static let donateNoteES = "XeonLLM es software libre. Puedes apoyar el proyecto con una estrella o una contribución en el repositorio."
+    static let donateNoteEN = "XeonLLM is free software. You can support the project with a star or a contribution in the repository."
 
     // A build packaged under another identity (TOSH_APP_NAME in make-app.sh) carries these keys;
     // a plain build has none of them and keeps XeonLLM's.
@@ -47,7 +44,6 @@ enum AppInfo {
 struct AboutView: View {
     @EnvironmentObject private var loc: Localizer
     @EnvironmentObject private var updates: UpdateChecker
-    @State private var showDonate = false
     @State private var showNotes = false
     @State private var copied = false
 
@@ -223,11 +219,10 @@ struct AboutView: View {
                     Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
                 .glassButton().fixedSize()
-                Button { showDonate = true } label: {
+                Button { open(AppInfo.repositoryURL) } label: {
                     Label(loc.t("Donar", "Donate"), systemImage: "heart.fill")
                 }
                 .glassButton(prominent: true).fixedSize()
-                .popover(isPresented: $showDonate, arrowEdge: .bottom) { DonateView() }
             }
         }
     }

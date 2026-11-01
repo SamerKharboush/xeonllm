@@ -119,3 +119,35 @@ Follow `specs/release-contract.md`. Briefs R3 (engine) and R4 (app), then the re
   `-DTOSH_VERSION` from VERSION and fail the build if the binary does not carry it.
 - The FA refusal is already logged once per kernel name (`ggml-metal-ops.cpp`, the refused
   set); no change.
+
+### 2026-11-01, the app half (R4, Mocca, reviewed and re-gated by the orchestrator)
+
+- Cause 4: `IdentityMigration` merges the ToshLLM folder item by item even when XeonLLM's
+  exists (missing items copied, no file overwritten, `conversations.json` / `projects.json`
+  united by `id` with the XeonLLM copy winning, atomic write). A second marker,
+  `migratedFromToshLLMFolderV2`, gives users migrated by beta.5 the merge once. ToshLLM's folder
+  is never moved or changed. The user's files have the expected shape (arrays keyed by `id`:
+  8 ToshLLM conversations, 2 XeonLLM).
+- Cause 2: `Sources/App/UserShellPath.swift` reads the login shell's PATH once (3 s deadline,
+  silent fallback; 0.24 s on this Mac) and adds the usual install locations; used for the
+  engine's environment and for the app's own stdio MCP transport. All 24 servers in the newest
+  log's `args:` resolve with it (`uvx` -> `~/.local/bin`, `npx` -> `~/.9remote/node/bin`; none
+  started). A `failed to spawn` line in the engine log now shows under that server in the MCP
+  settings.
+- Cause 3: no app change. App-configured remote servers already reach the engine through the
+  bundled Python relay (`SymPyToolsService.remoteEntry` -> `remote.py`); the failing request
+  was the web UI's `--ui-mcp-proxy` forwarding a browser-side https server. Open: refuse or
+  relay https in the UI proxy.
+- Cause 6: About, the docs' credits, the toolbar heart, the issue and update URLs point to
+  Samer Kharboush and `SamerKharboush/xeonllm`; Donate opens the repository. `Donate.swift`,
+  `Assets/binance-qr.png` and the Binance/USDT/sponsor strings are gone. The ToshLLM credit row
+  and the GPL headers stay.
+- CORS: Mocca added `--cors-origins "*"` under LAN discovery; the orchestrator removed it. The
+  engine does not block the request, it only omits the header and logs
+  (`tools/server/server-http.cpp:341`), and the web UI opened from the LAN address calls its own
+  origin, where CORS does not apply. `*` would let any page in the browser drive the tool
+  servers. The warning is noise; no change.
+- Gates (orchestrator): `swift build` OK; `swift test` 510 tests, 16 skipped, 3 assertion
+  failures all in `MCPStdioTransportTests.testAnswersRacingTheirDeadlinesResolveEachRequestOnce`
+  (the known race); `check-translations.py` OK; `engeldlgado` only in headers and the credit
+  row; no `binance` in Sources, Tests, Assets, make-app.sh.

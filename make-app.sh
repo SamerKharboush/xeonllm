@@ -155,8 +155,7 @@ fi
 mkdir -p "$APP/Contents/Resources/model-icons"
 cp Assets/model-icons/*.webp Assets/model-icons/sources.json "$APP/Contents/Resources/model-icons/"
 
-# Binance Pay QR (cropped) for the donations popup
-[ -f Assets/binance-qr.png ] && cp Assets/binance-qr.png "$APP/Contents/Resources/binance-qr.png"
+# Preview images
 [ -f Assets/model-hero.jpg ] && cp Assets/model-hero.jpg "$APP/Contents/Resources/model-hero.jpg"
 [ -f Assets/model-hero-light.jpg ] && cp Assets/model-hero-light.jpg "$APP/Contents/Resources/model-hero-light.jpg"
 [ -f Assets/settings-guide.jpg ] && cp Assets/settings-guide.jpg "$APP/Contents/Resources/settings-guide.jpg"

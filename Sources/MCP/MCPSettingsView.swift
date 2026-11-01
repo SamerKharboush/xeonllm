@@ -6,6 +6,7 @@ import SwiftUI
 
 struct MCPSettingsSection: View {
     @EnvironmentObject private var loc: Localizer
+    @EnvironmentObject private var controller: ServerController
     @State private var servers: [MCPServer] = []
     @State private var editing: MCPServer?
     @State private var testingID: UUID?
@@ -53,6 +54,11 @@ struct MCPSettingsSection: View {
                                 .lineLimit(1).truncationMode(.middle)
                             if let message = status[server.id] {
                                 Text(message).font(.caption2).foregroundStyle(.secondary)
+                            }
+                            if let command = controller.mcpSpawnFailures[server.engineName] {
+                                Text(loc.t("El motor no pudo iniciar «%@»: no está en su PATH.",
+                                           "The engine could not start “%@”: it is not on its PATH.", command))
+                                    .font(.caption2).foregroundStyle(.orange)
                             }
                         }
                         Spacer()
