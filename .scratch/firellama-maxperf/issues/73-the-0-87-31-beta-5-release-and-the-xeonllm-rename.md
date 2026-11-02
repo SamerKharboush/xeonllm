@@ -69,3 +69,28 @@ the app and volume icons show the X chip. Every entry has the same values as the
 template (`ToshLLM.app` → `XeonLLM.app` is the only difference). The background bookmark
 `pBBk` points to `/Volumes/XeonLLM/.background/background.tiff`. Not checked: how Finder
 draws the window on a real display.
+
+### 2026-11-02, beta.5's open items (R2, Mocca, reviewed by the orchestrator)
+
+- **Survey** (llama.cpp after the pin, ik_llama.cpp, six other engines; receipts in the R2
+  scratch folder): one idea fits this hardware, upstream `6d194531e1`, full threadgroups for the
+  contiguous unary, row-broadcast binary and GLU kernels (a decode step has one row, which ran
+  on one threadgroup). Rejected with receipts: `988190680d` and `1f8fa52318` need simdgroup
+  matrix ops (`simdgroup matrix mul. = false` on the D700); `df11702136` argmax is off the hot
+  path; the MXFP4 half of `6d194531e1` has no model here to measure it.
+- **`metal/0076`** carries it, on by default, `TOSH_FULL_TG_DISABLE=1` for the old dispatch.
+  Dev build, card 1, `llama-bench -p 0 -n 128 -r 5 -fa 1`, warmup discarded by llama-bench, one
+  process per cell, on/off alternated, two rounds: Qwen3-4B Q4_K_M 16.649 / 16.640 on against
+  16.597 / 16.600 off; Nemotron-3.5-Bolt-E4B Q4_K_M 13.739 / 13.745 against 13.513 / 13.517
+  (sd <= 0.012). Every op 13983/13983 on cards 0 and 1 with it on; the element-wise set 437/437
+  with it off; greedy 256-token server text byte-identical on and off (Nemotron, 500 bytes).
+- **A2, the drafter head on the shipped beta.5 server**: Ornith-1.0-35B Q6_K `-ngl 0 -c 16384`,
+  DFlash Q8_0 drafter on card 1, `--spec-draft-n-max 3`, 128 greedy tokens, 4 requests per
+  server with the first discarded, N = 2 servers per arm: head on the card 12.35 tok/s
+  (sd 0.13), on the host (`TOSH_DFLASH_HEAD_HOST=1`) 11.63 (sd 0.09), no drafter 11.16
+  (sd 0.05); draft generation 20.6 against 32.5 ms per call; acceptance 73/87 in both arms;
+  every drafted text byte-identical to the plain one.
+- **A1 is void.** Mocca compared `dist/XeonLLM-v0.87.31-beta.4-noavx2.dmg`, a leftover of the
+  rename built on 2026-10-31, against beta.5 and found the same engine bytes. The published
+  beta.4 is `ToshLLM-v0.87.31-beta.4-noavx2.dmg` (sha256 `dbe3ce7f...`, matching the release
+  asset). Redone by the orchestrator below.

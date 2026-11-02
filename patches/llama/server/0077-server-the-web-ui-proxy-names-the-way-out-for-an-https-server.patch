@@ -1,0 +1,33 @@
+From 397917a2af90831714c58246bd19f86413a36726 Mon Sep 17 00:00:00 2001
+From: SamerKharboush <samer.elnady@gmail.com>
+Date: Mon, 2 Nov 2026 02:18:08 +0100
+Subject: [PATCH] server: the web UI proxy names the way out when it is asked
+ for an https server
+
+The engine is built without TLS. The proxy's error now says to add the server in XeonLLM's
+MCP settings, which relay https, or to turn the proxy off for a server that accepts
+browser requests.
+---
+ tools/server/server-models.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/server/server-models.cpp b/tools/server/server-models.cpp
+index d0aad2668..74e2b15b1 100644
+--- a/tools/server/server-models.cpp
++++ b/tools/server/server-models.cpp
+@@ -2508,7 +2508,11 @@ server_http_proxy::server_http_proxy(
+ #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+         cli.reset(new httplib::SSLClient(host, port));
+ #else
+-        throw std::runtime_error("HTTPS requested but CPPHTTPLIB_OPENSSL_SUPPORT is not defined");
++        // XeonLLM builds the engine without TLS. Say what to do instead: the browser can reach
++        // the server itself, and the app's MCP settings relay https servers.
++        throw std::runtime_error("this engine is built without TLS, so its proxy cannot reach https servers: "
++                                 "add it in XeonLLM Settings > MCP, or turn off \"Use llama-server proxy\" "
++                                 "for this server if it accepts browser requests");
+ #endif
+     }
+ 
+-- 
+2.50.1 (Apple Git-155)
+
