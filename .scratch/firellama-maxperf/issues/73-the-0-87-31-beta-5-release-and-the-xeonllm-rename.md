@@ -94,3 +94,9 @@ draws the window on a real display.
   rename built on 2026-10-31, against beta.5 and found the same engine bytes. The published
   beta.4 is `ToshLLM-v0.87.31-beta.4-noavx2.dmg` (sha256 `dbe3ce7f...`, matching the release
   asset). Redone by the orchestrator below.
+- **A1 redone on the published DMGs** (orchestrator): beta.4 `ToshLLM-v0.87.31-beta.4-noavx2.dmg`
+  (llama-bench sha256 `40343e1f45c567a3...`) against the shipped beta.5 bundle (`2ed184f66e32ec34...`),
+  card 1, `llama-bench -p 0 -n 128 -r 5 -fa 1 -ngl 99`, warmup discarded by llama-bench, order
+  b4 b5 b5 b4 per round, two rounds, 4 processes per cell, sd <= 0.012: Qwen3-4B Q4_K_M
+  16.153-16.168 (beta.4) against 16.604-16.612 (beta.5); Nemotron-3.5-Bolt-E4B Q4_K_M
+  13.001-13.024 against 13.521-13.531. The beta.5 notes' table holds on the shipped binaries.
