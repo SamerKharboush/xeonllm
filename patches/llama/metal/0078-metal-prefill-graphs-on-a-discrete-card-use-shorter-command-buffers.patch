@@ -1,0 +1,138 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SamerKharboush <samer.elnady@gmail.com>
+Date: Mon, 2 Nov 2026 21:30:00 +0100
+Subject: [PATCH] metal: prefill graphs on a discrete card use shorter command
+ buffers
+
+A graph is encoded into n_cb + 1 command buffers and the backend sets n_cb = 1, so a prefill
+graph runs as the main thread's tenth and one buffer with the rest. Qwen3-14B Q4_K_M split by
+layer over two D700s at -c 32768 overcommits each card (about 6.9 GB against a 6.44 GB working
+set); paged, that second buffer runs past the GPU watchdog on a 5k-token prompt
+(kIOAccelCommandBufferCallbackErrorTimeout) and the backend fails every request after it.
+
+A graph whose first matrix product carries 32 or more tokens now uses TOSH_MTL_PREFILL_CB extra
+buffers (default 4) on a device without unified memory; decode graphs and Apple Silicon keep
+the layout they had. TOSH_MTL_PREFILL_CB=1 restores it everywhere. The adaptive main-thread
+share reads the main buffer of the graph it measured and skips a graph whose layout changed,
+and synchronize checks every slot, since a batch graph fills slots a decode graph leaves alone.
+---
+ ggml/src/ggml-metal/ggml-metal-context.m | 56 +++++++++++++++++++++--
+ 1 file changed, 53 insertions(+), 3 deletions(-)
+
+diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml-metal-context.m
+index 7ac5e54..1ee33cb 100644
+--- a/ggml/src/ggml-metal/ggml-metal-context.m
++++ b/ggml/src/ggml-metal/ggml-metal-context.m
+@@ -316,6 +316,10 @@ static void tosh_cbp_dump_dev(ggml_metal_device_t dev) {
+ 
+     // command buffer state
+     int n_cb;           // number of extra threads used to submit the command buffers
++    int n_cb_set;       // n_cb as set by ggml_metal_set_n_cb; n_cb itself can grow for one graph
++    int n_cb_last;      // n_cb the previous graph was submitted with (its main buffer is cmd_bufs[n_cb_last])
++    int n_cb_prefill;   // n_cb for a batch graph on a discrete card, 0 = same as n_cb_set
++    bool n_cb_logged;
+     int n_nodes_0;      // number of nodes submitted by the main thread
+     int n_nodes_1;      // remaining number of nodes submitted by the n_cb threads
+     int n_nodes_per_cb;
+@@ -1196,6 +1200,15 @@ ggml_metal_t ggml_metal_init(ggml_metal_device_t dev, bool prefetch) {
+ 
+         res->adapt_n_main = !props_dev->has_unified_memory && TOSH_ENV("TOSH_N_MAIN_FIXED") == nil;
+ 
++        // TOSH_MTL_PREFILL_CB=<n>: extra command buffers for a batch graph on a discrete card
++        // (default 4; 1 is the layout every other graph uses). A paged card runs a prefill
++        // buffer past the GPU watchdog (kIOAccelCommandBufferCallbackErrorTimeout) when the
++        // graph is cut in two, and the backend then fails every later request.
++        if (!props_dev->has_unified_memory) {
++            const char * v = TOSH_ENV("TOSH_MTL_PREFILL_CB");
++            res->n_cb_prefill = MAX(1, MIN(v ? atoi(v) : 4, GGML_METAL_MAX_COMMAND_BUFFERS));
++        }
++
+         {
+             const char * val = TOSH_ENV("GGML_METAL_GRAPH_DEBUG");
+             res->debug_graph = val ? atoi(val) : 0;
+@@ -1413,9 +1426,10 @@ void ggml_metal_synchronize(ggml_metal_t ctx) {
+                 clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - cbp_t, memory_order_relaxed);
+     }
+ 
+-    // check status of all command buffers
++    // check status of all command buffers; a batch graph may have filled slots that the
++    // graphs after it, with fewer buffers, left alone
+     {
+-        const int n_cb = ctx->n_cb;
++        const int n_cb = GGML_METAL_MAX_COMMAND_BUFFERS;
+ 
+         for (int cb_idx = 0; cb_idx <= n_cb; ++cb_idx) {
+             id<MTLCommandBuffer> cmd_buf = ctx->cmd_bufs[cb_idx].obj;
+@@ -4208,12 +4222,28 @@ bool ggml_metal_exchange_reduce(ggml_metal_t ctx_self, ggml_metal_t ctx_peer,
+ // submitting its own, which halves the command buffers a split token creates.
+ // The other thread must finish encoding before the GPU drains the main thread's share, so
+ // enc*(n - m) <= gpu*m with both per node, measured on the share itself; never below the default.
++// tokens in the graph's batch, read from the first matrix product: its src1 is the batch
++// ([n_embd, n_tokens] for MUL_MAT, [n_embd, n_used, n_tokens] for MUL_MAT_ID), so a decode graph
++// reads n_seq and a prefill graph its ubatch
++static int64_t ggml_metal_graph_n_tokens(const struct ggml_cgraph * gf) {
++    for (int i = 0; i < gf->n_nodes; ++i) {
++        const struct ggml_tensor * node = gf->nodes[i];
++        if (node->op == GGML_OP_MUL_MAT && node->src[1] != NULL) {
++            return node->src[1]->ne[1]*node->src[1]->ne[2]*node->src[1]->ne[3];
++        }
++        if (node->op == GGML_OP_MUL_MAT_ID && node->src[1] != NULL) {
++            return node->src[1]->ne[2];
++        }
++    }
++    return 0;
++}
++
+ static int ggml_metal_adapt_n_main(ggml_metal_t ctx, int n_nodes, int n_main) {
+     const int prev = ctx->am_prev;
+     ctx->am_prev = 0;
+ 
+     if (prev > 0 && ctx->n_nodes_0 > 0 && ctx->n_nodes_1 > 0 && ctx->am_enc_ns > 0) {
+-        id<MTLCommandBuffer> cb0 = ctx->cmd_bufs[ctx->n_cb].obj;
++        id<MTLCommandBuffer> cb0 = ctx->cmd_bufs[ctx->n_cb_last].obj;
+         const float enc = 1e-9f*(float) ctx->am_enc_ns/ctx->n_nodes_0;
+         // a graph that compiled pipelines while encoding says nothing about the next one
+         if (cb0 != nil && [cb0 status] == MTLCommandBufferStatusCompleted && enc < 20e-6f) {
+@@ -4338,12 +4368,30 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+     }
+     int n_main = n_main_env >= 0 ? n_main_env : MAX(64, 0.1*gf->n_nodes);
+ 
++    // a batch graph on a discrete card is cut into more, shorter buffers (TOSH_MTL_PREFILL_CB);
++    // the enqueue path only commits buffers past the second without an abort callback
++    ctx->n_cb = ctx->n_cb_set;
++    if (ctx->n_cb_prefill > ctx->n_cb && ctx->n_cb > 0 && ctx->abort_callback == NULL &&
++        ggml_metal_graph_n_tokens(gf) >= 32) {
++        ctx->n_cb = ctx->n_cb_prefill;
++        if (!ctx->n_cb_logged) {
++            ctx->n_cb_logged = true;
++            GGML_LOG_INFO("%s: %s: batch graphs use %d command buffers (TOSH_MTL_PREFILL_CB=%d)\n",
++                    __func__, ctx->name, ctx->n_cb + 1, ctx->n_cb);
++        }
++    }
++
+     // number of threads in addition to the main thread
+     const int n_cb = ctx->n_cb;
+ 
++    // the share measured on the previous graph only holds for the same layout
++    if (ctx->n_cb_last != n_cb) {
++        ctx->am_prev = 0;
++    }
+     if (n_main_env < 0 && ctx->adapt_n_main) {
+         n_main = ggml_metal_adapt_n_main(ctx, gf->n_nodes, n_main);
+     }
++    ctx->n_cb_last = n_cb;
+ 
+     // keep the memory wired
+     ggml_metal_device_rsets_keep_alive(ctx->dev);
+@@ -4797,6 +4845,8 @@ void ggml_metal_set_n_cb(ggml_metal_t ctx, int n_cb) {
+         n_cb = 0;
+     }
+ 
++    ctx->n_cb_set = MIN(n_cb, GGML_METAL_MAX_COMMAND_BUFFERS);
++
+     if (ctx->n_cb != n_cb) {
+         ctx->n_cb = MIN(n_cb, GGML_METAL_MAX_COMMAND_BUFFERS);
+ 
+-- 
+2.50.1 (Apple Git-155)
+
