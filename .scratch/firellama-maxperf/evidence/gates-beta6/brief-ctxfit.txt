@@ -1,0 +1,82 @@
+You are implementing one app change in XeonLLM (a Swift/SwiftUI macOS app that launches a llama.cpp
+engine, for Intel Macs with AMD GPUs). Repo: /Users/sam/firellama. Read specs/release-contract.md
+sections 5 and 7 and CLAUDE.md first.
+
+<hard-rules>
+- Do NOT run llama-server, llama-bench, test-backend-ops, make-app.sh, build-engines.sh, make-dmg.sh,
+  scripts/stress-release.sh or anything else that loads a model or uses the GPU. Allowed: `swift build`,
+  `swift test` (they use no GPU), reading files, grep.
+- Do not commit, tag, push, touch dist/, /Applications, the user's defaults domains (dev.xeonllm.app,
+  dev.engel.toshllm) or anything on port 8080.
+- Keep GPL headers; keep TOSH_* / SettingsKeys names. Every function, file or line you name must exist
+  (grep it) or be marked new.
+</hard-rules>
+
+<problem>
+Mac Pro 2013, 2x FirePro D700, each card's working set 6144 MiB (recommendedMaxWorkingSetSize). The app
+launches Qwen3-14B-Q4_K_M on both cards (-ngl 99, -c 32768, f16 KV, split by layer or tensor). Measured
+per card on the server log at that launch: 3954 MiB weights + 2688 MiB KV + 284 MiB compute = 6926 MiB,
+over 6144, so the driver pages. Deep in a long chat (~14k+ tokens) a command buffer then runs past the
+macOS GPU watchdog, the backend goes into an error state and every later chat request gets HTTP 500
+"Compute error.". The same launch with a smaller KV footprint (q8_0 KV, ~5666 MiB per card) passes every
+cell. The user chose this fix: keep the f16 cache and LOWER THE CONTEXT the app launches with until the
+model fits the cards.
+
+Today the single-model launch passes `ctx` straight through (Sources/Servers/Server.swift around line
+360: "-c", String(ctx)). The router path already shrinks context for models that do not fit
+(`routerCtx`, Sources/Servers/Server.swift around line 457): follow its spirit, not its numbers.
+The placement rule (Estimator.prefersHostPlacement, Sources/Hardware/Hardware.swift ~470) and ticket
+.scratch/firellama-maxperf/issues/75-the-placement-rule-ignores-the-kv-cache-on-the-card-path.md give
+the background; read ticket 75.
+</problem>
+
+<task>
+1. Add a pure, testable function (new), e.g. in Estimator (Sources/Hardware/Hardware.swift):
+     static func cardFitCtx(spec: ModelSpec, perCardVramMB: Int, devices: Int,
+                            requested: Int, kvScale: Double) -> Int
+   Per card need(ctx) in MiB = weights/devices + KV(ctx)*kvScale/devices + 300 (compute), where weights
+   is spec.weightsGB in MiB and KV uses the same per-token KV figure Estimator.kvCache uses (make a
+   non-private helper if needed). Budget per card = perCardVramMB - 256. If need(requested) <= budget,
+   return requested unchanged. Otherwise return the largest ctx that fits, rounded DOWN to a multiple of
+   1024, never below 4096 (return 4096 if even that does not fit). Comment the constants with where
+   they come from (the measured 14B row above), in the file's comment style.
+   Check your formula against the measured row: at 32768 f16 on 2 cards it must come out over budget,
+   and it must not be optimistic against 6926 MiB by more than ~5% (state the number in a comment).
+2. Use it in the single-model launch only, for the card path: placement == .card, not routerMode, not
+   usesAutoPlan (the engine's plan sizes memory itself), modelSpec known, GPUs in use. devices =
+   splitDeviceCount when wantsSplit, else 1; perCardVramMB = the smallest vramMB of the GPUs the launch
+   uses (find how Server.swift gets them; ServerController.availableGPUs() / gpuList). kvScale from
+   launchKV exactly as resolvePlacement does (Sources/Servers/Server.swift ~226). The "-c" argument
+   uses the fitted value. Router mode, host placement, expert tier and the auto plan are unchanged.
+3. When the context is lowered, write one line into the server log header next to the existing
+   placement line (grep for where "placement:" is written), e.g.
+     context: 32768 -> 16384 (f16 KV, 2 cards, 6144 MiB each: the requested context does not fit)
+   and show the user a note the same way `fitNote` is shown (grep where fitNote is displayed in the
+   UI and add a sibling, with the same en/es pattern as fitNoteText). Do not change the user's saved
+   ctx setting.
+4. Tests in Tests/XeonLLMTests.swift beside testThe14BFitsAcrossBothCardsAndStaysOnThem (class
+   EstimatorTests): use ModelSpec values that match the real files (read how the existing 14B test
+   builds its spec; give the 14B a kvBytesPerToken for Qwen3-14B: 40 layers x 8 KV heads x 128 dims x
+   2 (K and V) x 2 bytes = 163840 bytes/token, or the field the spec uses). Cases:
+   a. 14B, 2 cards, 6144 MiB each, 32768, f16 -> lowered, a multiple of 1024, >= 12288 and < 32768,
+      and need(result) <= budget.
+   b. Qwen3-8B-Q4_K_M (file 5027783488 bytes, 36 layers, 8 KV heads, 128 dims), 2 cards, 32768 f16 ->
+      unchanged 32768 (it ran every stress cell at this launch).
+   c. requested already fits -> unchanged; requested below 4096 -> unchanged.
+   d. a model whose weights alone exceed the budget -> 4096.
+   e. q8_0 KV (kvScale from Estimator.kvTypeScale("q8_0")) gives a larger result than f16 for the 14B.
+   f. one card (devices 1) halves the room: 14B-sized KV on a 4B-sized model at 32768 is lowered.
+</task>
+
+<gates> (run both, report exact output lines)
+G1: cd /Users/sam/firellama && swift build 2>&1 | tail -5
+G2: cd /Users/sam/firellama && swift test 2>&1 | tail -30
+    Known pre-existing failures: only MCPStdioTransportTests (a race). Name every failure; any other
+    failure is yours to fix.
+</gates>
+
+<report>
+End with: the diff summary (files, functions), the formula with its number for the measured 14B row
+(predicted MiB per card at 32768 vs measured 6926) and the context it picks for the 14B on 2 cards, the
+G1/G2 output lines, and anything you were unsure about.
+</report>

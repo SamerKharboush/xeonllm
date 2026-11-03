@@ -354,10 +354,11 @@ struct ServerSettings {
         // Quantized KV requires FA, so it stays forced. Elsewhere the AMD kernel rides
         // on "auto": an explicit "1" would drop uncovered models to the CPU fallback.
         let faValue = kvNeedsFlashAttention ? "1" : (effectiveFaAmd ? "auto" : flashAttn)
+
         var args = [
             "-m", modelPath,
             "-ngl", String(effectiveNgl),
-            "-c", String(ctx),
+            "-c", String(cardFit?.ctx ?? ctx),
             "-t", String(threads),
             "-fa", faValue,
             "--host", localNetworkDiscovery ? "0.0.0.0" : "127.0.0.1",
@@ -1111,6 +1112,24 @@ struct ServerSettings {
         return (cacheTypeK, cacheTypeV)
     }
 
+    /// The lowered context of a card launch whose KV cache would overcommit the cards
+    /// (Estimator.cardFitCtx, ticket 75); nil when the requested context fits or the
+    /// launch is not a single model on the cards. The saved ctx setting is not changed.
+    var cardFit: (ctx: Int, devices: Int, perCardMB: Int, kv: String)? {
+        guard placement == .card, !routerMode, !usesAutoPlan, usesGPUs,
+              let spec = modelSpec else { return nil }
+        let kv = launchKV
+        let kvScale = (Estimator.kvTypeScale(kv.k) + Estimator.kvTypeScale(kv.v)) / 2
+        let gpus = ServerController.availableGPUs()
+        let indices = selectedGPUIndices
+        guard let perCard = gpus.filter({ indices.contains($0.index) }).map(\.vramMB).min(),
+              perCard > 0 else { return nil }
+        let devices = wantsSplit ? splitDeviceCount : 1
+        let fitted = Estimator.cardFitCtx(spec: spec, perCardVramMB: perCard, devices: devices,
+                                          requested: ctx, kvScale: kvScale)
+        return fitted < ctx ? (fitted, devices, perCard, kv.k) : nil
+    }
+
     /// Resolves DFlash against the same physical GPU selection and memory reserve
     /// that will be passed to the engine. A nil plan means metadata or hardware is
     /// unavailable; a plan with nil layers means DFlash cannot fit safely.
@@ -1833,6 +1852,8 @@ final class ServerController: ObservableObject {
     @Published var autoPlanNote: String?
     /// Set when the engine's --fit gave up and continued with the parameters as given.
     @Published var fitNote: String?
+    /// Set when the launch lowered the context so the KV cache fits the cards (ServerSettings.cardFit).
+    @Published var ctxFitNote: String?
     /// Engine MCP servers the engine said it could not spawn, by engine name -> command.
     @Published private(set) var mcpSpawnFailures: [String: String] = [:]
     private var fitNoteText: String {
@@ -2003,6 +2024,7 @@ final class ServerController: ObservableObject {
         autoRuntime = nil
         autoPlanNote = nil
         fitNote = nil
+        ctxFitNote = nil
         mcpSpawnFailures = [:]
         Task { [weak self] in
             if let pid = previousPID {
@@ -2149,6 +2171,9 @@ final class ServerController: ObservableObject {
         if settings.tensorSplitDowngraded {
             gpuSel += " (tensor needs \(settings.splitDeviceCount) way split of experts this model only divides \(settings.tensorSplitLimit ?? 1) ways)"
         }
+        let contextLine = settings.cardFit.map { f in
+            "\n context: \(settings.ctx) -> \(f.ctx) (\(f.kv) KV, \(f.devices) card\(f.devices == 1 ? "" : "s"), \(f.perCardMB) MiB each: the requested context does not fit)"
+        } ?? ""
         return """
         ========================================================
          XeonLLM \(AppInfo.version) — server start (\(ServerSettings.isAppleSilicon ? "arm64" : "x86_64")\(AppInfo.isNoAVX2 ? " · no-AVX2 build" : ""))
@@ -2158,7 +2183,7 @@ final class ServerController: ObservableObject {
         \(gpus.isEmpty ? "    (none)" : gpus)
          GPU select: \(gpuSel) | force-VRAM-buffers: \(env["GGML_METAL_SHARED_BUFFERS_DISABLE"] == "1" ? "yes" : "no")
          settings: ngl=\(settings.effectiveNgl) \(moeLine) ctx=\(settings.ctx) fa=\(settings.flashAttn) ctk=\(settings.cacheTypeK) ctv=\(settings.cacheTypeV) cacheRAM=\(settings.cacheRAM)
-         placement: \(placementLine)
+         placement: \(placementLine)\(contextLine)
          dflash : \(settings.routerMode ? "per-model router plan" : settings.dflashPlanSummary)
          env: \(envLine)
          args: \(redact(args).joined(separator: " "))
@@ -2275,6 +2300,11 @@ final class ServerController: ObservableObject {
             }
         }
 
+        ctxFitNote = settings.cardFit.map { f in
+            (UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en") == "es"
+                ? "Contexto reducido a \(f.ctx) (de \(settings.ctx)) para que la caché KV quepa en \(f.devices == 1 ? "la tarjeta" : "las tarjetas")"
+                : "Context lowered to \(f.ctx) (from \(settings.ctx)) so the KV cache fits the card\(f.devices == 1 ? "" : "s")"
+        }
         fileLog.startSession()   // new timestamped per-session file, prunes old ones
         consume(Self.startupBanner(settings: settings, args: args))
         if let plan = autoPlan {

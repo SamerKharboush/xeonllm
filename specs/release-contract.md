@@ -40,6 +40,20 @@ checked on the shipped binaries, not the dev tree.
   `kept on the host`.
 - **The mat-vec thresholds** (metal/0074 and its predecessors): `TOSH_MV_ROWS8_DISABLE=1`
   changes tg128 on Qwen3-4B-Q4_K_M by more than the noise, proving the rule is in the binary.
+- **Full threadgroups for the element-wise kernels** (metal/0076): `TOSH_FULL_TG_DISABLE=1`
+  changes tg128 on Nemotron-3.5-Bolt-E4B-Q4_K_M by more than the noise (13.74 against 13.51
+  on the dev build, card 1), and greedy text is byte-identical with and without it.
+- **Shorter prefill command buffers on a discrete card** (metal/0078): a server log at `-lv 4`
+  shows `batch graphs use 5 command buffers (TOSH_MTL_PREFILL_CB=4)` for each card, and the
+  Qwen3-14B-Q4_K_M layer split at `-c 32768` answers a ~5.4k-token prompt with 200 and no
+  `kIOAccelCommandBufferCallbackErrorTimeout`, while `TOSH_MTL_PREFILL_CB=1` on the same run
+  reproduces the timeout and HTTP 500 (the control). Greedy text is byte-identical with and
+  without it, and tg128 on Qwen3-4B-Q4_K_M stays within the noise.
+- **The context fits the cards** (ticket 75, `Estimator.cardFitCtx`): the app's server log
+  header for Qwen3-14B-Q4_K_M at a saved `-c 32768`, f16 KV, split over both D700s shows
+  `context: 32768 -> 16384 (f16 KV, 2 cards, 6144 MiB each: …)` and `args:` carry `-c 16384`;
+  Qwen3-8B-Q4_K_M at the same launch keeps `-c 32768`; the 14B stress cells of section 4 on
+  that launch end with no `kIOAccelCommandBufferCallbackErrorTimeout` and no HTTP 500.
 - **The app's launch defaults.** The server log header shows `TOSH_FA_AMD=1`, the placement
   rule (`placement: card` or `host` per the ticket 67 rule), and the DFlash auto line.
 - **The data migration** from ToshLLM (see section 5).
@@ -60,8 +74,17 @@ All with `dist/XeonLLM.app/Contents/Resources/bin/*`, `GGML_METAL_DEVICE_INDEX=0
    missing names. (beta.5 composed `kernel_mul_mm_bf16e_f32_w_w64`, which was never
    instantiated.)
 3. **Prefill, not only decode.** `llama-bench -p 16,128,256,448,512,1024,2048 -n 0 -r 1` on
-   every model in the stress set (section 4) completes on both cards. A missing kernel, a
-   driver refusal that is not handled, or a non-zero exit fails the release.
+   every model in the stress set (section 4) completes on both cards. A model that fits one
+   card (weights under `recommendedMaxWorkingSetSize`, 6.44 GB on a D700) runs on card 0 and on
+   card 1; a model that does not runs on both cards together (`GGML_METAL_DEVICE_LIST=0,1`,
+   `-sm layer` and `-sm tensor`), as the app places it. One card overcommitted ends in a GPU
+   watchdog timeout (`kIOAccelCommandBufferCallbackErrorTimeout`), which says nothing about
+   the kernels. **Never run a model above one card's working set on one card, in any gate or
+   brief:** card 0 drives the display, and a paged card 0 stalls WindowServer until macOS
+   panics and reboots (`userspace watchdog timeout: no successful checkins from WindowServer`;
+   Ternary-Bonsai-2-27B-PQ2_0 at `-p 1024` on card 0 did this twice on 2026-11-03). A host-placed model runs at `-ngl 0`. A missing kernel, a driver refusal that
+   is not handled, or a non-zero exit fails the release; a refusal with its own exit code and
+   message (exit 86, `RESHAPE cannot be tensor-split`) is handled and is named in the notes.
 4. **The preflight gate** (`-ngl 0` and `-ngl 99` serve, the forced-drop control reads 1)
    and `assert_artifact` (engine commit == pin, bundle version == `VERSION`, engine banner
    version == `VERSION`).
@@ -93,9 +116,13 @@ Per model, through `/v1/chat/completions` with the app's chat template (`--jinja
 - both split modes the app offers (layer and tensor) on the two cards, and `-ngl 0`.
 
 A cell passes when the server stays up, the log has no `kernel not found`, no `exited with
-code`, no `GGML_ASSERT`, the answer is non-empty and on topic (a reviewer reads a sample of
-answers), and greedy text is byte-identical to `-ngl 0` for the same prompt where the model
-fits both ways. The report is a table: model x cell -> pass/fail with the log line that failed.
+code`, no `GGML_ASSERT`, and the answer is non-empty and on topic (a reviewer reads a sample of
+answers). Greedy text is byte-identical across the split modes of one backend (layer against
+tensor), and byte-identical to the previous release's text for the same prompt, model and
+backend. GPU text against `-ngl 0` is reported, not gated: the Metal and CPU backends sum in a
+different order and part ways after a few hundred characters on some models (Qwen3-4B Q4_K_M,
+Qwen3-8B, Nemotron, Underdog-27B on beta.4 and beta.6 alike). The report is a table: model x
+cell -> pass/fail with the log line that failed.
 
 ## 5. App gates
 

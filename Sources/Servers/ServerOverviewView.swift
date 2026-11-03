@@ -57,6 +57,12 @@ struct ServerOverviewView: View {
                     .help(loc.t("El motor no pudo ajustar la memoria y siguió con los parámetros dados.",
                                 "The engine could not fit memory and continued with the parameters as given."))
             }
+            if let note = server.ctxFitNote {
+                Label(note, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(.orange)
+                    .help(loc.t("Con el contexto guardado, la caché KV no cabe en la memoria de las tarjetas y el controlador paginaría; el ajuste guardado no cambia.",
+                                "At the saved context the KV cache does not fit the cards' memory and the driver would page; the saved setting is unchanged."))
+            }
             if let plan = server.autoPlan {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(AutoMemoryText.summary(plan, runtime: server.autoRuntime), systemImage: "memorychip")

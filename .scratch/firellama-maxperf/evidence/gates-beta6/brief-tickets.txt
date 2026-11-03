@@ -1,0 +1,68 @@
+You are writing two tickets in a local markdown issue tracker for XeonLLM (a llama.cpp-based Mac app
+for Intel Macs with AMD GPUs). Repo: /Users/sam/firellama. This is a WRITING task only.
+
+<hard-rules>
+- Do NOT run any program that uses the GPU or starts a server: no llama-server, llama-bench,
+  test-backend-ops, swift test, make-app.sh, build-engines.sh, scripts/*.sh. A release gate run is
+  using both GPUs right now. Allowed: reading files, grep, sed -n, ls, git log/show/diff (read-only).
+- Do not edit any file except the two new ticket files below. Do not commit, tag, push, or touch dist/.
+- Do not touch anything on port 8080 or /Applications.
+- Every file, function, flag or line number you cite must exist: grep it and quote file:line.
+  Something that does not exist yet is marked "(new)".
+</hard-rules>
+
+<read-first>
+- docs/agents/issue-tracker.md (format: Status: line, Type: line, ## Comments at the bottom)
+- .scratch/firellama-maxperf/issues/74-beta-5-loads-every-model-and-crashes-on-the-first-chat.md (style)
+- .scratch/firellama-maxperf/evidence/metal-0078-prefill-command-buffers-2026-11-02.md
+- .scratch/firellama-maxperf/evidence/engine-survey-2026-11-02.md
+- Sources/Hardware/Hardware.swift lines 455-490 (usableVRAM, prefersHostPlacement)
+- Sources/Servers/Server.swift around resolvePlacement (grep it)
+- vendor/llama.cpp/common/arg.cpp: grep for "--fit", "-fitt", "-fitc"; vendor/llama.cpp/common/common.h
+  for the fit fields; vendor/llama.cpp/common/ grep "common_fit_params" and the message
+  "n_gpu_layers already set by user"
+- CLAUDE.md "Performance claims" (rules every number must follow)
+</read-first>
+
+<facts> (measured by the orchestrator on 2026-11-02; use them, do not invent others)
+- Hardware: Mac Pro 2013, 2x FirePro D700, recommendedMaxWorkingSetSize 6.44 GB each, 64 GB RAM.
+- The app launches Qwen3-14B-Q4_K_M (about 9 GB of weights) split by layer over both cards with
+  -ngl 99 -c 32768 and an f16 KV cache. Per card that is about 6.9 GB (MTL0: 3954 MiB weights +
+  ~2688 MiB KV + 284 MiB compute), above 6.44 GB, so the driver pages. Tensor split is ~7.1 GB/card.
+- Paged, a long prefill command buffer hit the GPU watchdog (kIOAccelCommandBufferCallbackErrorTimeout)
+  and every later request got HTTP 500 "Compute error.". Patch metal/0078 (beta.6) cuts prefill
+  graphs into shorter command buffers and the same request now passes; the overcommit itself remains.
+- -ub 256 or -c 8192 also avoided the failure on the old engine.
+- Because the app passes -ngl 99, the engine logs "not fitting params to free device memory:
+  n_gpu_layers already set by user to 99, abort" and its own --fit never runs.
+</facts>
+
+<task>
+Write two new files:
+
+1. .scratch/firellama-maxperf/issues/75-the-placement-rule-ignores-the-kv-cache-on-the-card-path.md
+   Status: open (needs-triage), Type: task. Problem: prefersHostPlacement compares only the weights
+   with the VRAM budget for the card-vs-host decision; the KV cache is only counted for the host
+   check. Quote the exact lines. Show the arithmetic for the 14B case from the facts. Propose 2-3
+   options with trade-offs (for example: count weights + KV + compute per card against the working
+   set and, when over, lower ctx or pick a q8_0 KV; or warn in the UI; or hand it to --fit, ticket 76),
+   and say which existing tests near the rule would need a new case (grep Tests/ for
+   prefersHostPlacement and name the file). Acceptance criteria: a test for the 14B-at-32k case, and
+   the 14B layer split at the app's launch staying under the working set per card on a server log.
+   No performance claims.
+
+2. .scratch/firellama-maxperf/issues/76-let-the-engine-fit-memory-instead-of-forcing-ngl-99.md
+   Status: open (needs-triage), Type: research. Cite the --fit, -fitt, -fitc options with file:line
+   and their defaults from common.h. The open questions from the survey: what "free memory" the
+   engine reads on a D700 (grep how the fit gets device free memory; say what you found, or that it
+   needs a run), whether it shrinks context before moving layers to the CPU (the ticket 67 rule says
+   a partial offload of a dense model is slow here: grep ticket 67 for the number and quote it), and
+   whether it composes with --split-mode tensor. Write the experiment that would answer each, as
+   commands, marked "not run". Blocked by: 75 is NOT required; say how 75 and 76 relate.
+
+Keep the prose plain and short, in the style of ticket 74.
+</task>
+
+<report>
+End with: the two file paths, every file:line you cited, and anything you could not verify.
+</report>

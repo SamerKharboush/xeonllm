@@ -1,0 +1,108 @@
+========================================================
+ XeonLLM 0.87.31-beta.5 — server start (x86_64 · no-AVX2 build)
+ engine : bundled (official) · kernels 7a5a7c692f64
+ model  : Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf
+ GPUs detected:
+    [0] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+    [1] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+ GPU select: split-all · split-mode tensor | force-VRAM-buffers: no
+ settings: ngl=99 ncmoe=0 ctx=32768 fa=auto ctk=f16 ctv=f16 cacheRAM=2048
+ placement: card
+ dflash : auto, ngld=6 (estimated 10.4 / 10.5 GiB budget)
+ env: GGML_METAL_DEVICE_LIST=0,1 TOSH_FA_AMD=1 TOSH_MGPU_EVENTS=1
+ args: -m /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf -ngl 99 -c 32768 -t 10 -fa auto --host 0.0.0.0 --port 8080 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode tensor --tools all --mcp-servers-json {"mcpServers":{"agent":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/server.py","agent"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","env":{"TOSH_AGENT_SERVERS":"agent-eyes,agent-reach,brave-search,browser-use,context7,critical-thinking,deepwiki,deskwright,exa,filesystem,firecrawl,free-search,github,memory,nova-act,nuphus-mcp,parallel-search,playwright,sentry,sequential-thinking,universal-vibet-search,websift","TOSH_TRUST_KEY":"***"},"timeout_ms":900000},"agent-eyes":{"args":["agent-eyes"],"command":"uvx","timeout_ms":60000},"agent-reach":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/remote.py","--url","https:\/\/reach.codes\/mcp","--timeout","30"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","timeout_ms":30000},"brave-search":{"args":["-y","@modelcontextprotocol\/server-brave-search"],"command":"npx","timeout_ms":30000},"browser-use":{"args":["browser-use"],"command":"uvx","timeout_ms":60000},"context7":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/remote.py","--url","https:\/\/mcp.context7.com\/mcp","--timeout","30"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","timeout_ms":30000},"critical-thinking":{"args":["-y","critical-thinking-mcp"],"command":"npx","timeout_ms":60000},"deepwiki":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/remote.py","--url","https:\/\/mcp.deepwiki.com\/mcp","--timeout","30"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","timeout_ms":30000},"deskwright":{"args":["deskwright"],"command":"uvx","timeout_ms":60000},"exa":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/remote.py","--url","https:\/\/mcp.exa.ai\/mcp","--timeout","30"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","timeout_ms":30000},"filesystem":{"args":["-y","@modelcontextprotocol\/server-filesystem@latest","\/Users\/sam"],"command":"npx","timeout_ms":30000},"firecrawl":{"args":["-y","firecrawl-mcp"],"command":"npx","timeout_ms":60000},"free-search":{"args":["free-search-mcp"],"command":"uvx","timeout_ms":30000},"github":{"args":["-y","@modelcontextprotocol\/server-github@latest"],"command":"npx","timeout_ms":60000},"memory":{"args":["-y","@modelcontextprotocol\/server-memory"],"command":"npx","timeout_ms":30000},"nova-act":{"args":["amazon-nova-act-mcp"],"command":"uvx","timeout_ms":60000},"nuphus-mcp":{"args":["-y","nuphus-mcp"],"command":"npx","timeout_ms":60000},"parallel-search":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/remote.py","--url","https:\/\/search.parallel.ai\/mcp","--timeout","30"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","timeout_ms":30000},"playwright":{"args":["-y","@playwright\/mcp@latest"],"command":"npx","timeout_ms":60000},"scientific":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/server.py","scientific"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","env":{"TOSH_TRUST_KEY":"***"},"timeout_ms":30000},"sentry":{"args":["-y","@sentry\/mcp-server@latest"],"command":"npx","timeout_ms":60000},"sequential-thinking":{"args":["-y","@modelcontextprotocol\/server-sequential-thinking"],"command":"npx","timeout_ms":30000},"sympy":{"args":["-I","-B","\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/tosh_sympy\/server.py"],"command":"\/Applications\/XeonLLM.app\/Contents\/Resources\/tosh-sympy\/python\/bin\/python3","env":{"TOSH_TRUST_KEY":"***"},"timeout_ms":30000},"universal-vibet-search":{"args":["universal-vibet-search-mcp"],"command":"uvx","timeout_ms":30000},"websift":{"args":["websift-mcp"],"command":"uvx","timeout_ms":30000}}} --mcp-agent agent --ui-mcp-proxy -n 2048 -md /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.dflash.gguf --spec-type draft-dflash -ngld 6 -ctkd q8_0 -ctvd q8_0 --path /Applications/XeonLLM.app/Contents/Resources/web-ui --ui-config {"maxImageMPixels":1,"pdfAsImage":false} -ctk q8_0 -ctv q8_0
+========================================================
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.174.089 W server tools or MCP servers are enabled, using localhost as default CORS origin (change via --cors-origins)
+0.00.174.247 I srv  llama_server: initializing ...
+0.00.174.262 I cmn  common_param: common_params_print_info: ToshLLM engine 0.87.31-beta.4 (app 0.87.31-beta.5)
+0.00.174.263 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.370.138 I srv         start: MCP warmup: 'agent' discovered 1 tools
+0.00.373.085 W srv         start: MCP 'agent-eyes': failed to spawn 'uvx'
+0.00.373.093 W srv         start: MCP warmup: failed to spawn 'agent-eyes': 
+0.03.184.684 I srv         start: MCP warmup: 'agent-reach' discovered 0 tools
+0.03.188.238 W srv         start: MCP 'brave-search': failed to spawn 'npx'
+0.03.188.245 W srv         start: MCP warmup: failed to spawn 'brave-search': 
+0.03.189.035 W srv         start: MCP 'browser-use': failed to spawn 'uvx'
+0.03.189.043 W srv         start: MCP warmup: failed to spawn 'browser-use': 
+0.10.536.683 I srv         start: MCP warmup: 'context7' discovered 2 tools
+0.10.540.017 W srv         start: MCP 'critical-thinking': failed to spawn 'npx'
+0.10.540.026 W srv         start: MCP warmup: failed to spawn 'critical-thinking': 
+0.20.952.222 I srv         start: MCP warmup: 'deepwiki' discovered 0 tools
+0.20.955.576 W srv         start: MCP 'deskwright': failed to spawn 'uvx'
+0.20.955.585 W srv         start: MCP warmup: failed to spawn 'deskwright': 
+0.23.457.145 I srv         start: MCP warmup: 'exa' discovered 0 tools
+0.23.460.442 W srv         start: MCP 'filesystem': failed to spawn 'npx'
+0.23.460.452 W srv         start: MCP warmup: failed to spawn 'filesystem': 
+0.23.461.257 W srv         start: MCP 'firecrawl': failed to spawn 'npx'
+0.23.461.265 W srv         start: MCP warmup: failed to spawn 'firecrawl': 
+0.23.461.986 W srv         start: MCP 'free-search': failed to spawn 'uvx'
+0.23.461.994 W srv         start: MCP warmup: failed to spawn 'free-search': 
+0.23.462.794 W srv         start: MCP 'github': failed to spawn 'npx'
+0.23.462.803 W srv         start: MCP warmup: failed to spawn 'github': 
+0.23.463.503 W srv         start: MCP 'memory': failed to spawn 'npx'
+0.23.463.511 W srv         start: MCP warmup: failed to spawn 'memory': 
+0.23.464.257 W srv         start: MCP 'nova-act': failed to spawn 'uvx'
+0.23.464.265 W srv         start: MCP warmup: failed to spawn 'nova-act': 
+0.23.464.982 W srv         start: MCP 'nuphus-mcp': failed to spawn 'npx'
+0.23.464.990 W srv         start: MCP warmup: failed to spawn 'nuphus-mcp': 
+0.31.169.714 I srv         start: MCP warmup: 'parallel-search' discovered 2 tools
+0.31.173.073 W srv         start: MCP 'playwright': failed to spawn 'npx'
+0.31.173.081 W srv         start: MCP warmup: failed to spawn 'playwright': 
+0.31.313.875 I srv         start: MCP warmup: 'scientific' discovered 6 tools
+0.31.316.621 W srv         start: MCP 'sentry': failed to spawn 'npx'
+0.31.316.630 W srv         start: MCP warmup: failed to spawn 'sentry': 
+0.31.317.381 W srv         start: MCP 'sequential-thinking': failed to spawn 'npx'
+0.31.317.390 W srv         start: MCP warmup: failed to spawn 'sequential-thinking': 
+0.31.457.562 I srv         start: MCP warmup: 'sympy' discovered 4 tools
+0.31.460.233 W srv         start: MCP 'universal-vibet-search': failed to spawn 'uvx'
+0.31.460.241 W srv         start: MCP warmup: failed to spawn 'universal-vibet-search': 
+0.31.461.226 W srv         start: MCP 'websift': failed to spawn 'uvx'
+0.31.461.233 W srv         start: MCP warmup: failed to spawn 'websift': 
+0.31.461.462 I srv         setup: Added 14 MCP tools
+0.31.461.484 W srv  llama_server: security: MCP proxy (experimental), server tools (experimental), MCP servers (experimental) enabled - do not expose to untrusted environments
+0.31.461.502 W srv  llama_server: security: listening on 0.0.0.0 without an API key: other computers that can reach it can use the API and the model, the MCP servers agent, agent-eyes, agent-reach, brave-search, browser-use, context7, critical-thinking, deepwiki, deskwright, exa, filesystem, firecrawl, free-search, github, memory, nova-act, nuphus-mcp, parallel-search, playwright, scientific, sentry, sequential-thinking, sympy, universal-vibet-search, websift, the web UI's MCP proxy (built-in tools stay for this computer); --api-key makes clients send a key
+0.31.463.544 I srv    load_model: loading model '/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf'
+0.31.463.563 I Tosh MoE: standard
+0.31.463.686 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.32.318.568 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.32.327.712 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.32.349.885 W load: '</s>' is a normal token here, removing it from EOG list
+0.36.986.942 I cmn          init: llama threadpool init, n_threads = 10
+0.37.397.737 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_lds32
+0.37.442.834 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk512_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk512_kf16_vf16_w64_lds32
+0.37.545.494 I common_speculative_init_result: loading draft model '/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.dflash.gguf'
+0.38.352.490 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.38.361.105 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.38.377.949 W load: '</s>' is a normal token here, removing it from EOG list
+0.38.999.208 W srv    load_model: cache_reuse is not supported by this context, it will be disabled
+0.39.116.283 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.39.116.320 I common_speculative_impl_draft_dflash: adding speculative implementation 'draft-dflash'
+0.39.116.326 I common_speculative_impl_draft_dflash: - n_max=3, n_min=0, p_min=0.00
+0.39.116.327 I common_speculative_impl_draft_dflash: - block_size=8, mask_token_id=4, n_extract=5, sample_from_anchor=true
+0.39.116.354 W set_sampler: backend sampling not supported with SPLIT_MODE_TENSOR; using CPU
+0.39.116.362 W spec common_specu: backend offload failed for seq_id=0; using CPU sampler
+0.39.172.313 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kq8_0_vq8_0_w64; using kernel_flash_attn_ext_vec_amd_dk128_kq8_0_vq8_0_w64_lds32
+0.39.212.900 I srv  llama_server: model loaded
+0.39.212.924 I srv  llama_server: listening on http://0.0.0.0:8080
+0.39.212.925 W srv  llama_server: notice: server default port will be changed to :9931 in a future release (ref: https://github.com/ggml-org/llama.cpp/pull/26508)
+19.51.949.683 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.52.038.706 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.52.038.780 I srv  proxy_reques: proxying POST request to https://mcp.exa.ai:443/mcp
+19.52.039.106 W srv    operator(): got exception: {"error":{"code":500,"message":"HTTPS requested but CPPHTTPLIB_OPENSSL_SUPPORT is not defined","type":"server_error"}}
+19.52.084.875 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.52.115.635 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.57.555.481 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.57.732.673 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.57.732.717 I srv  proxy_reques: proxying POST request to https://mcp.exa.ai:443/mcp
+19.57.732.808 W srv    operator(): got exception: {"error":{"code":500,"message":"HTTPS requested but CPPHTTPLIB_OPENSSL_SUPPORT is not defined","type":"server_error"}}
+19.57.764.380 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+19.57.770.633 W srv    operator(): (CORS) skip non-localhost origin: http://10.139.172.6:8080
+43.27.567.019 I srv    operator(): operator(): cleaning up before exit...

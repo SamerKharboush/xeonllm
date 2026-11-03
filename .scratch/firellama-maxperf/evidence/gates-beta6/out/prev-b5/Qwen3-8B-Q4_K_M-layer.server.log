@@ -1,0 +1,46 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.166.979 W DEPRECATED: argument '--split-mode' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.166.996 W server tools or MCP servers are enabled, using localhost as default CORS origin (change via --cors-origins)
+0.00.167.140 I srv  llama_server: initializing ...
+0.00.167.151 I cmn  common_param: common_params_print_info: ToshLLM engine 0.87.31-beta.4 (app standalone)
+0.00.167.152 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.167.688 W srv  llama_server: security: MCP proxy (experimental), server tools (experimental) enabled - do not expose to untrusted environments
+0.00.169.513 I srv    load_model: loading model '/Users/sam/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.169.542 I Tosh MoE: standard
+0.00.809.732 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.06.180.918 I cmn          init: llama threadpool init, n_threads = 10
+0.06.499.694 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.06.949.143 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.06.964.236 I srv  llama_server: model loaded
+0.06.964.245 I srv  llama_server: listening on http://127.0.0.1:62919
+0.07.566.712 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.07.566.776 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.07.962.574 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.08.315.606 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+0.15.835.042 I slot print_timing: id  0 | task 0 | prompt eval time =    2803.31 ms /    80 tokens (   35.04 ms per token,    28.54 tokens per second)
+0.15.835.050 I slot print_timing: id  0 | task 0 |        eval time =    5464.91 ms /    64 tokens (   86.74 ms per token,    11.53 tokens per second)
+0.15.835.051 I slot print_timing: id  0 | task 0 |       total time =    8268.22 ms /   144 tokens
+0.15.835.053 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+0.15.835.099 I slot      release: id  0 | task 0 | stop processing: n_tokens = 143, truncated = 0
+0.15.849.447 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.143 (> 0.100 thold), f_keep = 0.448
+0.15.861.887 I slot launch_slot_: id  0 | task 65 | processing task, is_child = 0
+0.28.611.950 I slot print_timing: id  0 | task 65 | prompt eval time =    7226.06 ms /   384 tokens (   18.82 ms per token,    53.14 tokens per second)
+0.28.611.960 I slot print_timing: id  0 | task 65 |        eval time =    5523.97 ms /    64 tokens (   87.68 ms per token,    11.40 tokens per second)
+0.28.611.961 I slot print_timing: id  0 | task 65 |       total time =   12750.03 ms /   448 tokens
+0.28.611.962 I slot print_timing: id  0 | task 65 |    graphs reused =        125
+0.28.612.007 I slot      release: id  0 | task 65 | stop processing: n_tokens = 511, truncated = 0
+0.28.628.971 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.291 (> 0.100 thold), f_keep = 0.845
+0.28.629.188 I slot launch_slot_: id  0 | task 130 | processing task, is_child = 0
+0.57.143.213 I slot print_timing: id  0 | task 130 | prompt eval time =   22772.17 ms /  1051 tokens (   21.67 ms per token,    46.15 tokens per second)
+0.57.143.222 I slot print_timing: id  0 | task 130 |        eval time =    5741.83 ms /    64 tokens (   91.14 ms per token,    10.97 tokens per second)
+0.57.143.240 I slot print_timing: id  0 | task 130 |       total time =   28514.00 ms /  1115 tokens
+0.57.143.241 I slot print_timing: id  0 | task 130 |    graphs reused =        186
+0.57.143.323 I slot      release: id  0 | task 130 | stop processing: n_tokens = 1546, truncated = 0
+0.57.155.447 I srv    operator(): operator(): cleaning up before exit...

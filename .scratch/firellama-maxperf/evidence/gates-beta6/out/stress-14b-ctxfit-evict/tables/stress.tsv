@@ -1,0 +1,7 @@
+model	split	cell	verdict	detail	prompt_tokens
+Qwen3-14B-Q4_K_M.gguf	layer	evict	PASS	prompt_tokens=15168 completion_tokens=64 758.6s	15168
+Qwen3-14B-Q4_K_M.gguf	layer	after-evict	PASS	prompt_tokens=103 completion_tokens=64 11.0s	103
+Qwen3-14B-Q4_K_M.gguf	layer	over-ctx	PASS	refused with 400 at n_ctx=16384	0
+Qwen3-14B-Q4_K_M.gguf	layer	after-over-ctx	PASS	prompt_tokens=103 completion_tokens=64 9.6s	103
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	SKIP	no tensor run of this model	0

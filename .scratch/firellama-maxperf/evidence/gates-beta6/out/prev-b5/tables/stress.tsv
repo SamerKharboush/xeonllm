@@ -1,0 +1,16 @@
+model	split	cell	verdict	detail	prompt_tokens
+Qwen3-4B-Q4_K_M.gguf	layer	band16	PASS	prompt_tokens=80 completion_tokens=64 5.7s	80
+Qwen3-4B-Q4_K_M.gguf	layer	band300	PASS	prompt_tokens=448 completion_tokens=64 7.8s	448
+Qwen3-4B-Q4_K_M.gguf	layer	band1100	PASS	prompt_tokens=1483 completion_tokens=64 16.0s	1483
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-tensor	SKIP	no tensor run of this model	0
+Qwen3-8B-Q4_K_M.gguf	layer	band16	PASS	prompt_tokens=80 completion_tokens=64 8.3s	80
+Qwen3-8B-Q4_K_M.gguf	layer	band300	PASS	prompt_tokens=448 completion_tokens=64 12.8s	448
+Qwen3-8B-Q4_K_M.gguf	layer	band1100	PASS	prompt_tokens=1483 completion_tokens=64 28.5s	1483
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-tensor	SKIP	no tensor run of this model	0
+Qwen3-14B-Q4_K_M.gguf	layer	band16	PASS	prompt_tokens=80 completion_tokens=64 14.0s	80
+Qwen3-14B-Q4_K_M.gguf	layer	band300	PASS	prompt_tokens=448 completion_tokens=64 23.8s	448
+Qwen3-14B-Q4_K_M.gguf	layer	band1100	PASS	prompt_tokens=1483 completion_tokens=64 60.3s	1483
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	SKIP	no tensor run of this model	0

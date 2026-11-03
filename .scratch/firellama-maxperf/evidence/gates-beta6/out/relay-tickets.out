@@ -1,0 +1,63 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e5f11fb40ffe4mT7Op4kRy1ozO): ses_e5f11fb40ffe4mT7Op4kRy1ozO
+cost: $0
+touched files: 15
+   D Assets/web-ui/_app/immutable/bundle.B-3lmdOf.js
+   M Assets/web-ui/index.html
+   M Assets/web-ui/manifest.webmanifest
+   M Assets/web-ui/sw.js
+   M Sources/App/AboutTab.swift
+   M VERSION
+   M scripts/stress-release.sh
+   M specs/release-contract.md
+  ?? .scratch/firellama-maxperf/evidence/engine-survey-2026-11-02.md
+  ?? .scratch/firellama-maxperf/evidence/gates-beta6/
+  ?? .scratch/firellama-maxperf/evidence/metal-0078-prefill-command-buffers-2026-11-02.md
+  ?? .scratch/firellama-maxperf/issues/75-the-placement-rule-ignores-the-kv-cache-on-the-card-path.md
+  ?? .scratch/firellama-maxperf/issues/76-let-the-engine-fit-memory-instead-of-forcing-ngl-99.md
+  ?? Assets/web-ui/_app/immutable/bundle.X82ce0842.js
+  ?? patches/llama/metal/0078-metal-prefill-graphs-on-a-discrete-card-use-shorter-command-buffers.patch
+
+--- opencode final report ---
+I'll read the required files first.Both tickets written.
+
+**Files**
+- `.scratch/firellama-maxperf/issues/75-the-placement-rule-ignores-the-kv-cache-on-the-card-path.md`
+- `.scratch/firellama-maxperf/issues/76-let-the-engine-fit-memory-instead-of-forcing-ngl-99.md`
+
+**Cited lines**
+
+Ticket 75:
+- `Sources/Hardware/Hardware.swift:475-484` (rule), `:480` (weights-only guard), `:482-483`, `:203` (`.card` default), `:377`, `:387-393` (partial branch), `:534-541` (kvCache), `:31-33` (combinedVramGB), `:457-459` (usableVRAM)
+- `Sources/Servers/Server.swift:227-230`, `:359`, `:360`, `:386-387`
+- `Sources/Settings/SettingsTab.swift:30`
+- `Tests/XeonLLMTests.swift:349-356`, `:358`, `:554`, `:583-589`, `:586`
+- `vendor/llama.cpp/common/fit.cpp:922-926`
+- `vendor/llama.cpp/tools/server/server.cpp:931`
+- `../evidence/metal-0078-prefill-command-buffers-2026-11-02.md`
+
+Ticket 76:
+- `Sources/Servers/Server.swift:359`, `:360`, `:371`, `:402`, `:246`, `:1834-1842`, `:2659-2669`
+- `Sources/Settings/SettingsTab.swift:30`
+- `vendor/llama.cpp/common/arg.cpp:2891`, `:2921`, `:2935`, `:2960`, `:1666-1668`
+- `vendor/llama.cpp/common/common.h:485`, `:487`, `:488`, `:491`
+- `vendor/llama.cpp/common/common.cpp:1274`, `:1299-1305`
+- `vendor/llama.cpp/common/fit.cpp:111-133`, `:198`, `:373-457`, `:393`, `:455`, `:463-465`, `:470-474`, `:477`, `:484-486`, `:488`, `:675`, `:895`, `:922-926`
+- `vendor/llama.cpp/common/tosh-plan.cpp:621-632`, `:1294-1295`, `:1306-1307`
+- `vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-device.m:2274`, `:2561-2570`
+- `vendor/llama.cpp/include/llama.h:206`
+- `vendor/llama.cpp/tools/server/server.cpp:931`
+- ticket 67 lines 14, 16, 23
+- `dist/XeonLLM.app/Contents/Resources/bin/llama-server` (path exists)
+
+**Not verified**
+- No run made: the fit's actual `currentAllocatedSize`/`free` on a D700, whether the 14B fit succeeds, whether `--split-mode tensor` composes, whether the fit picks ctx reduction on that model. Marked "not run" in E1-E3.
+- Per-card MiB (3954/2688/284) and 6.44 GB working set come from the orchestrator facts, not my measurement.
+- Memory-breakdown table location is source-only (`fit.cpp:922-926`, printed at server shutdown by `server.cpp:931`); not seen in a log.
+- App's `ctx` default of 32768 taken from the facts; only the pass-through at `Server.swift:360` was checked.
+- Two vramGB readings differ across the repo (6144 MiB in the test fixture vs 6.44 GB in the facts); arithmetic stated both ways so it stays checkable.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-03T10-21-55-223Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.

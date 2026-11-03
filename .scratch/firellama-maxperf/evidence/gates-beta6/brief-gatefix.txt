@@ -1,0 +1,48 @@
+You are fixing a release-gate shell script for XeonLLM (a llama.cpp-based Mac app for Intel Macs with
+AMD GPUs). Repo: /Users/sam/firellama. You EDIT ONE FILE and RUN NOTHING on the GPU.
+
+<why>
+Mac Pro 2013, 2x FirePro D700. Each card's recommendedMaxWorkingSetSize is 6442450944 bytes
+(the engine logs "recommendedMaxWorkingSetSize  =  6442.45 MB"). Card 0 (GGML_METAL_DEVICE_INDEX=0)
+also drives the display. The gate script ran Ternary-Bonsai-2-27B-PQ2_0.gguf (7206168928 bytes) on
+card 0 alone with llama-bench; the card paged, the GPU hung, WindowServer stopped checking in and
+macOS panicked twice ("userspace watchdog timeout: no successful checkins from WindowServer ... in
+120 seconds"), rebooting the machine each time. specs/release-contract.md section 3 item 3 already
+says: a model that does not fit one card (weights under recommendedMaxWorkingSetSize) runs on both
+cards together (GGML_METAL_DEVICE_LIST=0,1, -sm layer and -sm tensor), never on one card.
+</why>
+
+<hard-rules>
+- Do NOT run llama-bench, llama-server, test-backend-ops, the gate script itself, or anything under
+  scripts/ or tools/. Both GPUs must stay idle. Allowed: reading files, grep, ls, stat, `bash -n`
+  (syntax check), and running a small pure-shell snippet that only computes file sizes.
+- Edit only /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/gates.sh. Do not
+  commit, tag, push, touch dist/, /Applications, or anything on port 8080.
+</hard-rules>
+
+<task>
+Read gates.sh and specs/release-contract.md section 3, then change gates.sh:
+
+1. Section "3.3 prefill bands": for each model, read the file size (stat -f %z, this is macOS). If the
+   size is at or above a per-card limit of 6442450944 bytes minus a 512 MiB margin for KV and compute
+   (state the number in a comment), never run it on a single card. Instead run it once with
+   GGML_METAL_DEVICE_LIST=0,1 -sm layer and once with -sm tensor (same -p list, -n 0 -r 1, -fa 1,
+   TOSH_FA_AMD=1), writing pp-<model>-both-layer.csv / pp-<model>-both-tensor.csv and .err. A tensor
+   run that exits 86 with "cannot be tensor-split" in its .err is reported as "handled (exit 86)", not
+   as a failure. Models under the limit keep the current per-card runs. Print one line per run in
+   the existing style, saying which placement it used.
+2. Add an env switch GATES_SECTIONS (default: all) holding a comma list of section names from
+   {identity, ops, coverage, prefill, preflight, engine, proofs, avx, repro}, so a rerun can skip
+   sections that already passed, e.g. GATES_SECTIONS=prefill,preflight,engine,proofs,avx,repro.
+   The identity section's assert_artifact must still run when "identity" is listed.
+3. Keep everything else in the script byte-for-byte the same in behaviour. `bash -n gates.sh` must pass.
+4. Read-only audit, no edits: grep scripts/stress-release.sh, tools/ab.sh and scripts/*.sh for any
+   path that would run a model whose file is above the limit on one card (GGML_METAL_DEVICE_INDEX=<n>
+   with -ngl 99 on a large model, or a hard-coded single-card run). Report each with file:line, or
+   say none found.
+</task>
+
+<report>
+End with: the diff of gates.sh (unified), the `bash -n` result, the list of models in the 3.3 list
+with their byte size and which placement each now gets, and the audit findings with file:line.
+</report>

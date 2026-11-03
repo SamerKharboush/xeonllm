@@ -1,0 +1,41 @@
+Qwen3-14B-Q4_K_M.gguf	tensor	band16	PASS	prompt_tokens=80 completion_tokens=64 9.1s	80
+Qwen3-14B-Q4_K_M.gguf	tensor	band300	PASS	prompt_tokens=448 completion_tokens=64 13.9s	448
+Qwen3-14B-Q4_K_M.gguf	tensor	band450	PASS	prompt_tokens=655 completion_tokens=64 11.6s	655
+Qwen3-14B-Q4_K_M.gguf	tensor	band520	PASS	prompt_tokens=724 completion_tokens=64 8.9s	724
+Qwen3-14B-Q4_K_M.gguf	tensor	band1100	PASS	prompt_tokens=1483 completion_tokens=64 28.7s	1483
+Qwen3-14B-Q4_K_M.gguf	tensor	band4200	PASS	prompt_tokens=5439 completion_tokens=64 171.1s	5439
+Qwen3-14B-Q4_K_M.gguf	tensor	band8300	PASS	prompt_tokens=10683 completion_tokens=64 339.3s	10683
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn0	PASS	prompt_tokens=220 completion_tokens=64 26.6s	220
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn1	PASS	prompt_tokens=443 completion_tokens=64 11.1s	443
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn2	PASS	prompt_tokens=666 completion_tokens=64 11.5s	666
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn3	PASS	prompt_tokens=889 completion_tokens=64 12.0s	889
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn4	PASS	prompt_tokens=1112 completion_tokens=64 12.4s	1112
+Qwen3-14B-Q4_K_M.gguf	tensor	conv6-turn5	PASS	prompt_tokens=1335 completion_tokens=64 12.8s	1335
+Qwen3-14B-Q4_K_M.gguf	tensor	evict	FAIL	TimeoutError: timed out	0
+Qwen3-14B-Q4_K_M.gguf	tensor	after-evict	PASS	prompt_tokens=103 completion_tokens=64 11.9s	103
+Qwen3-14B-Q4_K_M.gguf	tensor	tools	PASS	prompt_tokens=156 completion_tokens=100 13.3s	156
+Qwen3-14B-Q4_K_M.gguf	tensor	parallel2	SKIP	--parallel 1 does not allow it	0
+Qwen3-14B-Q4_K_M.gguf	tensor	cancel-stream	PASS	stream closed after 64 bytes	0
+Qwen3-14B-Q4_K_M.gguf	tensor	after-cancel	PASS	prompt_tokens=149 completion_tokens=64 8.0s	149
+Qwen3-14B-Q4_K_M.gguf	layer	band16	PASS	prompt_tokens=80 completion_tokens=64 14.1s	80
+Qwen3-14B-Q4_K_M.gguf	layer	band300	PASS	prompt_tokens=448 completion_tokens=64 23.9s	448
+Qwen3-14B-Q4_K_M.gguf	layer	band450	PASS	prompt_tokens=655 completion_tokens=64 20.2s	655
+Qwen3-14B-Q4_K_M.gguf	layer	band520	PASS	prompt_tokens=724 completion_tokens=64 14.4s	724
+Qwen3-14B-Q4_K_M.gguf	layer	band1100	PASS	prompt_tokens=1483 completion_tokens=64 49.8s	1483
+Qwen3-14B-Q4_K_M.gguf	layer	band4200	PASS	prompt_tokens=5439 completion_tokens=64 290.2s	5439
+Qwen3-14B-Q4_K_M.gguf	layer	band8300	PASS	prompt_tokens=10683 completion_tokens=64 734.5s	10683
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn0	PASS	prompt_tokens=220 completion_tokens=64 19.7s	220
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn1	PASS	prompt_tokens=443 completion_tokens=64 19.0s	443
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn2	PASS	prompt_tokens=666 completion_tokens=64 20.1s	666
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn3	PASS	prompt_tokens=889 completion_tokens=64 21.2s	889
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn4	PASS	prompt_tokens=1112 completion_tokens=64 22.3s	1112
+Qwen3-14B-Q4_K_M.gguf	layer	conv6-turn5	PASS	prompt_tokens=1335 completion_tokens=64 23.6s	1335
+Qwen3-14B-Q4_K_M.gguf	layer	evict	FAIL	TimeoutError: timed out	0
+Qwen3-14B-Q4_K_M.gguf	layer	after-evict	FAIL	HTTP 500: b'{"error":{"code":500,"message":"Compute error.","type":"server_error"}}'	0
+Qwen3-14B-Q4_K_M.gguf	layer	tools	FAIL	HTTP 500: b'{"error":{"code":500,"message":"Compute error.","type":"server_error"}}'	0
+Qwen3-14B-Q4_K_M.gguf	layer	parallel2	SKIP	--parallel 1 does not allow it	0
+Qwen3-14B-Q4_K_M.gguf	layer	cancel-stream	PASS	stream closed after 64 bytes	0
+Qwen3-14B-Q4_K_M.gguf	layer	after-cancel	FAIL	HTTP 500: b'{"error":{"code":500,"message":"Compute error.","type":"server_error"}}'	0
+Qwen3-14B-Q4_K_M.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0

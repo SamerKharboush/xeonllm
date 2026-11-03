@@ -587,6 +587,74 @@ final class EstimatorTests: XCTestCase {
         XCTAssertEqual(Estimator.estimate(spec: spec, hw: d700HW, multiGPU: true).placement, .card)
         XCTAssertEqual(Estimator.estimate(spec: spec, hw: d700HW).placement, .host)
     }
+
+    // Estimator.cardFitCtx: the context a card launch can hold (ticket 75).
+    private func qwen14B() -> ModelSpec {
+        var spec = ModelSpec(fileGB: 8.38, paramsB: 14.8, layers: 40, isMoE: false)
+        spec.kvBytesPerToken = 40 * 8 * 128 * 2 * 2      // 163840 B/token, f16
+        return spec
+    }
+    /// Per-card need in MiB, the formula cardFitCtx documents.
+    private func need(_ spec: ModelSpec, ctx: Int, devices: Int, kvScale: Double) -> Double {
+        spec.weightsGB * 1024 / Double(devices)
+            + spec.kvBytesPerToken * Double(ctx) / 1_048_576 * kvScale / Double(devices) + 300
+    }
+
+    func testThe14BAt32KOnBothCardsGetsALowerContextThatFits() {
+        // measured 6926 MiB per card at this launch against 6144: it paged and hit the watchdog
+        let spec = qwen14B()
+        XCTAssertGreaterThan(need(spec, ctx: 32768, devices: 2, kvScale: 1), 6144 - 256)
+        let c = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 32768, kvScale: 1)
+        XCTAssertEqual(c, 16384)
+        XCTAssertEqual(c % 1024, 0)
+        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 2, kvScale: 1), 6144 - 256)
+        XCTAssertGreaterThan(need(spec, ctx: c + 1024, devices: 2, kvScale: 1), 6144 - 256)
+    }
+
+    func testThe8BAt32KOnBothCardsKeepsItsContext() {
+        // Qwen3-8B-Q4_K_M, 5027783488 bytes; it ran every stress cell at this launch
+        var spec = ModelSpec(fileGB: 5027783488 / 1_073_741_824, paramsB: 8.2, layers: 36, isMoE: false)
+        spec.kvBytesPerToken = 36 * 8 * 128 * 2 * 2
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
+                                            requested: 32768, kvScale: 1), 32768)
+    }
+
+    func testAContextThatFitsOrIsSmallIsLeftAlone() {
+        let spec = qwen14B()
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
+                                            requested: 8192, kvScale: 1), 8192)
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
+                                            requested: 2048, kvScale: 1), 2048)
+    }
+
+    func testWeightsOverTheBudgetFloorAt4096() {
+        let spec = ModelSpec(fileGB: 20, paramsB: 25, layers: 40, isMoE: false)
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
+                                            requested: 32768, kvScale: 1), 4096)
+    }
+
+    func testAQuantizedCacheHoldsMoreContext() {
+        let spec = qwen14B()
+        let f16 = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 65536, kvScale: 1)
+        let q8 = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 65536,
+                                      kvScale: Estimator.kvTypeScale("q8_0"))
+        XCTAssertGreaterThan(q8, f16)
+        // conservative: the file size counts tensors the engine keeps on the host, so q8_0 at
+        // 32768 (measured 5666 MiB per card) comes out a step under, not over
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 32768,
+                                            kvScale: Estimator.kvTypeScale("q8_0")), 30720)
+    }
+
+    func testOneCardHasHalfTheRoom() {
+        var spec = ModelSpec(fileGB: 4.68, paramsB: 8.2, layers: 36, isMoE: false)
+        spec.kvBytesPerToken = 36 * 8 * 128 * 2 * 2
+        let one = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1, requested: 32768, kvScale: 1)
+        XCTAssertLessThan(one, 32768)
+        XCTAssertEqual(one % 1024, 0)
+        XCTAssertLessThanOrEqual(need(spec, ctx: one, devices: 1, kvScale: 1), 6144 - 256)
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
+                                            requested: 32768, kvScale: 1), 32768)
+    }
 }
 
 final class ResumableDownloadTests: XCTestCase {

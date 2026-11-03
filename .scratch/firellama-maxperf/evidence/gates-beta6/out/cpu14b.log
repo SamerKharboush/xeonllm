@@ -1,0 +1,23 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.159.413 I srv  llama_server: initializing ...
+0.00.159.443 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app standalone)
+0.00.159.443 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.160.910 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.162.051 I srv    load_model: loading model '/Users/sam/models/Qwen3-14B-Q4_K_M.gguf'
+0.00.162.131 I Tosh MoE: standard
+0.00.749.860 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.202.801 I cmn          init: llama threadpool init, n_threads = 12
+0.02.941.190 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 2048, kv_unified = 'true'
+0.02.966.239 I srv  llama_server: model loaded
+0.02.966.250 I srv  llama_server: listening on http://127.0.0.1:18111
+0.03.234.576 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.03.234.686 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.06.653.026 I slot print_timing: id  3 | task 0 | prompt eval time =    3218.27 ms /    25 tokens (  128.73 ms per token,     7.77 tokens per second)
+0.06.653.036 I slot print_timing: id  3 | task 0 |        eval time =     196.57 ms /     2 tokens (  196.57 ms per token,     5.09 tokens per second)
+0.06.653.037 I slot print_timing: id  3 | task 0 |       total time =    3414.84 ms /    27 tokens
+0.06.653.038 I slot print_timing: id  3 | task 0 |    graphs reused =          1
+0.06.653.181 I slot      release: id  3 | task 0 | stop processing: n_tokens = 26, truncated = 0
+0.06.733.286 I srv    operator(): operator(): cleaning up before exit...

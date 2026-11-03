@@ -4,9 +4,25 @@
 #
 # usage: scripts/stress-release.sh <bin-dir> <model.gguf> [more models...]
 #
-# It reads the newest app server log's `args:` and `env:` lines, drops the model and draft paths,
-# the MCP server list, the web UI and host/port, and starts <bin-dir>/llama-server on 127.0.0.1
-# with a free port. It never touches port 8080 or a running app.
+# It reads the newest app server log's `args:` and `env:` lines (or the log named by APPLOG),
+# drops the model and draft paths, the MCP server list, the web UI and host/port, and starts
+# <bin-dir>/llama-server on 127.0.0.1 with a free port. It never touches port 8080 or a running app.
+#
+# MODES (default "tensor layer ngl0"): tensor = the app's flags as logged; layer adds
+# --split-mode layer; ngl0 adds -ngl 0; draft adds the DFlash drafter the app would load, the
+# file <model stem>.dflash.gguf beside the model (a model without one gets a SKIP row, as the app
+# launches it without a drafter), with the app's flags (-ngld DRAFT_NGLD, default 99), -lv 4 and
+# DRAFT_EXTRA (e.g. "--split-mode layer", the app's fallback after exit 86), and checks the log
+# for where the drafter's borrowed head went. CELL_TIMEOUT (default 900 s) bounds each request.
+# Each mode gets the env the app builds for it: the tensor-only switches (TOSH_MGPU_EVENTS,
+# _PEER, _TENSOR_GROUP, TOSH_MIRROR_OUTPUT_HEAD) only on a tensor split, no card list at -ngl 0.
+# NGL0_CELLS (e.g. "band16 band300 band1100") limits the ngl0 mode to those cells; CELLS does
+# the same for every other mode (for a repro of one failing cell).
+# After a model's modes, band16, band300 and band1100 of every mode are compared byte for byte
+# with the tensor mode (identical-vs-tensor, gated), with the ngl0 mode (identical-vs-ngl0,
+# reported as DIFFERS, not gated: Metal and the CPU sum in a different order), and, when PREV_OUT
+# names the previous release's $OUT, with the same mode there (identical-vs-previous, gated).
+# Answers are kept in full under $OUT.
 set -u
 
 BIN_DIR="${1:-}"; shift || true
@@ -31,7 +47,7 @@ TABLES="$OUT/tables"
 mkdir -p "$TABLES"
 
 LOGDIR="$HOME/Library/Application Support/XeonLLM/logs"
-APPLOG="$(ls -t "$LOGDIR"/server-*.log 2>/dev/null | head -1)"
+APPLOG="${APPLOG:-$(ls -t "$LOGDIR"/server-*.log 2>/dev/null | head -1)}"
 
 # --- the app's launch flags ---------------------------------------------------------------
 ARGS=()
@@ -69,6 +85,27 @@ fi
 # the app always names both cards; keep whichever the caller wants
 ENVS+=("GGML_METAL_DEVICE_LIST=${GGML_METAL_DEVICE_LIST:-0,1}")
 
+# A model above one card's working set (6442450944 bytes less 512 MiB for KV and compute) never
+# runs on one card: card 0 drives the display, and a paged card stalls WindowServer until macOS
+# panics and reboots (2026-11-03, a 7.2 GB model on card 0, twice). Refuse before starting.
+ONECARD=5905580032
+one_card=0
+for kv in "${ENVS[@]}"; do
+    case "$kv" in
+        GGML_METAL_DEVICE_INDEX=*) one_card=1 ;;
+        GGML_METAL_DEVICE_LIST=*) [[ "${kv#*=}" == *,* ]] || one_card=1 ;;
+    esac
+done
+if [ "$one_card" = 1 ]; then
+    for m in "${MODELS[@]}"; do
+        sz=$(stat -f %z "$m" 2>/dev/null || echo 0)
+        if [ "$sz" -ge "$ONECARD" ]; then
+            echo "refusing: $m is $sz bytes, above one card's $ONECARD, and the env names one card" >&2
+            exit 3
+        fi
+    done
+fi
+
 PARALLEL=1
 for ((i = 0; i < ${#ARGS[@]}; i++)); do
     [ "${ARGS[$i]}" = "--parallel" ] && PARALLEL="${ARGS[$((i+1))]}"
@@ -89,6 +126,20 @@ cat > "$DRIVER" <<'PY'
 import json, sys, threading, http.client, time
 
 HOST, PORT, MODEL, OUT, PARALLEL = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], int(sys.argv[5])
+RUN = sys.argv[6]  # <model stem>-<label>, names this run's answer files
+TIMEOUT = int(sys.argv[7])  # seconds per request; -ngl 0 on a large model prefills slowly
+ONLY = sys.argv[8].split()  # run only these cells (empty: all)
+
+def save():
+    # after every cell, so a run that is stopped keeps the answers it finished
+    with open(f"{OUT}/{RUN}.answers.json", "w") as f:
+        json.dump(dict(answers), f, ensure_ascii=False, indent=1)
+    with open(f"{OUT}/{RUN}.answers.txt", "w") as f:
+        for name, text in answers:
+            f.write(f"== {name}\n{text[-400:]}\n\n".replace("\r", " "))
+
+def wanted(name):
+    return not ONLY or name in ONLY
 results = []
 answers = []
 
@@ -96,7 +147,7 @@ def add(name, status, note, ptok):
     # print each cell as it lands so a stall leaves the finished cells on disk
     print(f"{name}\t{status}\t{note}\t{ptok}", flush=True)
 
-def post(payload, timeout=900):
+def post(payload, timeout=TIMEOUT):
     c = http.client.HTTPConnection(HOST, PORT, timeout=timeout)
     body = json.dumps(payload)
     c.request("POST", "/v1/chat/completions", body, {"Content-Type": "application/json"})
@@ -106,6 +157,8 @@ def post(payload, timeout=900):
     return r.status, data
 
 def cell(name, payload, want_tool=False):
+    if not wanted(name):
+        return None
     t0 = time.time()
     try:
         status, data = post(payload)
@@ -126,7 +179,9 @@ def cell(name, payload, want_tool=False):
         if not ok:
             add(name, "FAIL", f"empty answer (prompt {ptok}, completion {ctok})", ptok)
             return None
-        answers.append((name, text[:400].replace("\n", " ")))
+        # the full greedy text, reasoning first, so a thinking model is compared on all of it
+        answers.append((name, (msg.get("reasoning_content") or "") + "\n--\n" + (msg.get("content") or "")))
+        save()
         add(name, "PASS", f"prompt_tokens={ptok} completion_tokens={ctok} {time.time()-t0:.1f}s", ptok)
         return js
     except Exception as e:
@@ -153,9 +208,34 @@ for i in range(6):
     cell(f"conv6-turn{i}", {"model": MODEL, "messages": msgs, "max_tokens": 64, "temperature": 0.0})
     msgs.append({"role": "assistant", "content": "blue"})
 
-# a prompt past the cache window, then a small one: the cache must evict and still answer
-cell("evict", band(16000, TOPIC))
+def n_ctx():
+    # the slot's context, which the app may have lowered to fit the cards (cardFitCtx)
+    try:
+        c = http.client.HTTPConnection(HOST, PORT, timeout=30)
+        c.request("GET", "/props")
+        js = json.loads(c.getresponse().read())
+        c.close()
+        return int(js["default_generation_settings"]["n_ctx"])
+    except Exception:
+        return 0
+
+NCTX = n_ctx()
+# a prompt past the cache window, then a small one: the cache must evict and still answer.
+# band(t) is about 1.28 tokens per t; the prompt stays 1024 tokens under the context.
+cell("evict", band(min(16000, (NCTX - 1024) * 100 // 130) if NCTX else 16000, TOPIC))
 cell("after-evict", band(32, TOPIC))
+
+# a prompt over the context: the engine must refuse it with 400 and keep serving
+if wanted("over-ctx") and NCTX:
+    try:
+        st, data = post(band(NCTX * 100 // 120, TOPIC))
+        if st == 400 and b"exceed_context_size_error" in data:
+            add("over-ctx", "PASS", f"refused with 400 at n_ctx={NCTX}", 0)
+        else:
+            add("over-ctx", "FAIL", f"HTTP {st}: {data[:200]!r}", 0)
+    except Exception as e:
+        add("over-ctx", "FAIL", f"{type(e).__name__}: {e}", 0)
+    cell("after-over-ctx", band(32, TOPIC))
 
 # tools
 cell("tools", {"model": MODEL,
@@ -164,10 +244,13 @@ cell("tools", {"model": MODEL,
                    "name": "get_weather", "description": "Get the current weather",
                    "parameters": {"type": "object", "properties": {"city": {"type": "string"}},
                                   "required": ["city"]}}}],
-               "tool_choice": "auto", "max_tokens": 128, "temperature": 0.0}, want_tool=True)
+               # a thinking model plans the call first; 128 tokens ended Nemotron mid-plan
+               "tool_choice": "auto", "max_tokens": 512, "temperature": 0.0}, want_tool=True)
 
 # two concurrent requests
-if PARALLEL >= 2:
+if not wanted("parallel2"):
+    pass
+elif PARALLEL >= 2:
     out = []
     def one(i):
         out.append((i, post(band(220, TOPIC))[0]))
@@ -180,6 +263,8 @@ else:
 
 # a cancelled stream, then a new request
 try:
+    if not wanted("cancel-stream"):
+        raise StopIteration
     c = http.client.HTTPConnection(HOST, PORT, timeout=30)
     c.request("POST", "/v1/chat/completions",
               json.dumps({"model": MODEL, "messages": [{"role": "user", "content": "Write a very long essay about the sea."}],
@@ -189,15 +274,13 @@ try:
     r.read(64)
     c.close()
     add("cancel-stream", "PASS", "stream closed after 64 bytes", 0)
+except StopIteration:
+    pass
 except Exception as e:
     add("cancel-stream", "FAIL", f"{type(e).__name__}: {e}", 0)
 cell("after-cancel", band(64, TOPIC))
 
 results = []  # each cell already printed; keep the list shape for the caller
-
-with open(f"{OUT}/answers.txt", "w") as f:
-    for name, text in answers:
-        f.write(f"== {name}\n{text}\n\n")
 PY
 
 # llama-server on this fork can hang in its shutdown path ("cleaning up before exit..." never
@@ -219,8 +302,33 @@ run_server() {
     local log="$OUT/$(basename "$model" .gguf)-$label.server.log"
     local runargs=("${ARGS[@]}" -m "$model" --host 127.0.0.1 --port "$port")
     if [ $# -gt 0 ]; then runargs+=("$@"); fi
+    # the env the app builds for this launch (Server.swift): the last -ngl and --split-mode win
+    local ngl="" split="" drafting=0 i
+    for ((i = 0; i < ${#runargs[@]}; i++)); do
+        case "${runargs[$i]}" in
+            -ngl) ngl="${runargs[$((i+1))]}" ;;
+            --split-mode) split="${runargs[$((i+1))]}" ;;
+            -md) drafting=1 ;;
+        esac
+    done
+    local runenv=() kv
+    for kv in "${ENVS[@]}"; do
+        case "${kv%%=*}" in
+            # a model on the host leaves the cards out of the run
+            GGML_METAL_DEVICE_LIST|GGML_METAL_DEVICE_INDEX|GGML_METAL_DEVICES) [ "$ngl" = 0 ] && continue ;;
+            # set only on a tensor split; TOSH_MGPU_EVENTS deadlocks a layer split (ticket 10)
+            TOSH_MGPU_PEER|TOSH_MGPU_EVENTS|TOSH_MGPU_TENSOR_GROUP|TOSH_MTL_QUEUE_DEPTH|TOSH_MIRROR_OUTPUT_HEAD)
+                { [ "$ngl" = 0 ] || [ "$split" != tensor ]; } && continue ;;
+        esac
+        runenv+=("$kv")
+    done
+    # a DFlash draft on a tensor split keeps the target's head on every card
+    if [ "$drafting" = 1 ] && [ "$ngl" != 0 ] && [ "$split" = tensor ]; then runenv+=(TOSH_MIRROR_OUTPUT_HEAD=1); fi
+    echo "${runenv[*]}" > "$OUT/$(basename "$model" .gguf)-$label.env"
     echo "== $(basename "$model") [$label] port $port"
-    ( cd "$OUT" && env "${ENVS[@]}" "$SERVER" "${runargs[@]}" > "$log" 2>&1 & echo $! > "$OUT/current.pid" )
+    # background env alone, not `cd && env`, so $! is the server (env execs it) and not a
+    # subshell that kill_server would kill while the server kept running
+    ( cd "$OUT" || exit 1; env "${runenv[@]}" "$SERVER" "${runargs[@]}" > "$log" 2>&1 & echo $! > "$OUT/current.pid" )
     local pid; pid="$(cat "$OUT/current.pid")"
     local up=0
     for _ in $(seq 1 240); do
@@ -235,7 +343,9 @@ run_server() {
         return 1
     fi
 
-    python3 "$DRIVER" 127.0.0.1 "$port" "$model" "$OUT" "$PARALLEL" > "$OUT/$(basename "$model" .gguf)-$label.cells.tsv" 2>&1
+    python3 "$DRIVER" 127.0.0.1 "$port" "$model" "$OUT" "$PARALLEL" "$(basename "$model" .gguf)-$label" "${CELL_TIMEOUT:-900}" \
+        "$(if [ "$label" = ngl0 ]; then echo "${NGL0_CELLS:-}"; else echo "${CELLS:-}"; fi)" \
+        > "$OUT/$(basename "$model" .gguf)-$label.cells.tsv" 2>&1
 
     kill_server "$pid"
     local bad
@@ -248,7 +358,74 @@ run_server() {
     if [ -n "$bad" ]; then
         echo -e "$(basename "$model")\t$label\t(log)\tFAIL\t${bad//$'\n'/ | }" >> "$TABLES/raw.tsv"
     fi
+    if [ "$label" = draft ]; then
+        local head
+        head="$(grep -m1 -oE 'dflash lm head (copied to|kept on)[^(]*\([^)]*\)' "$log")"
+        if [ -n "$head" ]; then
+            echo -e "$(basename "$model")\t$label\tdrafter-head\tPASS\t$head\t0" >> "$TABLES/raw.tsv"
+        elif ! grep -q 'offloaded 0/' "$log"; then
+            # spec/0073 copies the head only when the target's head is on the host
+            echo -e "$(basename "$model")\t$label\tdrafter-head\tSKIP\tthe target's head is on a card; no copy is made\t0" >> "$TABLES/raw.tsv"
+        else
+            echo -e "$(basename "$model")\t$label\tdrafter-head\tFAIL\tno 'dflash lm head' line in $log\t0" >> "$TABLES/raw.tsv"
+        fi
+    fi
     sleep 20
+}
+
+# --- greedy text of every mode against -ngl 0 ----------------------------------------------
+compare_to_ngl0() {
+    local stem="$1"
+    python3 - "$OUT" "$stem" "$stem.gguf" "${PREV_OUT:-}" ${MODES:-tensor layer ngl0} >> "$TABLES/raw.tsv" <<'PY'
+import json, os, sys
+out, stem, name, prev, modes = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:]
+def load(mode, where=None):
+    p = f"{where or out}/{stem}-{mode}.answers.json"
+    return json.load(open(p)) if os.path.exists(p) else None
+
+def compare(row, ref, got, gated):
+    bad, missing = [], []
+    for cell in ("band16", "band300", "band1100"):
+        a, b = ref.get(cell), got.get(cell)
+        if a is None or b is None:
+            missing.append(cell)
+        elif a != b:
+            i = next((k for k in range(min(len(a), len(b))) if a[k] != b[k]), min(len(a), len(b)))
+            bad.append(f"{cell} differs at offset {i}")
+    if bad:
+        print(f"{row}\t{'FAIL' if gated else 'DIFFERS'}\t{'; '.join(bad)}\t0")
+    elif missing:
+        print(f"{row}\tSKIP\tno answer for {', '.join(missing)}\t0")
+    else:
+        print(f"{row}\tPASS\tband16 band300 band1100 byte-identical\t0")
+
+# every other mode against the app's launch (tensor), which a drafter must match: it is lossless;
+# every GPU mode against the CPU (-ngl 0), reported only: the two backends sum in another order
+for refmode in ("ngl0", "tensor"):
+    ref = load(refmode)
+    for mode in modes:
+        if mode == refmode or (refmode == "tensor" and mode == "ngl0"):
+            continue
+        got = load(mode)
+        if got is None:
+            continue
+        row = f"{name}\t{mode}\tidentical-vs-{refmode}"
+        if ref is None:
+            print(f"{row}\tSKIP\tno {refmode} run of this model\t0")
+            continue
+        compare(row, ref, got, gated=(refmode != "ngl0"))
+# every mode against the same mode of the previous release
+if prev:
+    for mode in modes:
+        got, ref = load(mode), load(mode, prev)
+        if got is None:
+            continue
+        row = f"{name}\t{mode}\tidentical-vs-previous"
+        if ref is None:
+            print(f"{row}\tSKIP\tno {mode} run in {prev}\t0")
+            continue
+        compare(row, ref, got, gated=True)
+PY
 }
 
 # --- the matrix ---------------------------------------------------------------------------
@@ -263,9 +440,19 @@ for model in "${MODELS[@]}"; do
             tensor) run_server "$model" "tensor" ;;
             layer)  run_server "$model" "layer" --split-mode layer ;;
             ngl0)   run_server "$model" "ngl0" -ngl 0 ;;
+            draft)
+                # the app's rule: the drafter is <stem>.dflash.gguf next to the model
+                draft="${model%.gguf}.dflash.gguf"
+                if [ -f "$draft" ]; then
+                    run_server "$model" "draft" -md "$draft" --spec-type draft-dflash \
+                        -ngld "${DRAFT_NGLD:-99}" -ctkd q8_0 -ctvd q8_0 -lv 4 ${DRAFT_EXTRA:-}
+                else
+                    echo -e "$(basename "$model")\tdraft\t(all)\tSKIP\tno $(basename "$draft") beside the model; the app loads no drafter\t0" >> "$TABLES/raw.tsv"
+                fi ;;
             *)      echo "unknown mode: $mode" >&2 ;;
         esac
     done
+    compare_to_ngl0 "$(basename "$model" .gguf)"
 done
 
 cat "$TABLES/raw.tsv" >> "$TABLES/stress.tsv"

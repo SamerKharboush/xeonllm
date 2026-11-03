@@ -1,0 +1,5 @@
+{
+ "evict": "Okay, the user provided a long text that repeats the same sentence multiple times, mentioning the quick brown fox, the lazy dog, the compiler waiting for the next token, and the GPU finishing its tile. Then they ask, \"In one word, what colour is the sky?\" \n\nFirst, I need to\n--\n",
+ "after-evict": "Okay, let's see. The user provided a text that repeats the sentence \"the quick brown fox jumps over the lazy dog\" multiple times, along with some other phrases about a compiler and GPU. Then the question is asking, in one word, what colour is the sky?\n\nFirst, I need to figure\n--\n",
+ "after-over-ctx": "Okay, let's see. The user provided a text that repeats the sentence \"the quick brown fox jumps over the lazy dog\" multiple times, along with some other phrases about a compiler and GPU. Then the question is asking, in one word, what colour is the sky?\n\nFirst, I need to figure\n--\n"
+}

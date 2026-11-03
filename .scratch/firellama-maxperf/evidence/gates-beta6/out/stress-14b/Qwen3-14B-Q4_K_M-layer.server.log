@@ -1,0 +1,181 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.216.416 W DEPRECATED: argument '--split-mode' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.216.446 W server tools or MCP servers are enabled, using localhost as default CORS origin (change via --cors-origins)
+0.00.216.563 I srv  llama_server: initializing ...
+0.00.216.572 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app standalone)
+0.00.216.573 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.217.217 W srv  llama_server: security: MCP proxy (experimental), server tools (experimental) enabled - do not expose to untrusted environments
+0.00.219.449 I srv    load_model: loading model '/Users/sam/models/Qwen3-14B-Q4_K_M.gguf'
+0.00.219.479 I Tosh MoE: standard
+0.00.596.871 W common_fit_params: not fitting params to free device memory: n_gpu_layers already set by user to 99, abort; continuing with the parameters as given
+0.00.801.414 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.08.927.683 I cmn          init: llama threadpool init, n_threads = 10
+0.09.241.271 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.24.797.293 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.24.812.340 I srv  llama_server: model loaded
+0.24.812.349 I srv  llama_server: listening on http://127.0.0.1:57474
+0.26.178.671 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.26.178.728 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.26.568.540 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.26.935.335 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+0.40.239.241 I slot print_timing: id  0 | task 0 | prompt eval time =    4327.09 ms /    80 tokens (   54.09 ms per token,    18.49 tokens per second)
+0.40.239.252 I slot print_timing: id  0 | task 0 |        eval time =    9733.38 ms /    64 tokens (  154.50 ms per token,     6.47 tokens per second)
+0.40.239.253 I slot print_timing: id  0 | task 0 |       total time =   14060.47 ms /   144 tokens
+0.40.239.254 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+0.40.239.310 I slot      release: id  0 | task 0 | stop processing: n_tokens = 143, truncated = 0
+0.40.254.466 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.143 (> 0.100 thold), f_keep = 0.448
+0.40.278.610 I slot launch_slot_: id  0 | task 65 | processing task, is_child = 0
+1.04.103.037 I slot print_timing: id  0 | task 65 | prompt eval time =   13788.99 ms /   384 tokens (   35.91 ms per token,    27.85 tokens per second)
+1.04.103.047 I slot print_timing: id  0 | task 65 |        eval time =   10035.41 ms /    64 tokens (  159.29 ms per token,     6.28 tokens per second)
+1.04.103.048 I slot print_timing: id  0 | task 65 |       total time =   23824.40 ms /   448 tokens
+1.04.103.049 I slot print_timing: id  0 | task 65 |    graphs reused =        125
+1.04.103.094 I slot      release: id  0 | task 65 | stop processing: n_tokens = 511, truncated = 0
+1.04.118.575 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.660 (> 0.100 thold), f_keep = 0.845
+1.04.118.833 I slot launch_slot_: id  0 | task 130 | processing task, is_child = 0
+1.24.284.701 I slot print_timing: id  0 | task 130 | prompt eval time =    9802.86 ms /   223 tokens (   43.96 ms per token,    22.75 tokens per second)
+1.24.284.712 I slot print_timing: id  0 | task 130 |        eval time =   10362.98 ms /    64 tokens (  164.49 ms per token,     6.08 tokens per second)
+1.24.284.713 I slot print_timing: id  0 | task 130 |       total time =   20165.84 ms /   287 tokens
+1.24.284.714 I slot print_timing: id  0 | task 130 |    graphs reused =        187
+1.24.284.777 I slot      release: id  0 | task 130 | stop processing: n_tokens = 718, truncated = 0
+1.24.298.953 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.883 (> 0.100 thold), f_keep = 0.890
+1.24.299.196 I slot launch_slot_: id  0 | task 195 | processing task, is_child = 0
+1.38.711.410 I slot print_timing: id  0 | task 195 | prompt eval time =    3994.63 ms /    85 tokens (   47.00 ms per token,    21.28 tokens per second)
+1.38.711.421 I slot print_timing: id  0 | task 195 |        eval time =   10417.56 ms /    64 tokens (  165.36 ms per token,     6.05 tokens per second)
+1.38.711.422 I slot print_timing: id  0 | task 195 |       total time =   14412.19 ms /   149 tokens
+1.38.711.423 I slot print_timing: id  0 | task 195 |    graphs reused =        248
+1.38.711.487 I slot      release: id  0 | task 195 | stop processing: n_tokens = 787, truncated = 0
+1.38.727.775 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.477 (> 0.100 thold), f_keep = 0.900
+1.38.727.822 I slot launch_slot_: id  0 | task 260 | processing task, is_child = 0
+2.28.528.295 I slot print_timing: id  0 | task 260 | prompt eval time =   38290.36 ms /   775 tokens (   49.41 ms per token,    20.24 tokens per second)
+2.28.528.308 I slot print_timing: id  0 | task 260 |        eval time =   11510.09 ms /    64 tokens (  182.70 ms per token,     5.47 tokens per second)
+2.28.528.309 I slot print_timing: id  0 | task 260 |       total time =   49800.46 ms /   839 tokens
+2.28.528.310 I slot print_timing: id  0 | task 260 |    graphs reused =        309
+2.28.528.386 I slot      release: id  0 | task 260 | stop processing: n_tokens = 1546, truncated = 0
+2.28.553.958 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.270 (> 0.100 thold), f_keep = 0.949
+2.28.554.026 I slot launch_slot_: id  0 | task 325 | processing task, is_child = 0
+4.09.652.615 I slot print_timing: id  0 | task 325 | prompt processing, n_tokens =   2048, progress = 0.65, t = 101.10 s / 20.26 tokens per second
+7.18.727.718 I slot print_timing: id  0 | task 325 | prompt eval time =  271622.45 ms /  3972 tokens (   68.38 ms per token,    14.62 tokens per second)
+7.18.727.730 I slot print_timing: id  0 | task 325 |        eval time =   18551.22 ms /    64 tokens (  294.46 ms per token,     3.40 tokens per second)
+7.18.727.732 I slot print_timing: id  0 | task 325 |       total time =  290173.67 ms /  4036 tokens
+7.18.727.732 I slot print_timing: id  0 | task 325 |    graphs reused =        371
+7.18.727.902 I slot      release: id  0 | task 325 | stop processing: n_tokens = 5502, truncated = 0
+7.18.766.289 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.508 (> 0.100 thold), f_keep = 0.986
+7.18.766.344 I slot launch_slot_: id  0 | task 391 | processing task, is_child = 0
+10.42.176.478 I slot print_timing: id  0 | task 391 | prompt processing, n_tokens =   2048, progress = 0.70, t = 203.41 s / 10.07 tokens per second
+15.13.182.721 I slot print_timing: id  0 | task 391 | prompt processing, n_tokens =   4096, progress = 0.89, t = 474.42 s / 8.63 tokens per second
+19.33.222.539 I slot print_timing: id  0 | task 391 | prompt eval time =  705183.58 ms /  5260 tokens (  134.07 ms per token,     7.46 tokens per second)
+19.33.222.549 I slot print_timing: id  0 | task 391 |        eval time =   29272.60 ms /    64 tokens (  464.64 ms per token,     2.15 tokens per second)
+19.33.222.550 I slot print_timing: id  0 | task 391 |       total time =  734456.18 ms /  5324 tokens
+19.33.222.551 I slot print_timing: id  0 | task 391 |    graphs reused =        433
+19.33.222.851 I slot      release: id  0 | task 391 | stop processing: n_tokens = 10746, truncated = 0
+19.33.235.435 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 8543086554
+19.34.505.865 I slot launch_slot_: id  0 | task 458 | processing task, is_child = 0
+19.52.905.898 I slot print_timing: id  0 | task 458 | prompt eval time =    8697.66 ms /   217 tokens (   40.08 ms per token,    24.95 tokens per second)
+19.52.905.922 I slot print_timing: id  0 | task 458 |        eval time =    9702.33 ms /    64 tokens (  154.01 ms per token,     6.49 tokens per second)
+19.52.905.923 I slot print_timing: id  0 | task 458 |       total time =   18399.99 ms /   281 tokens
+19.52.905.924 I slot print_timing: id  0 | task 458 |    graphs reused =        494
+19.52.905.957 I slot      release: id  0 | task 458 | stop processing: n_tokens = 283, truncated = 0
+19.52.919.932 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.497 (> 0.100 thold), f_keep = 0.777
+19.52.920.104 I slot launch_slot_: id  0 | task 523 | processing task, is_child = 0
+20.11.938.943 I slot print_timing: id  0 | task 523 | prompt eval time =    9149.24 ms /   223 tokens (   41.03 ms per token,    24.37 tokens per second)
+20.11.938.953 I slot print_timing: id  0 | task 523 |        eval time =    9869.57 ms /    64 tokens (  156.66 ms per token,     6.38 tokens per second)
+20.11.938.954 I slot print_timing: id  0 | task 523 |       total time =   19018.82 ms /   287 tokens
+20.11.938.955 I slot print_timing: id  0 | task 523 |    graphs reused =        556
+20.11.939.011 I slot      release: id  0 | task 523 | stop processing: n_tokens = 506, truncated = 0
+20.11.955.159 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.665 (> 0.100 thold), f_keep = 0.875
+20.11.955.328 I slot launch_slot_: id  0 | task 588 | processing task, is_child = 0
+20.32.001.770 I slot print_timing: id  0 | task 588 | prompt eval time =    9849.96 ms /   223 tokens (   44.17 ms per token,    22.64 tokens per second)
+20.32.001.780 I slot print_timing: id  0 | task 588 |        eval time =   10196.45 ms /    64 tokens (  161.85 ms per token,     6.18 tokens per second)
+20.32.001.781 I slot print_timing: id  0 | task 588 |       total time =   20046.42 ms /   287 tokens
+20.32.001.782 I slot print_timing: id  0 | task 588 |    graphs reused =        618
+20.32.001.831 I slot      release: id  0 | task 588 | stop processing: n_tokens = 729, truncated = 0
+20.32.019.600 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.749 (> 0.100 thold), f_keep = 0.914
+20.32.019.770 I slot launch_slot_: id  0 | task 653 | processing task, is_child = 0
+20.53.157.751 I slot print_timing: id  0 | task 653 | prompt eval time =   10594.98 ms /   223 tokens (   47.51 ms per token,    21.05 tokens per second)
+20.53.157.760 I slot print_timing: id  0 | task 653 |        eval time =   10542.98 ms /    64 tokens (  167.35 ms per token,     5.98 tokens per second)
+20.53.157.761 I slot print_timing: id  0 | task 653 |       total time =   21137.96 ms /   287 tokens
+20.53.157.762 I slot print_timing: id  0 | task 653 |    graphs reused =        680
+20.53.157.808 I slot      release: id  0 | task 653 | stop processing: n_tokens = 952, truncated = 0
+20.53.175.711 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.799 (> 0.100 thold), f_keep = 0.934
+20.53.175.936 I slot launch_slot_: id  0 | task 718 | processing task, is_child = 0
+21.15.446.409 I slot print_timing: id  0 | task 718 | prompt eval time =   11364.02 ms /   223 tokens (   50.96 ms per token,    19.62 tokens per second)
+21.15.446.418 I slot print_timing: id  0 | task 718 |        eval time =   10906.43 ms /    64 tokens (  173.12 ms per token,     5.78 tokens per second)
+21.15.446.419 I slot print_timing: id  0 | task 718 |       total time =   22270.45 ms /   287 tokens
+21.15.446.420 I slot print_timing: id  0 | task 718 |    graphs reused =        742
+21.15.446.471 I slot      release: id  0 | task 718 | stop processing: n_tokens = 1175, truncated = 0
+21.15.466.593 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.833 (> 0.100 thold), f_keep = 0.946
+21.15.466.862 I slot launch_slot_: id  0 | task 783 | processing task, is_child = 0
+21.39.002.103 I slot print_timing: id  0 | task 783 | prompt eval time =   12218.52 ms /   223 tokens (   54.79 ms per token,    18.25 tokens per second)
+21.39.002.113 I slot print_timing: id  0 | task 783 |        eval time =   11316.69 ms /    64 tokens (  179.63 ms per token,     5.57 tokens per second)
+21.39.002.114 I slot print_timing: id  0 | task 783 |       total time =   23535.22 ms /   287 tokens
+21.39.002.115 I slot print_timing: id  0 | task 783 |    graphs reused =        804
+21.39.002.195 I slot      release: id  0 | task 783 | stop processing: n_tokens = 1398, truncated = 0
+21.39.063.220 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 8668865895
+21.39.701.963 I slot launch_slot_: id  0 | task 848 | processing task, is_child = 0
+27.30.589.341 I slot print_timing: id  0 | task 848 | prompt processing, n_tokens =   2048, progress = 0.62, t = 350.89 s / 5.84 tokens per second
+34.43.954.556 I slot print_timing: id  0 | task 848 | prompt processing, n_tokens =   4096, progress = 0.72, t = 784.25 s / 5.22 tokens per second
+36.39.632.613 W srv          stop: cancel task, id_task = 848
+41.36.250.057 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+41.36.250.086 E error: Caused GPU Timeout Error (00000002:kIOAccelCommandBufferCallbackErrorTimeout)
+42.30.476.768 I slot      release: id  0 | task 848 | stop processing: n_tokens = 16811, truncated = 0
+42.30.476.794 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.845 (> 0.100 thold), f_keep = 0.005
+42.30.478.529 W srv         alloc:  - prompt state size 2626.912 MiB exceeds cache size limit 2048.000 MiB, skipping
+42.30.478.647 I slot launch_slot_: id  0 | task 852 | processing task, is_child = 0
+42.30.487.053 E ggml_metal_graph_compute: backend is in error state from a previous command buffer failure - recreate the backend to recover
+42.30.487.063 E graph_compute: ggml_backend_sched_graph_compute_async failed with error -1
+42.30.487.064 E process_ubatch: failed to compute graph, compute status: -1
+42.30.487.066 W decode: removing memory module entries for seq_id = 0, pos = [87, +inf)
+42.30.487.153 E srv        decode: Compute error. off = 0, n_batch = 2048, ret = -3
+42.30.487.155 E srv    send_error: task id = 852, error: Compute error.
+42.30.487.166 I slot      release: id  0 | task 852 | stop processing: n_tokens = 103, truncated = 0
+42.30.487.208 W srv          stop: cancel task, id_task = 852
+42.30.487.385 E srv  update_slots: decode() failed: Compute error.
+42.30.488.967 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+42.30.488.977 E error: Caused GPU Timeout Error (00000002:kIOAccelCommandBufferCallbackErrorTimeout)
+43.59.265.560 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 9920350867
+43.59.265.899 I slot launch_slot_: id  0 | task 856 | processing task, is_child = 0
+43.59.272.248 E ggml_metal_graph_compute: backend is in error state from a previous command buffer failure - recreate the backend to recover
+43.59.272.256 E graph_compute: ggml_backend_sched_graph_compute_async failed with error -1
+43.59.272.258 E process_ubatch: failed to compute graph, compute status: -1
+43.59.272.261 W decode: removing memory module entries for seq_id = 0, pos = [0, +inf)
+43.59.272.477 E srv        decode: Compute error. off = 0, n_batch = 2048, ret = -3
+43.59.272.479 E srv    send_error: task id = 856, error: Compute error.
+43.59.272.490 I slot      release: id  0 | task 856 | stop processing: n_tokens = 156, truncated = 0
+43.59.272.504 W srv          stop: cancel task, id_task = 856
+43.59.272.634 E srv  update_slots: decode() failed: Compute error.
+43.59.285.128 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 10009136191
+43.59.285.190 I slot launch_slot_: id  0 | task 859 | processing task, is_child = 0
+43.59.288.657 E ggml_metal_graph_compute: backend is in error state from a previous command buffer failure - recreate the backend to recover
+43.59.288.663 E graph_compute: ggml_backend_sched_graph_compute_async failed with error -1
+43.59.288.664 E process_ubatch: failed to compute graph, compute status: -1
+43.59.288.667 W decode: removing memory module entries for seq_id = 0, pos = [0, +inf)
+43.59.288.750 E srv        decode: Compute error. off = 0, n_batch = 2048, ret = -3
+43.59.288.752 E srv    send_error: task id = 859, error: Compute error.
+43.59.288.761 I slot      release: id  0 | task 859 | stop processing: n_tokens = 17, truncated = 0
+43.59.288.774 W srv          stop: cancel task, id_task = 859
+43.59.288.851 E srv  update_slots: decode() failed: Compute error.
+43.59.301.108 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 10009152462
+43.59.301.132 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+43.59.301.137 E error: Caused GPU Timeout Error (00000002:kIOAccelCommandBufferCallbackErrorTimeout)
+43.59.394.397 I slot launch_slot_: id  0 | task 862 | processing task, is_child = 0
+43.59.399.223 E ggml_metal_graph_compute: backend is in error state from a previous command buffer failure - recreate the backend to recover
+43.59.399.232 E graph_compute: ggml_backend_sched_graph_compute_async failed with error -1
+43.59.399.233 E process_ubatch: failed to compute graph, compute status: -1
+43.59.399.236 W decode: removing memory module entries for seq_id = 0, pos = [64, +inf)
+43.59.399.359 E srv        decode: Compute error. off = 0, n_batch = 2048, ret = -3
+43.59.399.361 E srv    send_error: task id = 862, error: Compute error.
+43.59.399.371 I slot      release: id  0 | task 862 | stop processing: n_tokens = 149, truncated = 0
+43.59.399.382 W srv          stop: cancel task, id_task = 862
+43.59.399.519 E srv  update_slots: decode() failed: Compute error.
+43.59.412.685 I srv    operator(): operator(): cleaning up before exit...
+43.59.413.899 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+43.59.413.911 E error: Caused GPU Timeout Error (00000002:kIOAccelCommandBufferCallbackErrorTimeout)
+43.59.414.444 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+43.59.414.453 E error: Caused GPU Timeout Error (00000002:kIOAccelCommandBufferCallbackErrorTimeout)

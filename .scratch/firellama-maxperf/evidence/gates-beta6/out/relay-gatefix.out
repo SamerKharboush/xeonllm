@@ -1,0 +1,167 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e5ea8f431ffeBhuqSiSAYZLecB): ses_e5ea8f431ffeBhuqSiSAYZLecB
+cost: $0
+touched files: 15
+   D Assets/web-ui/_app/immutable/bundle.B-3lmdOf.js
+   M Assets/web-ui/index.html
+   M Assets/web-ui/manifest.webmanifest
+   M Assets/web-ui/sw.js
+   M Sources/App/AboutTab.swift
+   M VERSION
+   M scripts/stress-release.sh
+   M specs/release-contract.md
+  ?? .scratch/firellama-maxperf/evidence/engine-survey-2026-11-02.md
+  ?? .scratch/firellama-maxperf/evidence/gates-beta6/
+  ?? .scratch/firellama-maxperf/evidence/metal-0078-prefill-command-buffers-2026-11-02.md
+  ?? .scratch/firellama-maxperf/issues/75-the-placement-rule-ignores-the-kv-cache-on-the-card-path.md
+  ?? .scratch/firellama-maxperf/issues/76-let-the-engine-fit-memory-instead-of-forcing-ngl-99.md
+  ?? Assets/web-ui/_app/immutable/bundle.X82ce0842.js
+  ?? patches/llama/metal/0078-metal-prefill-graphs-on-a-discrete-card-use-shorter-command-buffers.patch
+
+--- opencode final report ---
+I'll read the gate script and contract first.Now edit gates.sh.Done.
+
+## Diff of `.scratch/firellama-maxperf/evidence/gates-beta6/gates.sh`
+
+```diff
+--- a/.scratch/firellama-maxperf/evidence/gates-beta6/gates.sh
++++ b/.scratch/firellama-maxperf/evidence/gates-beta6/gates.sh
+@@ -3,12 +3,20 @@
+ cd /Users/sam/firellama
+ B=dist/XeonLLM.app/Contents/Resources/bin; O=$(dirname "$0")/out; mkdir -p $O
+ M=/Users/sam/models
++# GATES_SECTIONS: comma list of {identity,ops,coverage,prefill,preflight,engine,proofs,avx,repro}
++# to run; default all. A rerun of a partially passed gate skips what already passed, e.g.
++# GATES_SECTIONS=prefill,preflight,engine,proofs,avx,repro
++SECTIONS=${GATES_SECTIONS:-identity,ops,coverage,prefill,preflight,engine,proofs,avx,repro}
++want() { case ",$SECTIONS," in *",$1,"*) return 0;; *) return 1;; esac; }
++if want identity; then
+ echo "== identity"
+ shasum -a 256 $B/llama-server $B/llama-bench $B/test-backend-ops | cut -c1-16
+ $B/llama-server --version 2>&1 | head -3
+ for f in llama-server llama-bench; do echo "$f banner: $(strings $B/$f | grep -m1 -o 'XeonLLM engine.*')"; done
+ echo "VERSION $(cat VERSION)"
+ ( sed -n 1,176p tools/ab.sh > $O/ab-fns.sh; source $O/ab-fns.sh; assert_artifact $B/llama-server bundle )
++fi
++if want ops; then
+ echo "== 3.1 every op"
+ for c in 0 1; do
+   GGML_METAL_DEVICE_INDEX=$c $B/test-backend-ops -b MTL0 > $O/all-c$c.log 2>&1
+@@ -16,28 +24,65 @@
+   GGML_METAL_DEVICE_INDEX=$c TOSH_FA_AMD=1 $B/test-backend-ops -b MTL0 -o FLASH_ATTN_EXT > $O/fa-c$c.log 2>&1
+   echo "card $c FA TOSH_FA_AMD=1: $(grep 'tests passed' $O/fa-c$c.log | tail -1) FAIL=$(grep -c '\bFAIL\b' $O/fa-c$c.log)"
+ done
++fi
++if want coverage; then
+ echo "== 3.2 kernel coverage"
+ scripts/check-kernel-coverage.sh $B 2>&1 | tail -4
++fi
++if want prefill; then
+ echo "== 3.3 prefill bands"
+-for c in 0 1; do for m in Qwen3-0.6B-Q8_0 Qwen3-4B-Q4_K_M Qwen3-4B-Q6_K Qwen3-8B-Q4_K_M Qwen3-14B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M LFM3-1.7B-F16 Ternary-Bonsai-2-27B-PQ2_0 Underdog-Saluki-27B-1.0-IQ2-mix; do
+-  GGML_METAL_DEVICE_INDEX=$c TOSH_FA_AMD=1 $B/llama-bench -m $M/$m.gguf -ngl 99 -fa 1 -p 16,128,256,448,512,1024,2048 -n 0 -r 1 -o csv > $O/pp-$m-c$c.csv 2> $O/pp-$m-c$c.err
+-  rc=$?; echo "card $c $m rc=$rc rows=$(($(wc -l < $O/pp-$m-c$c.csv)-1)) $(grep -m1 -E 'kernel not found|error|unknown model' $O/pp-$m-c$c.err | cut -c1-120)"
+-  sleep 3
+-done; done
+-TOSH_FA_AMD=1 $B/llama-bench -m $M/Ornith-1.0-35B-GGUF/ornith-1.0-35b-Q6_K.gguf -ngl 0 -fa 1 -p 16,128,256,448,512,1024,2048 -n 0 -r 1 -o csv > $O/pp-35b-host.csv 2> $O/pp-35b-host.err
+-echo "35B host rc=$? rows=$(($(wc -l < $O/pp-35b-host.csv)-1))"
++# Per-card budget: recommendedMaxWorkingSetSize 6442450944 (6442.45 MB) minus 512 MiB
++# (536870912) for KV and compute = 5905580032 bytes. A model at or above that never runs
++# on one card: card 0 drives the display and a paged card stalls WindowServer until macOS
++# panics (2026-11-03, Ternary-Bonsai-2-27B-PQ2_0 at -p 1024 on card 0, twice). It runs on
++# both cards, -sm layer and -sm tensor, as the app places it.
++ONECARD=5905580032
++PBANDS=16,128,256,448,512,1024,2048
++for m in Qwen3-0.6B-Q8_0 Qwen3-4B-Q4_K_M Qwen3-4B-Q6_K Qwen3-8B-Q4_K_M Qwen3-14B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M LFM3-1.7B-F16 Ternary-Bonsai-2-27B-PQ2_0 Underdog-Saluki-27B-1.0-IQ2-mix; do
++  sz=$(stat -f %z $M/$m.gguf 2>/dev/null)
++  if [ -z "$sz" ]; then echo "$m missing at $M/$m.gguf"; continue; fi
++  if [ "$sz" -ge "$ONECARD" ]; then
++    for sm in layer tensor; do
++      GGML_METAL_DEVICE_LIST=0,1 TOSH_FA_AMD=1 $B/llama-bench -m $M/$m.gguf -ngl 99 -sm $sm -fa 1 -p $PBANDS -n 0 -r 1 -o csv > $O/pp-$m-both-$sm.csv 2> $O/pp-$m-both-$sm.err
++      rc=$?
++      note=$(grep -m1 -E 'kernel not found|error|unknown model' $O/pp-$m-both-$sm.err | cut -c1-120)
++      if [ "$sm" = tensor ] && [ "$rc" = 86 ] && grep -q 'cannot be tensor-split' $O/pp-$m-both-$sm.err; then note="handled (exit 86)"; fi
++      echo "both cards 0,1 -sm $sm $m ($sz bytes, over one card) rc=$rc rows=$(($(wc -l < $O/pp-$m-both-$sm.csv)-1)) $note"
++      sleep 3
++    done
++  else
++    for c in 0 1; do
++      GGML_METAL_DEVICE_INDEX=$c TOSH_FA_AMD=1 $B/llama-bench -m $M/$m.gguf -ngl 99 -fa 1 -p $PBANDS -n 0 -r 1 -o csv > $O/pp-$m-c$c.csv 2> $O/pp-$m-c$c.err
++      rc=$?; echo "card $c $m ($sz bytes, fits one card) rc=$rc rows=$(($(wc -l < $O/pp-$m-c$c.csv)-1)) $(grep -m1 -E 'kernel not found|error|unknown model' $O/pp-$m-c$c.err | cut -c1-120)"
++      sleep 3
++    done
++  fi
++done
++TOSH_FA_AMD=1 $B/llama-bench -m $M/Ornith-1.0-35B-GGUF/ornith-1.0-35b-Q6_K.gguf -ngl 0 -fa 1 -p $PBANDS -n 0 -r 1 -o csv > $O/pp-35b-host.csv 2> $O/pp-35b-host.err
++echo "35B host (-ngl 0) rc=$? rows=$(($(wc -l < $O/pp-35b-host.csv)-1))"
++fi
++if want preflight; then
+ echo "== 3.4 preflight"
+ tools/ab.sh --baseline $B/llama-server --model $M/Qwen3-0.6B-Q8_0.gguf --split layer --preflight-only > $O/preflight.log 2>&1; echo "preflight rc=$?"; grep -E 'preflight\[' $O/preflight.log | head -8
++fi
++if want engine; then
+ echo "== 3.5 test-engine"
+ scripts/test-engine.sh $B/llama-server > $O/test-engine.log 2>&1; echo "test-engine rc=$?"; tail -3 $O/test-engine.log
++fi
++if want proofs; then
+ echo "== section 2 proofs"
+ for c in 0 1; do grep -hE "SIMD-group width = 64 \(|wave64 decode ON|aligned mat-vec reads ON" $O/all-c$c.log | sort -u | sed "s/^/card $c: /"; done
+ for e in X TOSH_MV_ROWS8_DISABLE TOSH_FULL_TG_DISABLE; do for m in Qwen3-4B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M; do
+   env $e=1 GGML_METAL_DEVICE_INDEX=1 $B/llama-bench -m $M/$m.gguf -ngl 99 -p 0 -n 128 -r 5 -fa 1 -o csv 2>/dev/null | tail -1 | awk -F, -v e=$e -v m=$m '{print e " " m " tg128 " $(NF-1) " sd " $NF}'; sleep 5; done; done
++fi
++if want avx; then
+ echo "== AVX2/FMA mnemonics"
+ for f in $B/*; do [ -x "$f" ] && file "$f" | grep -q Mach-O && echo "$(basename $f): $(otool -tv "$f" 2>/dev/null | grep -cE '\b(vfmadd|vfmsub|vfnmadd|vpbroadcast[bwdq]|vpermd|vpermq|vperm2i128|vinserti128|vextracti128|vpgatherdd|vgatherdps|vpsllvd|vpsrlvd)')"; done
++fi
++if want repro; then
+ echo "== 0078 on the shipped engine"
+ $(dirname "$0")/repro.sh ship
+ TOSH_MTL_PREFILL_CB=1 $(dirname "$0")/repro.sh shipctl
++fi
+ pgrep -fl "firellama.*llama-server" || echo "no servers of ours"
+ echo GATES DONE
+```
+
+Single-card budget in script: `6442450944 - 536870912 = 5905580032` (`ONECARD`), `-ge` → both cards.
+
+## `bash -n`
+
+```
+bash -n .scratch/firellama-maxperf/evidence/gates-beta6/gates.sh
+bash -n OK
+```
+
+Nothing executed on GPU; only `stat`, `grep`, `diff`, `bash -n`.
+
+## 3.3 models, byte size, placement
+
+| model | bytes | placement |
+|---|---|---|
+| Qwen3-0.6B-Q8_0 | 639446688 | card 0, card 1 |
+| Qwen3-4B-Q4_K_M | 2497280256 | card 0, card 1 |
+| Qwen3-4B-Q6_K | 3306260704 | card 0, card 1 |
+| Qwen3-8B-Q4_K_M | 5027783488 | card 0, card 1 |
+| LFM3-1.7B-F16 | 3466626336 | card 0, card 1 |
+| Nemotron-3.5-Bolt-E4B-Q4_K_M | 6180446208 | both 0,1 — layer + tensor |
+| Qwen3-14B-Q4_K_M | 9001753376 | both 0,1 — layer + tensor |
+| Ternary-Bonsai-2-27B-PQ2_0 | 7206168928 | both 0,1 — layer + tensor |
+| Underdog-Saluki-27B-1.0-IQ2-mix | 7898369152 | both 0,1 — layer + tensor |
+
+Threshold 5905580032: 8B (5027783488) stays single-card; Nemotron (6180446208) crosses by 275 MB. `Ornith-1.0-35B … Q6_K` host run unchanged (`-ngl 0`).
+
+Tensor run exits 86 with `cannot be tensor-split` in `.err` → line prints `handled (exit 86)`, not a failure.
+
+## Audit — paths that can run an over-limit model on one card
+
+- `scripts/stress-release.sh:59-62` + `:86` — `ENVS` copied verbatim from the newest app log's ` env: ` line, then `ENVS+=("GGML_METAL_DEVICE_LIST=${GGML_METAL_DEVICE_LIST:-0,1}")`. If that log carries `GGML_METAL_DEVICE_INDEX=0` (or caller sets it), the run gets `-ngl 99` (`:79`) with one card and any model passed at `:30` — no size check. Real risk; needs the same stat-vs-limit guard or a stripped `GGML_METAL_DEVICE_INDEX`.
+- `scripts/tp-baseline.sh:53` — `run solo GGML_METAL_DEVICE_LIST=1 -- -sm none` on `$MODEL` (GLM-4-9B-0414-Q4_K_M, absent here; nominal ~5.5-5.8 GB, near the 5.905 GB line). Hard-coded single die, no size check.
+- `scripts/tp-baseline.sh:109-110` — `spec_solo_none` / `spec_solo_ngram` use `GGML_METAL_DEVICE_LIST=1 -- -sm none` with `SPEC_MODEL` unset, i.e. `$MODEL`. Same pattern. (`spec_qwen_*` rows at `:131-134` are TP4, and the comment at `:122-124` documents that solo 35B was dropped for exactly this reason.)
+- Nothing else: `tools/ab.sh:56,110,181` use `-sm tensor`/`layer`/`row` with no card pinning (all devices); `SMOKE_MODEL` defaults to the 0.6B (`:28`). `scripts/mgpu-report.sh:19,55`, `mgpu-server-check.sh:38`, `test-wave64-fa.sh:46`, `test-spec-decode.sh:44`, `spec-kernel-bench.py:96,112` and `make-engine-zip.sh:98` (generated `start.sh`) pin no card. `scripts/check-kernel-coverage.sh:29` pins a card but runs `test-backend-ops`, no model.
+- `tp-baseline.sh` targets the 4×W6800X box, not this Mac Pro; its GLM and Qwen models are not in `/Users/sam/models`.
+
+skipped: rewriting the two other scripts (out of scope, read-only audit), add when the guard must cover them.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-03T12-16-30-870Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.

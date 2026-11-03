@@ -1,0 +1,19 @@
+band16	PASS	prompt_tokens=80 completion_tokens=64 9.1s	80
+band300	PASS	prompt_tokens=448 completion_tokens=64 13.9s	448
+band450	PASS	prompt_tokens=655 completion_tokens=64 11.6s	655
+band520	PASS	prompt_tokens=724 completion_tokens=64 8.9s	724
+band1100	PASS	prompt_tokens=1483 completion_tokens=64 28.7s	1483
+band4200	PASS	prompt_tokens=5439 completion_tokens=64 171.1s	5439
+band8300	PASS	prompt_tokens=10683 completion_tokens=64 339.3s	10683
+conv6-turn0	PASS	prompt_tokens=220 completion_tokens=64 26.6s	220
+conv6-turn1	PASS	prompt_tokens=443 completion_tokens=64 11.1s	443
+conv6-turn2	PASS	prompt_tokens=666 completion_tokens=64 11.5s	666
+conv6-turn3	PASS	prompt_tokens=889 completion_tokens=64 12.0s	889
+conv6-turn4	PASS	prompt_tokens=1112 completion_tokens=64 12.4s	1112
+conv6-turn5	PASS	prompt_tokens=1335 completion_tokens=64 12.8s	1335
+evict	FAIL	TimeoutError: timed out	0
+after-evict	PASS	prompt_tokens=103 completion_tokens=64 11.9s	103
+tools	PASS	prompt_tokens=156 completion_tokens=100 13.3s	156
+parallel2	SKIP	--parallel 1 does not allow it	0
+cancel-stream	PASS	stream closed after 64 bytes	0
+after-cancel	PASS	prompt_tokens=149 completion_tokens=64 8.0s	149

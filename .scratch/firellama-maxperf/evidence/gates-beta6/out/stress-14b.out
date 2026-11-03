@@ -1,0 +1,5 @@
+launch flags from: /Users/sam/Library/Application Support/XeonLLM/logs/server-2026-11-01_13-20-50.log
+== Qwen3-14B-Q4_K_M.gguf [tensor] port 56382
+== Qwen3-14B-Q4_K_M.gguf [layer] port 57474
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/stress-14b/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/stress-14b
