@@ -1,0 +1,294 @@
+diff --git a/Sources/Hardware/Hardware.swift b/Sources/Hardware/Hardware.swift
+index 4b56c30..14aea4e 100644
+--- a/Sources/Hardware/Hardware.swift
++++ b/Sources/Hardware/Hardware.swift
+@@ -236,7 +236,8 @@ enum DflashMemoryPlanner {
+                      baseFileGB: Double, baseLayers: Int, ncmoe: Int,
+                      ctx: Int, mainKVScale: Double,
+                      draftFileGB: Double, draftLayers: Int,
+-                     draftKVBytesPerToken: Double) -> DflashMemoryPlan {
++                     draftKVBytesPerToken: Double,
++                     targetHeadCopyGB: Double? = nil) -> DflashMemoryPlan {
+         let budget = max(0, vramGB - reserveGB)
+         guard budget > 0, baseFileGB > 0, baseLayers > 0,
+               draftFileGB > 0, draftLayers > 0 else {
+@@ -256,7 +257,10 @@ enum DflashMemoryPlanner {
+         // because most layers use a sliding window. This coefficient is calibrated
+         // against the engine's 8K/16K/32K allocations and scales with KV quantization.
+         let baseKVGB = 0.021 * Double(max(0, ctx)) / 1024 * mainKVScale
+-        let baseNeedGB = baseWeightsGB + baseComputeGB + baseKVGB
++        // A drafter on a card the target does not use (the expert tier's other card) holds none
++        // of the target's weights, KV or compute; only its copy of the borrowed output head
++        // (spec/0073) sits beside it.
++        let baseNeedGB = targetHeadCopyGB ?? (baseWeightsGB + baseComputeGB + baseKVGB)
+ 
+         let draftKVGB = draftKVBytesPerToken * Double(max(0, ctx)) / 1_073_741_824
+         let draftFixedGB = draftComputeGB + draftKVGB
+diff --git a/Sources/Servers/Server.swift b/Sources/Servers/Server.swift
+index f27a751..dca9af7 100644
+--- a/Sources/Servers/Server.swift
++++ b/Sources/Servers/Server.swift
+@@ -428,14 +428,20 @@ struct ServerSettings {
+         // A compatible downloaded DFlash draft takes precedence over embedded MTP.
+         // Dynamic MoE plans memory without a separate draft model, so DFlash only joins a
+         // full-GPU plan; the plan counts an MTP head, built in or in its own file.
+-        // A model on the host has no card for the draft to run on.
+-        let draftAllowed = usesGPUs && (!usesAutoPlan || plannedMode == "full_gpu")
++        // A model on the host has no card for the draft to run on. The expert tier's draft
++        // runs on the card the tier leaves idle, planned against that card alone.
++        let otherCardDraft = expertTierDraftOnOtherCard != nil
++        let draftAllowed = usesGPUs && (!usesAutoPlan || plannedMode == "full_gpu" || otherCardDraft)
+         if draftAllowed, let selection = dflashSelection(modelPath: modelPath, ncmoe: ncmoe) {
+             // Quantize the draft's KV cache: it doubles KV pressure at high ctx, and
+             // q8_0 halves that footprint at no measurable quality cost for a draft.
+             args += ["-md", selection.draft, "--spec-type", "draft-dflash",
+                      "-ngld", String(selection.ngld),
+                      "-ctkd", "q8_0", "-ctvd", "q8_0"]
++            if otherCardDraft {
++                // the target on the first listed card only, the drafter on the second
++                args += ["--split-mode", "none", "-mg", "0", "-devd", "MTL1"]
++            }
+         } else if Self.mtpEnabled(forModel: modelPath), let draft = Self.mtpDraftPath(forModel: modelPath) {
+             args += ["-md", draft, "--spec-type", "draft-mtp"] + Self.mtpSamplingArgs
+             args += Self.mtpDraftWidthArgs(forModel: modelPath, gpuArchitecture: selectedGPUArchitecture)
+@@ -795,10 +801,13 @@ struct ServerSettings {
+         let gpus = ServerController.availableGPUs()
+         if placement == .expertTier {
+             // Dynamic MoE plans the first card it sees: give it one, the user's if one is picked,
+-            // else the one with the most free VRAM.
+-            if gpuIndex >= 0 {
+-                env["GGML_METAL_DEVICE_INDEX"] = String(gpuIndex)
+-            } else if let card = Self.expertTierCard(VRAMMonitor.snapshot()) {
++            // else the one with the most free VRAM. With a drafter that fits the other card, the
++            // engine sees both, the expert card first; `--split-mode none -mg 0` keeps the
++            // target on it (src/llama.cpp, llama_prepare_model_devices) and `-devd MTL1` puts
++            // the drafter on the other.
++            if let cards = expertTierDraftOnOtherCard {
++                env["GGML_METAL_DEVICE_LIST"] = "\(cards.expert),\(cards.drafter)"
++            } else if let card = expertTierCardIndex {
+                 env["GGML_METAL_DEVICE_INDEX"] = String(card)
+             }
+         } else if usesGPUs, gpuList.count >= 2 {
+@@ -1152,10 +1161,52 @@ struct ServerSettings {
+         return []
+     }
+ 
++    /// The card the expert tier plans on: the user's if one is picked, else the one with the
++    /// most free VRAM. The environment and the drafter's plan both read this.
++    var expertTierCardIndex: Int? {
++        gpuIndex >= 0 ? gpuIndex : Self.expertTierCard(VRAMMonitor.snapshot())
++    }
++
++    /// The cards of an expert tier with its DFlash drafter on the card the tier leaves idle:
++    /// the expert card and the other discrete card. Nil when the user picked a card, when there
++    /// are fewer than two discrete cards, or when the model has no drafter or has DFlash off;
++    /// the run then keeps one card, as in beta.6. Whether the drafter fits that card is the
++    /// plan's question, not this one.
++    var expertTierDraftCards: (expert: Int, drafter: Int)? {
++        guard placement == .expertTier,
++              Self.dflashDraftPath(forModel: modelPath) != nil,
++              Self.dflashMode(forModel: modelPath) != .off else { return nil }
++        return Self.expertTierDraftCards(gpus: ServerController.availableGPUs(),
++                                         expertCard: expertTierCardIndex, picked: gpuIndex >= 0)
++    }
++
++    /// The expert tier's cards when its drafter is planned onto the other card and fits there.
++    var expertTierDraftOnOtherCard: (expert: Int, drafter: Int)? {
++        guard let cards = expertTierDraftCards,
++              dflashSelection(modelPath: modelPath, ncmoe: ncmoe) != nil else { return nil }
++        return cards
++    }
++
++    nonisolated static func expertTierDraftCards(gpus: [GPUDevice], expertCard: Int?,
++                                                 picked: Bool) -> (expert: Int, drafter: Int)? {
++        let discrete = gpus.filter { !$0.isIntegrated }
++        guard !picked, discrete.count >= 2 else { return nil }
++        let expert = expertCard.flatMap { card in discrete.first { $0.index == card }?.index }
++            ?? discrete[0].index
++        guard let drafter = discrete.first(where: { $0.index != expert })?.index else { return nil }
++        return (expert, drafter)
++    }
++
++    /// The drafter's copy of the target's output head on its own card (spec/0073): measured
++    /// 397.9 MiB for the 35B's Q6_K head (2048 x 248320).
++    static let dflashHeadCopyGB = 397.9 / 1024
++
+     func dflashMemoryPlan(modelPath: String, draftPath: String, ncmoe: Int,
+                           honorReserve: Bool = true) -> DflashMemoryPlan? {
+         let gpus = ServerController.availableGPUs()
+-        let indices = selectedGPUIndices
++        let otherCard = expertTierDraftCards?.drafter
++        // On the expert tier the drafter is budgeted against the idle card alone.
++        let indices = otherCard.map { Set([$0]) } ?? selectedGPUIndices
+         let selected = gpus.filter { indices.contains($0.index) }
+         guard !selected.isEmpty else { return nil }
+ 
+@@ -1186,7 +1237,8 @@ struct ServerSettings {
+             baseFileGB: baseBytes / 1_073_741_824, baseLayers: baseLayers, ncmoe: ncmoe,
+             ctx: ctx, mainKVScale: mainKVScale,
+             draftFileGB: draftBytes / 1_073_741_824, draftLayers: repeatingDraftLayers + 1,
+-            draftKVBytesPerToken: draftKVBytesPerToken)
++            draftKVBytesPerToken: draftKVBytesPerToken,
++            targetHeadCopyGB: otherCard == nil ? nil : Self.dflashHeadCopyGB)
+     }
+ 
+     private func dflashSelection(modelPath: String, ncmoe: Int) -> (draft: String, ngld: Int)? {
+@@ -1219,6 +1271,9 @@ struct ServerSettings {
+         guard let layers = plan.gpuLayers else {
+             return "off by memory planner (need \(need) GiB, budget \(budget) GiB)"
+         }
++        if let cards = expertTierDraftCards {
++            return "\(mode.rawValue), ngld=\(layers) on card \(cards.drafter), the card the expert tier leaves idle (estimated \(need) / \(budget) GiB budget)"
++        }
+         return "\(mode.rawValue), ngld=\(layers) (estimated \(need) / \(budget) GiB budget)"
+     }
+ 
+@@ -1942,6 +1997,13 @@ final class ServerController: ObservableObject {
+     nonisolated(unsafe) private static var cachedGPUs: [GPUDevice]?
+     private nonisolated static let gpuCacheLock = NSLock()
+ 
++    /// Tests: replace the detected GPUs (nil rescans the machine on the next call).
++    nonisolated static func setGPUsForTesting(_ gpus: [GPUDevice]?) {
++        gpuCacheLock.lock()
++        cachedGPUs = gpus
++        gpuCacheLock.unlock()
++    }
++
+     /// Whether any detected GPU is an external eGPU. Used to surface the
+     /// VRAM-resident-weights option, which fixes eGPU slowness over Thunderbolt.
+     nonisolated static func hasExternalGPU() -> Bool {
+diff --git a/Tests/XeonLLMTests.swift b/Tests/XeonLLMTests.swift
+index dfb704c..70fe35d 100644
+--- a/Tests/XeonLLMTests.swift
++++ b/Tests/XeonLLMTests.swift
+@@ -1238,6 +1238,130 @@ final class ServerSettingsTests: XCTestCase {
+         XCTAssertNil(ServerSettings.expertTierCard([]))
+     }
+ 
++    // MARK: the drafter on the card the expert tier leaves idle (beta7 ticket 01)
++
++    private func writeGGUF(_ url: URL, _ values: [(String, UInt32)], size: Int64) throws {
++        var data = Data("GGUF".utf8)
++        func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
++        func u64(_ v: UInt64) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
++        u32(3); u64(0); u64(UInt64(values.count))
++        for (key, value) in values {
++            u64(UInt64(key.utf8.count)); data.append(contentsOf: key.utf8); u32(4); u32(value)
++        }
++        try data.write(to: url)
++        let handle = try FileHandle(forWritingTo: url)
++        try handle.truncate(atOffset: UInt64(size))
++        try handle.close()
++    }
++
++    private func d700(_ index: Int, vramMB: Int = 6_144) -> GPUDevice {
++        GPUDevice(index: index, name: "AMD Radeon HD - FirePro D700", vramMB: vramMB)
++    }
++
++    /// The 35B Q6_K's size with a MoE header, and its 421 MB DFlash drafter beside it.
++    private func moeWithDrafter(gpus: [GPUDevice]) throws -> ServerSettings {
++        let dir = FileManager.default.temporaryDirectory
++            .appendingPathComponent("tosh-draft-\(UUID().uuidString)", isDirectory: true)
++        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
++        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
++        let model = dir.appendingPathComponent("moe.gguf")
++        try writeGGUF(model, [("qwen35moe.block_count", 40), ("qwen35moe.expert_count", 256),
++                              ("qwen35moe.expert_used_count", 8)],
++                      size: Int64(26.56 * 1_073_741_824))
++        try writeGGUF(dir.appendingPathComponent("moe.dflash.gguf"),
++                      [("qwen3.block_count", 5), ("qwen3.attention.head_count_kv", 4),
++                       ("qwen3.attention.key_length", 128), ("qwen3.attention.value_length", 128)],
++                      size: 421_060_896)
++        ServerController.setGPUsForTesting(gpus)
++        addTeardownBlock { ServerController.setGPUsForTesting(nil) }
++        var s = makeSettings()
++        s.modelPath = model.path
++        s.multiGPU = true
++        s.ctx = 32_768
++        s.placement = s.resolvePlacement(on: d700HW)
++        return s
++    }
++
++    func testTheExpertTierPutsItsDrafterOnTheOtherCard() throws {
++        let s = try moeWithDrafter(gpus: [d700(0), d700(1)])
++        XCTAssertEqual(s.placement, .expertTier)
++        let cards = try XCTUnwrap(s.expertTierDraftCards)
++        XCTAssertNotEqual(cards.expert, cards.drafter)
++        let env = s.environment
++        XCTAssertEqual(env["GGML_METAL_DEVICE_LIST"], "\(cards.expert),\(cards.drafter)",
++                       "the expert card first: Dynamic MoE plans the first card it sees")
++        XCTAssertNil(env["GGML_METAL_DEVICE_INDEX"])
++        let args = s.arguments
++        XCTAssertTrue(args.contains("--dynamic-moe"))
++        let md = try XCTUnwrap(args.firstIndex(of: "-md"))
++        XCTAssertTrue(args[md + 1].hasSuffix("moe.dflash.gguf"))
++        XCTAssertGreaterThan(Int(args[args.firstIndex(of: "-ngld")! + 1]) ?? 0, 0)
++        XCTAssertEqual(args[args.firstIndex(of: "-devd")! + 1], "MTL1")
++        XCTAssertEqual(args[args.firstIndex(of: "--split-mode")! + 1], "none",
++                       "the target stays on the first listed card")
++        XCTAssertEqual(args[args.firstIndex(of: "-mg")! + 1], "0")
++        XCTAssertTrue(s.dflashPlanSummary.contains("on card \(cards.drafter)"), s.dflashPlanSummary)
++    }
++
++    func testTheExpertTierKeepsOneCardWithDFlashOff() throws {
++        var s = try moeWithDrafter(gpus: [d700(0), d700(1)])
++        let defaults = UserDefaults.standard
++        let saved = defaults.stringArray(forKey: SettingsKeys.dflashDisabled)
++        defaults.set([s.modelPath], forKey: SettingsKeys.dflashDisabled)
++        addTeardownBlock { defaults.set(saved, forKey: SettingsKeys.dflashDisabled) }
++        s.placement = s.resolvePlacement(on: d700HW)
++        XCTAssertNil(s.expertTierDraftCards)
++        XCTAssertNotNil(s.environment["GGML_METAL_DEVICE_INDEX"])
++        XCTAssertNil(s.environment["GGML_METAL_DEVICE_LIST"])
++        XCTAssertFalse(s.arguments.contains("-md"))
++        XCTAssertFalse(s.arguments.contains("--split-mode"))
++    }
++
++    func testAPickedCardKeepsTheExpertTierOnItWithNoDrafterElsewhere() throws {
++        var s = try moeWithDrafter(gpus: [d700(0), d700(1)])
++        s.gpuIndex = 0
++        s.placement = s.resolvePlacement(on: d700HW)
++        XCTAssertEqual(s.placement, .expertTier)
++        XCTAssertNil(s.expertTierDraftCards)
++        XCTAssertEqual(s.environment["GGML_METAL_DEVICE_INDEX"], "0")
++        XCTAssertFalse(s.arguments.contains("-devd"))
++        XCTAssertFalse(s.arguments.contains("--split-mode"))
++    }
++
++    func testAnIdleCardTooSmallForTheDrafterLeavesItOff() throws {
++        // The drafter's fixed cost (1.9 GiB compute, the head copy, its KV) needs more than
++        // 2 GiB less the reserve. Both cards are small, so whichever is idle cannot hold it.
++        let s = try moeWithDrafter(gpus: [d700(0, vramMB: 2_048), d700(1, vramMB: 2_048)])
++        XCTAssertNotNil(s.expertTierDraftCards)
++        XCTAssertNil(s.expertTierDraftOnOtherCard)
++        XCTAssertFalse(s.arguments.contains("-md"))
++        XCTAssertNotNil(s.environment["GGML_METAL_DEVICE_INDEX"])
++        XCTAssertTrue(s.dflashPlanSummary.hasPrefix("off by memory planner"), s.dflashPlanSummary)
++    }
++
++    func testOneCardKeepsTheExpertTierAsBefore() throws {
++        let s = try moeWithDrafter(gpus: [d700(0)])
++        XCTAssertNil(s.expertTierDraftCards)
++        XCTAssertNil(s.environment["GGML_METAL_DEVICE_LIST"])
++        XCTAssertFalse(s.arguments.contains("-devd"))
++    }
++
++    func testTheIdleCardPlanCountsOnlyTheDrafterAndTheHeadCopy() {
++        func plan(head: Double?) -> DflashMemoryPlan {
++            DflashMemoryPlanner.plan(vramGB: 6, reserveGB: 1, baseFileGB: 26.56, baseLayers: 40,
++                                     ncmoe: 0, ctx: 32_768, mainKVScale: 1,
++                                     draftFileGB: 421_060_896 / 1_073_741_824, draftLayers: 6,
++                                     draftKVBytesPerToken: 5 * 4 * 256 * 34.0 / 32,
++                                     targetHeadCopyGB: head)
++        }
++        let idle = plan(head: ServerSettings.dflashHeadCopyGB)
++        XCTAssertEqual(idle.gpuLayers, 6, "the whole drafter fits the idle card")
++        XCTAssertLessThan(idle.estimatedVRAMGB, 3.0)
++        // the same inputs with the target on the drafter's card: the beta.6 answer, off
++        XCTAssertNil(plan(head: nil).gpuLayers)
++        XCTAssertGreaterThan(plan(head: nil).estimatedVRAMGB, 26)
++    }
++
+     func testAPickedCardOverridesTheExpertTierChoice() throws {
+         let url = try sparseModel(bytes: Int64(26.56 * 1_073_741_824))
+         try writeMinimalMoEGGUF(url)

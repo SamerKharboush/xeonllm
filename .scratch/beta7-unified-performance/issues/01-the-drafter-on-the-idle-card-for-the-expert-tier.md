@@ -1,6 +1,6 @@
 # 01: the DFlash drafter on the idle card for the expert tier
 
-Status: ready-for-agent
+Status: resolved (measured: does not pay; app change not shipped)
 Type: task
 Spec: `../spec.md` (user stories 1-7)
 
@@ -127,3 +127,73 @@ Ship only if the text is identical and the run is clean (no watchdog, no exit). 
 either way, as two observations, with no ratio against a modelled figure.
 
 ## Comments
+
+### 2026-11-04: answer (orchestrator)
+
+**The drafter on the idle card runs, but it does not pay.** The app change is not shipped. It
+is kept as `evidence/01/app-drafter-on-idle-card.diff`, with six `ServerSettings` tests, for when
+ticket 04 changes the verify cost.
+
+Mocca's two attempts were rejected:
+- The first left the planner counting all 26.6 GiB of the target on the drafter's card, so the
+  drafter stayed off. Its "other card" set was empty with both cards selected, it overrode a
+  picked card, it added no tests, and it reported test failures that do not exist.
+- The second recursed forever (`expertTierCards` -> `dflashSelection` -> `dflashMemoryPlan` ->
+  `expertTierCards`). It dropped `GGML_METAL_DEVICE_INDEX` from the expert tier when no drafter
+  was present, passed `-devd 1`, which names no device, and still had no tests. The
+  orchestrator wrote the change.
+
+**The engine question.** `--split-mode none -mg 0` keeps the target on the first listed card
+(`src/llama.cpp:339-351`, `llama_prepare_model_devices`; Dynamic MoE's probe builds its model
+params from the same flags, `common/tosh-plan.cpp:320`). The run confirms it: the memory table
+shows the target on one card only.
+
+**An engine bug found and fixed.** The first real launch aborted:
+
+    ggml-backend.cpp:1127: pre-allocated tensor (output.weight) in a buffer (MTL0_Private) that
+    cannot run the operation
+
+The drafter borrows the target's output head. `spec/0073` copied it to the drafter's card only
+from host memory, but on the expert tier the head sits in the other card's private memory. The
+patch now copies it from another card too, with `ggml_backend_tensor_copy`:
+
+    dflash lm head copied from MTL0_Private to MTL1_Private (397.9 MiB, q6_K)
+
+The series applies 88/88 at `d81235049`. The host path is unchanged.
+
+**The A/B.** Method:
+- dev engine `build-static` (`d81235049` + 88 patches with the new 0073, AVX1, 0 AVX2/FMA);
+- Ornith-1.0-35B Q6_K, the launch the rebuilt app logged: `-c 32768 -t 12 -fa 1 --dynamic-moe on`,
+  expert tier on card 1;
+- with the drafter: `GGML_METAL_DEVICE_LIST=1,0`, `-md <Qwen3.6-35B-A3B-DFlash Q8_0> --spec-type
+  draft-dflash -ngld 7 -ctkd q8_0 -ctvd q8_0 --split-mode none -mg 0 -devd MTL1`;
+- without it: beta.6's `GGML_METAL_DEVICE_INDEX=1`, no draft flags;
+- 6 servers, alternating;
+- each server: 4 requests of 128 tokens, temperature 0, `cache_prompt:false`, the first a warmup;
+- display awake (IODisplayWrangler power state 4) throughout.
+
+| server | mode | measured requests, tok/s | accepted / drafted |
+|---|---|---|---|
+| 1 | no drafter | 14.904, 14.956, 14.951 | — |
+| 2 | drafter | 15.227, 14.316, 13.654 | 62/81, 44/60, 36/54 |
+| 3 | no drafter | 15.433, 15.433, 15.402 | — |
+| 4 | drafter | 13.880, 14.539, 14.534 | 34/54, 42/60, 42/60 |
+| 5 | no drafter | 15.419, 15.423, 15.400 | — |
+| 6 | drafter | 14.181, 14.098, 14.164 | 36/54, 36/54, 36/54 |
+
+Without the drafter the measured requests span 14.90-15.43 tok/s; with it, 13.65-15.23. Two of
+the three drafter servers are below every no-drafter request. Acceptance falls after the warmup.
+
+**Text.** Byte identity cannot gate this pair: the expert tier's own text is not deterministic.
+Server 1, without a drafter, gave two texts across its requests (they first differ at "I should" /
+"I'll"). Dynamic MoE's cache moves experts between the CPU and the card from one request to the
+next, which changes the order of the sums. Both texts occur with and without the drafter. One
+drafter warmup gave a third text; it first differs at character 257.
+
+**Why it does not pay** (a mechanism, not measured here): to verify k drafted tokens the target
+runs its CPU experts over k rows, and on this AVX1 CPU that costs about k single tokens (the
+`core/0022` multi-row dots are AVX2-only). Ticket 04 is the lever. Re-run this A/B after it, from
+the saved diff.
+
+Evidence: `evidence/01/` (ab.sh, ab.tsv, ab.args, per-request JSON and text, server logs, the
+crash log, the memory table from the `-lv 4` run).
