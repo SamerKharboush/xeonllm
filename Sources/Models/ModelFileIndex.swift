@@ -34,10 +34,14 @@ struct ModelFileIndex: Sendable {
 
         var files: [URL] = []
         for case let url as URL in enumerator {
-            guard let values = try? url.resourceValues(forKeys: keys),
+            guard modelExtensions.contains(url.pathExtension.lowercased()) else { continue }
+            // A link to a regular, non-empty file is a model; keep the link path so
+            // it matches what the user put in the folder. Dangling links and links
+            // to directories stay out.
+            let target = url.resolvingSymlinksInPath().standardizedFileURL
+            guard let values = try? target.resourceValues(forKeys: keys),
                   values.isRegularFile == true,
-                  (values.fileSize ?? 0) > 0,
-                  modelExtensions.contains(url.pathExtension.lowercased()) else { continue }
+                  (values.fileSize ?? 0) > 0 else { continue }
             files.append(url.standardizedFileURL)
         }
         return ModelFileIndex(root: root, files: files)

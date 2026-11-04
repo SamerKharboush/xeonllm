@@ -272,7 +272,8 @@ enum GGUFMetadataCache {
     }
 
     private static func fileKey(for path: String) -> FileKey? {
-        let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
+        // A model often lives behind a symlink; size the target, not the link.
+        let standardized = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: standardized),
               let size = (attributes[.size] as? NSNumber)?.uint64Value else { return nil }
         let date = (attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0

@@ -197,7 +197,8 @@ struct ServerSettings {
     /// name matches a known model, otherwise an estimate from the file and its header.
     var modelSpec: ModelSpec? {
         guard !modelPath.isEmpty else { return nil }
-        let bytes = ((try? FileManager.default.attributesOfItem(atPath: modelPath))?[.size] as? NSNumber)?.int64Value ?? 0
+        let resolved = URL(fileURLWithPath: modelPath).resolvingSymlinksInPath().path
+        let bytes = ((try? FileManager.default.attributesOfItem(atPath: resolved))?[.size] as? NSNumber)?.int64Value ?? 0
         guard bytes > 0 else { return nil }
         return Catalog.spec(forPath: modelPath, fileBytes: bytes, isMoE: Self.modelIsMoE(at: modelPath))
     }
@@ -462,7 +463,8 @@ struct ServerSettings {
         let vramMB = ServerController.availableGPUs().map(\.vramMB).max() ?? 0
         guard vramMB > 0 else { return requested }
         let budget = Double(vramMB - effectiveVramReserveMB(reserveMB, vramMB: vramMB)) / 1024
-        let size = ((try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? Int64) ?? 0
+        let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        let size = ((try? FileManager.default.attributesOfItem(atPath: resolved))?[.size] as? Int64) ?? 0
         let weightsGB = Double(size) / 1_073_741_824 * (ncmoe > 0 ? 0.45 : 1.0)
         let computeGB = 0.9
         var value = requested
@@ -1157,8 +1159,10 @@ struct ServerSettings {
         let selected = gpus.filter { indices.contains($0.index) }
         guard !selected.isEmpty else { return nil }
 
-        guard let baseBytes = (try? FileManager.default.attributesOfItem(atPath: modelPath)[.size] as? NSNumber)?.doubleValue,
-              let draftBytes = (try? FileManager.default.attributesOfItem(atPath: draftPath)[.size] as? NSNumber)?.doubleValue else {
+        let base = URL(fileURLWithPath: modelPath).resolvingSymlinksInPath().path
+        let draft = URL(fileURLWithPath: draftPath).resolvingSymlinksInPath().path
+        guard let baseBytes = (try? FileManager.default.attributesOfItem(atPath: base)[.size] as? NSNumber)?.doubleValue,
+              let draftBytes = (try? FileManager.default.attributesOfItem(atPath: draft)[.size] as? NSNumber)?.doubleValue else {
             return nil
         }
         let baseLayers = Int(Self.ggufUInt32("block_count", at: modelPath) ?? 0)

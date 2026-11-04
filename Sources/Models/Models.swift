@@ -35,7 +35,8 @@ struct LocalModel: Identifiable, Hashable, Sendable {
 
     nonisolated static func models(from files: [URL]) -> [LocalModel] {
         let entries = files.map { url in
-            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+            let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+            let size = (try? resolved.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
             return GGUFFileEntry(path: url.path, sizeBytes: size)
         }
         return GGUFFile.models(from: entries)
@@ -98,7 +99,8 @@ private final class DownloadSink: @unchecked Sendable {
 
     func size() -> Int64 {
         lock.lock(); defer { lock.unlock() }
-        return ((try? FileManager.default.attributesOfItem(atPath: url.path)[.size]) as? NSNumber)?.int64Value ?? 0
+        let resolved = url.resolvingSymlinksInPath().standardizedFileURL.path
+        return ((try? FileManager.default.attributesOfItem(atPath: resolved)[.size]) as? NSNumber)?.int64Value ?? 0
     }
 
     func open(append: Bool) throws -> Int64 {

@@ -217,7 +217,8 @@ private struct ServerDetailHero: View {
         }
         guard FileManager.default.fileExists(atPath: target) else { return nil }
         let url = URL(fileURLWithPath: target)
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+        let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+        let size = (try? resolved.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
         return LocalModel(url: url, name: url.lastPathComponent, sizeBytes: size)
     }
 

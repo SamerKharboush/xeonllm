@@ -1167,6 +1167,42 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertFalse(args.contains("--split-mode"), "a model on the host does not split")
     }
 
+    /// A symlink to the model, sized as its 62-byte link, read as a 0 GB model: the 28 GB 35B Q6_K
+    /// went onto both D700s at -ngl 99 and the Mac panicked (2026-11-04). The rule sizes the target.
+    private func symlink(to target: URL) throws -> URL {
+        let link = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tosh-placement-link-\(UUID().uuidString).gguf")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        addTeardownBlock { try? FileManager.default.removeItem(at: link) }
+        return link
+    }
+
+    func testASymlinkedModelThatDoesNotFitIsLaunchedOnTheHost() throws {
+        let url = try symlink(to: try sparseModel(bytes: Int64(26.56 * 1_073_741_824)))
+        var s = makeSettings()
+        s.modelPath = url.path
+        s.multiGPU = true
+        XCTAssertEqual(s.modelSpec.map { $0.fileGB }!, 26.56, accuracy: 0.01)
+        s.placement = s.resolvePlacement(on: d700HW)
+        XCTAssertEqual(s.placement, .host)
+        let args = s.arguments
+        XCTAssertEqual(args[args.firstIndex(of: "-ngl")! + 1], "0")
+    }
+
+    func testASymlinkedMoEModelThatDoesNotFitTakesTheExpertTier() throws {
+        let target = try sparseModel(bytes: Int64(26.56 * 1_073_741_824))
+        try writeMinimalMoEGGUF(target)
+        let handle = try FileHandle(forWritingTo: target)
+        try handle.truncate(atOffset: UInt64(26.56 * 1_073_741_824))
+        try handle.close()
+        var s = makeSettings()
+        s.modelPath = try symlink(to: target).path
+        s.multiGPU = true
+        s.placement = s.resolvePlacement(on: d700HW)
+        XCTAssertEqual(s.placement, .expertTier)
+        XCTAssertFalse(s.arguments.contains("--split-mode"), "not the whole model over both cards")
+    }
+
     func testAMoEModelThatDoesNotFitIsLaunchedOnOneCardWithItsExpertsInRAM() throws {
         // The 35B Q6_K's size with a MoE header; the default settings split across both cards.
         let url = try sparseModel(bytes: Int64(26.56 * 1_073_741_824))
@@ -3335,5 +3371,79 @@ extension ServerSettingsTests {
         let hint = ServerController.diagnose(log, exitCode: 1)
         XCTAssertTrue(hint.contains("por capas"), hint)
         XCTAssertTrue(hint.contains("by layers"), hint)
+    }
+}
+
+final class SymlinkedModelSizeTests: XCTestCase {
+    private var tempDir: URL!
+
+    override func setUpWithError() throws {
+        tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xeonllm-symlink-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        if let tempDir { try? FileManager.default.removeItem(at: tempDir) }
+    }
+
+    private func writeGGUF(at url: URL, size: Int) throws {
+        var data = Data("GGUF".utf8)
+        func u32(_ value: UInt32) { withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) } }
+        func u64(_ value: UInt64) { withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) } }
+        func string(_ value: String) { u64(UInt64(value.utf8.count)); data.append(contentsOf: value.utf8) }
+        u32(3); u64(1); u64(0)
+        string("blk.0.ffn_up_exps.weight")
+        u32(1); u64(8); u32(0); u64(0)
+        if data.count < size { data.append(Data(repeating: 0, count: size - data.count)) }
+        try data.write(to: url)
+    }
+
+    private func link(_ name: String, to target: URL, in directory: URL) throws -> URL {
+        let url = directory.appendingPathComponent(name)
+        try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+        return url
+    }
+
+    func testSymlinkedModelUsesTargetSize() throws {
+        let store = tempDir.appendingPathComponent("store", isDirectory: true)
+        let models = tempDir.appendingPathComponent("models", isDirectory: true)
+        try FileManager.default.createDirectory(at: store, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
+
+        let expected = 1 << 20
+        let target = store.appendingPathComponent("target.gguf")
+        try writeGGUF(at: target, size: expected)
+        let alias = try link("alias.gguf", to: target, in: models)
+        let dangling = try link("dangling.gguf", to: store.appendingPathComponent("missing.gguf"), in: models)
+
+        XCTAssertEqual(GGUFFile.totalSize(at: alias.path), UInt64(expected))
+
+        let indexed = ModelFileIndex.scan(in: models).files.map(\.path)
+        XCTAssertTrue(indexed.contains(alias.standardizedFileURL.path))
+        XCTAssertFalse(indexed.contains(dangling.standardizedFileURL.path))
+
+        let sized = LocalModel.models(from: [alias])
+        XCTAssertEqual(sized.first?.sizeBytes, Int64(expected))
+
+        let split = try XCTUnwrap(GGUFMetadataCache.weightSplit(at: alias.path))
+        XCTAssertGreaterThan(split.expertBytes, 0, "the header was read through the link")
+        XCTAssertEqual(split, GGUFMetadataCache.weightSplit(at: target.path))
+    }
+
+    func testSymlinkedShardsUseTargetSizes() throws {
+        let store = tempDir.appendingPathComponent("store", isDirectory: true)
+        let models = tempDir.appendingPathComponent("models", isDirectory: true)
+        try FileManager.default.createDirectory(at: store, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: models, withIntermediateDirectories: true)
+
+        let target1 = store.appendingPathComponent("shard-00001-of-00002.gguf")
+        let target2 = store.appendingPathComponent("shard-00002-of-00002.gguf")
+        try writeGGUF(at: target1, size: 1 << 20)
+        try writeGGUF(at: target2, size: 2 << 20)
+        let link1 = try link("shard-00001-of-00002.gguf", to: target1, in: models)
+        _ = try link("shard-00002-of-00002.gguf", to: target2, in: models)
+
+        XCTAssertEqual(GGUFFile.totalSize(at: link1.path), UInt64(3 << 20))
     }
 }

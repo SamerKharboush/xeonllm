@@ -390,7 +390,8 @@ final class BenchmarkSharing: ObservableObject {
         let engineURL = run.engineURL
         let digests = await Task.detached(priority: .utility) {
             artifactURLs.map { url -> (URL, String?, Int64) in
-                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+                let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+                let size = (try? resolved.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
                 return (url, FileHash.sha256(of: url), size)
             }
         }.value

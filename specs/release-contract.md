@@ -82,7 +82,11 @@ All with `dist/XeonLLM.app/Contents/Resources/bin/*`, `GGML_METAL_DEVICE_INDEX=0
    the kernels. **Never run a model above one card's working set on one card, in any gate or
    brief:** card 0 drives the display, and a paged card 0 stalls WindowServer until macOS
    panics and reboots (`userspace watchdog timeout: no successful checkins from WindowServer`;
-   Ternary-Bonsai-2-27B-PQ2_0 at `-p 1024` on card 0 did this twice on 2026-11-03). A host-placed model runs at `-ngl 0`. A missing kernel, a driver refusal that
+   Ternary-Bonsai-2-27B-PQ2_0 at `-p 1024` on card 0 did this twice on 2026-11-03). **Nor a
+   model above both cards' working sets with every layer on the cards:** the 28 GB 35B Q6_K at
+   `-ngl 99` over both D700s paged through the GART until the kernel deadlocked (spinlock
+   timeout in `IOAccelSysMemory::unwire`, 2026-11-04). Size a model with `stat -L` (a symlink
+   is otherwise sized as the link, 62 bytes); `scripts/stress-release.sh` refuses both cases. A host-placed model runs at `-ngl 0`. A missing kernel, a driver refusal that
    is not handled, or a non-zero exit fails the release; a refusal with its own exit code and
    message (exit 86, `RESHAPE cannot be tensor-split`) is handled and is named in the notes.
 4. **The preflight gate** (`-ngl 0` and `-ngl 99` serve, the forced-drop control reads 1)

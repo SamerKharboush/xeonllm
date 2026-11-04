@@ -98,7 +98,7 @@ for kv in "${ENVS[@]}"; do
 done
 if [ "$one_card" = 1 ]; then
     for m in "${MODELS[@]}"; do
-        sz=$(stat -f %z "$m" 2>/dev/null || echo 0)
+        sz=$(stat -L -f %z "$m" 2>/dev/null || echo 0)   # -L: a link is sized as its target
         if [ "$sz" -ge "$ONECARD" ]; then
             echo "refusing: $m is $sz bytes, above one card's $ONECARD, and the env names one card" >&2
             exit 3
@@ -311,6 +311,22 @@ run_server() {
             -md) drafting=1 ;;
         esac
     done
+    # A model above both cards' working sets never goes onto the cards whole: the driver pages GPU
+    # memory through the GART until the kernel deadlocks (2026-11-04 01:15, the 28 GB 35B Q6_K at
+    # -ngl 99 over both D700s; spinlock timeout in IOAccelSysMemory::unwire, the Mac rebooted). Only
+    # -ngl 0 or an expert offload (--n-cpu-moe, -cmoe, -ot) may run it. The size is the link target's.
+    local offload=0 a
+    for a in "${runargs[@]}"; do
+        case "$a" in --n-cpu-moe|-ncmoe|--cpu-moe|-cmoe|-ot|--override-tensor) offload=1 ;; esac
+    done
+    if [ "$ngl" != 0 ] && [ "$offload" = 0 ]; then
+        local msz; msz=$(stat -L -f %z "$model" 2>/dev/null || echo 0)
+        if [ "$msz" -ge $((2 * ONECARD)) ]; then
+            echo "refusing [$label]: $(basename "$model") is $msz bytes, above both cards' $((2 * ONECARD)), with every layer on the cards" >&2
+            echo -e "$(basename "$model")\t$label\t(all)\tREFUSED\t$msz bytes on the cards would page GPU memory and panic the Mac\t0" >> "$TABLES/raw.tsv"
+            return 1
+        fi
+    fi
     local runenv=() kv
     for kv in "${ENVS[@]}"; do
         case "${kv%%=*}" in

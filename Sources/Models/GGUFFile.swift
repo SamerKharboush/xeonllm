@@ -65,7 +65,8 @@ enum GGUFFile {
     static func totalSize(at path: String) -> UInt64? {
         let url = URL(fileURLWithPath: path).standardizedFileURL
         if shardInfo(url.path) == nil {
-            guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+            let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: resolved.path),
                   let size = (attributes[.size] as? NSNumber)?.uint64Value else { return nil }
             return size
         }
@@ -74,8 +75,11 @@ enum GGUFFile {
             includingPropertiesForKeys: [.fileSizeKey],
             options: [.skipsHiddenFiles]) else { return nil }
         let entries = files.compactMap { file -> GGUFFileEntry? in
+            // Group shards by the names in the directory the user pointed at, but
+            // size each entry through the file it links to.
+            let resolved = file.resolvingSymlinksInPath().standardizedFileURL
             guard file.pathExtension.lowercased() == "gguf",
-                  let values = try? file.resourceValues(forKeys: [.fileSizeKey]),
+                  let values = try? resolved.resourceValues(forKeys: [.fileSizeKey]),
                   let size = values.fileSize else { return nil }
             return GGUFFileEntry(path: file.standardizedFileURL.path, sizeBytes: Int64(size))
         }
