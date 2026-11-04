@@ -41,6 +41,7 @@ using the AVX1 Xeon, both D700s and the 64 GB of RAM as one pool. Nothing is bui
 - [What clock headroom do the D700s and the Xeon have on macOS, and at what risk?](issues/04-what-clock-headroom-do-the-d700s-and-the-xeon-have-on-macos.md): no clock ticket (no macOS control, locked Xeon, a memory overclock gives silent wrong answers). Instead, card health at app start: a known-answer test per card, reset reports per PCIe address, leave a failing card out.
 
 - [What do the big-model-on-small-GPU projects actually do, and what of it runs here?](issues/02-what-do-the-big-model-on-small-gpu-projects-actually-do.md): none runs here (CUDA, ROCm RDNA3+, Apple Silicon, MLX); the fork already has most of their mechanisms. Gaps: a miss split (FreeToken), a warm start for the VRAM arena (Colibri), pipelined verify (mesh-llm). Two unmeasured numbers decide them: NVMe read and D700 zero-copy host read.
+- [Which newer engines and methods beat llama.cpp, and which of their ideas can this fork mimic?](issues/03-which-newer-engines-and-methods-beat-llama-cpp-and-why.md): none runs here. Carry over the GCN mat-vec layout, short drafts sized to the verify curve (n-gram defaults of 48-64 are wrong here), and overlap of the CPU experts with card work. Every card-1 number of 11-04 must be re-taken on card 0.
 
 ## Not yet specified
 
