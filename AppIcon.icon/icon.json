@@ -1,22 +1,24 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "srgb:0.349,0.318,0.498,1.00",
-      "srgb:0.753,0.306,0.482,1.00"
+  "fill": {
+    "linear-gradient": [
+      "srgb:1.000,0.776,0.102,1.00",
+      "srgb:0.941,0.565,0.000,1.00"
     ]
   },
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
+      "layers": [
         {
-          "image-name" : "glyph.png",
-          "name" : "glyph"
+          "image-name": "glyph.png",
+          "name": "glyph"
         }
       ]
     }
   ],
-  "supported-platforms" : {
-    "circles" : [ "watchOS" ],
-    "squares" : "shared"
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
   }
 }
