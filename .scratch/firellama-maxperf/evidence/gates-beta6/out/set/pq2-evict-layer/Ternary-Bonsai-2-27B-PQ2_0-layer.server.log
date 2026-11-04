@@ -1,0 +1,52 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.165.065 W DEPRECATED: argument '--split-mode' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.165.207 I srv  llama_server: initializing ...
+0.00.165.221 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app standalone)
+0.00.165.221 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.165.674 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.167.832 I srv    load_model: loading model '/Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf'
+0.00.167.862 I Tosh MoE: standard
+0.04.951.092 I cmn          init: llama threadpool init, n_threads = 12
+0.05.273.356 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_lds32
+0.05.943.856 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.05.953.983 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.05.954.006 I srv  llama_server: model loaded
+0.05.954.009 I srv  llama_server: listening on http://127.0.0.1:57964
+0.07.550.302 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.07.550.386 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.07.942.063 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.08.282.157 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+0.10.639.385 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =     42, progress = 0.00, t =   3.09 s / 13.60 tokens per second
+1.45.765.033 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   2090, progress = 0.10, t =  98.21 s / 21.28 tokens per second
+3.21.765.273 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   4138, progress = 0.20, t = 194.21 s / 21.31 tokens per second
+5.00.634.233 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   6186, progress = 0.30, t = 293.08 s / 21.11 tokens per second
+6.42.873.500 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   8234, progress = 0.40, t = 395.32 s / 20.83 tokens per second
+8.27.995.717 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  10282, progress = 0.50, t = 500.45 s / 20.55 tokens per second
+10.16.384.330 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  12330, progress = 0.60, t = 608.83 s / 20.25 tokens per second
+12.07.876.845 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  14378, progress = 0.70, t = 720.33 s / 19.96 tokens per second
+14.02.447.253 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  16426, progress = 0.80, t = 834.90 s / 19.67 tokens per second
+16.00.102.032 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  18474, progress = 0.90, t = 952.55 s / 19.39 tokens per second
+17.59.047.631 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  20033, progress = 0.97, t = 1071.50 s / 18.70 tokens per second
+18.31.496.763 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =  20545, progress = 1.00, t = 1103.95 s / 18.61 tokens per second
+19.01.323.394 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_wg32; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_wg32_lds32
+19.13.158.794 I slot print_timing: id  0 | task 0 | prompt eval time = 1133723.33 ms / 20549 tokens (   55.17 ms per token,    18.13 tokens per second)
+19.13.158.804 I slot print_timing: id  0 | task 0 |        eval time =   11885.04 ms /    64 tokens (  188.65 ms per token,     5.30 tokens per second)
+19.13.158.806 I slot print_timing: id  0 | task 0 |       total time = 1145608.37 ms / 20613 tokens
+19.13.158.807 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+19.13.159.432 I slot      release: id  0 | task 0 | stop processing: n_tokens = 20612, truncated = 0
+19.13.164.406 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.878 (> 0.100 thold), f_keep = 0.006
+19.14.269.244 I slot launch_slot_: id  0 | task 77 | processing task, is_child = 0
+19.18.468.308 I slot print_timing: id  0 | task 77 | prompt processing, n_tokens =    102, progress = 0.97, t =   4.20 s / 24.29 tokens per second
+19.33.183.039 I slot print_timing: id  0 | task 77 | prompt eval time =    8758.60 ms /   106 tokens (   82.63 ms per token,    12.10 tokens per second)
+19.33.183.049 I slot print_timing: id  0 | task 77 |        eval time =   10155.15 ms /    64 tokens (  161.19 ms per token,     6.20 tokens per second)
+19.33.183.050 I slot print_timing: id  0 | task 77 |       total time =   18913.75 ms /   170 tokens
+19.33.183.051 I slot print_timing: id  0 | task 77 |    graphs reused =        125
+19.33.183.087 I slot      release: id  0 | task 77 | stop processing: n_tokens = 211, truncated = 0
+19.33.194.099 I srv    operator(): operator(): cleaning up before exit...

@@ -1,0 +1,2 @@
+evict	PASS	prompt_tokens=20549 completion_tokens=64 1145.1s	20549
+after-evict	PASS	prompt_tokens=148 completion_tokens=64 20.1s	148

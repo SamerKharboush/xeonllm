@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.87.31-beta.6] - 2026-11-03
+
+beta.5 loaded every model and then failed in chat (ticket 74). This beta fixes every cause
+found, and it is the first release gated by `specs/release-contract.md`, on its shipped
+binaries and the app's real launch. The llama.cpp series is 88 patches on the pin
+`d81235049`; the new ones are `metal/0075`, `metal/0076`, `server/0077` and `metal/0078`.
+
+### Fixed
+
+- **The engine crashed on prompts of 448+ tokens on models with a BF16 tensor** (exit 11). The
+  GEMM selector composed `kernel_mul_mm_bf16e_f32_w_w64`, which the library never built. It
+  now checks the library, drops the wide suffix first, and aborts with the kernel's name if
+  nothing is left (`metal/0075`). `scripts/check-kernel-coverage.sh` checks every type and
+  batch class against the shipped metallib: 0 missing.
+- **The 14B on both cards failed deep in a chat with "Compute error."** At `-c 32768` with an
+  f16 cache, Qwen3-14B Q4_K_M needs 6926 MiB per card against 6144 (3954 weights + 2688 KV +
+  284 compute). The driver paged, and a long prompt's command buffer ran past the macOS GPU
+  watchdog (`kIOAccelCommandBufferCallbackErrorTimeout`). After that, every request got HTTP
+  500. Two changes:
+  - **The app lowers the context of a card launch until the KV cache fits** (ticket 75,
+    `Estimator.cardFitCtx`). The 14B at a saved 32768 launches at 16384. The log header says
+    `context: 32768 -> 16384 (…)` and the server overview shows a note. The saved setting is
+    not changed, and a model that fits keeps its context.
+  - **Batch graphs on a discrete card use shorter command buffers** (`metal/0078`), five
+    instead of two, so a prefill graph no longer runs as one long buffer.
+    `TOSH_MTL_PREFILL_CB=1` restores one.
+- **Tool servers never started.** The engine and the app's MCP transport now use the PATH of
+  the user's login shell plus the usual install locations. A server whose command is not found
+  shows in the MCP settings by name.
+- **The ToshLLM data was only half migrated.** If the XeonLLM folder already existed, the
+  ToshLLM folder was skipped. It is now merged item by item: missing items are copied,
+  conversations and projects are joined by id with XeonLLM's copy winning, and nothing of
+  ToshLLM's is moved or changed. Users migrated by beta.5 get the merge once.
+- **A model reached through a symlink was sized as the link, 62 bytes.** The placement rule
+  then read a 28 GB model as 0 GB and put it on both cards whole; the driver paged GPU memory
+  and macOS panicked (found by the stress test on 2026-11-04). Every model and drafter size now
+  follows links, and the model list shows a link to a model. The 35B now takes the expert tier
+  wherever its path points. `scripts/stress-release.sh` refuses any launch that would put a
+  model larger than both cards on them whole.
+- **The engine called itself "ToshLLM engine 0.87.31-beta.4".** It prints
+  `XeonLLM engine <VERSION>`, and the build refuses a stale version stamp.
+- **About and Donate pointed to upstream's author.** They now show Samer Kharboush and
+  <https://github.com/SamerKharboush/xeonllm>, and Donate opens the repository. ToshLLM by
+  Engelbert Delgado stays credited as the upstream.
+- **A remote MCP server over HTTPS failed with no explanation.** The web UI proxy now says the
+  engine has no HTTPS and names the way out (`server/0077`).
+
+### Changed
+
+- **Element-wise kernels spread a row over threadgroups** (`metal/0076`, a port of upstream
+  `6d194531e1`). `TOSH_FULL_TG_DISABLE=1` restores the old dispatch.
+
 ## [0.87.31-beta.5] - 2026-10-31
 
 **ToshLLM is now XeonLLM**, a fork of [ToshLLM](https://github.com/engeldlgado/toshllm) by

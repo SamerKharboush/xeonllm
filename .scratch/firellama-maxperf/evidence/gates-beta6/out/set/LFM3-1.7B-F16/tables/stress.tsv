@@ -1,0 +1,4 @@
+model	split	cell	verdict	detail	prompt_tokens
+LFM3-1.7B-F16.gguf	tensor	FAIL	server did not start; see /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16/LFM3-1.7B-F16-tensor.server.log
+LFM3-1.7B-F16.gguf	layer	FAIL	server did not start; see /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16/LFM3-1.7B-F16-layer.server.log
+LFM3-1.7B-F16.gguf	ngl0	FAIL	server did not start; see /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16/LFM3-1.7B-F16-ngl0.server.log

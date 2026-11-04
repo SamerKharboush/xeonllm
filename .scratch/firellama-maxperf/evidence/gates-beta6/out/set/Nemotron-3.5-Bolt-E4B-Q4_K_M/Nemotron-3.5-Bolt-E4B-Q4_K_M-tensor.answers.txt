@@ -1,0 +1,119 @@
+== band16
+Thinking Process:
+1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question.
+2.  **Analyze the text:** "the quick brown fox jumps over the lazy dog while the compiler waits for the next token
+--
+
+
+== band300
+Thinking Process:
+1.  **Analyze the Request:** The user wants me to act as a "terse assistant," read the provided text, and answer the final question in one word.
+2.  **Analyze the Text:** The text is a repetitive string: "the quick brown fox jumps
+--
+
+
+== band450
+Thinking Process:
+1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question in one word.
+2.  **Analyze the text:** The text is a repetitive string: "the quick brown fox jumps over the
+--
+
+
+== band520
+Thinking Process:
+1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question in one word.
+2.  **Analyze the text:** The text is a repetitive string: "the quick brown fox jumps over the
+--
+
+
+== band1100
+Thinking Process:
+
+1.  **Analyze the Request:** The user wants me to act as a "terse assistant," read the provided text, and answer the final question in *one word*.
+2.  **Analyze the Text:** The text is a repetitive string: "the quick brown fox
+--
+
+
+== band4200
+1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question ("In one word, what colour is the sky?").
+2.  **Analyze the Text:** The text is a repetition of: "
+--
+
+
+== band8300
+1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question in one word: "In one word, what colour is the sky?"
+
+2.  **Analyze the Text:** The text is a massive
+--
+
+
+== conv6-turn0
+
+--
+blue
+
+== conv6-turn1
+
+--
+red
+
+== conv6-turn2
+
+--
+blue
+
+== conv6-turn3
+
+--
+blue
+
+== conv6-turn4
+
+--
+blue
+
+== conv6-turn5
+
+--
+blue
+
+== evict
+1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question in one word: "In one word, what colour is the sky?"
+
+2.  **Analyze the Text:** The text is a massive
+--
+
+
+== after-evict
+Thinking Process:
+
+1.  **Analyze the Request:** The user wants me to act as a "terse assistant," read the provided text, and answer the final question.
+2.  **Analyze the Text:** The text is repetitive: "the quick brown fox jumps over the lazy dog while
+--
+
+
+== after-over-ctx
+Thinking Process:
+
+1.  **Analyze the Request:** The user wants me to act as a "terse assistant," read the provided text, and answer the final question.
+2.  **Analyze the Text:** The text is repetitive: "the quick brown fox jumps over the lazy dog while
+--
+
+
+== tools
+tly instructs to "Use the tool."
+2. **Examine available tools:** The only available tool is `get_weather`.
+3. **Check tool requirements:** `get_weather` requires a `city` parameter (type STRING).
+4. **Extract parameters from the request:** The city provided is "Lisbon".
+5. **Construct the tool call:** `get_weather(city="Lisbon")`
+6. **Format the output:** Generate the JSON tool call structure.
+--
+
+
+== after-cancel
+Thinking Process:
+1.  **Analyze the request:** The user wants me to act as a "terse assistant," read the provided text, and answer the final question.
+2.  **Analyze the text:** The text is a repetitive string: "the quick brown fox jumps over the lazy
+--
+
+

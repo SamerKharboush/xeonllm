@@ -1,0 +1,35 @@
+========================================================
+ XeonLLM 0.87.31-beta.6 — server start (x86_64 · no-AVX2 build)
+ engine : bundled (official) · kernels fae2c1f1f84a
+ model  : Qwen3-4B-Q6_K.gguf
+ GPUs detected:
+    [0] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+    [1] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+ GPU select: split-all · split-mode tensor | force-VRAM-buffers: no
+ settings: ngl=99 ncmoe=0 ctx=32768 fa=auto ctk=f16 ctv=f16 cacheRAM=2048
+ placement: card
+ dflash : not installed
+ env: GGML_METAL_DEVICES=2 TOSH_FA_AMD=1 TOSH_MGPU_EVENTS=1
+ args: -m /Users/sam/models/Qwen3-4B-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode tensor -n 2048 --path /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app/Contents/Resources/web-ui --ui-config {"maxImageMPixels":1,"pdfAsImage":false}
+========================================================
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.217.481 I srv  llama_server: initializing ...
+0.00.217.516 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app 0.87.31-beta.6)
+0.00.217.517 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.218.909 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.220.292 I srv    load_model: loading model '/Users/sam/models/Qwen3-4B-Q6_K.gguf'
+0.00.220.399 I Tosh MoE: standard
+0.00.220.779 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.00.500.749 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.04.427.316 I cmn          init: llama threadpool init, n_threads = 12
+0.04.801.160 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.05.017.374 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.05.036.025 I srv  llama_server: model loaded
+0.05.036.049 I srv  llama_server: listening on http://127.0.0.1:18099

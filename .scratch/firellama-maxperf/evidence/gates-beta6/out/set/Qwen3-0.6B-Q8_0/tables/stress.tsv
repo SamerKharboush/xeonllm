@@ -1,0 +1,49 @@
+model	split	cell	verdict	detail	prompt_tokens
+Qwen3-0.6B-Q8_0.gguf	tensor	band16	PASS	prompt_tokens=80 completion_tokens=64 2.1s	80
+Qwen3-0.6B-Q8_0.gguf	tensor	band300	PASS	prompt_tokens=448 completion_tokens=64 1.9s	448
+Qwen3-0.6B-Q8_0.gguf	tensor	band450	PASS	prompt_tokens=655 completion_tokens=64 1.7s	655
+Qwen3-0.6B-Q8_0.gguf	tensor	band520	PASS	prompt_tokens=724 completion_tokens=64 1.6s	724
+Qwen3-0.6B-Q8_0.gguf	tensor	band1100	PASS	prompt_tokens=1483 completion_tokens=64 2.9s	1483
+Qwen3-0.6B-Q8_0.gguf	tensor	band4200	PASS	prompt_tokens=5439 completion_tokens=64 16.4s	5439
+Qwen3-0.6B-Q8_0.gguf	tensor	band8300	PASS	prompt_tokens=10683 completion_tokens=64 41.2s	10683
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn0	PASS	prompt_tokens=220 completion_tokens=64 12.3s	220
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn1	PASS	prompt_tokens=443 completion_tokens=64 1.6s	443
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn2	PASS	prompt_tokens=666 completion_tokens=64 1.7s	666
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn3	PASS	prompt_tokens=889 completion_tokens=64 1.8s	889
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn4	PASS	prompt_tokens=1112 completion_tokens=64 1.8s	1112
+Qwen3-0.6B-Q8_0.gguf	tensor	conv6-turn5	PASS	prompt_tokens=1335 completion_tokens=64 1.8s	1335
+Qwen3-0.6B-Q8_0.gguf	tensor	evict	PASS	prompt_tokens=20504 completion_tokens=64 138.5s	20504
+Qwen3-0.6B-Q8_0.gguf	tensor	after-evict	PASS	prompt_tokens=103 completion_tokens=64 1.4s	103
+Qwen3-0.6B-Q8_0.gguf	tensor	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+Qwen3-0.6B-Q8_0.gguf	tensor	after-over-ctx	PASS	prompt_tokens=103 completion_tokens=64 1.2s	103
+Qwen3-0.6B-Q8_0.gguf	tensor	tools	PASS	prompt_tokens=156 completion_tokens=106 2.2s	156
+Qwen3-0.6B-Q8_0.gguf	tensor	parallel2	SKIP	--parallel 1 does not allow it	0
+Qwen3-0.6B-Q8_0.gguf	tensor	cancel-stream	PASS	stream closed after 64 bytes	0
+Qwen3-0.6B-Q8_0.gguf	tensor	after-cancel	PASS	prompt_tokens=149 completion_tokens=64 1.5s	149
+Qwen3-0.6B-Q8_0.gguf	layer	band16	PASS	prompt_tokens=80 completion_tokens=64 2.1s	80
+Qwen3-0.6B-Q8_0.gguf	layer	band300	PASS	prompt_tokens=448 completion_tokens=64 2.0s	448
+Qwen3-0.6B-Q8_0.gguf	layer	band450	PASS	prompt_tokens=655 completion_tokens=64 1.8s	655
+Qwen3-0.6B-Q8_0.gguf	layer	band520	PASS	prompt_tokens=724 completion_tokens=64 1.6s	724
+Qwen3-0.6B-Q8_0.gguf	layer	band1100	PASS	prompt_tokens=1483 completion_tokens=64 3.4s	1483
+Qwen3-0.6B-Q8_0.gguf	layer	band4200	PASS	prompt_tokens=5439 completion_tokens=64 18.5s	5439
+Qwen3-0.6B-Q8_0.gguf	layer	band8300	PASS	prompt_tokens=10683 completion_tokens=64 46.6s	10683
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn0	PASS	prompt_tokens=220 completion_tokens=64 2.5s	220
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn1	PASS	prompt_tokens=443 completion_tokens=64 1.7s	443
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn2	PASS	prompt_tokens=666 completion_tokens=64 1.8s	666
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn3	PASS	prompt_tokens=889 completion_tokens=64 2.0s	889
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn4	PASS	prompt_tokens=1112 completion_tokens=64 2.1s	1112
+Qwen3-0.6B-Q8_0.gguf	layer	conv6-turn5	PASS	prompt_tokens=1335 completion_tokens=64 2.2s	1335
+Qwen3-0.6B-Q8_0.gguf	layer	evict	PASS	prompt_tokens=20504 completion_tokens=64 150.6s	20504
+Qwen3-0.6B-Q8_0.gguf	layer	after-evict	PASS	prompt_tokens=103 completion_tokens=64 1.3s	103
+Qwen3-0.6B-Q8_0.gguf	layer	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+Qwen3-0.6B-Q8_0.gguf	layer	after-over-ctx	PASS	prompt_tokens=103 completion_tokens=64 1.2s	103
+Qwen3-0.6B-Q8_0.gguf	layer	tools	PASS	prompt_tokens=156 completion_tokens=106 2.3s	156
+Qwen3-0.6B-Q8_0.gguf	layer	parallel2	SKIP	--parallel 1 does not allow it	0
+Qwen3-0.6B-Q8_0.gguf	layer	cancel-stream	PASS	stream closed after 64 bytes	0
+Qwen3-0.6B-Q8_0.gguf	layer	after-cancel	PASS	prompt_tokens=149 completion_tokens=64 1.4s	149
+Qwen3-0.6B-Q8_0.gguf	ngl0	band16	PASS	prompt_tokens=80 completion_tokens=64 1.7s	80
+Qwen3-0.6B-Q8_0.gguf	ngl0	band300	PASS	prompt_tokens=448 completion_tokens=64 3.2s	448
+Qwen3-0.6B-Q8_0.gguf	ngl0	band1100	PASS	prompt_tokens=1483 completion_tokens=64 8.4s	1483
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0

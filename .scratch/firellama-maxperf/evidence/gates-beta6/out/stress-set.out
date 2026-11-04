@@ -1,0 +1,141 @@
+### Qwen3-0.6B-Q8_0
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Qwen3-0.6B-Q8_0.gguf ctx=32768 tensor, port 18099)
+== Qwen3-0.6B-Q8_0
+ placement: card
+ args: -m /Users/sam/models/Qwen3-0.6B-Q8_0.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-0.6B-Q8_0.applog
+== Qwen3-0.6B-Q8_0.gguf [tensor] port 60313
+== Qwen3-0.6B-Q8_0.gguf [layer] port 60484
+== Qwen3-0.6B-Q8_0.gguf [ngl0] port 60650
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-0.6B-Q8_0/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-0.6B-Q8_0
+-- Qwen3-0.6B-Q8_0-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-0.6B-Q8_0-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-0.6B-Q8_0-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### Qwen3-4B-Q4_K_M
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Qwen3-4B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Qwen3-4B-Q4_K_M
+ placement: card
+ args: -m /Users/sam/models/Qwen3-4B-Q4_K_M.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q4_K_M.applog
+== Qwen3-4B-Q4_K_M.gguf [tensor] port 60700
+== Qwen3-4B-Q4_K_M.gguf [layer] port 61115
+== Qwen3-4B-Q4_K_M.gguf [ngl0] port 61661
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q4_K_M
+-- Qwen3-4B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-4B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-4B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 77	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 77	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 77	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 77	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### Qwen3-4B-Q6_K
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Qwen3-4B-Q6_K.gguf ctx=32768 tensor, port 18099)
+== Qwen3-4B-Q6_K
+ placement: card
+ args: -m /Users/sam/models/Qwen3-4B-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --sp
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q6_K.applog
+== Qwen3-4B-Q6_K.gguf [tensor] port 61758
+== Qwen3-4B-Q6_K.gguf [layer] port 62226
+== Qwen3-4B-Q6_K.gguf [ngl0] port 62788
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q6_K/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-4B-Q6_K
+-- Qwen3-4B-Q6_K-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-4B-Q6_K-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-4B-Q6_K-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 51	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 51	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 51	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 51	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### Qwen3-8B-Q4_K_M
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Qwen3-8B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Qwen3-8B-Q4_K_M
+ placement: card
+ args: -m /Users/sam/models/Qwen3-8B-Q4_K_M.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-8B-Q4_K_M.applog
+== Qwen3-8B-Q4_K_M.gguf [tensor] port 62895
+== Qwen3-8B-Q4_K_M.gguf [layer] port 63465
+== Qwen3-8B-Q4_K_M.gguf [ngl0] port 64131
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-8B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Qwen3-8B-Q4_K_M
+-- Qwen3-8B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-8B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-8B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band16 differs at offset 225	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band16 differs at offset 225	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band16 differs at offset 225	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band16 differs at offset 225	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### Nemotron-3.5-Bolt-E4B-Q4_K_M
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Nemotron-3.5-Bolt-E4B-Q4_K_M
+ placement: card
+ context: 32768 -> 31744 (f16 KV, 2 cards, 6144 MiB each: the requested context does not fit)
+ args: -m /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf -ngl 99 -c 31744 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M.applog
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [tensor] port 64264
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [layer] port 64476
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [ngl0] port 64821
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### LFM3-1.7B-F16
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/LFM3-1.7B-F16.gguf ctx=32768 tensor, port 18099)
+== LFM3-1.7B-F16
+ placement: card
+ args: -m /Users/sam/models/LFM3-1.7B-F16.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --sp
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16.applog
+== LFM3-1.7B-F16.gguf [tensor] port 64926
+== LFM3-1.7B-F16.gguf [layer] port 64948
+== LFM3-1.7B-F16.gguf [ngl0] port 64979
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16
+cut: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/LFM3-1.7B-F16/*.cells.tsv: No such file or directory
+-- *.cells.tsv: 
+### Ternary-Bonsai-2-27B-PQ2_0
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf ctx=32768 tensor, port 18099)
+== Ternary-Bonsai-2-27B-PQ2_0
+ placement: card
+ args: -m /Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --pa
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Ternary-Bonsai-2-27B-PQ2_0.applog
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [tensor] port 65014
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [layer] port 49682
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [ngl0] port 50499
+results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Ternary-Bonsai-2-27B-PQ2_0/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/Ternary-Bonsai-2-27B-PQ2_0
+-- Ternary-Bonsai-2-27B-PQ2_0-layer.cells.tsv:    1 FAIL   19 PASS    1 SKIP 
+-- Ternary-Bonsai-2-27B-PQ2_0-ngl0.cells.tsv:    3 PASS 
+-- Ternary-Bonsai-2-27B-PQ2_0-tensor.cells.tsv:    1 FAIL   19 PASS    1 SKIP 
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+### ornith-1.0-35b-Q6_K
+launched .scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app (/Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/models35/ornith-1.0-35b-Q6_K.gguf ctx=32768 tensor, port 18099)
+== ornith-1.0-35b-Q6_K
+ placement: card
+ args: -m /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/models35/ornith-1.0-35b-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-prese
+launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/set/ornith-1.0-35b-Q6_K.applog
+== ornith-1.0-35b-Q6_K.gguf [tensor] port 50791

@@ -1,0 +1,21 @@
+band16	PASS	prompt_tokens=83 completion_tokens=64 8.0s	83
+band300	PASS	prompt_tokens=451 completion_tokens=64 11.2s	451
+band450	PASS	prompt_tokens=658 completion_tokens=64 14.3s	658
+band520	PASS	prompt_tokens=727 completion_tokens=64 13.0s	727
+band1100	PASS	prompt_tokens=1486 completion_tokens=64 21.3s	1486
+band4200	PASS	prompt_tokens=5442 completion_tokens=64 65.9s	5442
+band8300	PASS	prompt_tokens=10686 completion_tokens=64 98.4s	10686
+conv6-turn0	PASS	prompt_tokens=221 completion_tokens=64 7.9s	221
+conv6-turn1	PASS	prompt_tokens=447 completion_tokens=64 8.0s	447
+conv6-turn2	PASS	prompt_tokens=673 completion_tokens=64 8.0s	673
+conv6-turn3	PASS	prompt_tokens=899 completion_tokens=64 8.1s	899
+conv6-turn4	PASS	prompt_tokens=1125 completion_tokens=64 8.1s	1125
+conv6-turn5	PASS	prompt_tokens=1351 completion_tokens=64 8.1s	1351
+evict	PASS	prompt_tokens=20507 completion_tokens=64 214.2s	20507
+after-evict	PASS	prompt_tokens=106 completion_tokens=64 6.6s	106
+over-ctx	PASS	refused with 400 at n_ctx=32768	0
+after-over-ctx	PASS	prompt_tokens=106 completion_tokens=64 4.8s	106
+tools	PASS	prompt_tokens=277 completion_tokens=81 10.1s	277
+parallel2	SKIP	--parallel 1 does not allow it	0
+cancel-stream	PASS	stream closed after 64 bytes	0
+after-cancel	PASS	prompt_tokens=152 completion_tokens=64 6.9s	152

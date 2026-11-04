@@ -1,0 +1,50 @@
+========================================================
+ XeonLLM 0.87.31-beta.6 — server start (x86_64 · no-AVX2 build)
+ engine : bundled (official) · kernels fae2c1f1f84a
+ model  : Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf
+ GPUs detected:
+    [0] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+    [1] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+ GPU select: split-all · split-mode tensor | force-VRAM-buffers: no
+ settings: ngl=99 ncmoe=0 ctx=32768 fa=auto ctk=f16 ctv=f16 cacheRAM=2048
+ placement: card
+ context: 32768 -> 31744 (f16 KV, 2 cards, 6144 MiB each: the requested context does not fit)
+ dflash : auto, ngld=6 (estimated 10.4 / 10.5 GiB budget)
+ env: GGML_METAL_DEVICES=2 TOSH_FA_AMD=1 TOSH_MGPU_EVENTS=1
+ args: -m /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf -ngl 99 -c 31744 -t 12 -fa auto --host 127.0.0.1 --port 18099 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode tensor -n 2048 -md /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.dflash.gguf --spec-type draft-dflash -ngld 6 -ctkd q8_0 -ctvd q8_0 --path /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/testapp/XeonLLM.app/Contents/Resources/web-ui --ui-config {"maxImageMPixels":1,"pdfAsImage":false}
+========================================================
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.207.540 I srv  llama_server: initializing ...
+0.00.207.561 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app 0.87.31-beta.6)
+0.00.207.572 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.208.958 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.210.276 I srv    load_model: loading model '/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf'
+0.00.210.369 I Tosh MoE: standard
+0.00.210.750 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.01.083.141 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.091.130 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.109.594 W load: '</s>' is a normal token here, removing it from EOG list
+0.05.347.814 I cmn          init: llama threadpool init, n_threads = 12
+0.05.740.269 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_lds32
+0.05.785.168 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk512_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk512_kf16_vf16_w64_lds32
+0.05.887.902 I common_speculative_init_result: loading draft model '/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.dflash.gguf'
+0.06.633.329 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.06.640.522 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.06.659.628 W load: '</s>' is a normal token here, removing it from EOG list
+0.07.629.514 W srv    load_model: cache_reuse is not supported by this context, it will be disabled
+0.07.742.693 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 31744, kv_unified = 'false'
+0.07.742.862 I common_speculative_impl_draft_dflash: adding speculative implementation 'draft-dflash'
+0.07.742.883 I common_speculative_impl_draft_dflash: - n_max=3, n_min=0, p_min=0.00
+0.07.742.884 I common_speculative_impl_draft_dflash: - block_size=8, mask_token_id=4, n_extract=5, sample_from_anchor=true
+0.07.742.931 W set_sampler: backend sampling not supported with SPLIT_MODE_TENSOR; using CPU
+0.07.742.936 W spec common_specu: backend offload failed for seq_id=0; using CPU sampler
+0.07.797.294 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kq8_0_vq8_0_w64; using kernel_flash_attn_ext_vec_amd_dk128_kq8_0_vq8_0_w64_lds32
+0.07.837.673 I srv  llama_server: model loaded
+0.07.837.682 I srv  llama_server: listening on http://127.0.0.1:18099

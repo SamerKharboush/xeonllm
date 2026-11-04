@@ -1,0 +1,24 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.164.973 W DEPRECATED: argument '--split-mode' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.165.129 I srv  llama_server: initializing ...
+0.00.165.143 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app standalone)
+0.00.165.144 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.165.609 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.167.748 I srv    load_model: loading model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+0.00.167.779 I Tosh MoE: standard
+0.00.362.497 E llama_model_load: error loading model: unknown model architecture: 'lfm3'
+0.00.362.696 E llama_model_load_from_file_impl: failed to load model
+0.00.362.789 E common_fit_params: encountered an error while trying to fit params to free device memory: failed to load model
+0.00.535.453 E llama_model_load: error loading model: unknown model architecture: 'lfm3'
+0.00.535.463 E llama_model_load_from_file_impl: failed to load model
+0.00.535.492 E cmn  common_init_: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+0.00.535.498 E srv    load_model: failed to load model, '/Users/sam/models/LFM3-1.7B-F16.gguf'
+0.00.535.502 I srv    operator(): operator(): cleaning up before exit...
+0.00.536.230 E srv  llama_server: exiting due to model loading error

@@ -151,3 +151,47 @@ Follow `specs/release-contract.md`. Briefs R3 (engine) and R4 (app), then the re
   failures all in `MCPStdioTransportTests.testAnswersRacingTheirDeadlinesResolveEachRequestOnce`
   (the known race); `check-translations.py` OK; `engeldlgado` only in headers and the credit
   row; no `binance` in Sources, Tests, Assets, make-app.sh.
+
+### 2026-11-04, the release record (orchestrator)
+
+**Why chatting failed after a good load.** Three causes, each reproduced and fixed:
+- The 448-token crash (cause 1, `metal/0075`).
+- The 14B on both cards at the saved `-c 32768`: 6926 MiB per card against 6144 (3954 weights +
+  2688 KV + 284 compute). The driver paged, a long prefill's command buffer hit the macOS GPU
+  watchdog (`kIOAccelCommandBufferCallbackErrorTimeout`), and every later request returned HTTP
+  500 "Compute error.". Fixed by the context fit (ticket 75: the 14B launches at 16384, measured
+  5613 / 5649 MiB per card) and shorter prefill command buffers (`metal/0078`; the repro on the
+  shipped engine serves 200 where the control returns 500).
+- A model behind a symlink was sized as the link (62 bytes): the 28 GB 35B Q6_K was placed on both
+  cards whole and the Mac panicked (2026-11-04 01:15, spinlock timeout in
+  `IOAccelSysMemory::unwire`). Fixed in `f0cae71`; the 35B takes the expert tier wherever its path
+  points, and the drafter planner, fooled the same way, now turns the drafter off for it.
+
+**The reboots** ("one of the tests always make device dead or restart"): the 2026-11-03 panics
+were the 7.2 GB PQ2_0 27B on card 0 alone (WindowServer watchdog); the 2026-11-04 panic was the
+symlinked 35B. `scripts/stress-release.sh` now refuses both (one card: exit 3; every layer of a
+model over both cards on the cards: a REFUSED row, no server), sizing with `stat -L`. Contract
+section 3.3.
+
+**Stress, contract section 4, the rebuilt beta.6 app's real launch** (test bundle
+`dev.xeonllm.gatetest`, saved ctx 32768, tensor split; `evidence/gates-beta6/out/set/`):
+- Qwen3-0.6B, Qwen3-4B Q4_K_M and Q6_K, Qwen3-8B, Nemotron-3.5-Bolt-E4B: tensor and layer 20 PASS
+  1 SKIP each, ngl0 3 PASS; layer == tensor byte-identical. Nemotron launches at 31744.
+- Qwen3-14B (app launch at 16384): layer and tensor 20 PASS 1 SKIP (`out/stress-14b-ctxfit*`).
+- Ternary-Bonsai-2-27B PQ2_0 (both cards): the app turns the saved tensor split into a layer
+  split for this model (`tensorSplitLimit`, the engine refuses it with exit 86), so both stress
+  modes ran `--split-mode layer`. 19 PASS 1 SKIP, and the evict cell timed out at the 900 s
+  client limit with the engine still prefilling; rerun with 2700 s: evict PASS (20549 tokens,
+  1145 s) and after-evict PASS in both runs (`out/set/pq2-evict-*`). A tensor split of it is not
+  covered: it cannot run.
+- Ornith-1.0-35B Q6_K (expert tier on card 1, no drafter; the stress "tensor" mode is the app's
+  logged launch, so one card): 20 PASS 1 SKIP, ngl0 3 PASS
+  (`out/set/ornith-1.0-35b-Q6_K/`).
+- LFM3-1.7B: does not load (`unknown model architecture: 'lfm3'`), no cells.
+- parallel2 SKIP everywhere: the app launches `--parallel 1`.
+- No watchdog, assert or exit lines in any server log.
+- GPU vs CPU text (reported, not gated): identical on the 0.6B and the PQ2; the quantised models
+  diverge partway through an answer.
+
+The real chat: the 14B through the test app's engine API (port 18099), 200 tokens at 6.70 tok/s,
+`out/realchat-14b.json`; it went through the API, not the chat window.

@@ -1,6 +1,6 @@
 # 75: the placement rule ignores the KV cache on the card path
 
-Status: open (needs-triage)
+Status: closed (done)
 Type: task
 
 ## Problem
@@ -101,3 +101,24 @@ default 16k. A new case for 14B at 32k belongs beside it.
   `vendor/llama.cpp/tools/server/server.cpp:931`). Load, stop the server, read the table.
 
 ## Comments
+
+### 2026-11-04: done
+
+Option 3 (the context fit) shipped in `a0a0d6a`: `Estimator.cardFitCtx` lowers a card launch's
+context until the KV cache fits; the 14B at a saved 32768 on both cards launches at 16384. Tests:
+`EstimatorTests.testThe14BAt32KOnBothCardsGetsALowerContextThatFits` and five beside it.
+
+The table, from the bundled llama-server (sha256 `c854ada6`) at the app's launch
+(`GGML_METAL_DEVICES=2 TOSH_FA_AMD=1`, `-ngl 99 -c 16384 -fa auto --split-mode layer`), one
+8-token chat, then SIGINT; `-lv 4`, because the table is logged at trace level
+(`fit.cpp:1077`, `LOG_TRC`). At shutdown:
+
+| card | total | model | context | compute | self |
+|---|---|---|---|---|---|
+| MTL0 | 6144 | 3953 | 1344 | 316 | 5613 |
+| MTL1 | 6144 | 4207 | 1216 | 226 | 5649 |
+
+Both cards are under 6144 MiB. The fit at load projected 5689 MiB on MTL1 (compute 266 before
+the first graph). `cardFitCtx` predicts 5871 MiB per card at 16384 (its 7151 at 32768 less 1280 MiB of KV per card), above both. Log:
+`evidence/gates-beta6/out/mem14b-16k.log.gz`. The 14B stress cells on the app's 16384
+launch, layer and tensor, end with no watchdog and no HTTP 500 (`out/stress-14b-ctxfit*`).

@@ -1,0 +1,135 @@
+== band16
+We need answer user's request. User: "You are a terse assistant. Read the text and answer the final question.
+
+the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile the quick brown fox jumps over the lazy dog while the compiler waits for the
+--
+
+
+== band300
+We need answer user's final question. User: terse assistant. Read text and answer final question. Text is repeated pangram with compiler/gpu. Final question: "In one word, what colour is the sky?" Need answer one word. Likely blue. Need be terse. Ensure final one word.
+
+--
+
+
+== band450
+We need answer user's final question. User: terse assistant. Read text and answer final question. Text is repeated pangram with compiler/gpu. Final question: "In one word, what colour is the sky?" Need answer one word. Likely blue. Need be terse. Ensure final one word.
+
+--
+
+
+== band520
+We need answer user's final question. User: terse assistant. Read text and answer final question. Text is repeated pangram with compiler/gpu. Final question: "In one word, what colour is the sky?" Need answer one word. Likely blue. Need be terse. Ensure final one word.
+
+--
+
+
+== band1100
+We need answer user's final question. User: "You are a terse assistant. Read the text and answer the final question.
+
+[long repeated text]
+
+In one word, what colour is the sky?"
+
+Need answer one word. Likely "blue". Need terse. Ensure final one word.
+
+--
+
+
+== band4200
+We need answer user's final question. User: "You are a terse assistant. Read the text and answer the final question.
+
+[long repeated text]
+
+In one word, what colour is the sky?"
+
+Need answer one word. Likely "blue". Need terse. Ensure final one word.
+
+--
+
+
+== band8300
+We need answer user's final question. User: "You are a terse assistant. Read the text and answer the final question.
+
+[long repeated text]
+
+In one word, what colour is the sky?"
+
+Need answer one word. Likely "blue". Need terse. Ensure final one word.
+
+--
+
+
+== conv6-turn0
+We need to respond to user: "Turn 0: name a colour (one word). filler filler ..." They likely want just one word color. Need final one word. Ensure one word. Could be "Red".
+
+--
+Red
+
+== conv6-turn1
+We need to respond to user: "Turn 1: name a colour (one word). filler ..." They likely expect one word color. Need final one word. Ensure one word. Could be "red". Need maybe same language? User English. Final: red.
+
+--
+red
+
+== conv6-turn2
+We need to respond to user: "Turn 2: name a colour (one word). filler ..." They likely expect one word color. Previous turns assistant answered "blue" twice. Need maybe continue? User says name a colour one word. We should output one word. Could be "red" or "blue".
+--
+
+
+== conv6-turn3
+We need to respond to user: "Turn 3: name a colour (one word). filler ..." They likely expect one word color. Previous turns assistant answered "blue". Need final one word. Could be blue. Ensure one word.
+
+--
+blue
+
+== conv6-turn4
+We need to respond to user: "Turn 4: name a colour (one word). filler ..." They likely expect one word color. Previous turns assistant answered "blue". Need final one word. Could be blue. Ensure one word.
+
+--
+blue
+
+== conv6-turn5
+We need to respond to user: "Turn 5: name a colour (one word). filler ..." They likely expect one word color. Previous turns assistant answered "blue". Need final one word. Ensure one word. Could be blue. Need maybe British spelling colour? User says name a colour (one word). We
+--
+
+
+== after-evict
+We need answer user's request. User: "You are a terse assistant. Read the text and answer the final question.
+
+the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile ... repeated
+
+In one word, what colour is the sky?"
+
+Need
+--
+
+
+== after-over-ctx
+We need answer user's request. User: "You are a terse assistant. Read the text and answer the final question.
+
+the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile ... repeated
+
+In one word, what colour is the sky?"
+
+Need
+--
+
+
+== tools
+The user is asking about the weather in Lisbon and explicitly requesting to use the tool. I should call the get_weather function with city="Lisbon".
+
+--
+
+
+== after-cancel
+We need answer user's request. User: "You are a terse assistant. Read the text and answer the final question.
+
+the quick brown fox ... repeated ...
+
+In one word, what colour is the sky?"
+
+Need answer one word. Likely "blue". Need terse. Ensure final one word.
+
+--
+
+

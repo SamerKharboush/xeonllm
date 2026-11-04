@@ -15,11 +15,11 @@ Native macOS app · Metal acceleration · No cloud, no accounts, no per-token co
 
 ### [⬇️ Download XeonLLM](https://github.com/SamerKharboush/xeonllm/releases) · [📝 Changelog](CHANGELOG.md)
 
-> ### Fork release: v0.87.31-beta.5
+> ### Fork release: v0.87.31-beta.6
 >
-> **[⬇️ XeonLLM-v0.87.31-beta.5-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.5/XeonLLM-v0.87.31-beta.5-noavx2.dmg)**
-> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.87.31-beta.5) ·
-> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.5/checksums.txt))
+> **[⬇️ XeonLLM-v0.87.31-beta.6-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.6/XeonLLM-v0.87.31-beta.6-noavx2.dmg)**
+> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.87.31-beta.6) ·
+> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.6/checksums.txt))
 >
 > **This build is x86_64 only. It will not run on Apple Silicon.** There is no arm64 slice,
 > and Rosetta cannot help: an Apple GPU never enters the code these fixes touch — the Metal
@@ -276,6 +276,18 @@ machine was sized as if it were single-card. That is fixed too.
 Measured on the dual-FirePro-D700 Mac Pro this fork runs on. Method lines are copied from
 the release notes or evidence that produced each table, so each table keeps its own
 conditions; numbers from different tables are not comparable with each other.
+
+**0.87.31-beta.6** (from [`dist/beta31b6-notes.md`](dist/beta31b6-notes.md)). Method: the
+bundled engine (llama-bench sha256 `82725c76…`, llama.cpp `d81235049` plus 88 patches), card
+1, `llama-bench -p 0 -n 128 -r 5 -fa 1`, one process per cell, llama-bench discards its own
+warmup. A separate CPU-only `llama-server` (14B, `-ngl 0`, idle) was resident during the run.
+Each cell is that process's mean of 5 with its sd. Each switch turns off one patch to show it
+is in the binary.
+
+| model | default | `TOSH_MV_ROWS8_DISABLE=1` | `TOSH_FULL_TG_DISABLE=1` |
+|---|---|---|---|
+| Qwen3-4B Q4_K_M | 16.644 (sd 0.007) | 14.120 (sd 0.006) | 16.599 (sd 0.004) |
+| Nemotron-3.5-Bolt-E4B Q4_K_M | 13.752 (sd 0.007) | 11.969 (sd 0.006) | 13.514 (sd 0.009) |
 
 **0.87.31-beta.5** (from [`dist/beta31b5-notes.md`](dist/beta31b5-notes.md)). Method: the dev
 tree `build-static` of the same source (llama.cpp `d81235049` plus 84 patches), card 1,
