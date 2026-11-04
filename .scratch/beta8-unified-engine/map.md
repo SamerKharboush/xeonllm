@@ -38,6 +38,8 @@ using the AVX1 Xeon, both D700s and the 64 GB of RAM as one pool. Nothing is bui
 
 ## Decisions so far
 
+- [What clock headroom do the D700s and the Xeon have on macOS, and at what risk?](issues/04-what-clock-headroom-do-the-d700s-and-the-xeon-have-on-macos.md): no clock ticket (no macOS control, locked Xeon, a memory overclock gives silent wrong answers). Instead, card health at app start: a known-answer test per card, reset reports per PCIe address, leave a failing card out.
+
 ## Not yet specified
 
 - How the four pools become one schedule: which tensors live on card 0, card 1 and host RAM, per
