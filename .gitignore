@@ -8,3 +8,4 @@ icon-1024.png
 
 /experiments/
 __pycache__/
+.scratch/firellama-maxperf/evidence/gates-beta6/models35/

@@ -89,6 +89,23 @@ ENVS+=("GGML_METAL_DEVICE_LIST=${GGML_METAL_DEVICE_LIST:-0,1}")
 # runs on one card: card 0 drives the display, and a paged card stalls WindowServer until macOS
 # panics and reboots (2026-11-03, a 7.2 GB model on card 0, twice). Refuse before starting.
 ONECARD=5905580032
+
+# True (0) when the arguments keep experts or tensors in RAM: --dynamic-moe on, --cpu-moe/-cmoe,
+# --n-cpu-moe N with N > 0 (the app passes --n-cpu-moe 0 on a plain card launch), -ot ...=CPU.
+offloads() {
+    local i
+    local -a v=("$@")
+    for ((i = 0; i < ${#v[@]}; i++)); do
+        case "${v[$i]}" in
+            --cpu-moe|-cmoe) return 0 ;;
+            --dynamic-moe) [ "${v[$((i+1))]}" != off ] && return 0 ;;
+            --n-cpu-moe|-ncmoe) [ "${v[$((i+1))]:-0}" -gt 0 ] 2>/dev/null && return 0 ;;
+            -ot|--override-tensor) [[ "${v[$((i+1))]}" == *=CPU* ]] && return 0 ;;
+        esac
+    done
+    return 1
+}
+
 one_card=0
 for kv in "${ENVS[@]}"; do
     case "$kv" in
@@ -96,6 +113,9 @@ for kv in "${ENVS[@]}"; do
         GGML_METAL_DEVICE_LIST=*) [[ "${kv#*=}" == *,* ]] || one_card=1 ;;
     esac
 done
+# The app's expert tier is the one exception: one card holds attention and the hot experts, which
+# its plan sizes to the card, and the CPU computes the rest (--dynamic-moe, or an explicit offload).
+offloads "${ARGS[@]}" && one_card=0
 if [ "$one_card" = 1 ]; then
     for m in "${MODELS[@]}"; do
         sz=$(stat -L -f %z "$m" 2>/dev/null || echo 0)   # -L: a link is sized as its target
@@ -315,11 +335,7 @@ run_server() {
     # memory through the GART until the kernel deadlocks (2026-11-04 01:15, the 28 GB 35B Q6_K at
     # -ngl 99 over both D700s; spinlock timeout in IOAccelSysMemory::unwire, the Mac rebooted). Only
     # -ngl 0 or an expert offload (--n-cpu-moe, -cmoe, -ot) may run it. The size is the link target's.
-    local offload=0 a
-    for a in "${runargs[@]}"; do
-        case "$a" in --n-cpu-moe|-ncmoe|--cpu-moe|-cmoe|-ot|--override-tensor) offload=1 ;; esac
-    done
-    if [ "$ngl" != 0 ] && [ "$offload" = 0 ]; then
+    if [ "$ngl" != 0 ] && ! offloads "${runargs[@]}"; then
         local msz; msz=$(stat -L -f %z "$model" 2>/dev/null || echo 0)
         if [ "$msz" -ge $((2 * ONECARD)) ]; then
             echo "refusing [$label]: $(basename "$model") is $msz bytes, above both cards' $((2 * ONECARD)), with every layer on the cards" >&2
