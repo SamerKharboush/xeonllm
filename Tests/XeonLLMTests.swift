@@ -3447,3 +3447,38 @@ final class SymlinkedModelSizeTests: XCTestCase {
         XCTAssertEqual(GGUFFile.totalSize(at: link1.path), UInt64(3 << 20))
     }
 }
+
+/// Another program on the engine's port took every request meant for it: the user's own
+/// llama-server on 127.0.0.1:8080 answered the chat with 403 and showed its model in the web UI.
+final class PortHolderTests: XCTestCase {
+    /// A listening socket on 127.0.0.1 at a free port, closed at teardown.
+    private func listen() throws -> (fd: Int32, port: Int) {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        XCTAssertGreaterThanOrEqual(fd, 0)
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = 0
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let bound = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.bind(fd, $0, len) == 0 && Darwin.listen(fd, 4) == 0 && getsockname(fd, $0, &len) == 0 }
+        }
+        XCTAssertTrue(bound)
+        return (fd, Int(UInt16(bigEndian: addr.sin_port)))
+    }
+
+    func testAPortSomeoneListensOnNamesTheListener() throws {
+        let (fd, port) = try listen()
+        defer { close(fd) }
+        let holder = try XCTUnwrap(ServerController.portHolder(port))
+        XCTAssertEqual(holder.pid, getpid(), "the listener is this test process")
+        XCTAssertFalse(holder.isOurs, "a test runner is not one of the app's engines")
+        XCTAssertFalse(holder.name.isEmpty)
+    }
+
+    func testAFreePortHasNoHolder() throws {
+        let (fd, port) = try listen()
+        close(fd)
+        XCTAssertNil(ServerController.portHolder(port))
+    }
+}

@@ -2052,8 +2052,81 @@ final class ServerController: ObservableObject {
                 planned.plannedMode = plan.mode
                 self?.autoPlan = plan
             }
+            // Another program answering on this port takes every request meant for the engine:
+            // the engine still binds (0.0.0.0 beside a 127.0.0.1 listener), the chat and the web
+            // UI reach the other program, and the user sees its model and its errors (a 403 from
+            // a separate llama-server on 127.0.0.1:8080, 2026-11-04). Refuse with its name.
+            if let holder = await Task.detached(operation: { Self.portHolder(settings.port) }).value {
+                if holder.isOurs {
+                    EngineLock.reapOrphans()
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                if let still = await Task.detached(operation: { Self.portHolder(settings.port) }).value {
+                    self?.failPortInUse(port: settings.port, holder: still)
+                    return
+                }
+            }
             self?.launch(planned)
         }
+    }
+
+    struct PortHolder: Equatable, Sendable {
+        let pid: Int32?
+        let name: String
+        /// An engine from one of our own bundles, left behind by an earlier run.
+        let isOurs: Bool
+    }
+
+    /// The program listening on 127.0.0.1:`port`, or nil when nothing answers there.
+    nonisolated static func portHolder(_ port: Int) -> PortHolder? {
+        guard port > 0, port < 65536 else { return nil }
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { return nil }
+        defer { close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(UInt16(port).bigEndian)
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let connected = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+            }
+        }
+        guard connected else { return nil }
+        // name the listener: lsof's field output gives "p<pid>" and "c<command>" lines
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        p.arguments = ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN", "-Fpc"]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        var pid: Int32?
+        var name = "another program"
+        if (try? p.run()) != nil {
+            p.waitUntilExit()
+            let text = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            for line in text.split(separator: "\n") {
+                if line.hasPrefix("p"), pid == nil { pid = Int32(line.dropFirst()) }
+                if line.hasPrefix("c"), name == "another program" { name = String(line.dropFirst()) }
+            }
+        }
+        var ours = false
+        if let pid {
+            var buffer = [CChar](repeating: 0, count: 4096)
+            if proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 {
+                ours = String(cString: buffer).contains(AppInfo.name + ".app/Contents/Resources/bin")
+            }
+        }
+        return PortHolder(pid: pid, name: name, isOurs: ours)
+    }
+
+    private func failPortInUse(port: Int, holder: PortHolder) {
+        guard state == .starting else { return }
+        let who = holder.pid.map { "\(holder.name) (pid \($0))" } ?? holder.name
+        let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
+        state = .failed(lang == "es"
+            ? "El puerto \(port) ya lo usa \(who). El motor de XeonLLM no recibiría ninguna petición: el chat y la interfaz web hablarían con ese programa. Ciérralo o elige otro puerto en Ajustes."
+            : "Port \(port) is already in use by \(who). XeonLLM's engine would get no requests: the chat and the web UI would talk to that program instead. Stop it, or choose another port in Settings.")
     }
 
     private func restartAfterFailure(_ settings: ServerSettings) {
