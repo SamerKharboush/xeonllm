@@ -1,6 +1,6 @@
 # 04: an AVX1 port of the core/0022 multi-row CPU dots
 
-Status: ready-for-agent (step 0 is the orchestrator's; the port waits for it)
+Status: resolved (port bit-identical and running; time change small, see 2026-11-05)
 Type: task
 Blocked by: step 0 below
 Spec: `../spec.md` (user stories 15-18). Survey: `.scratch/firellama-maxperf/evidence/engine-survey-2026-11-04.md` §3.3 and shortlist item 4.
@@ -71,3 +71,42 @@ t(k) is the mean time to process k tokens in one batch, sd in brackets.
   ahead; its gate is these same cells with the switch taking effect.
 
 Evidence: `evidence/04/step0.sh`, `step0.out`, `*.err`.
+
+### 2026-11-05: the port (Mocca, reviewed by the orchestrator)
+
+`patches/llama/core/0080-cpu-expert-dots-avx1.patch`: `#elif defined(__AVX__)` multi-row kernels for
+Q6_K, Q4_K and Q8_0. They use 128-bit SSSE3/SSE4.1 integer ops and 256-bit AVX float accumulation,
+with no FMA. They follow the single-row AVX1 branches operation for operation, with only the unpack
+of the weight block shared. The getter prints `ggml_cpu: multi-row dot ON for <type> (AVX1)` once
+per type. The patch adds `tests/test-vec-dot-multi.cpp`. The series applies 90 of 90 at the pin.
+
+Gates, run by the orchestrator:
+- `test-vec-dot-multi`: 36 of 36 cases identical (memcmp), for Q6_K, Q4_K and Q8_0 with n in
+  {256, 4096, 5120} and nc in 1..4. The ON line printed for all three types. Exit 0.
+- AVX2/FMA mnemonics (vfmadd, vpbroadcast, vperm, vinserti128, ymm integer ops) in llama-bench,
+  llama-cli and the test: 0.
+- 35B Q6_K, host only, greedy, 28-token prompt, 48 tokens: the text is byte-identical with the
+  switch unset and set. The ON line appears only when unset, so the control takes effect.
+
+Verify-cost cells (`evidence/04/port.sh`, `port.out`):
+- Method: the CPU-only AVX1 build of the worktree (sha256 `9798b6032b48f2f6`) on Ornith-1.0-35B Q6_K,
+  `-ngl 0 -t 12 -p 1,2,4,8 -n 0 -r 5`, llama-bench discarding its own warmup.
+- 2 processes per switch setting, alternating. The user's idle 14B `llama-server` was resident, and
+  RustDesk was using about half a core.
+
+t(k) in ms, with sd in brackets:
+
+| process | t(1) | t(2) | t(4) | t(8) |
+|---|---|---|---|---|
+| unset 1 | 105.70 (0.84) | 150.56 (6.81) | 251.05 (11.69) | 588.96 (14.08) |
+| set 1 | 106.15 (1.51) | 153.16 (7.70) | 225.95 (15.72) | 655.53 (45.11) |
+| unset 2 | 102.94 (1.84) | 148.25 (3.22) | 216.58 (4.79) | 612.49 (42.59) |
+| set 2 | 106.18 (2.21) | 159.29 (3.12) | 244.33 (14.11) | 669.58 (42.20) |
+
+- **k = 1 to 4:** the two settings overlap; no change is resolved.
+- **k = 8:** both unset processes (589, 612) are below both set processes (656, 670). The gaps are
+  43-81 ms, with per-process sd of 14-45 ms. That is small and only about 1-2 sd per pair. It is two
+  observations per side, not a measured gain.
+
+The expert dots are not the dominant cost of a host verify on the 35B. The port stays in: it is
+correct, it runs, and it costs nothing at k = 1.

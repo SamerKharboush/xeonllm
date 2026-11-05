@@ -1,0 +1,442 @@
+diff --git a/ggml/src/ggml-cpu/arch/x86/quants.c b/ggml/src/ggml-cpu/arch/x86/quants.c
+index 50582fb21..dec871e59 100644
+--- a/ggml/src/ggml-cpu/arch/x86/quants.c
++++ b/ggml/src/ggml-cpu/arch/x86/quants.c
+@@ -2269,6 +2269,103 @@ Q4K_MULTI(3)
+ Q4K_MULTI(4)
+ #undef Q4K_MULTI
+ 
++static void ggml_vec_dot_q4_K_q8_K_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
++    switch (nc) {
++        case 2: ggml_vec_dot_q4_K_q8_K_x2(n, s, vx, vy); break;
++        case 3: ggml_vec_dot_q4_K_q8_K_x3(n, s, vx, vy); break;
++        case 4: ggml_vec_dot_q4_K_q8_K_x4(n, s, vx, vy); break;
++        default:
++            for (int c = 0; c < nc; ++c) ggml_vec_dot_q4_K_q8_K(n, s + c, 0, vx, 0, vy[c], 0, 1);
++    }
++}
++#elif defined(__AVX__)
++#define Q4K_MULTI(NC)                                                                                             \
++static void ggml_vec_dot_q4_K_q8_K_x##NC(int n, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx,           \
++                                         const void * const * vy) {                                               \
++    const block_q4_K * GGML_RESTRICT x = vx;                                                                      \
++    const block_q8_K * y[NC];                                                                                     \
++    for (int c = 0; c < NC; ++c) y[c] = vy[c];                                                                    \
++    const int nb = n / QK_K;                                                                                      \
++    const uint32_t kmask1 = 0x3f3f3f3f, kmask2 = 0x0f0f0f0f, kmask3 = 0x03030303;                                 \
++    uint32_t utmp[4];                                                                                             \
++    const __m128i m4 = _mm_set1_epi8(0xF);                                                                        \
++    const __m128i m2 = _mm_set1_epi8(0x2);                                                                        \
++    __m256 acc[NC];                                                                                               \
++    __m128 acc_m[NC];                                                                                             \
++    for (int c = 0; c < NC; ++c) { acc[c] = _mm256_setzero_ps(); acc_m[c] = _mm_setzero_ps(); }                   \
++    for (int i = 0; i < nb; ++i) {                                                                                \
++        const float xd = GGML_CPU_FP16_TO_FP32(x[i].d), xdmin = GGML_CPU_FP16_TO_FP32(x[i].dmin);                 \
++        const uint8_t * GGML_RESTRICT q4 = x[i].qs;                                                               \
++        memcpy(utmp, x[i].scales, 12);                                                                            \
++        utmp[3] = ((utmp[2] >> 4) & kmask2) | (((utmp[1] >> 6) & kmask3) << 4);                                   \
++        const uint32_t uaux = utmp[1] & kmask1;                                                                   \
++        utmp[1] = (utmp[2] & kmask2) | (((utmp[0] >> 6) & kmask3) << 4);                                          \
++        utmp[2] = uaux;                                                                                           \
++        utmp[0] &= kmask1;                                                                                        \
++        const __m128i utmps = _mm_set_epi32(utmp[3], utmp[2], utmp[1], utmp[0]);                                  \
++        const __m128i scales = _mm_cvtepu8_epi16(utmps);                                                          \
++        const __m128i mins = _mm_cvtepu8_epi16(_mm_unpackhi_epi64(utmps, utmps));                                 \
++        __m128i sumi_0[NC];                                                                                       \
++        __m128i sumi_1[NC];                                                                                       \
++        for (int c = 0; c < NC; ++c) {                                                                            \
++            const float dmin = -y[c][i].d * xdmin;                                                                \
++            const __m128i q8sums_0 = _mm_loadu_si128((const __m128i*)&y[c][i].bsums[0]);                          \
++            const __m128i q8sums_1 = _mm_loadu_si128((const __m128i*)&y[c][i].bsums[8]);                          \
++            const __m128i q8s = _mm_hadd_epi16(q8sums_0, q8sums_1);                                               \
++            const __m128i prod = _mm_madd_epi16(mins, q8s);                                                       \
++            acc_m[c] = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(dmin), _mm_cvtepi32_ps(prod)), acc_m[c]);                \
++            sumi_0[c] = _mm_setzero_si128();                                                                      \
++            sumi_1[c] = _mm_setzero_si128();                                                                      \
++        }                                                                                                         \
++        __m128i shuffle = _mm_set1_epi16(0x0100);                                                                 \
++        for (int j = 0; j < QK_K/64; ++j) {                                                                       \
++            const __m128i scale_l = _mm_shuffle_epi8(scales, shuffle);                                            \
++            shuffle = _mm_add_epi16(shuffle, m2);                                                                 \
++            const __m128i scale_h = _mm_shuffle_epi8(scales, shuffle);                                            \
++            shuffle = _mm_add_epi16(shuffle, m2);                                                                 \
++            __m128i q4bits = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                                       \
++            const __m128i q4l_0 = _mm_and_si128(q4bits, m4);                                                      \
++            const __m128i q4h_0 = _mm_and_si128(_mm_srli_epi16(q4bits, 4), m4);                                   \
++            q4bits = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                                               \
++            const __m128i q4l_1 = _mm_and_si128(q4bits, m4);                                                      \
++            const __m128i q4h_1 = _mm_and_si128(_mm_srli_epi16(q4bits, 4), m4);                                   \
++            for (int c = 0; c < NC; ++c) {                                                                        \
++                const int8_t * q8 = y[c][i].qs + 64*j;                                                            \
++                const __m128i q8l_0 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                __m128i p16l = _mm_maddubs_epi16(q4l_0, q8l_0);                                                   \
++                p16l = _mm_madd_epi16(scale_l, p16l);                                                             \
++                sumi_0[c] = _mm_add_epi32(sumi_0[c], p16l);                                                       \
++                const __m128i q8l_1 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                p16l = _mm_maddubs_epi16(q4l_1, q8l_1);                                                           \
++                p16l = _mm_madd_epi16(scale_l, p16l);                                                             \
++                sumi_1[c] = _mm_add_epi32(sumi_1[c], p16l);                                                       \
++                const __m128i q8h_0 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                __m128i p16h = _mm_maddubs_epi16(q4h_0, q8h_0);                                                   \
++                p16h = _mm_madd_epi16(scale_h, p16h);                                                             \
++                sumi_0[c] = _mm_add_epi32(sumi_0[c], p16h);                                                       \
++                const __m128i q8h_1 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                p16h = _mm_maddubs_epi16(q4h_1, q8h_1);                                                           \
++                p16h = _mm_madd_epi16(scale_h, p16h);                                                             \
++                sumi_1[c] = _mm_add_epi32(sumi_1[c], p16h);                                                       \
++            }                                                                                                     \
++        }                                                                                                         \
++        for (int c = 0; c < NC; ++c) {                                                                            \
++            __m256 vd = _mm256_set1_ps(y[c][i].d * xd);                                                           \
++            __m256i sumi = MM256_SET_M128I(sumi_1[c], sumi_0[c]);                                                 \
++            acc[c] = _mm256_add_ps(_mm256_mul_ps(vd, _mm256_cvtepi32_ps(sumi)), acc[c]);                          \
++        }                                                                                                         \
++    }                                                                                                             \
++    for (int c = 0; c < NC; ++c) {                                                                                \
++        __m128 m = _mm_add_ps(acc_m[c], _mm_movehl_ps(acc_m[c], acc_m[c]));                                       \
++        m = _mm_add_ss(m, _mm_movehdup_ps(m));                                                                    \
++        s[c] = hsum_float_8(acc[c]) + _mm_cvtss_f32(m);                                                           \
++    }                                                                                                             \
++}
++Q4K_MULTI(2)
++Q4K_MULTI(3)
++Q4K_MULTI(4)
++#undef Q4K_MULTI
++
+ static void ggml_vec_dot_q4_K_q8_K_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
+     switch (nc) {
+         case 2: ggml_vec_dot_q4_K_q8_K_x2(n, s, vx, vy); break;
+@@ -4496,6 +4593,129 @@ Q6K_MULTI(3)
+ Q6K_MULTI(4)
+ #undef Q6K_MULTI
+ 
++static void ggml_vec_dot_q6_K_q8_K_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
++    switch (nc) {
++        case 2: ggml_vec_dot_q6_K_q8_K_x2(n, s, vx, vy); break;
++        case 3: ggml_vec_dot_q6_K_q8_K_x3(n, s, vx, vy); break;
++        case 4: ggml_vec_dot_q6_K_q8_K_x4(n, s, vx, vy); break;
++        default:
++            for (int c = 0; c < nc; ++c) ggml_vec_dot_q6_K_q8_K(n, s + c, 0, vx, 0, vy[c], 0, 1);
++    }
++}
++#elif defined(__AVX__)
++#define Q6K_MULTI(NC)                                                                                             \
++static void ggml_vec_dot_q6_K_q8_K_x##NC(int n, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx,           \
++                                         const void * const * vy) {                                               \
++    const block_q6_K * GGML_RESTRICT x = vx;                                                                      \
++    const block_q8_K * y[NC];                                                                                     \
++    for (int c = 0; c < NC; ++c) y[c] = vy[c];                                                                    \
++    const int nb = n / QK_K;                                                                                      \
++    const __m128i m3 = _mm_set1_epi8(3);                                                                          \
++    const __m128i m15 = _mm_set1_epi8(15);                                                                        \
++    __m256 acc[NC];                                                                                               \
++    for (int c = 0; c < NC; ++c) acc[c] = _mm256_setzero_ps();                                                    \
++    for (int i = 0; i < nb; ++i) {                                                                                \
++        const float xd = GGML_CPU_FP16_TO_FP32(x[i].d);                                                           \
++        const uint8_t * GGML_RESTRICT q4 = x[i].ql;                                                               \
++        const uint8_t * GGML_RESTRICT qh = x[i].qh;                                                               \
++        const __m128i scales = _mm_loadu_si128((const __m128i*)x[i].scales);                                      \
++        const __m128i scales_16_0 = _mm_cvtepi8_epi16(scales);                                                    \
++        const __m128i scales_16_1 = _mm_cvtepi8_epi16(_mm_bsrli_si128(scales, 8));                                \
++        __m128i sumi_0[NC];                                                                                       \
++        __m128i sumi_1[NC];                                                                                       \
++        __m128i q8sclsub_0[NC];                                                                                   \
++        __m128i q8sclsub_1[NC];                                                                                   \
++        for (int c = 0; c < NC; ++c) {                                                                            \
++            const __m128i q8sums_0 = _mm_loadu_si128((const __m128i*)y[c][i].bsums);                              \
++            const __m128i q8sums_1 = _mm_loadu_si128((const __m128i*)y[c][i].bsums + 1);                          \
++            q8sclsub_0[c] = _mm_slli_epi32(_mm_madd_epi16(q8sums_0, scales_16_0), 5);                             \
++            q8sclsub_1[c] = _mm_slli_epi32(_mm_madd_epi16(q8sums_1, scales_16_1), 5);                             \
++            sumi_0[c] = _mm_setzero_si128();                                                                      \
++            sumi_1[c] = _mm_setzero_si128();                                                                      \
++        }                                                                                                         \
++        int is = 0;                                                                                               \
++        for (int j = 0; j < QK_K/128; ++j) {                                                                      \
++            const __m128i q4bitsH_0 = _mm_loadu_si128((const __m128i*)qh); qh += 16;                              \
++            const __m128i q4bitsH_1 = _mm_loadu_si128((const __m128i*)qh); qh += 16;                              \
++            const __m128i q4h_0 = _mm_slli_epi16(_mm_and_si128(q4bitsH_0, m3), 4);                                \
++            const __m128i q4h_1 = _mm_slli_epi16(_mm_and_si128(q4bitsH_1, m3), 4);                                \
++            const __m128i q4h_2 = _mm_slli_epi16(_mm_and_si128(q4bitsH_0, _mm_set1_epi8(12)), 2);                 \
++            const __m128i q4h_3 = _mm_slli_epi16(_mm_and_si128(q4bitsH_1, _mm_set1_epi8(12)), 2);                 \
++            const __m128i q4h_4 = _mm_and_si128(q4bitsH_0, _mm_set1_epi8(48));                                    \
++            const __m128i q4h_5 = _mm_and_si128(q4bitsH_1, _mm_set1_epi8(48));                                    \
++            const __m128i q4h_6 = _mm_srli_epi16(_mm_and_si128(q4bitsH_0, _mm_set1_epi8(-64)), 2);                \
++            const __m128i q4h_7 = _mm_srli_epi16(_mm_and_si128(q4bitsH_1, _mm_set1_epi8(-64)), 2);                \
++            const __m128i q4bits1_0 = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                              \
++            const __m128i q4bits1_1 = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                              \
++            const __m128i q4bits2_0 = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                              \
++            const __m128i q4bits2_1 = _mm_loadu_si128((const __m128i*)q4); q4 += 16;                              \
++            const __m128i q4_0 = _mm_or_si128(_mm_and_si128(q4bits1_0, m15), q4h_0);                              \
++            const __m128i q4_1 = _mm_or_si128(_mm_and_si128(q4bits1_1, m15), q4h_1);                              \
++            const __m128i q4_2 = _mm_or_si128(_mm_and_si128(q4bits2_0, m15), q4h_2);                              \
++            const __m128i q4_3 = _mm_or_si128(_mm_and_si128(q4bits2_1, m15), q4h_3);                              \
++            const __m128i q4_4 = _mm_or_si128(_mm_and_si128(_mm_srli_epi16(q4bits1_0, 4), m15), q4h_4);           \
++            const __m128i q4_5 = _mm_or_si128(_mm_and_si128(_mm_srli_epi16(q4bits1_1, 4), m15), q4h_5);           \
++            const __m128i q4_6 = _mm_or_si128(_mm_and_si128(_mm_srli_epi16(q4bits2_0, 4), m15), q4h_6);           \
++            const __m128i q4_7 = _mm_or_si128(_mm_and_si128(_mm_srli_epi16(q4bits2_1, 4), m15), q4h_7);           \
++            const __m128i scale_0 = _mm_shuffle_epi8(scales, get_scale_shuffle(is + 0));                          \
++            const __m128i scale_1 = _mm_shuffle_epi8(scales, get_scale_shuffle(is + 1));                          \
++            const __m128i scale_2 = _mm_shuffle_epi8(scales, get_scale_shuffle(is + 2));                          \
++            const __m128i scale_3 = _mm_shuffle_epi8(scales, get_scale_shuffle(is + 3));                          \
++            is += 4;                                                                                              \
++            const __m128i sc_0_lo = _mm_cvtepi8_epi16(scale_0);                                                   \
++            const __m128i sc_0_hi = _mm_cvtepi8_epi16(_mm_bsrli_si128(scale_0, 8));                               \
++            const __m128i sc_1_lo = _mm_cvtepi8_epi16(scale_1);                                                   \
++            const __m128i sc_1_hi = _mm_cvtepi8_epi16(_mm_bsrli_si128(scale_1, 8));                               \
++            const __m128i sc_2_lo = _mm_cvtepi8_epi16(scale_2);                                                   \
++            const __m128i sc_2_hi = _mm_cvtepi8_epi16(_mm_bsrli_si128(scale_2, 8));                               \
++            const __m128i sc_3_lo = _mm_cvtepi8_epi16(scale_3);                                                   \
++            const __m128i sc_3_hi = _mm_cvtepi8_epi16(_mm_bsrli_si128(scale_3, 8));                               \
++            for (int c = 0; c < NC; ++c) {                                                                        \
++                const int8_t * q8 = y[c][i].qs + 128*j;                                                           \
++                const __m128i q8_0 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_1 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_2 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_3 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_4 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_5 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_6 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                const __m128i q8_7 = _mm_loadu_si128((const __m128i*)q8); q8 += 16;                              \
++                __m128i p16_0 = _mm_maddubs_epi16(q4_0, q8_0);                                                    \
++                __m128i p16_1 = _mm_maddubs_epi16(q4_1, q8_1);                                                    \
++                __m128i p16_2 = _mm_maddubs_epi16(q4_2, q8_2);                                                    \
++                __m128i p16_3 = _mm_maddubs_epi16(q4_3, q8_3);                                                    \
++                __m128i p16_4 = _mm_maddubs_epi16(q4_4, q8_4);                                                    \
++                __m128i p16_5 = _mm_maddubs_epi16(q4_5, q8_5);                                                    \
++                __m128i p16_6 = _mm_maddubs_epi16(q4_6, q8_6);                                                    \
++                __m128i p16_7 = _mm_maddubs_epi16(q4_7, q8_7);                                                    \
++                p16_0 = _mm_madd_epi16(sc_0_lo, p16_0);                                                           \
++                p16_1 = _mm_madd_epi16(sc_0_hi, p16_1);                                                           \
++                p16_2 = _mm_madd_epi16(sc_1_lo, p16_2);                                                           \
++                p16_3 = _mm_madd_epi16(sc_1_hi, p16_3);                                                           \
++                p16_4 = _mm_madd_epi16(sc_2_lo, p16_4);                                                           \
++                p16_5 = _mm_madd_epi16(sc_2_hi, p16_5);                                                           \
++                p16_6 = _mm_madd_epi16(sc_3_lo, p16_6);                                                           \
++                p16_7 = _mm_madd_epi16(sc_3_hi, p16_7);                                                           \
++                sumi_0[c] = _mm_add_epi32(sumi_0[c], _mm_add_epi32(p16_0, p16_2));                                \
++                sumi_1[c] = _mm_add_epi32(sumi_1[c], _mm_add_epi32(p16_1, p16_3));                                \
++                sumi_0[c] = _mm_add_epi32(sumi_0[c], _mm_add_epi32(p16_4, p16_6));                                \
++                sumi_1[c] = _mm_add_epi32(sumi_1[c], _mm_add_epi32(p16_5, p16_7));                                \
++            }                                                                                                     \
++        }                                                                                                         \
++        for (int c = 0; c < NC; ++c) {                                                                            \
++            sumi_0[c] = _mm_sub_epi32(sumi_0[c], q8sclsub_0[c]);                                                  \
++            sumi_1[c] = _mm_sub_epi32(sumi_1[c], q8sclsub_1[c]);                                                  \
++            const __m256i sumi = MM256_SET_M128I(sumi_1[c], sumi_0[c]);                                           \
++            acc[c] = _mm256_add_ps(_mm256_mul_ps(_mm256_set1_ps(y[c][i].d * xd), _mm256_cvtepi32_ps(sumi)), acc[c]); \
++        }                                                                                                         \
++    }                                                                                                             \
++    for (int c = 0; c < NC; ++c) s[c] = hsum_float_8(acc[c]);                                                     \
++}
++Q6K_MULTI(2)
++Q6K_MULTI(3)
++Q6K_MULTI(4)
++#undef Q6K_MULTI
++
+ static void ggml_vec_dot_q6_K_q8_K_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
+     switch (nc) {
+         case 2: ggml_vec_dot_q6_K_q8_K_x2(n, s, vx, vy); break;
+@@ -5449,6 +5669,59 @@ Q80_MULTI(3)
+ Q80_MULTI(4)
+ #undef Q80_MULTI
+ 
++static void ggml_vec_dot_q8_0_q8_0_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
++    switch (nc) {
++        case 2: ggml_vec_dot_q8_0_q8_0_x2(n, s, vx, vy); break;
++        case 3: ggml_vec_dot_q8_0_q8_0_x3(n, s, vx, vy); break;
++        case 4: ggml_vec_dot_q8_0_q8_0_x4(n, s, vx, vy); break;
++        default:
++            for (int c = 0; c < nc; ++c) ggml_vec_dot_q8_0_q8_0(n, s + c, 0, vx, 0, vy[c], 0, 1);
++    }
++}
++#elif defined(__AVX__)
++#define Q80_MULTI(NC)                                                                                             \
++static void ggml_vec_dot_q8_0_q8_0_x##NC(int n, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx,           \
++                                         const void * const * vy) {                                               \
++    const block_q8_0 * GGML_RESTRICT x = vx;                                                                      \
++    const block_q8_0 * y[NC];                                                                                     \
++    for (int c = 0; c < NC; ++c) y[c] = vy[c];                                                                    \
++    const int nb = n / QK8_0;                                                                                     \
++    __m256 accum[NC];                                                                                             \
++    for (int c = 0; c < NC; ++c) accum[c] = _mm256_setzero_ps();                                                  \
++    int ib = 0;                                                                                                   \
++    for (; ib + 1 < nb; ib += 2) {                                                                                \
++        const __m128i qx_1_0 = _mm_loadu_si128((const __m128i *)x[ib].qs);                                        \
++        const __m128i qx_1_1 = _mm_loadu_si128((const __m128i *)x[ib].qs + 1);                                    \
++        const __m128i qx_2_0 = _mm_loadu_si128((const __m128i *)x[ib + 1].qs);                                    \
++        const __m128i qx_2_1 = _mm_loadu_si128((const __m128i *)x[ib + 1].qs + 1);                                \
++        for (int c = 0; c < NC; ++c) {                                                                            \
++            const __m128i qy_1_0 = _mm_loadu_si128((const __m128i *)y[c][ib].qs);                                 \
++            const __m128i qy_1_1 = _mm_loadu_si128((const __m128i *)y[c][ib].qs + 1);                             \
++            const __m128i qy_2_0 = _mm_loadu_si128((const __m128i *)y[c][ib + 1].qs);                             \
++            const __m128i qy_2_1 = _mm_loadu_si128((const __m128i *)y[c][ib + 1].qs + 1);                         \
++            const __m256 p = mul_sum_i8_quad_float(qx_1_0, qx_1_1, qx_2_0, qx_2_1,                               \
++                                                   qy_1_0, qy_1_1, qy_2_0, qy_2_1);                               \
++            const __m256 deltas = quad_fp16_delta_float(x[ib].d, y[c][ib].d, x[ib + 1].d, y[c][ib + 1].d);        \
++            accum[c] = _mm256_add_ps(_mm256_mul_ps(deltas, p), accum[c]);                                         \
++        }                                                                                                         \
++    }                                                                                                             \
++    for (int c = 0; c < NC; ++c) {                                                                                \
++        float sumf = hsum_float_8(accum[c]);                                                                      \
++        for (int ib2 = ib; ib2 < nb; ++ib2) {                                                                     \
++            int sumi = 0;                                                                                         \
++            for (int j = 0; j < QK8_0; j++) {                                                                     \
++                sumi += x[ib2].qs[j]*y[c][ib2].qs[j];                                                             \
++            }                                                                                                     \
++            sumf += sumi*(GGML_CPU_FP16_TO_FP32(x[ib2].d)*GGML_CPU_FP16_TO_FP32(y[c][ib2].d));                    \
++        }                                                                                                         \
++        s[c] = sumf;                                                                                              \
++    }                                                                                                             \
++}
++Q80_MULTI(2)
++Q80_MULTI(3)
++Q80_MULTI(4)
++#undef Q80_MULTI
++
+ static void ggml_vec_dot_q8_0_q8_0_multi(int n, int nc, float * GGML_RESTRICT s, const void * GGML_RESTRICT vx, const void * const * vy) {
+     switch (nc) {
+         case 2: ggml_vec_dot_q8_0_q8_0_x2(n, s, vx, vy); break;
+@@ -5482,6 +5755,20 @@ ggml_vec_dot_multi_t ggml_get_vec_dot_multi(enum ggml_type type) {
+         case GGML_TYPE_Q8_0: return ggml_vec_dot_q8_0_q8_0_multi;
+         default: break;
+     }
++#elif defined(__AVX__)
++    ggml_vec_dot_multi_t fn = NULL;
++    switch (type) {
++        case GGML_TYPE_Q6_K: fn = ggml_vec_dot_q6_K_q8_K_multi; break;
++        case GGML_TYPE_Q4_K: fn = ggml_vec_dot_q4_K_q8_K_multi; break;
++        case GGML_TYPE_Q8_0: fn = ggml_vec_dot_q8_0_q8_0_multi; break;
++        default: break;
++    }
++    static bool announced[GGML_TYPE_COUNT];
++    if (fn != NULL && !announced[type]) {
++        announced[type] = true;
++        fprintf(stderr, "ggml_cpu: multi-row dot ON for %s (AVX1)\n", ggml_type_name(type));
++    }
++    return fn;
+ #endif
+     GGML_UNUSED(type);
+     return NULL;
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index 1f6ce6993..69c2b7931 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -311,6 +311,7 @@ if (NOT GGML_BACKEND_DL AND GGML_CPU)
+     llama_build_and_test(test-turbo-quant.c)
+     target_include_directories(test-turbo-quant PRIVATE ${CMAKE_SOURCE_DIR}/ggml/src)
+     llama_build_and_test(test-quantize-fns.cpp)
++    llama_build_and_test(test-vec-dot-multi.cpp)
+     llama_build_and_test(test-quantize-perf.cpp)
+     llama_build_and_test(test-rope.cpp)
+     llama_build_and_test(test-col2im-1d.cpp)
+diff --git a/tests/test-vec-dot-multi.cpp b/tests/test-vec-dot-multi.cpp
+new file mode 100644
+index 000000000..4ec7dd83f
+--- /dev/null
++++ b/tests/test-vec-dot-multi.cpp
+@@ -0,0 +1,105 @@
++// Checks that the multi-row dot kernels match the single-row dot bit for bit.
++
++#include "ggml.h"
++#include "ggml-cpu.h"
++
++#include <cstdint>
++#include <cstdio>
++#include <cstring>
++#include <vector>
++
++static uint32_t rng_state = 12345;
++
++static float next_float(void) {
++    rng_state = rng_state*1664525u + 1013904223u;
++    return ((float) (rng_state >> 8)/(float) 0x00ffffffu)*2.0f - 1.0f;
++}
++
++static int run_type(const struct ggml_type_traits_cpu * cpu, ggml_cpu_vec_dot_multi_t multi,
++                    enum ggml_type type, const char * name, int n) {
++    const size_t w_size = ggml_row_size(type, n);
++    const size_t a_size = ggml_row_size(cpu->vec_dot_type, n);
++
++    std::vector<float> w(n);
++    std::vector<float> a(n);
++    std::vector<char> wq(w_size);
++
++    for (int i = 0; i < n; ++i) {
++        w[i] = next_float();
++    }
++    ggml_get_type_traits_cpu(type)->from_float(w.data(), wq.data(), n);
++
++    std::vector<std::vector<char>> rows(4);
++    for (int r = 0; r < 4; ++r) {
++        rows[r].resize(a_size);
++        for (int i = 0; i < n; ++i) {
++            a[i] = next_float();
++        }
++        ggml_get_type_traits_cpu(cpu->vec_dot_type)->from_float(a.data(), rows[r].data(), n);
++    }
++
++    int ret = 0;
++    for (int nc = 1; nc <= 4; ++nc) {
++        const void * vy[4];
++        for (int r = 0; r < nc; ++r) {
++            vy[r] = rows[r].data();
++        }
++        float got[4] = { 0, 0, 0, 0 };
++        multi(n, nc, got, wq.data(), vy);
++
++        bool ok = true;
++        for (int r = 0; r < nc; ++r) {
++            float ref = 0;
++            cpu->vec_dot(n, &ref, 0, wq.data(), 0, rows[r].data(), 0, 1);
++            if (memcmp(&got[r], &ref, sizeof(float)) != 0) {
++                printf("%s n=%d nc=%d DIFF row=%d multi=%.9g single=%.9g\n", name, n, nc, r, got[r], ref);
++                ret = 1;
++                ok = false;
++                break;
++            }
++        }
++        if (ok) {
++            printf("%s n=%d nc=%d identical\n", name, n, nc);
++        }
++    }
++    return ret;
++}
++
++int main(void) {
++    // only the test TU flags; the ggml-cpu objects carry the backend arch flags
++#ifdef __AVX2__
++    printf("test TU: __AVX2__ defined\n");
++#else
++    printf("test TU: __AVX2__ not defined\n");
++#endif
++#ifdef __AVX__
++    printf("test TU: __AVX__ defined\n");
++#else
++    printf("test TU: __AVX__ not defined\n");
++#endif
++#ifdef __FMA__
++    printf("test TU: __FMA__ defined\n");
++#else
++    printf("test TU: __FMA__ not defined\n");
++#endif
++
++    const enum ggml_type types[] = { GGML_TYPE_Q6_K, GGML_TYPE_Q4_K, GGML_TYPE_Q8_0 };
++    const char * names[]        = { "q6_K",         "q4_K",         "q8_0"         };
++    const int sizes[]           = { 256, 4096, 5120 };
++
++    int ret = 0;
++    for (size_t t = 0; t < sizeof(types)/sizeof(types[0]); ++t) {
++        const struct ggml_type_traits_cpu * cpu = ggml_get_type_traits_cpu(types[t]);
++        const ggml_cpu_vec_dot_multi_t multi = ggml_cpu_get_vec_dot_multi(types[t]);
++        if (multi == NULL) {
++            printf("%s getter NULL\n", names[t]);
++            ret = 1;
++            continue;
++        }
++        for (size_t s = 0; s < sizeof(sizes)/sizeof(sizes[0]); ++s) {
++            ret |= run_type(cpu, multi, types[t], names[t], sizes[s]);
++        }
++    }
++
++    return ret;
++}
