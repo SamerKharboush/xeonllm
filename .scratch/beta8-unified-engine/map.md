@@ -44,6 +44,8 @@ using the AVX1 Xeon, both D700s and the 64 GB of RAM as one pool. Nothing is bui
 - [Which newer engines and methods beat llama.cpp, and which of their ideas can this fork mimic?](issues/03-which-newer-engines-and-methods-beat-llama-cpp-and-why.md): none runs here. Carry over the GCN mat-vec layout, short drafts sized to the verify curve (n-gram defaults of 48-64 are wrong here), and overlap of the CPU experts with card work. Every card-1 number of 11-04 must be re-taken on card 0.
 - [How many distinct experts does a k-token verify touch on the 35B?](issues/08-how-many-distinct-experts-does-a-k-token-verify-touch-on-the-35b.md): 8, 13.4, 21.2 and 32.4 per layer for k = 1, 2, 4, 8 (ratios 1.68, 2.65, 4.04). Host time grows more slowly up to k=4 and faster at k=8. Host verify can pay for drafts; the expert tier's loss must come from the card half.
 
+- [Is card 1 healthy after a cold power cycle?](issues/01-is-card-1-healthy-after-a-cold-power-cycle.md): yes, the fault was transient: 13983/13983 after a cold power-off (a warm reboot did not clear it). The app now checks every card at launch and leaves a failing one out (f512e24).
+
 ## Not yet specified
 
 - How the four pools become one schedule: which tensors live on card 0, card 1 and host RAM, per
