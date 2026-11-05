@@ -793,13 +793,55 @@ struct ServerSettings {
         // these to MTLCopyAllDevices() — the same order as the app's GPU picker).
         // A model that runs on the host leaves the cards out of the run entirely.
         let gpus = ServerController.availableGPUs()
+        let excludedCards = CardHealth.excluded
+        let healthyGPUs = gpus.filter { !excludedCards.contains($0.index) }
+        if usesGPUs, !excludedCards.isEmpty {
+            // An inherited or stale selection could name the failed card too.
+            env.removeValue(forKey: "GGML_METAL_DEVICES")
+            env.removeValue(forKey: "GGML_METAL_DEVICE_LIST")
+            env.removeValue(forKey: "GGML_METAL_DEVICE_INDEX")
+        }
         if placement == .expertTier {
             // Dynamic MoE plans the first card it sees: give it one, the user's if one is picked,
             // else the one with the most free VRAM.
-            if gpuIndex >= 0 {
+            if excludedCards.isEmpty {
+                if gpuIndex >= 0 {
+                    env["GGML_METAL_DEVICE_INDEX"] = String(gpuIndex)
+                } else if let card = Self.expertTierCard(VRAMMonitor.snapshot()) {
+                    env["GGML_METAL_DEVICE_INDEX"] = String(card)
+                }
+            } else if gpuIndex >= 0, !excludedCards.contains(gpuIndex) {
                 env["GGML_METAL_DEVICE_INDEX"] = String(gpuIndex)
-            } else if let card = Self.expertTierCard(VRAMMonitor.snapshot()) {
+            } else if let card = Self.expertTierCard(VRAMMonitor.snapshot().filter { stat in
+                !excludedCards.contains(stat.id) && healthyGPUs.contains { $0.index == stat.id }
+            }) {
                 env["GGML_METAL_DEVICE_INDEX"] = String(card)
+            } else if let card = healthyGPUs.first(where: { !$0.isIntegrated }) ?? healthyGPUs.first {
+                env["GGML_METAL_DEVICE_INDEX"] = String(card.index)
+            }
+        } else if usesGPUs, !excludedCards.isEmpty {
+            // A failed card leaves the engine to pick its own devices, and it would
+            // take the bad one: name the healthy cards explicitly instead.
+            var chosen: [Int] = []
+            if gpuList.count >= 2 {
+                chosen = gpuList.filter { !excludedCards.contains($0) }
+            } else if multiGPU {
+                let pool = healthyGPUs.filter { !$0.isIntegrated }
+                let candidates = pool.isEmpty ? healthyGPUs : pool
+                let requested = multiGPUCount > 0 ? min(multiGPUCount, candidates.count) : candidates.count
+                let n = min(candidates.count, max(2, requested))
+                chosen = Array(candidates.prefix(n)).map(\.index)
+            } else if gpuIndex >= 0, !excludedCards.contains(gpuIndex) {
+                chosen = [gpuIndex]
+            }
+            if chosen.isEmpty {
+                chosen = (healthyGPUs.first(where: { !$0.isIntegrated }) ?? healthyGPUs.first)
+                    .map { [$0.index] } ?? []
+            }
+            if chosen.count >= 2 {
+                env["GGML_METAL_DEVICE_LIST"] = chosen.map(String.init).joined(separator: ",")
+            } else if let one = chosen.first {
+                env["GGML_METAL_DEVICE_INDEX"] = String(one)
             }
         } else if usesGPUs, gpuList.count >= 2 {
             // Split across exactly these GPUs; slot i maps to the i-th listed index.
@@ -1925,7 +1967,10 @@ final class ServerController: ObservableObject {
     nonisolated static func availableGPUs(rescan: Bool = false) -> [GPUDevice] {
         gpuCacheLock.lock()
         defer { gpuCacheLock.unlock() }
-        if !rescan, let cached = cachedGPUs { return cached }
+        if let testing = gpusForTesting { return testing }
+        if !rescan, let cached = cachedGPUs {
+            return filtered(cached)
+        }
         let devices = MTLCopyAllDevices().enumerated().map { i, dev in
             GPUDevice(index: i, name: dev.name,
                       vramMB: Int(dev.recommendedMaxWorkingSetSize / 1_048_576),
@@ -1936,10 +1981,24 @@ final class ServerController: ObservableObject {
                       supportsBF16: dev.supportsFamily(.metal3))
         }
         cachedGPUs = devices
-        return devices
+        return filtered(devices)
+    }
+
+    private nonisolated static func filtered(_ devices: [GPUDevice]) -> [GPUDevice] {
+        let excluded = CardHealth.excluded
+        return excluded.isEmpty ? devices : devices.filter { !excluded.contains($0.index) }
+    }
+
+    /// Tests state the exact card list, unfiltered: their fixtures stand in for
+    /// the physical cards, so a card-health decision must not rewrite them.
+    nonisolated static func setGPUsForTesting(_ gpus: [GPUDevice]?) {
+        gpuCacheLock.lock()
+        gpusForTesting = gpus
+        gpuCacheLock.unlock()
     }
 
     nonisolated(unsafe) private static var cachedGPUs: [GPUDevice]?
+    nonisolated(unsafe) private static var gpusForTesting: [GPUDevice]?
     private nonisolated static let gpuCacheLock = NSLock()
 
     /// Whether any detected GPU is an external eGPU. Used to surface the
@@ -2036,6 +2095,8 @@ final class ServerController: ObservableObject {
                     try? await Task.sleep(for: .milliseconds(250))
                 }
             }
+            // the card check runs at app launch; an auto-started engine waits for its answer
+            _ = await Task.detached(operation: { CardHealth.waitForProbe(timeout: 5) }).value
             var planned = settings
             // The placement is resolved again here: the settings may have come
             // from a profile or from a screen that never asked for a placement.
@@ -2219,6 +2280,17 @@ final class ServerController: ObservableObject {
                 : " · peer group \($0.peerGroupID) (\($0.peerCount) GPUs)"
             return "    [\($0.index)] \($0.name) · \($0.vramGB) GB\(peer)\($0.isExternal ? " · EXTERNAL/eGPU" : "")\($0.isIntegrated ? " · iGPU (not auto-selected)" : "")"
         }.joined(separator: "\n")
+        let cardLines = CardHealth.lastResults.filter { !$0.passed }.map { result in
+            let outcome: String
+            if CardHealth.excluded.contains(result.index) {
+                outcome = "left out of this run"
+            } else if CardHealth.forceInclude.contains(result.index) {
+                outcome = "kept: forced on in Settings"
+            } else {
+                outcome = "kept (no healthy card left)"
+            }
+            return "\n card check: [\(result.index)] FAILED (\(result.detail)) — \(outcome)"
+        }.joined()
         let envKeys = ["TOSH_AUTO", "TOSH_AUTO_KV", "TOSH_AUTO_HOST_BANK", "GGML_METAL_VRAM_RESERVE_MB",
                        "GGML_METAL_DEVICE_INDEX", "GGML_METAL_DEVICES", "GGML_METAL_DEVICE_LIST",
                        "GGML_METAL_SHARED_BUFFERS_DISABLE", "TOSH_FA_AMD",
@@ -2257,7 +2329,7 @@ final class ServerController: ObservableObject {
          engine : \(engine) · kernels \(kernelFingerprint(binary: settings.serverBinary))
          model  : \(settings.routerMode ? "router (autoload, max \(settings.routerModelsMax) loaded)" : (settings.modelPath as NSString).lastPathComponent)
          GPUs detected:
-        \(gpus.isEmpty ? "    (none)" : gpus)
+        \(gpus.isEmpty ? "    (none)" : gpus)\(cardLines)
          GPU select: \(gpuSel) | force-VRAM-buffers: \(env["GGML_METAL_SHARED_BUFFERS_DISABLE"] == "1" ? "yes" : "no")
          settings: ngl=\(settings.effectiveNgl) \(moeLine) ctx=\(settings.ctx) fa=\(settings.flashAttn) ctk=\(settings.cacheTypeK) ctv=\(settings.cacheTypeV) cacheRAM=\(settings.cacheRAM)
          placement: \(placementLine)\(contextLine)

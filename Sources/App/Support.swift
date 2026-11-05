@@ -97,6 +97,8 @@ enum SettingsKeys {
     static let gpuIndex = "gpuIndex"
     /// Comma-separated physical GPU indices to split across (2+ entries).
     static let gpuList = "gpuList"
+    /// Physical GPU indices the user forces into a run even if the card check failed.
+    static let cardHealthForceInclude = "cardHealthForceInclude"
     static let gpusCardCollapsed = "gpusCardCollapsed"
     static let extraArgs = "extraArgs"
 

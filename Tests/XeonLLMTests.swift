@@ -4,6 +4,7 @@
 
 import AppKit
 import CoreText
+import Metal
 import PDFKit
 import XCTest
 @testable import XeonLLM
@@ -3371,6 +3372,95 @@ extension ServerSettingsTests {
         let hint = ServerController.diagnose(log, exitCode: 1)
         XCTAssertTrue(hint.contains("por capas"), hint)
         XCTAssertTrue(hint.contains("by layers"), hint)
+    }
+}
+
+final class CardHealthTests: XCTestCase {
+    private func makeSettings() -> ServerSettings {
+        ServerSettings(serverBinary: "/usr/bin/true", modelPath: "/tmp/m.gguf", port: 8080,
+                       ngl: 99, ncmoe: 24, ctx: 16384, threads: 6, flashAttn: "auto",
+                       noMmap: true, jinja: true,
+                       vramReserveMB: 1024, gpuIndex: -1, extraArgs: "",
+                       cacheTypeK: "f16", cacheTypeV: "f16", mlock: false)
+    }
+
+    private var d700s: [GPUDevice] {
+        [GPUDevice(index: 0, name: "AMD Radeon HD - FirePro D700", vramMB: 6144),
+         GPUDevice(index: 1, name: "AMD Radeon HD - FirePro D700", vramMB: 6144)]
+    }
+
+    override func tearDown() {
+        CardHealth.setExcludedForTesting(nil)
+        ServerController.setGPUsForTesting(nil)
+        unsetenv("XEONLLM_CARD_FAULT")
+        super.tearDown()
+    }
+
+    func testFailedCardIsExcluded() {
+        let results = [CardCheckResult(index: 0, passed: true, detail: "ok"),
+                       CardCheckResult(index: 1, passed: false, detail: "mismatch")]
+        XCTAssertEqual(CardHealth.excludedCards(results: results, forceInclude: [],
+                                                injectedFaults: []), [1])
+    }
+
+    func testInjectedFaultIsExcluded() {
+        let results = [CardCheckResult(index: 0, passed: true, detail: "ok"),
+                       CardCheckResult(index: 1, passed: true, detail: "ok")]
+        XCTAssertEqual(CardHealth.excludedCards(results: results, forceInclude: [],
+                                                injectedFaults: [1]), [1])
+    }
+
+    func testForceIncludeWinsOverFailureAndInjectedFault() {
+        let results = [CardCheckResult(index: 0, passed: true, detail: "ok"),
+                       CardCheckResult(index: 1, passed: false, detail: "mismatch")]
+        XCTAssertEqual(CardHealth.excludedCards(results: results, forceInclude: [1],
+                                                injectedFaults: [1]), [])
+    }
+
+    func testNeverExcludesEveryCard() {
+        let results = [CardCheckResult(index: 0, passed: false, detail: "timeout"),
+                       CardCheckResult(index: 1, passed: false, detail: "mismatch")]
+        XCTAssertEqual(CardHealth.excludedCards(results: results, forceInclude: [],
+                                                injectedFaults: []), [])
+    }
+
+    func testCardFaultEnvironmentVariableFeedsTheExclusion() {
+        setenv("XEONLLM_CARD_FAULT", "1", 1)
+        let results = [CardCheckResult(index: 0, passed: true, detail: "ok"),
+                       CardCheckResult(index: 1, passed: true, detail: "ok")]
+        XCTAssertEqual(CardHealth.injectedFaults(), [1])
+        XCTAssertEqual(CardHealth.excludedCards(results: results, forceInclude: [],
+                                                injectedFaults: CardHealth.injectedFaults()), [1])
+    }
+
+    func testMetalKnownAnswerProbePasses() throws {
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            throw XCTSkip("no Metal device on this machine")
+        }
+        let result = CardHealth.check(device: device, index: 0)
+        XCTAssertTrue(result.passed, result.detail)
+    }
+
+    func testExcludedCardLeavesOneHealthyCardInTheEnvironment() {
+        ServerController.setGPUsForTesting(d700s)
+        CardHealth.setExcludedForTesting([1])
+        var s = makeSettings()
+        s.multiGPU = true
+        let env = s.environment
+        XCTAssertEqual(env["GGML_METAL_DEVICE_INDEX"], "0")
+        XCTAssertNil(env["GGML_METAL_DEVICE_LIST"])
+        XCTAssertNil(env["GGML_METAL_DEVICES"],
+                     "a count would take the first N physical cards, including the bad one")
+    }
+
+    func testNoExclusionKeepsTheCurrentEnvironment() {
+        ServerController.setGPUsForTesting(d700s)
+        var s = makeSettings()
+        s.multiGPU = true
+        let env = s.environment
+        XCTAssertEqual(env["GGML_METAL_DEVICES"], "2")
+        XCTAssertNil(env["GGML_METAL_DEVICE_LIST"])
+        XCTAssertNil(env["GGML_METAL_DEVICE_INDEX"])
     }
 }
 

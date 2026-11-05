@@ -54,6 +54,9 @@ struct XeonLLMApp: App {
         ProductDefaults.register()
         // Release VRAM held by an engine orphaned by a previous force-quit.
         EngineLock.reapOrphans()
+        // Check every card's known-answer output once, off the main thread, before
+        // a server run can pick a card whose results are silently wrong.
+        CardHealth.startProbe()
 
         // Remove the legacy raw flag; MTP is selected automatically per model.
         if var extra = defaultsMigrationExtraArgs(), extra.contains("--spec-type draft-mtp") {
