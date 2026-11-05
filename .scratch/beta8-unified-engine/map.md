@@ -46,6 +46,8 @@ using the AVX1 Xeon, both D700s and the 64 GB of RAM as one pool. Nothing is bui
 
 - [Is card 1 healthy after a cold power cycle?](issues/01-is-card-1-healthy-after-a-cold-power-cycle.md): yes, the fault was transient: 13983/13983 after a cold power-off (a warm reboot did not clear it). The app now checks every card at launch and leaves a failing one out (f512e24).
 
+- [How fast can a D700 read host memory directly, and how fast is the NVMe?](issues/07-how-fast-can-a-d700-read-host-memory-and-how-fast-is-the-nvme.md): a card reads host RAM at 4.2-6.9 GB/s (zero-copy is out), and doing so wedged card 1 with 7 resets. The SSD reads 1.46-1.48 GB/s sequential and 1.25-1.26 random 2 MiB, uncached.
+
 ## Not yet specified
 
 - How the four pools become one schedule: which tensors live on card 0, card 1 and host RAM, per

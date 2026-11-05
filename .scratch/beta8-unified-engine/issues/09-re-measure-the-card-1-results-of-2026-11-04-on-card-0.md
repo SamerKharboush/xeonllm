@@ -1,7 +1,7 @@
 # Re-measure the card-1 results of 2026-11-04 on card 0
 
 Type: task
-Status: open
+Status: open (steps 1-2 done; 3-6 wait for a cold power cycle)
 Mode: AFK (orchestrator: it runs GPU programs)
 
 ## Question
@@ -23,3 +23,28 @@ what do these give?
 
 Card 0 drives the display: keep every command buffer short and every model under its working set.
 Record whether the display was awake.
+
+## Progress (2026-11-05)
+
+Steps 1-2 measured on both cards (`evidence/09/probes.log`, the same probe binaries rebuilt from
+`tools/metal-probe/`; 1 GiB private buffer; one pass per command buffer; at least 1.5 s soak; warmup
+discarded).
+
+| card | rep | `read4` 1024x256 | `read4` 4096x256 | `read4` 512x64 | `read1` 1024x256 | `read1` 4096x256 | host copy (GPU-time GB/s) |
+|---|---|---|---|---|---|---|---|
+| 0 | 1 | 141.78 | 139.46 | 171.70 | 184.61 | 194.66 | 11.35-11.45 |
+| 0 | 2 | 195.53 | 198.72 | 197.31 | 184.16 | 194.65 | 11.32-11.42 |
+| 1 | 1 | 205.69 | 206.40 | 204.31 | 191.12 | 201.85 | 11.39-11.53 |
+| 1 | 2 | 205.70 | 206.51 | 204.45 | 191.24 | 201.85 | (not reached) |
+
+- Card 1's read ceiling (204.3-206.5) and host copy (11.4-11.5) match its 11-04 values
+  (204.4-206.1 and 11.4-11.6). Those two 11-04 numbers stand, even though the card was faulty then.
+- Card 0 is the display card. Its first process read 139-172 with `read4`, its second 195-199.
+  These are two observations, not one rate; the first process may have shared the card with the
+  display. Card 0 sits below card 1 in both processes.
+
+**Stopped.** The shared-buffer read of ticket 07 wedged card 1 (7 resets on [2:0:0]; see ticket 07).
+Steps 3-6 (decode, op offload text check, LFM3 on a card, verify curve) wait for a cold power cycle.
+Scripts ready: `evidence/09/engine.sh`, `evidence/09/offload.sh` (it swaps the scheduler fix into the
+vendor tree, rebuilds, and restores the file; the vendor copy is saved as
+`evidence/09/ggml-backend.vendor.cpp`).

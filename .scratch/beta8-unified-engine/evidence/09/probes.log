@@ -1,0 +1,71 @@
+## rep 1 card 0 private
+device 0: AMD Radeon HD - FirePro D700, buffer 1024 MiB private (card), 1024 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes  199  1.507 s  141.78 GB/s
+read4  4096 x 256  passes  195  1.501 s  139.46 GB/s
+read4   512 x  64  passes  240  1.501 s  171.70 GB/s
+read1  1024 x 256  passes  258  1.501 s  184.61 GB/s
+read1  4096 x 256  passes  272  1.500 s  194.66 GB/s
+## rep 1 card 0 shared
+device 0: AMD Radeon HD - FirePro D700, buffer 1024 MiB shared (host), 128 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes   55  1.511 s  4.89 GB/s
+read4  4096 x 256  passes   59  1.508 s  5.25 GB/s
+read4   512 x  64  passes   48  1.520 s  4.24 GB/s
+read1  1024 x 256  passes   56  1.517 s  4.95 GB/s
+read1  4096 x 256  passes   60  1.509 s  5.34 GB/s
+## rep 1 card 0 hostcopy
+device 0: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.098 s  10.96 GB/s wall  GPU-time rate 11.40 GB/s
+rep 2  wall 0.098 s  10.99 GB/s wall  GPU-time rate 11.39 GB/s
+rep 3  wall 0.098 s  10.93 GB/s wall  GPU-time rate 11.35 GB/s
+rep 4  wall 0.097 s  11.07 GB/s wall  GPU-time rate 11.45 GB/s
+rep 5  wall 0.098 s  11.00 GB/s wall  GPU-time rate 11.38 GB/s
+## rep 1 card 1 private
+device 1: AMD Radeon HD - FirePro D700, buffer 1024 MiB private (card), 1024 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes  288  1.503 s  205.69 GB/s
+read4  4096 x 256  passes  289  1.503 s  206.40 GB/s
+read4   512 x  64  passes  286  1.503 s  204.31 GB/s
+read1  1024 x 256  passes  267  1.500 s  191.12 GB/s
+read1  4096 x 256  passes  282  1.500 s  201.85 GB/s
+## rep 1 card 1 shared
+device 1: AMD Radeon HD - FirePro D700, buffer 1024 MiB shared (host), 128 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes   64  1.515 s  5.67 GB/s
+read4  4096 x 256  passes   69  1.502 s  6.16 GB/s
+read4   512 x  64  passes   78  1.515 s  6.91 GB/s
+read1  1024 x 256  passes   63  1.501 s  5.63 GB/s
+read1  4096 x 256  passes   70  1.518 s  6.19 GB/s
+## rep 1 card 1 hostcopy
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.096 s  11.13 GB/s wall  GPU-time rate 11.53 GB/s
+rep 2  wall 0.097 s  11.12 GB/s wall  GPU-time rate 11.50 GB/s
+rep 3  wall 0.097 s  11.07 GB/s wall  GPU-time rate 11.44 GB/s
+rep 4  wall 0.097 s  11.04 GB/s wall  GPU-time rate 11.43 GB/s
+rep 5  wall 0.098 s  11.00 GB/s wall  GPU-time rate 11.39 GB/s
+## rep 2 card 0 private
+device 0: AMD Radeon HD - FirePro D700, buffer 1024 MiB private (card), 1024 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes  274  1.505 s  195.53 GB/s
+read4  4096 x 256  passes  278  1.502 s  198.72 GB/s
+read4   512 x  64  passes  276  1.502 s  197.31 GB/s
+read1  1024 x 256  passes  258  1.504 s  184.16 GB/s
+read1  4096 x 256  passes  272  1.500 s  194.65 GB/s
+## rep 2 card 0 shared
+device 0: AMD Radeon HD - FirePro D700, buffer 1024 MiB shared (host), 128 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes   54  1.520 s  4.77 GB/s
+read4  4096 x 256  passes   61  1.516 s  5.40 GB/s
+read4   512 x  64  passes   51  1.517 s  4.51 GB/s
+read1  1024 x 256  passes   56  1.522 s  4.94 GB/s
+read1  4096 x 256  passes   61  1.522 s  5.38 GB/s
+## rep 2 card 0 hostcopy
+device 0: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.098 s  10.96 GB/s wall  GPU-time rate 11.35 GB/s
+rep 2  wall 0.097 s  11.03 GB/s wall  GPU-time rate 11.42 GB/s
+rep 3  wall 0.099 s  10.88 GB/s wall  GPU-time rate 11.32 GB/s
+rep 4  wall 0.098 s  10.93 GB/s wall  GPU-time rate 11.36 GB/s
+rep 5  wall 0.098 s  10.91 GB/s wall  GPU-time rate 11.33 GB/s
+## rep 2 card 1 private
+device 1: AMD Radeon HD - FirePro D700, buffer 1024 MiB private (card), 1024 MiB per command buffer, soak >= 1.5 s
+read4  1024 x 256  passes  288  1.503 s  205.70 GB/s
+read4  4096 x 256  passes  289  1.503 s  206.51 GB/s
+read4   512 x  64  passes  286  1.502 s  204.45 GB/s
+read1  1024 x 256  passes  268  1.505 s  191.24 GB/s
+read1  4096 x 256  passes  282  1.500 s  201.85 GB/s
+## rep 2 card 1 shared
