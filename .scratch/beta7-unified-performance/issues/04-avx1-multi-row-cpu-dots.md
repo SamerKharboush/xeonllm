@@ -37,3 +37,37 @@ F16C, no AVX2 or FMA) the multi-row path never runs.
 - `scripts/check-patch-series.sh` applies the series at the pin.
 
 ## Comments
+
+### 2026-11-04: step 0 (orchestrator)
+
+Method:
+- the shipped `llama-bench` (sha256 `82725c76...`, `d81235049` + 88 patches, AVX1 build);
+- `-ngl 0 -nopo 1 -t 12 -p 1,2,4,8 -n 0 -r 5`, one process per model and switch setting;
+- llama-bench discards its own warmup;
+- the user's idle CPU-only 14B `llama-server` was resident;
+- no GPU work ran;
+- Mocca was working at the same time (remote model, no local build).
+
+t(k) is the mean time to process k tokens in one batch, sd in brackets.
+
+| model | switch | t(1) ms | t(2) ms | t(4) ms | t(8) ms |
+|---|---|---|---|---|---|
+| Ornith-1.0-35B Q6_K | unset | 103.99 (2.82) | 147.58 (2.69) | 224.50 (6.74) | 614.23 (27.84) |
+| Ornith-1.0-35B Q6_K | `GGML_CPU_NO_MULTI_DOT=1` | 108.19 (2.26) | 164.86 (8.43) | 224.73 (8.97) | 627.35 (35.61) |
+| gemma4-coding 12B Q8_0 | unset | 299.15 (4.28) | 439.43 (18.87) | 675.83 (55.02) | 1206.06 (68.69) |
+| gemma4-coding 12B Q8_0 | `GGML_CPU_NO_MULTI_DOT=1` | 298.04 (2.80) | 429.05 (24.05) | 646.76 (8.07) | 1244.26 (92.15) |
+
+- **The switch.** For gemma, set and unset agree within one sd at every k. For the 35B they agree
+  within one sd at k=4 and differ by 1.4 sd at k=1. At k=2 and k=8 they differ by about two sd,
+  and the set runs ran second. This is consistent with an inert switch, which the code says it
+  is: the getter returns NULL without AVX2.
+- **The curve is not linear.** t(2) is about 1.4-1.5 x t(1), and t(4) about 2.2 x. Verifying a
+  few drafted tokens on the host already costs much less than that many single tokens, which
+  corrects the survey's "verification scales about linearly with k". On the 35B, t(8) jumps to
+  5.9 x: eight tokens route to more distinct experts, so more weight bytes are read. The dense
+  12B does not jump (4.0 x).
+- **The port.** It shares the unpack work across k rows, so it can only lower t(k) for k >= 2 on
+  the weights it covers (Q6_K, Q4_K, Q8_0). How much is unknown until measured. The port goes
+  ahead; its gate is these same cells with the switch taking effect.
+
+Evidence: `evidence/04/step0.sh`, `step0.out`, `*.err`.

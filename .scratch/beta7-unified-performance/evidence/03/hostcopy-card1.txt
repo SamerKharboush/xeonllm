@@ -1,0 +1,30 @@
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.097 s  11.05 GB/s wall  GPU-time rate 11.36 GB/s
+rep 2  wall 0.097 s  11.08 GB/s wall  GPU-time rate 11.41 GB/s
+rep 3  wall 0.097 s  11.08 GB/s wall  GPU-time rate 11.40 GB/s
+rep 4  wall 0.098 s  10.98 GB/s wall  GPU-time rate 11.34 GB/s
+rep 5  wall 0.098 s  11.01 GB/s wall  GPU-time rate 11.33 GB/s
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.098 s  11.00 GB/s wall  GPU-time rate 11.34 GB/s
+rep 2  wall 0.097 s  11.02 GB/s wall  GPU-time rate 11.34 GB/s
+rep 3  wall 0.097 s  11.04 GB/s wall  GPU-time rate 11.36 GB/s
+rep 4  wall 0.097 s  11.05 GB/s wall  GPU-time rate 11.35 GB/s
+rep 5  wall 0.097 s  11.11 GB/s wall  GPU-time rate 11.46 GB/s
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.097 s  11.05 GB/s wall  GPU-time rate 11.41 GB/s
+rep 2  wall 0.097 s  11.02 GB/s wall  GPU-time rate 11.35 GB/s
+rep 3  wall 0.098 s  10.99 GB/s wall  GPU-time rate 11.32 GB/s
+rep 4  wall 0.096 s  11.15 GB/s wall  GPU-time rate 11.47 GB/s
+rep 5  wall 0.097 s  11.07 GB/s wall  GPU-time rate 11.40 GB/s
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.096 s  11.18 GB/s wall  GPU-time rate 11.52 GB/s
+rep 2  wall 0.095 s  11.25 GB/s wall  GPU-time rate 11.53 GB/s
+rep 3  wall 0.096 s  11.22 GB/s wall  GPU-time rate 11.53 GB/s
+rep 4  wall 0.096 s  11.19 GB/s wall  GPU-time rate 11.53 GB/s
+rep 5  wall 0.096 s  11.22 GB/s wall  GPU-time rate 11.57 GB/s
+device 1: AMD Radeon HD - FirePro D700, 1024 MiB in 64 MiB command buffers
+rep 1  wall 0.097 s  11.06 GB/s wall  GPU-time rate 11.41 GB/s
+rep 2  wall 0.096 s  11.20 GB/s wall  GPU-time rate 11.52 GB/s
+rep 3  wall 0.096 s  11.24 GB/s wall  GPU-time rate 11.54 GB/s
+rep 4  wall 0.096 s  11.15 GB/s wall  GPU-time rate 11.47 GB/s
+rep 5  wall 0.096 s  11.16 GB/s wall  GPU-time rate 11.48 GB/s

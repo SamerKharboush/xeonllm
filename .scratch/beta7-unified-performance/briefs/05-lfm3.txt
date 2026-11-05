@@ -1,0 +1,17 @@
+You are working in /Users/sam/firellama (XeonLLM: a macOS app bundling a patched llama.cpp). The engine source is vendor/llama.cpp, a clone of upstream ggml-org/llama.cpp at the pin d81235049 with this fork's patch series (patches/llama/<area>/NNNN-*.patch, 88 files, applied in order of FILE NAME across all area folders) applied as uncommitted working-tree changes. You will NOT commit anything in either repo; the orchestrator reviews and commits.
+
+GOAL (ticket .scratch/beta7-unified-performance/issues/05-backport-lfm3.md — read it): LFM3 text models fail to load ("unknown model architecture: 'lfm3'"). Backport upstream's LFM3 TEXT model as ONE new patch: patches/llama/model/0079-model-lfm3-text.patch. Upstream commits (objects are present in vendor/llama.cpp):
+  - 84e66d032 "refactor : move LFM2 shortconv and FFN blocks into a shared LFM base (#30874)" (src/models/lfm-base.cpp, lfm2.cpp, models.h) — needed first;
+  - 19cce6919 "model : add LiquidAI/LFM3-1.7B and LiquidAI/LFM3-VL-2B (#31252)" — take ONLY the text-model parts: src/llama-arch.cpp, src/llama-arch.h, src/llama-model.cpp, src/llama-quant.cpp, src/models/lfm3.cpp, src/models/models.h, and tests/test-llama-archs.cpp if it applies. Do NOT take tools/mtmd/*, tests/test-chat.cpp, models/templates/LFM3.jinja, tests/fusion/MTL.csv. If src/CMakeLists.txt (or wherever src/models/*.cpp are listed) needs lfm-base.cpp / lfm3.cpp added at the pin, add them (check how lfm2.cpp is listed).
+
+METHOD (do exactly this; use bash, absolute paths; WT=/Users/sam/Library/Caches/xeonllm-wt-lfm3):
+1. git -C /Users/sam/firellama/vendor/llama.cpp worktree add --detach $WT d81235049
+2. In WT apply the whole current series in order: for p in $(find /Users/sam/firellama/patches/llama -name '*.patch' | awk -F/ '{print $NF"\t"$0}' | sort | cut -f2-); do git -C $WT apply "$p" || git -C $WT apply --3way "$p"; done — all 88 must apply (use ABSOLUTE patch paths; git -C resolves relative paths inside WT). Then git -C $WT add -A && git -C $WT -c user.name=x -c user.email=x commit -qm series.
+3. Bring in the two upstream changes for the listed files (e.g. git -C $WT show 84e66d032 -- <files> | git -C $WT apply -3, then the same for 19cce6919 limited to the text files). Resolve any conflicts against the fork's changes by hand, keeping the fork's behaviour.
+4. Produce the patch: git -C $WT add -A; git -C $WT diff --cached -U8 HEAD > /Users/sam/firellama/patches/llama/model/0079-model-lfm3-text.patch. Check it contains only the intended files.
+5. Run /Users/sam/firellama/scripts/check-patch-series.sh d81235049 and paste its final summary line: it must say 89 of 89 apply.
+6. Apply the new patch to /Users/sam/firellama/vendor/llama.cpp's working tree (git -C /Users/sam/firellama/vendor/llama.cpp apply <absolute patch path>) so the orchestrator's build includes it, then git -C /Users/sam/firellama/vendor/llama.cpp worktree remove --force $WT.
+
+CONSTRAINTS: Do NOT build (no cmake, no make, no llama-incremental-build.sh): the orchestrator builds afterwards. Do NOT run any model, server, GPU program or binary. Do not edit any existing patch file. Do not touch Sources/, Tests/, dist/, specs/, CLAUDE.md, .scratch/. Keep upstream's license headers. Do not create summary/report markdown files anywhere.
+
+REPORT (end of reply): (a) the exact list of files in the new patch with +/- line counts (git apply --numstat); (b) every conflict you resolved and how; (c) the check-patch-series summary line verbatim; (d) the new LLM_ARCH enum value and the GGUF arch string; (e) anything not done and why.

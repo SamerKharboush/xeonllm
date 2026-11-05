@@ -1,0 +1,6 @@
+device 1: AMD Radeon HD - FirePro D700, buffer 64 MiB, soak >= 0.3 s
+read4  1024 x 256  passes  400  0.143 s  188.27 GB/s
+read4  4096 x 256  passes  400  0.288 s  93.08 GB/s
+read4   512 x  64  passes  400  0.135 s  198.77 GB/s
+read1  1024 x 256  passes  400  0.146 s  184.33 GB/s
+read1  4096 x 256  passes  400  0.287 s  93.38 GB/s
