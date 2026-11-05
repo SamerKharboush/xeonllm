@@ -1,0 +1,49 @@
+You are working in /Users/sam/firellama (Swift macOS app "XeonLLM", SwiftPM; it launches a bundled llama.cpp engine on Metal). You will NOT commit; the orchestrator reviews and commits. Do not create summary/report markdown files anywhere.
+
+<why>
+This Mac Pro has two AMD FirePro D700 GPUs. On 2026-11-04 card 1 began returning WRONG results (test-backend-ops: ADD 51/82, MUL 43/73, RMS_NORM 29/51 passed, while card 0 passed all) after 19 GPU resets logged as /Library/Logs/DiagnosticReports/Kernel_*.gpuRestart. A cold power cycle fixed it. While it was broken, the app kept using it (tensor split over both cards) and every answer was garbage, silently. The app must detect a card that computes wrong answers and leave it out.
+</why>
+
+<what_to_build>
+1. New file Sources/Hardware/CardHealth.swift:
+   a) `struct CardCheckResult: Equatable, Sendable { let index: Int; let passed: Bool; let detail: String }`.
+   b) `enum CardHealth` with a pure decision function
+      `static func excludedCards(results: [CardCheckResult], forceInclude: Set<Int>, injectedFaults: Set<Int>) -> Set<Int>`
+      — a card is excluded if its check failed OR its index is in injectedFaults, unless it is in forceInclude. If excluding would leave ZERO cards, exclude nothing (the engine then runs as before; the banner still reports the failure).
+   c) A Metal known-answer probe `static func check(device: MTLDevice, index: Int, timeout: TimeInterval = 2) -> CardCheckResult`:
+      - compile a tiny kernel from source: for i in 0..<n: out[i] = a[i] * b[i] + a[i], plus a second pass that sums 256-element blocks of `out` with a threadgroup reduction (one threadgroup per block). n = 262144 floats, fixed deterministic inputs (e.g. a[i] = Float(i % 97) * 0.25, b[i] = Float(i % 89) * 0.5 - 7).
+      - ONE command buffer, both dispatches, private/shared buffers sized for n only (~3 MiB). Never a long-running command buffer: this machine reboots when a GPU command buffer runs for seconds.
+      - wait with the timeout (use a DispatchSemaphore signalled from addCompletedHandler); a timeout, a command-buffer error, a status other than .completed, or ANY element/block sum differing from the CPU computation by more than 1e-3 relative => passed = false with a short detail ("timeout", "error: …", "mismatch at 1234: 5.0 vs 7.0", "block sum mismatch …").
+   d) `static func injectedFaults()` reads env XEONLLM_CARD_FAULT (comma-separated indices, e.g. "1") — this is the test override that proves the exclusion path takes effect. `forceInclude` comes from UserDefaults key SettingsKeys.cardHealthForceInclude (add it to SettingsKeys; [Int] array; default empty).
+2. Run the probe once per app launch, off the main thread, for every non-integrated device in MTLCopyAllDevices() order (the same order and index as ServerController.availableGPUs in Sources/Servers/Server.swift). Cache the results (a static, lock-protected, like the GPU cache there). Expose `CardHealth.lastResults` and `CardHealth.excluded` (Set<Int>).
+3. ServerController.availableGPUs(): leave excluded cards out of the returned list (keep the indices of the remaining devices unchanged — they are physical indices the engine env uses). Keep the existing setGPUsForTesting override working and NOT filtered (tests set exact lists).
+4. ServerSettings.environment (Server.swift, the block that sets GGML_METAL_DEVICE_INDEX / GGML_METAL_DEVICE_LIST / GGML_METAL_DEVICES): when CardHealth.excluded is non-empty and the run uses GPUs, never leave the engine to pick devices itself — set GGML_METAL_DEVICE_LIST to the healthy indices when splitting over ≥2, or GGML_METAL_DEVICE_INDEX to the single healthy card otherwise; GGML_METAL_DEVICES (a count) must not be used then, because it would take the first N physical cards including the bad one. Read the code first; keep every existing case unchanged when nothing is excluded.
+5. The server log banner (find where "GPUs detected:" is printed in Server.swift) gains one line per card that failed: " card check: [1] FAILED (mismatch at …) — left out of this run" (or "… — kept: forced on in Settings"). Nothing printed when all pass.
+6. Do not add UI beyond that banner line; do not change placement rules.
+</what_to_build>
+
+<tests>
+Tests/XeonLLMTests.swift, new `final class CardHealthTests: XCTestCase`:
+- excludedCards: failed card excluded; injected fault excluded; forceInclude wins over both; all-failed => empty set (never exclude every card).
+- check(device:) on a real MTLDevice (MTLCreateSystemDefaultDevice(); skip with XCTSkip if nil) passes — it must not need a model and must finish well under 2 s.
+- environment: with ServerController.setGPUsForTesting([two D700 GPUDevice fixtures]) and the excluded set forced to [1] through a test-only hook you add (e.g. `CardHealth.setExcludedForTesting(_:)`, reset in tearDown), a multiGPU split launch sets GGML_METAL_DEVICE_INDEX="0" (one healthy card left) and no GGML_METAL_DEVICES; with nothing excluded the environment equals the current behaviour (assert the existing value for the same settings).
+Look at ServerSettingsTests (makeSettings, d700HW, sparseModel) for prior art.
+</tests>
+
+<must_not>
+- Run any model, llama-server, llama-bench, test-backend-ops, the app, or any GPU program other than through `swift test`.
+- Touch vendor/, patches/, dist/, specs/, CLAUDE.md, .scratch/.
+- Change behaviour when every card passes.
+</must_not>
+
+<gates>
+From /Users/sam/firellama:
+  swift build 2>&1 | tail -3
+  swift test 2>&1 | grep -E "error:|Executed" | tail -6
+Baseline: 522 tests, 16 skipped, failures ONLY in MCPStdioTransportTests.testAnswersRacingTheirDeadlinesResolveEachRequestOnce (a known race). Any other failure is yours. Paste the real lines verbatim — never report output you did not see.
+  swift test --filter CardHealthTests 2>&1 | grep Executed
+</gates>
+
+<report>
+End with: files touched (one line each); the exact gate lines; how a test proves XEONLLM_CARD_FAULT takes effect; decisions you made that this brief did not dictate.
+</report>

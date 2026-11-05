@@ -42,6 +42,7 @@ using the AVX1 Xeon, both D700s and the 64 GB of RAM as one pool. Nothing is bui
 
 - [What do the big-model-on-small-GPU projects actually do, and what of it runs here?](issues/02-what-do-the-big-model-on-small-gpu-projects-actually-do.md): none runs here (CUDA, ROCm RDNA3+, Apple Silicon, MLX); the fork already has most of their mechanisms. Gaps: a miss split (FreeToken), a warm start for the VRAM arena (Colibri), pipelined verify (mesh-llm). Two unmeasured numbers decide them: NVMe read and D700 zero-copy host read.
 - [Which newer engines and methods beat llama.cpp, and which of their ideas can this fork mimic?](issues/03-which-newer-engines-and-methods-beat-llama-cpp-and-why.md): none runs here. Carry over the GCN mat-vec layout, short drafts sized to the verify curve (n-gram defaults of 48-64 are wrong here), and overlap of the CPU experts with card work. Every card-1 number of 11-04 must be re-taken on card 0.
+- [How many distinct experts does a k-token verify touch on the 35B?](issues/08-how-many-distinct-experts-does-a-k-token-verify-touch-on-the-35b.md): 8, 13.4, 21.2 and 32.4 per layer for k = 1, 2, 4, 8 (ratios 1.68, 2.65, 4.04). Host time grows more slowly up to k=4 and faster at k=8. Host verify can pay for drafts; the expert tier's loss must come from the card half.
 
 ## Not yet specified
 

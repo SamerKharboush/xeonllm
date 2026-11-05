@@ -1,0 +1,5 @@
+prompt tokens 90, experts used per token 8, moe layers 40
+k=1  distinct experts per layer: mean 8.00 (min 8, max 8, 440 samples)  ratio to k=1: 1.000
+k=2  distinct experts per layer: mean 13.41 (min 9, max 16, 440 samples)  ratio to k=1: 1.676
+k=4  distinct experts per layer: mean 21.21 (min 13, max 32, 440 samples)  ratio to k=1: 2.651
+k=8  distinct experts per layer: mean 32.35 (min 18, max 61, 440 samples)  ratio to k=1: 4.044

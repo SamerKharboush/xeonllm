@@ -19,5 +19,7 @@ what do these give?
      tok/s on gemma4 12B) is real.
 5. **LFM3-1.7B F16 at `-ngl 99` on card 0:** does it answer "Paris" like the host does?
 
+6. The card verify curve: `llama-bench -ngl 99 -p 1,2,4,8 -n 0 -r 5` for the 8B and the 4B on card 0 (from ticket 08: the expert tier's drafter loss must come from the card half).
+
 Card 0 drives the display: keep every command buffer short and every model under its working set.
 Record whether the display was awake.
