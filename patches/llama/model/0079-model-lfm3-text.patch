@@ -1,0 +1,791 @@
+diff --git a/gguf-py/gguf/constants.py b/gguf-py/gguf/constants.py
+index 1e0a6b18a..2656d19aa 100644
+--- a/gguf-py/gguf/constants.py
++++ b/gguf-py/gguf/constants.py
+@@ -627,6 +627,7 @@ class MODEL_ARCH(IntEnum):
+     GPT_OSS          = auto()
+     LFM2             = auto()
+     LFM2MOE          = auto()
++    LFM3             = auto()
+     DREAM            = auto()
+     SMALLTHINKER     = auto()
+     LLADA            = auto()
+@@ -1407,6 +1408,7 @@ MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
+     MODEL_ARCH.GPT_OSS:          "gpt-oss",
+     MODEL_ARCH.LFM2:             "lfm2",
+     MODEL_ARCH.LFM2MOE:          "lfm2moe",
++    MODEL_ARCH.LFM3:             "lfm3",
+     MODEL_ARCH.DREAM:            "dream",
+     MODEL_ARCH.SMALLTHINKER:     "smallthinker",
+     MODEL_ARCH.LLADA:            "llada",
+@@ -5162,6 +5164,29 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
+         MODEL_TENSOR.FFN_UP_EXP,
+         MODEL_TENSOR.FFN_EXP_PROBS_B,
+     ],
++    MODEL_ARCH.LFM3: [
++        MODEL_TENSOR.TOKEN_EMBD,
++        MODEL_TENSOR.OUTPUT_NORM,
++        MODEL_TENSOR.OUTPUT,
++        MODEL_TENSOR.ROPE_FREQS,
++        MODEL_TENSOR.SHORTCONV_CONV,
++        MODEL_TENSOR.SHORTCONV_INPROJ,
++        MODEL_TENSOR.SHORTCONV_OUTPROJ,
++        MODEL_TENSOR.FFN_GATE,
++        MODEL_TENSOR.FFN_DOWN,
++        MODEL_TENSOR.FFN_UP,
++        MODEL_TENSOR.FFN_NORM,
++        MODEL_TENSOR.FFN_POST_NORM,
++        MODEL_TENSOR.ATTN_NORM, # operator_norm
++        MODEL_TENSOR.ATTN_POST_NORM,
++        MODEL_TENSOR.ATTN_Q_NORM,
++        MODEL_TENSOR.ATTN_K_NORM,
++        MODEL_TENSOR.ATTN_Q,
++        MODEL_TENSOR.ATTN_K,
++        MODEL_TENSOR.ATTN_V,
++        MODEL_TENSOR.ATTN_OUT,
++        MODEL_TENSOR.ATTN_GATE,
++    ],
+     MODEL_ARCH.SMALLTHINKER: [
+         MODEL_TENSOR.TOKEN_EMBD,
+         MODEL_TENSOR.OUTPUT_NORM,
+@@ -6037,6 +6062,7 @@ class VisionProjectorType:
+     VOXTRAL = "voxtral"
+     MERALION = "meralion"  # audio: Whisper + gated MLP adaptor
+     LFM2 = "lfm2"
++    LFM3VL = "lfm3vl"
+     KIMIVL = "kimivl"
+     PADDLEOCR = "paddleocr"
+     KIMIK25 = "kimik25"
+diff --git a/gguf-py/gguf/tensor_mapping.py b/gguf-py/gguf/tensor_mapping.py
+index cef04d082..56af4a066 100644
+--- a/gguf-py/gguf/tensor_mapping.py
++++ b/gguf-py/gguf/tensor_mapping.py
+@@ -118,6 +118,7 @@ class TensorNameMap:
+             "model.transformer.ln_f",                  # llada
+             "final_norm",                              # modern-bert
+             "model.norm",                              # cogvlm
++            "model.embedding_norm",                    # lfm3
+         ),
+ 
+         # Rope frequencies
+@@ -377,6 +378,7 @@ class TensorNameMap:
+             "layers.{bid}.post_attention_layernorm",             # embeddinggemma
+             "model.layers.{bid}.post_self_attn_layernorm",       # glm-4-0414
+             "model.layers.layers.{bid}.post_mixer_norm.weight",  # plamo2
++            "model.layers.{bid}.post_operator_norm",             # lfm3
+         ),
+ 
+         # Rotary embeddings
+@@ -449,6 +451,7 @@ class TensorNameMap:
+             "model.layers.layers.{bid}.post_mlp_norm.weight", # plamo2
+             "model.layers.{bid}.feed_forward.up_proj",
+             "model.layers.{bid}.post_moe_norm",               # grok-2
++            "model.layers.{bid}.post_ffn_norm",               # lfm3
+         ),
+ 
+         MODEL_TENSOR.FFN_POST_NORM_1: (
+@@ -1741,6 +1744,7 @@ class TensorNameMap:
+             "vision_model.model.layers.{bid}.self_attn.q_proj", # llama4
+             "vision_tower.transformer.layers.{bid}.attention.q_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.attention.wq", # pixtral
++            "model.vision_tower.layers.{bid}.self_attn.q_proj", # lfm3vl
+             "visual.blocks.{bid}.attn.q", # qwen2vl, generated
+             "vision_tower.encoder.blocks.{bid}.wq", # kimi-vl, generated
+             "siglip2.vision_model.encoder.layers.{bid}.self_attn.q_proj", # youtuvl
+@@ -1756,6 +1760,7 @@ class TensorNameMap:
+             "model.vision_tower.encoder.layer.{bid}.attention.q_norm", # Intern-S1
+             "visual.blocks.{bid}.attn.q_norm", # GLM-OCR
+             "vision_model.model.layers.{bid}.self_attn.q_norm", # gemma4
++            "model.vision_tower.layers.{bid}.self_attn.q_layernorm", # lfm3vl
+         ),
+ 
+         MODEL_TENSOR.V_ENC_ATTN_K: (
+@@ -1769,6 +1774,7 @@ class TensorNameMap:
+             "vision_model.model.layers.{bid}.self_attn.k_proj", # llama4
+             "vision_tower.transformer.layers.{bid}.attention.k_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.attention.wk", # pixtral
++            "model.vision_tower.layers.{bid}.self_attn.k_proj", # lfm3vl
+             "visual.blocks.{bid}.attn.k", # qwen2vl, generated
+             "vision_tower.encoder.blocks.{bid}.wk", # kimi-vl, generated
+             "model.vision_model.transformer.layers.{bid}.self_attn.k_proj", # Deepseek-OCR CLIP, generated
+@@ -1784,6 +1790,7 @@ class TensorNameMap:
+             "model.vision_tower.encoder.layer.{bid}.attention.k_norm", # Intern-S1
+             "visual.blocks.{bid}.attn.k_norm", # GLM-OCR
+             "vision_model.model.layers.{bid}.self_attn.k_norm", # gemma4
++            "model.vision_tower.layers.{bid}.self_attn.k_layernorm", # lfm3vl
+         ),
+ 
+         MODEL_TENSOR.V_ENC_ATTN_V: (
+@@ -1797,6 +1804,7 @@ class TensorNameMap:
+             "vision_model.model.layers.{bid}.self_attn.v_proj", # llama4
+             "vision_tower.transformer.layers.{bid}.attention.v_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.attention.wv", # pixtral
++            "model.vision_tower.layers.{bid}.self_attn.v_proj", # lfm3vl
+             "visual.blocks.{bid}.attn.v", # qwen2vl, generated
+             "vision_tower.encoder.blocks.{bid}.wv", # kimi-vl, generated
+             "siglip2.vision_model.encoder.layers.{bid}.self_attn.v_proj",
+@@ -1818,6 +1826,7 @@ class TensorNameMap:
+             "vit.layers.{bid}.input_layernorm", # HunyuanVL
+             "vision_tower.transformer.layers.{bid}.attention_norm", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.attention_norm", # pixtral
++            "model.vision_tower.layers.{bid}.operator_norm", # lfm3vl
+             "vision_model.model.layers.{bid}.input_layernorm", # llama4, gemma4
+             "visual.blocks.{bid}.norm1", # qwen2vl
+             "vision_tower.encoder.blocks.{bid}.norm0", # kimi-vl (norm0/norm1)
+@@ -1846,6 +1855,7 @@ class TensorNameMap:
+             "vision_model.model.layers.{bid}.self_attn.o_proj", # llama4
+             "vision_tower.transformer.layers.{bid}.attention.o_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.attention.wo", # pixtral
++            "model.vision_tower.layers.{bid}.self_attn.out_proj", # lfm3vl
+             "visual.blocks.{bid}.attn.proj", # qwen2vl
+             "vision_tower.encoder.blocks.{bid}.wo", # kimi-vl
+             "model.vision.transformer.layers.{bid}.attention.dense", # cogvlm
+@@ -1877,6 +1887,7 @@ class TensorNameMap:
+             "vision_model.model.layers.{bid}.post_attention_layernorm", # llama4
+             "vision_tower.transformer.layers.{bid}.ffn_norm", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.ffn_norm", # pixtral
++            "model.vision_tower.layers.{bid}.ffn_norm", # lfm3vl
+             "visual.blocks.{bid}.norm2", # qwen2vl
+             "vision_tower.encoder.blocks.{bid}.norm1", # kimi-vl (norm0/norm1)
+             "model.vision.transformer.layers.{bid}.post_attention_layernorm", # cogvlm
+@@ -1903,6 +1914,7 @@ class TensorNameMap:
+             "vit.layers.{bid}.mlp.dense_h_to_4h", # HunyuanVL
+             "vision_tower.transformer.layers.{bid}.feed_forward.up_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.feed_forward.w3", # pixtral
++            "model.vision_tower.layers.{bid}.feed_forward.w3", # lfm3vl
+             "vision_model.model.layers.{bid}.mlp.fc1", # llama4
+             "visual.blocks.{bid}.mlp.fc1", # qwen2vl
+             "visual.blocks.{bid}.mlp.up_proj", # qwen2.5vl
+@@ -1923,6 +1935,7 @@ class TensorNameMap:
+             "vision_encoder.blocks.{bid}.mlp.fc1", # dots3note
+             "vision_tower.transformer.layers.{bid}.feed_forward.gate_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.feed_forward.w1", # pixtral
++            "model.vision_tower.layers.{bid}.feed_forward.w1", # lfm3vl
+             "visual.blocks.{bid}.mlp.gate_proj", # qwen2.5vl
+             "vision_model.model.layers.{bid}.mlp.gate_proj", # gemma4
+             "model.qwen2_model.model.model.layers.{bid}.mlp.gate_proj", # Deepseek-OCR-2 qwen2
+@@ -1940,6 +1953,7 @@ class TensorNameMap:
+             "vit.layers.{bid}.mlp.dense_4h_to_h", # HunyuanVL
+             "vision_tower.transformer.layers.{bid}.feed_forward.down_proj", # pixtral-hf
+             "vision_encoder.transformer.layers.{bid}.feed_forward.w2", # pixtral
++            "model.vision_tower.layers.{bid}.feed_forward.w2", # lfm3vl
+             "vision_model.model.layers.{bid}.mlp.fc2", # llama4
+             "visual.blocks.{bid}.mlp.fc2", # qwen2vl
+             "visual.blocks.{bid}.mlp.down_proj", # qwen2.5vl
+diff --git a/src/llama-arch.cpp b/src/llama-arch.cpp
+index 850737eca..e18804d2f 100644
+--- a/src/llama-arch.cpp
++++ b/src/llama-arch.cpp
+@@ -128,6 +128,7 @@ static const std::map<llm_arch, const char *> LLM_ARCH_NAMES = {
+     { LLM_ARCH_OPENAI_MOE,       "gpt-oss"          },
+     { LLM_ARCH_LFM2,             "lfm2"             },
+     { LLM_ARCH_LFM2MOE,          "lfm2moe"          },
++    { LLM_ARCH_LFM3,             "lfm3"             },
+     { LLM_ARCH_DREAM,            "dream"            },
+     { LLM_ARCH_SMALLTHINKER,     "smallthinker"     },
+     { LLM_ARCH_LLADA,            "llada"            },
+@@ -1129,6 +1130,7 @@ bool llm_arch_is_hybrid(const llm_arch & arch) {
+         case LLM_ARCH_GRANITE_HYBRID:
+         case LLM_ARCH_LFM2:
+         case LLM_ARCH_LFM2MOE:
++        case LLM_ARCH_LFM3:
+         case LLM_ARCH_NEMOTRON_H:
+         case LLM_ARCH_NEMOTRON_H_MOE:
+         case LLM_ARCH_QWEN3NEXT:
+@@ -1171,6 +1173,7 @@ bool llm_arch_supports_rs_rollback(const llm_arch & arch) {
+         case LLM_ARCH_NEMOTRON_H_MOE:
+         case LLM_ARCH_LFM2:
+         case LLM_ARCH_LFM2MOE:
++        case LLM_ARCH_LFM3:
+         case LLM_ARCH_BAILINGMOE3:
+             return true;
+         default:
+@@ -1216,6 +1219,7 @@ bool llm_arch_supports_sm_tensor(const llm_arch & arch) {
+         case LLM_ARCH_NEMOTRON_H:
+         case LLM_ARCH_NEMOTRON_H_MOE:
+         case LLM_ARCH_GRANITE_HYBRID:
++        case LLM_ARCH_LFM3:
+         case LLM_ARCH_MINIMAX_01:
+         case LLM_ARCH_MINIMAX_M2:
+         case LLM_ARCH_MINIMAX_M3:
+diff --git a/src/llama-arch.h b/src/llama-arch.h
+index 24068fb7a..8a25e75f8 100644
+--- a/src/llama-arch.h
++++ b/src/llama-arch.h
+@@ -133,6 +133,7 @@ enum llm_arch {
+     LLM_ARCH_OPENAI_MOE,
+     LLM_ARCH_LFM2,
+     LLM_ARCH_LFM2MOE,
++    LLM_ARCH_LFM3,
+     LLM_ARCH_DREAM,
+     LLM_ARCH_SMALLTHINKER,
+     LLM_ARCH_LLADA,
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 2358e917c..76dacaaab 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -304,6 +304,8 @@ static llama_model * llama_model_mapping(llm_arch arch, const llama_model_params
+             return new llama_model_lfm2(params);
+         case LLM_ARCH_LFM2MOE:
+             return new llama_model_lfm2moe(params);
++        case LLM_ARCH_LFM3:
++            return new llama_model_lfm3(params);
+         case LLM_ARCH_SMALLTHINKER:
+             return new llama_model_smallthinker(params);
+         case LLM_ARCH_GROVEMOE:
+@@ -3508,6 +3510,7 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
+         case LLM_ARCH_HY_V3:
+         case LLM_ARCH_LFM2:
+         case LLM_ARCH_LFM2MOE:
++        case LLM_ARCH_LFM3:
+         case LLM_ARCH_SMALLTHINKER:
+         case LLM_ARCH_SEED_OSS:
+         case LLM_ARCH_GROVEMOE:
+diff --git a/src/llama-quant.cpp b/src/llama-quant.cpp
+index de6cee729..c42add62d 100644
+--- a/src/llama-quant.cpp
++++ b/src/llama-quant.cpp
+@@ -324,6 +324,9 @@ static bool tensor_allows_quantization(const llama_model_quantize_params * param
+     quantize &= name.find("ssm_conv1d") == std::string::npos;
+     quantize &= name.find("shortconv.conv.weight") == std::string::npos;
+ 
++    // do not quantize LFM3-VL's depthwise conv kernels, CONV_2D_DW takes F32 kernels
++    quantize &= name.find("conv2d_spatial.weight") == std::string::npos;
++
+     // do not quantize MiniMax's indexer projection weights, they are tiny
+     quantize &= name.find("indexer.k_proj.weight") == std::string::npos;
+     quantize &= name.find("indexer.q_proj.weight") == std::string::npos;
+diff --git a/src/models/lfm-base.cpp b/src/models/lfm-base.cpp
+new file mode 100644
+index 000000000..5e722eca8
+--- /dev/null
++++ b/src/models/lfm-base.cpp
+@@ -0,0 +1,114 @@
++#include "models.h"
++
++#include "llama-memory-recurrent.h"
++
++#include <algorithm>
++
++llm_build_lfm_base::llm_build_lfm_base(const llm_graph_params & params) : llm_graph_context(params) {}
++
++ggml_tensor * llm_build_lfm_base::build_lfm_shortconv(const llama_model & model,
++                                                      const llama_memory_recurrent_context * mctx_recr,
++                                                      llm_graph_input_rs * inp_recr,
++                                                      ggml_tensor * cur,
++                                                      int il) {
++    const uint32_t kv_head      = mctx_recr->get_head();
++    const int64_t  n_seq_tokens = ubatch.n_seq_tokens;
++    const int64_t  n_seqs       = ubatch.n_seqs;
++    GGML_ASSERT(n_seqs != 0);
++    GGML_ASSERT(ubatch.equal_seqs());
++    GGML_ASSERT(ubatch.n_tokens == n_seq_tokens * n_seqs);
++
++    GGML_ASSERT(hparams.n_shortconv_l_cache > 1);
++    const uint32_t d_conv = hparams.n_shortconv_l_cache - 1;
++    const int64_t  n_embd = hparams.n_embd;
++
++    // {n_embd, n_tokens} => {n_embd, n_seq_tokens, n_seqs}
++    cur = ggml_reshape_3d(ctx0, cur, cur->ne[0], n_seq_tokens, n_seqs);
++
++    auto * bcx = build_lora_mm(model.layers[il].shortconv.in_proj, cur);
++    cb(bcx, "model.layers.{}.conv.in_proj", il);
++
++    constexpr auto n_chunks = 3;
++    GGML_ASSERT(bcx->ne[0] % n_chunks == 0);
++    const auto chunk_size = bcx->ne[0] / n_chunks;
++    auto *     b          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
++                                         0 * chunk_size * ggml_element_size(bcx));
++    auto *     c          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
++                                         1 * chunk_size * ggml_element_size(bcx));
++    auto *     x          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
++                                         2 * chunk_size * ggml_element_size(bcx));
++
++    auto * bx = ggml_transpose(ctx0, ggml_mul(ctx0, b, x));
++
++    // read conv state
++    auto * conv_state = mctx_recr->get_r_l(il);
++    auto * conv_rs    = build_rs(inp_recr, conv_state, hparams.n_embd_r(), n_seqs);
++    auto * conv       = ggml_reshape_3d(ctx0, conv_rs, d_conv, n_embd, n_seqs);
++
++    // causal prepends the state, non-causal pads symmetrically for a centered window
++    if (hparams.causal_attn) {
++        bx = ggml_concat(ctx0, conv, bx, 0);
++    } else {
++        const int64_t pad = (hparams.n_shortconv_l_cache - 1) / 2;
++        auto * left = ggml_cont(ctx0,
++            ggml_view_3d(ctx0, conv, pad, n_embd, n_seqs, conv->nb[1], conv->nb[2], (d_conv - pad) * conv->nb[0]));
++        bx = ggml_pad_ext(ctx0, ggml_concat(ctx0, left, bx, 0), 0, pad, 0, 0, 0, 0, 0, 0);
++    }
++    GGML_ASSERT(bx->ne[0] > conv->ne[0]);
++
++    // write conv states: slot 0 = the final state, slot s = the state s tokens back (partial rollback)
++    const int64_t K         = hparams.causal_attn && cparams.n_rs_seq > 0 ? (int64_t) cparams.n_rs_seq + 1 : 1;
++    const int64_t n_written = std::min<int64_t>(n_seq_tokens, K);
++    const auto    mem_size  = mctx_recr->get_size();
++    const size_t  row_size  = ggml_row_size(conv_state->type, (int64_t) d_conv * n_embd);
++
++    for (int64_t slot = 0; slot < n_written; ++slot) {
++        auto * conv_snap = ggml_view_3d(ctx0, bx, d_conv, bx->ne[1], bx->ne[2], bx->nb[1], bx->nb[2],
++                                        (bx->ne[0] - d_conv - slot) * ggml_element_size(bx));
++        ggml_build_forward_expand(gf, ggml_cpy(ctx0, conv_snap,
++                                               ggml_view_2d(ctx0, conv_state, (int64_t) d_conv * n_embd, n_seqs,
++                                                            conv_state->nb[1],
++                                                            ((size_t) slot * mem_size + kv_head) * row_size)));
++    }
++
++    auto * conv_kernel = model.layers[il].shortconv.conv;
++    auto * conv_out    = ggml_ssm_conv(ctx0, bx, conv_kernel);
++    cb(conv_out, "model.layers.{}.conv.conv", il);
++
++    auto * y = ggml_mul(ctx0, c, conv_out);
++    y        = build_lora_mm(model.layers[il].shortconv.out_proj, y);
++    cb(y, "model.layers.{}.conv.out_proj", il);
++    // {n_embd, n_seq_tokens, n_seqs} => {n_embd, n_tokens}
++    y = ggml_reshape_2d(ctx0, y, y->ne[0], n_seq_tokens * n_seqs);
++
++    return y;
++}
++
++ggml_tensor * llm_build_lfm_base::build_lfm_dense_ffn(const llama_model & model,
++                                                      ggml_tensor * cur,
++                                                      int il) {
++    GGML_ASSERT(!model.layers[il].ffn_up_b);
++    GGML_ASSERT(!model.layers[il].ffn_gate_b);
++    GGML_ASSERT(!model.layers[il].ffn_down_b);
++    return build_ffn(cur,
++        model.layers[il].ffn_up,   NULL, NULL,
++        model.layers[il].ffn_gate, NULL, NULL,
++        model.layers[il].ffn_down, NULL, NULL,
++        NULL, LLM_FFN_SILU, LLM_FFN_PAR, il);
++}
++
++ggml_tensor * llm_build_lfm_base::build_lfm_moe_ffn(const llama_model & model,
++                                                    ggml_tensor * cur,
++                                                    int il) {
++    return build_moe_ffn(cur,
++            model.layers[il].ffn_gate_inp,
++            model.layers[il].ffn_up_exps,
++            model.layers[il].ffn_gate_exps,
++            model.layers[il].ffn_down_exps,
++            model.layers[il].ffn_exp_probs_b,
++            n_expert, n_expert_used,
++            LLM_FFN_SILU, true,
++            hparams.expert_weights_scale,
++            static_cast<llama_expert_gating_func_type>(hparams.expert_gating_func),
++            il);
++}
+diff --git a/src/models/lfm2.cpp b/src/models/lfm2.cpp
+index 07b71ccd3..382a26269 100644
+--- a/src/models/lfm2.cpp
++++ b/src/models/lfm2.cpp
+@@ -96,35 +96,11 @@ std::unique_ptr<llm_graph_context> llama_model_lfm2::build_arch_graph(const llm_
+ 
+ template <bool iswa>
+ llama_model_lfm2::graph<iswa>::graph(const llama_model & model, const llm_graph_params & params) :
+-    llm_graph_context(params) {
++    llm_build_lfm_base(params) {
+     using inp_hybrid_type = std::conditional_t<iswa, llm_graph_input_mem_hybrid_iswa,  llm_graph_input_mem_hybrid>;
+     using inp_attn_type   = std::conditional_t<iswa, llm_graph_input_attn_kv_iswa,     llm_graph_input_attn_kv>;
+     using mem_hybrid_ctx  = std::conditional_t<iswa, llama_memory_hybrid_iswa_context, llama_memory_hybrid_context>;
+ 
+-    // lambda helpers for readability
+-    auto build_dense_feed_forward = [&model, this](ggml_tensor * cur, int il) -> ggml_tensor * {
+-        GGML_ASSERT(!model.layers[il].ffn_up_b);
+-        GGML_ASSERT(!model.layers[il].ffn_gate_b);
+-        GGML_ASSERT(!model.layers[il].ffn_down_b);
+-        return build_ffn(cur,
+-            model.layers[il].ffn_up, NULL, NULL,
+-            model.layers[il].ffn_gate, NULL, NULL,
+-            model.layers[il].ffn_down, NULL, NULL,
+-            NULL, LLM_FFN_SILU, LLM_FFN_PAR, il);
+-    };
+-    auto build_moe_feed_forward = [&model, this](ggml_tensor * cur, int il) -> ggml_tensor * {
+-        return build_moe_ffn(cur,
+-                model.layers[il].ffn_gate_inp,
+-                model.layers[il].ffn_up_exps,
+-                model.layers[il].ffn_gate_exps,
+-                model.layers[il].ffn_down_exps,
+-                model.layers[il].ffn_exp_probs_b,
+-                n_expert, n_expert_used,
+-                LLM_FFN_SILU, true,
+-                hparams.expert_weights_scale,
+-                static_cast<llama_expert_gating_func_type>(hparams.expert_gating_func),
+-                il);
+-    };
+     auto build_attn_block = [&model, this](ggml_tensor *   cur,
+                                            ggml_tensor *   inp_pos,
+                                            inp_attn_type * inp_attn,
+@@ -156,82 +132,6 @@ llama_model_lfm2::graph<iswa>::graph(const llama_model & model, const llm_graph_
+ 
+         return cur;
+     };
+-    auto build_shortconv_block = [&model, this](ggml_tensor *        cur,
+-                                                llm_graph_input_rs * inp_recr,
+-                                                int                  il) -> ggml_tensor * {
+-        const auto * mctx_cur = static_cast<const mem_hybrid_ctx *>(mctx)->get_recr();
+-        const uint32_t kv_head      = mctx_cur->get_head();
+-        const int64_t  n_seq_tokens = ubatch.n_seq_tokens;
+-        const int64_t  n_seqs       = ubatch.n_seqs;
+-        GGML_ASSERT(n_seqs != 0);
+-        GGML_ASSERT(ubatch.equal_seqs());
+-        GGML_ASSERT(ubatch.n_tokens == n_seq_tokens * n_seqs);
+-
+-        GGML_ASSERT(hparams.n_shortconv_l_cache > 1);
+-        const uint32_t d_conv = hparams.n_shortconv_l_cache - 1;
+-
+-        // {n_embd, n_tokens} => {n_embd, n_seq_tokens, n_seqs}
+-        cur = ggml_reshape_3d(ctx0, cur, cur->ne[0], n_seq_tokens, n_seqs);
+-
+-        auto * bcx = build_lora_mm(model.layers[il].shortconv.in_proj, cur);
+-        cb(bcx, "model.layers.{}.conv.in_proj", il);
+-
+-        constexpr auto n_chunks = 3;
+-        GGML_ASSERT(bcx->ne[0] % n_chunks == 0);
+-        const auto chunk_size = bcx->ne[0] / n_chunks;
+-        auto *     b          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
+-                                             0 * chunk_size * ggml_element_size(bcx));
+-        auto *     c          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
+-                                             1 * chunk_size * ggml_element_size(bcx));
+-        auto *     x          = ggml_view_3d(ctx0, bcx, chunk_size, bcx->ne[1], bcx->ne[2], bcx->nb[1], bcx->nb[2],
+-                                             2 * chunk_size * ggml_element_size(bcx));
+-
+-        auto * bx = ggml_transpose(ctx0, ggml_mul(ctx0, b, x));
+-
+-        // read conv state
+-        auto * conv_state = mctx_cur->get_r_l(il);
+-        auto * conv_rs    = build_rs(inp_recr, conv_state, hparams.n_embd_r(), n_seqs);
+-        auto * conv       = ggml_reshape_3d(ctx0, conv_rs, d_conv, hparams.n_embd, n_seqs);
+-
+-        // causal prepends the state, non-causal pads symmetrically for a centered window
+-        if (hparams.causal_attn) {
+-            bx = ggml_concat(ctx0, conv, bx, 0);
+-        } else {
+-            const int64_t pad = (hparams.n_shortconv_l_cache - 1) / 2;
+-            auto * left = ggml_cont(ctx0,
+-                ggml_view_3d(ctx0, conv, pad, hparams.n_embd, n_seqs, conv->nb[1], conv->nb[2], (d_conv - pad) * conv->nb[0]));
+-            bx = ggml_pad_ext(ctx0, ggml_concat(ctx0, left, bx, 0), 0, pad, 0, 0, 0, 0, 0, 0);
+-        }
+-        GGML_ASSERT(bx->ne[0] > conv->ne[0]);
+-
+-        // write conv states: slot 0 = the final state, slot s = the state s tokens back (partial rollback)
+-        const int64_t K         = hparams.causal_attn && cparams.n_rs_seq > 0 ? (int64_t) cparams.n_rs_seq + 1 : 1;
+-        const int64_t n_written = std::min<int64_t>(n_seq_tokens, K);
+-        const auto    mem_size  = mctx_cur->get_size();
+-        const size_t  row_size  = ggml_row_size(conv_state->type, (int64_t) d_conv * n_embd);
+-
+-        for (int64_t slot = 0; slot < n_written; ++slot) {
+-            auto * conv_snap = ggml_view_3d(ctx0, bx, d_conv, bx->ne[1], bx->ne[2], bx->nb[1], bx->nb[2],
+-                                            (bx->ne[0] - d_conv - slot) * ggml_element_size(bx));
+-            ggml_build_forward_expand(gf, ggml_cpy(ctx0, conv_snap,
+-                                                   ggml_view_2d(ctx0, conv_state, (int64_t) d_conv * n_embd, n_seqs,
+-                                                                conv_state->nb[1],
+-                                                                ((size_t) slot * mem_size + kv_head) * row_size)));
+-        }
+-
+-        auto * conv_kernel = model.layers[il].shortconv.conv;
+-        auto * conv_out    = ggml_ssm_conv(ctx0, bx, conv_kernel);
+-        cb(conv_out, "model.layers.{}.conv.conv", il);
+-
+-        auto * y = ggml_mul(ctx0, c, conv_out);
+-        y        = build_lora_mm(model.layers[il].shortconv.out_proj, y);
+-        cb(y, "model.layers.{}.conv.out_proj", il);
+-        // {n_embd, n_seq_tokens, n_seqs} => {n_embd, n_tokens}
+-        y = ggml_reshape_2d(ctx0, y, y->ne[0], n_seq_tokens * n_seqs);
+-
+-        return y;
+-    };
+-
+     // actual graph construction starts here
+     ggml_tensor * cur = build_inp_embd(model.tok_embd);
+     cb(cur, "model.embed_tokens", -1);
+@@ -257,8 +157,12 @@ llama_model_lfm2::graph<iswa>::graph(const llama_model & model, const llm_graph_
+         cur             = build_norm(cur, model.layers[il].attn_norm, NULL, LLM_NORM_RMS, il);
+         cb(cur, "model.layers.{}.operator_norm", il);
+ 
+-        cur = hparams.is_recr(il) ? build_shortconv_block(cur, inp_hybrid->get_recr(), il) :
+-                                    build_attn_block(cur, inp_pos, inp_hybrid->get_attn(), il);
++        if (hparams.is_recr(il)) {
++            const auto * mctx_recr = static_cast<const mem_hybrid_ctx *>(mctx)->get_recr();
++            cur = build_lfm_shortconv(model, mctx_recr, inp_hybrid->get_recr(), cur, il);
++        } else {
++            cur = build_attn_block(cur, inp_pos, inp_hybrid->get_attn(), il);
++        }
+ 
+         if (il == n_layer - 1 && inp_out_ids) {
+             cur      = ggml_get_rows(ctx0, cur, inp_out_ids);
+@@ -271,7 +175,7 @@ llama_model_lfm2::graph<iswa>::graph(const llama_model & model, const llm_graph_
+         cb(ffn_norm_out, "model.layers.{}.ffn_norm", il);
+ 
+         ggml_tensor * ffn_out =
+-            is_moe_layer ? build_moe_feed_forward(ffn_norm_out, il) : build_dense_feed_forward(ffn_norm_out, il);
++            is_moe_layer ? build_lfm_moe_ffn(model, ffn_norm_out, il) : build_lfm_dense_ffn(model, ffn_norm_out, il);
+         cb(ffn_norm_out, "model.layers.{}.ffn_out", il);
+ 
+         cur = ggml_add(ctx0, cur, ffn_out);
+diff --git a/src/models/lfm3.cpp b/src/models/lfm3.cpp
+new file mode 100644
+index 000000000..053550c51
+--- /dev/null
++++ b/src/models/lfm3.cpp
+@@ -0,0 +1,200 @@
++#include "models.h"
++#include "../llama-memory-hybrid-iswa.h"
++
++void llama_model_lfm3::load_arch_hparams(llama_model_loader & ml) {
++    ml.get_key(LLM_KV_SHORTCONV_L_CACHE,           hparams.n_shortconv_l_cache);
++    ml.get_key(LLM_KV_ATTENTION_LAYERNORM_RMS_EPS, hparams.f_norm_rms_eps);
++
++    for (uint32_t il = 0; il < hparams.n_layer(); ++il) {
++        hparams.is_recr_impl[il] = hparams.n_head_kv(il) == 0;
++    }
++
++    // LFM3 always mixes full and sliding window attention layers
++    ml.get_arr(LLM_KV_ATTENTION_SLIDING_WINDOW_PATTERN, hparams.is_swa_impl);
++    if (!hparams.is_swa_any()) {
++        throw std::runtime_error("LFM3 requires sliding window attention layers");
++    }
++    hparams.swa_type = LLAMA_SWA_TYPE_STANDARD;
++    ml.get_key(LLM_KV_ATTENTION_SLIDING_WINDOW, hparams.n_swa);
++
++    ml.get_key(LLM_KV_ROPE_FREQ_BASE_SWA, hparams.rope_freq_base_train_swa);
++
++    switch (hparams.n_ff()) {
++        case 7680: type = LLM_TYPE_1_7B; break;
++        default:   type = LLM_TYPE_UNKNOWN;
++    }
++}
++
++void llama_model_lfm3::load_arch_tensors(llama_model_loader &) {
++    LLAMA_LOAD_LOCALS;
++
++    tok_embd    = create_tensor(tn(LLM_TENSOR_TOKEN_EMBD,  "weight"), {n_embd, n_vocab}, 0);
++    output_norm = create_tensor(tn(LLM_TENSOR_OUTPUT_NORM, "weight"), {n_embd}, 0);
++    output      = create_tensor(tn(LLM_TENSOR_OUTPUT,      "weight"), {n_embd, n_vocab}, TENSOR_NOT_REQUIRED);
++    if (output == NULL) {
++        output = create_tensor(tn(LLM_TENSOR_TOKEN_EMBD, "weight"), {n_embd, n_vocab}, TENSOR_DUPLICATED);
++    }
++
++    int rope_freqs_flag = 0;
++
++    for (int i = 0; i < n_layer; ++i) {
++        auto & layer = layers[i];
++
++        layer.attn_norm      = create_tensor(tn(LLM_TENSOR_ATTN_NORM,      "weight", i), {n_embd}, 0);
++        layer.ffn_norm       = create_tensor(tn(LLM_TENSOR_FFN_NORM,       "weight", i), {n_embd}, 0);
++        // absent when use_sandwich_norm is false
++        layer.attn_post_norm = create_tensor(tn(LLM_TENSOR_ATTN_POST_NORM, "weight", i), {n_embd}, TENSOR_NOT_REQUIRED);
++        layer.ffn_post_norm  = create_tensor(tn(LLM_TENSOR_FFN_POST_NORM,  "weight", i), {n_embd}, TENSOR_NOT_REQUIRED);
++        if ((layer.attn_post_norm == nullptr) != (layer.ffn_post_norm == nullptr)) {
++            throw std::runtime_error("LFM3 requires both post norms or neither");
++        }
++
++        layer.ffn_gate = create_tensor(tn(LLM_TENSOR_FFN_GATE, "weight", i), {n_embd,   n_ff}, 0);
++        layer.ffn_down = create_tensor(tn(LLM_TENSOR_FFN_DOWN, "weight", i), {  n_ff, n_embd}, 0);
++        layer.ffn_up   = create_tensor(tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd,   n_ff}, 0);
++
++        if (!hparams.is_recr(i)) {
++            // note: n_embd_head_k * n_head may differ from n_embd
++            const int64_t n_embd_q = n_embd_head_k * n_head;
++            const int64_t n_embd_k = hparams.n_embd_k_gqa(i);
++            const int64_t n_embd_v = hparams.n_embd_v_gqa(i);
++            if (n_embd_k != n_embd_v) {
++                throw std::runtime_error("LFM3 requires equal key and value sizes");
++            }
++
++            layer.attn_q_norm = create_tensor(tn(LLM_TENSOR_ATTN_Q_NORM, "weight", i), {n_embd_head_k}, 0);
++            layer.attn_k_norm = create_tensor(tn(LLM_TENSOR_ATTN_K_NORM, "weight", i), {n_embd_head_k}, 0);
++
++            create_tensor_qkv(layer, i, n_embd, n_embd_q, n_embd_k, n_embd_v, 0);
++
++            layer.wo = create_tensor(tn(LLM_TENSOR_ATTN_OUT, "weight", i), {n_embd_q, n_embd}, 0);
++
++            layer.wqkv_gate = create_tensor(tn(LLM_TENSOR_ATTN_GATE, "weight", i), {n_embd, n_head}, 0);
++
++            if (!hparams.is_swa(i)) {
++                layer.rope_freqs = create_tensor(tn(LLM_TENSOR_ROPE_FREQS, "weight", i), {n_embd_head_k / 2}, rope_freqs_flag);
++                rope_freqs_flag = TENSOR_DUPLICATED;
++            }
++        } else {
++            layer.shortconv.conv     = create_tensor(tn(LLM_TENSOR_SHORTCONV_CONV,    "weight", i), {hparams.n_shortconv_l_cache, n_embd}, 0);
++            layer.shortconv.in_proj  = create_tensor(tn(LLM_TENSOR_SHORTCONV_INPROJ,  "weight", i), {n_embd, 3 * n_embd}, 0);
++            layer.shortconv.out_proj = create_tensor(tn(LLM_TENSOR_SHORTCONV_OUTPROJ, "weight", i), {n_embd, n_embd}, 0);
++        }
++    }
++}
++
++std::unique_ptr<llm_graph_context> llama_model_lfm3::build_arch_graph(const llm_graph_params & params) const {
++    return std::make_unique<graph>(*this, params);
++}
++
++llama_model_lfm3::graph::graph(const llama_model & model, const llm_graph_params & params) :
++    llm_build_lfm_base(params) {
++    auto build_attn_block = [&model, this](ggml_tensor *                  cur_in,
++                                           ggml_tensor *                  inp_pos,
++                                           llm_graph_input_attn_kv_iswa * inp_attn,
++                                           int                            il) -> ggml_tensor * {
++        const int64_t n_embd_head = hparams.n_embd_head_k(il);
++        const int64_t n_head_il   = hparams.n_head(il);
++        const int64_t n_head_kv   = hparams.n_head_kv(il);
++
++        const int     n_rot_l      = hparams.n_rot(il);
++        const float   freq_base_l  = model.get_rope_freq_base (cparams, il);
++        const float   freq_scale_l = model.get_rope_freq_scale(cparams, il);
++
++        ggml_tensor * rope_factors = hparams.is_swa(il) ? nullptr : model.layers[il].rope_freqs;
++
++        auto [q, k, v] = build_qkv(model.layers[il], cur_in, n_embd_head, n_head_il, n_head_kv, il);
++
++        q = build_norm(q, model.layers[il].attn_q_norm, NULL, LLM_NORM_RMS, il);
++        cb(q, "model.layers.{}.self_attn.q_layernorm", il);
++        k = build_norm(k, model.layers[il].attn_k_norm, NULL, LLM_NORM_RMS, il);
++        cb(k, "model.layers.{}.self_attn.k_layernorm", il);
++
++        q = ggml_rope_ext(ctx0, q, inp_pos, rope_factors, n_rot_l, rope_type, n_ctx_orig,
++                          freq_base_l, freq_scale_l, ext_factor, attn_factor, beta_fast, beta_slow);
++        k = ggml_rope_ext(ctx0, k, inp_pos, rope_factors, n_rot_l, rope_type, n_ctx_orig,
++                          freq_base_l, freq_scale_l, ext_factor, attn_factor, beta_fast, beta_slow);
++
++        ggml_tensor * attn_out = build_attn(inp_attn,
++                NULL, NULL, NULL,
++                q, k, v, nullptr, nullptr, nullptr, 1.0f / sqrtf(float(n_embd_head)), il);
++        cb(attn_out, "attn_out", il);
++
++        ggml_tensor * gate = build_lora_mm(model.layers[il].wqkv_gate, cur_in);
++        gate = ggml_sigmoid(ctx0, gate);
++        cb(gate, "model.layers.{}.self_attn.gate", il);
++
++        ggml_tensor * attn_3d = ggml_reshape_3d(ctx0, attn_out, n_embd_head, n_head_il, n_tokens);
++        ggml_tensor * gate_3d = ggml_reshape_3d(ctx0, gate,     1,           n_head_il, n_tokens);
++        attn_3d = ggml_mul(ctx0, attn_3d, gate_3d);
++        attn_out = ggml_reshape_2d(ctx0, attn_3d, n_embd_head * n_head_il, n_tokens);
++
++        ggml_tensor * out = build_lora_mm(model.layers[il].wo, attn_out, model.layers[il].wo_s);
++        cb(out, "model.layers.{}.self_attn.out_proj", il);
++
++        return out;
++    };
++
++    ggml_tensor * cur = build_inp_embd(model.tok_embd);
++    cb(cur, "model.embed_tokens", -1);
++
++    ggml_build_forward_expand(gf, cur);
++
++    auto * inp_hybrid = build_inp_mem_hybrid_iswa();
++
++    ggml_tensor * inp_pos     = build_inp_pos();
++    ggml_tensor * inp_out_ids = build_inp_out_ids();
++
++    for (int il = 0; il < n_layer; ++il) {
++        auto * prev_cur = cur;
++
++        cur = build_norm(cur, model.layers[il].attn_norm, NULL, LLM_NORM_RMS, il);
++        cb(cur, "model.layers.{}.operator_norm", il);
++
++        if (hparams.is_recr(il)) {
++            const auto * mctx_recr = static_cast<const llama_memory_hybrid_iswa_context *>(mctx)->get_recr();
++            cur = build_lfm_shortconv(model, mctx_recr, inp_hybrid->get_recr(), cur, il);
++        } else {
++            cur = build_attn_block(cur, inp_pos, inp_hybrid->get_attn(), il);
++        }
++
++        if (model.layers[il].attn_post_norm) {
++            cur = build_norm(cur, model.layers[il].attn_post_norm, NULL, LLM_NORM_RMS, il);
++            cb(cur, "model.layers.{}.post_operator_norm", il);
++        }
++
++        if (il == n_layer - 1 && inp_out_ids) {
++            cur      = ggml_get_rows(ctx0, cur, inp_out_ids);
++            prev_cur = ggml_get_rows(ctx0, prev_cur, inp_out_ids);
++        }
++
++        cur = ggml_add(ctx0, prev_cur, cur);
++
++        auto * ffn_norm_out = build_norm(cur, model.layers[il].ffn_norm, NULL, LLM_NORM_RMS, il);
++        cb(ffn_norm_out, "model.layers.{}.ffn_norm", il);
++
++        ggml_tensor * ffn_out = build_lfm_dense_ffn(model, ffn_norm_out, il);
++
++        if (model.layers[il].ffn_post_norm) {
++            ffn_out = build_norm(ffn_out, model.layers[il].ffn_post_norm, NULL, LLM_NORM_RMS, il);
++            cb(ffn_out, "model.layers.{}.post_ffn_norm", il);
++        }
++
++        cur = ggml_add(ctx0, cur, ffn_out);
++
++        cur = build_cvec(cur, il);
++        cb(cur, "l_out", il);
++    }
++
++    cur = build_norm(cur, model.output_norm, NULL, LLM_NORM_RMS, -1);
++    cb(cur, "result_norm", -1);
++    res->t_embd = cur;
++
++    cur = build_lora_mm(model.output, cur, model.output_s);
++    cb(cur, "result_output", -1);
++
++    res->t_logits = cur;
++
++    // tosh: at this pin each graph expands its own output; upstream does it in the caller
++    ggml_build_forward_expand(gf, cur);
++}
+diff --git a/src/models/models.h b/src/models/models.h
+index fa8aef65f..4e2b42a6c 100644
+--- a/src/models/models.h
++++ b/src/models/models.h
+@@ -118,6 +118,26 @@ struct llm_build_delta_net_base : public llm_graph_context {
+             int                  il);
+ };
+ 
++struct llm_build_lfm_base : public llm_graph_context {
++    llm_build_lfm_base(const llm_graph_params & params);
++
++    virtual ~llm_build_lfm_base() = default;
++
++    ggml_tensor * build_lfm_shortconv(const llama_model & model,
++                                      const llama_memory_recurrent_context * mctx_recr,
++                                      llm_graph_input_rs * inp_recr,
++                                      ggml_tensor * cur,
++                                      int il);
++
++    ggml_tensor * build_lfm_dense_ffn(const llama_model & model,
++                                      ggml_tensor * cur,
++                                      int il);
++
++    ggml_tensor * build_lfm_moe_ffn(const llama_model & model,
++                                    ggml_tensor * cur,
++                                    int il);
++};
++
+ struct llm_build_rwkv6_base : public llm_graph_context {
+     const llama_model & model;
+ 
+@@ -2183,7 +2203,7 @@ struct llama_model_lfm2 : public llama_model_base {
+     void load_arch_tensors(llama_model_loader & ml) override;
+ 
+     template <bool iswa>
+-    struct graph : public llm_graph_context {
++    struct graph : public llm_build_lfm_base {
+         graph(const llama_model & model, const llm_graph_params & params);
+     };
+ 
+@@ -2203,6 +2223,19 @@ struct llama_model_lfm2moe : public llama_model_base {
+ };
+ 
+ 
++struct llama_model_lfm3 : public llama_model_base {
++    llama_model_lfm3(const struct llama_model_params & params) : llama_model_base(params) {}
++    void load_arch_hparams(llama_model_loader & ml) override;
++    void load_arch_tensors(llama_model_loader & ml) override;
++
++    struct graph : public llm_build_lfm_base {
++        graph(const llama_model & model, const llm_graph_params & params);
++    };
++
++    std::unique_ptr<llm_graph_context> build_arch_graph(const llm_graph_params & params) const override;
++};
++
++
+ struct llama_model_smallthinker : public llama_model_base {
+     llama_model_smallthinker(const struct llama_model_params & params) : llama_model_base(params) {}
+     void load_arch_hparams(llama_model_loader & ml) override;

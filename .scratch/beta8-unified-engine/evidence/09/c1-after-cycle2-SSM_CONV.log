@@ -1,0 +1,103 @@
+ggml_metal_device_init: probed SIMD-group width = 64
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: using embedded metal library
+ggml_metal_library_init: kernel fingerprint f43dd4109052
+ggml_metal_library_load_precompiled: loaded 41 precompiled libraries in 0.015 sec
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (AMD Radeon HD - FirePro D700)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon3 (3003)
+ggml_metal_device_init: simdgroup reduction   = false
+ggml_metal_device_init: simdgroup matrix mul. = false
+ggml_metal_device_init: has unified memory    = false
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+ggml_metal_init: allocating
+ggml_metal_init: found device: AMD Radeon HD - FirePro D700
+ggml_metal_init: found device: AMD Radeon HD - FirePro D700
+ggml_metal_init: picking default device: AMD Radeon HD - FirePro D700
+ggml_metal_init: use fusion         = true
+ggml_metal_init: use concurrency    = false
+ggml_metal_init: use graph optimize = true
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_decode', name = 'kernel_ssm_conv_f32_f32_decode'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_decode             0x7f8afc804b90 | th_max = 1024 | th_width =   64
+Testing 3 devices
+
+Backend 1/3: MTL0
+  Device description: AMD Radeon HD - FirePro D700
+  Device memory: 6144 MB (6143 MB free)
+
+  SSM_CONV(type=f32,ne_a=[3,1024,1,1],ne_b=[3,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched', name = 'kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=2_nc=3_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=2_nc=3_silu=0   0x7f8afc8067a0 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[6,1024,1,1],ne_b=[3,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[3,1024,4,1],ne_b=[3,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched', name = 'kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=64_nc=3_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=64_nc=3_silu=0   0x7f8afbf13210 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[66,1024,1,1],ne_b=[3,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[66,1024,4,1],ne_b=[3,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[3,1536,1,1],ne_b=[3,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[6,1536,1,1],ne_b=[3,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[3,1536,4,1],ne_b=[3,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[66,1536,1,1],ne_b=[3,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[66,1536,4,1],ne_b=[3,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[3,2048,1,1],ne_b=[3,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[6,2048,1,1],ne_b=[3,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[3,2048,4,1],ne_b=[3,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[66,2048,1,1],ne_b=[3,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[66,2048,4,1],ne_b=[3,2048,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_decode_4', name = 'kernel_ssm_conv_f32_f32_decode_4'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_decode_4           0x7f8afbf13660 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[4,1024,1,1],ne_b=[4,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched_4', name = 'kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=8_nc=4_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=8_nc=4_silu=0   0x7f8afc9076a0 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[8,1024,1,1],ne_b=[4,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[4,1024,4,1],ne_b=[4,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched_4', name = 'kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=64_nc=4_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=64_nc=4_silu=0   0x7f8afca04dc0 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[67,1024,1,1],ne_b=[4,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[67,1024,4,1],ne_b=[4,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[4,1536,1,1],ne_b=[4,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[8,1536,1,1],ne_b=[4,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[4,1536,4,1],ne_b=[4,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[67,1536,1,1],ne_b=[4,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[67,1536,4,1],ne_b=[4,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[4,2048,1,1],ne_b=[4,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[8,2048,1,1],ne_b=[4,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[4,2048,4,1],ne_b=[4,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[67,2048,1,1],ne_b=[4,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[67,2048,4,1],ne_b=[4,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,1024,1,1],ne_b=[9,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched', name = 'kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=16_nc=9_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=16_nc=9_silu=0   0x7f8afc906f00 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[18,1024,1,1],ne_b=[9,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,1024,4,1],ne_b=[9,1024,1,1]): [1;32mOK[0m
+ggml_metal_library_compile_pipeline_impl: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched', name = 'kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=64_nc=9_silu=0'
+ggml_metal_library_compile_pipeline_impl: loaded kernel_ssm_conv_f32_f32_batched_ssm_conv_bs=64_nc=9_silu=0   0x7f8afbf146b0 | th_max = 1024 | th_width =   64
+  SSM_CONV(type=f32,ne_a=[72,1024,1,1],ne_b=[9,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[72,1024,4,1],ne_b=[9,1024,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,1536,1,1],ne_b=[9,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[18,1536,1,1],ne_b=[9,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,1536,4,1],ne_b=[9,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[72,1536,1,1],ne_b=[9,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[72,1536,4,1],ne_b=[9,1536,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,2048,1,1],ne_b=[9,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[18,2048,1,1],ne_b=[9,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[9,2048,4,1],ne_b=[9,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[72,2048,1,1],ne_b=[9,2048,1,1]): [1;32mOK[0m
+  SSM_CONV(type=f32,ne_a=[72,2048,4,1],ne_b=[9,2048,1,1]): [1;32mOK[0m
+ggml_metal_free: deallocating
+  45/45 tests passed
+  Backend MTL0: [1;32mOK[0m
+Backend 2/3: BLAS
+  Skipping
+Backend 3/3: CPU
+  Skipping
+3/3 backends passed
+[1;32mOK[0m

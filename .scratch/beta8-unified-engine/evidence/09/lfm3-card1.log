@@ -1,0 +1,24 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.144.759 I srv  llama_server: initializing ...
+0.00.144.775 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.6 (app standalone)
+0.00.144.776 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.145.232 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.147.224 I srv    load_model: loading model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+0.00.147.246 I Tosh MoE: standard
+0.05.941.818 I cmn          init: llama threadpool init, n_threads = 12
+0.06.241.781 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.06.346.508 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 4096, kv_unified = 'true'
+0.06.357.965 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
+0.06.357.994 I srv  llama_server: model loaded
+0.06.357.998 I srv  llama_server: listening on http://127.0.0.1:18122
+0.07.139.509 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.07.139.580 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.09.236.232 I slot print_timing: id  3 | task 0 | prompt eval time =     353.54 ms /    22 tokens (   16.07 ms per token,    62.23 tokens per second)
+0.09.236.249 I slot print_timing: id  3 | task 0 |        eval time =    1743.05 ms /    40 tokens (   44.69 ms per token,    22.37 tokens per second)
+0.09.236.258 I slot print_timing: id  3 | task 0 |       total time =    2096.59 ms /    62 tokens
+0.09.236.259 I slot print_timing: id  3 | task 0 |    graphs reused =         39
+0.09.236.293 I slot      release: id  3 | task 0 | stop processing: n_tokens = 61, truncated = 0
+0.09.438.986 I srv    operator(): operator(): cleaning up before exit...
