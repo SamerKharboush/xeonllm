@@ -1,0 +1,4 @@
+== Qwen3-0.6B-Q8_0 offload=on exit=0 MUL_MAT on MTL0: 1158
+== Qwen3-0.6B-Q8_0 offload=off exit=0 MUL_MAT on MTL0: 0
+== Qwen3-4B-Q4_K_M offload=on exit=0 MUL_MAT on MTL0: 1494
+== Qwen3-4B-Q4_K_M offload=off exit=0 MUL_MAT on MTL0: 0

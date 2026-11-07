@@ -1,0 +1,29 @@
+llama-cli sha 2dbeb374f2ed25c5
+[Start thinking]
+
+Okay, let's see. The user provided a paragraph about the history of Paris starting from a small settlement on an island in the Seine. They want me to summarize this in one sentence.
+
+First, I need to identify the key elements. The main points are: Paris' history begins with a small settlement
+
+[ Prompt: 198.8 t/s | Generation: 38.1 t/s ]
+[Start thinking]
+
+Okay, let's see. The user provided a paragraph about the history of Paris starting from a small settlement on an island in the Seine. They want me to summarize this in one sentence.
+
+First, I need to identify the key elements. The main points are: Paris' history begins with a small settlement
+
+[ Prompt: 172.8 t/s | Generation: 40.6 t/s ]
+[Start thinking]
+
+Okay, the user provided a bunch of repeated sentences about the history of Paris starting with a small settlement on an island in the Seine. They want a one-sentence summary.
+
+First, I need to recognize that all the sentences are the same. So, the key is to condense that repetition into a
+
+[ Prompt: 57.2 t/s | Generation: 11.7 t/s ]
+[Start thinking]
+
+Okay, the user provided a bunch of repeated sentences about the history of Paris starting with a small settlement on an island in the Seine. They want a one-sentence summary.
+
+First, I need to recognize that all the sentences are the same. So, the key is to condense that repetition into a
+
+[ Prompt: 31.0 t/s | Generation: 11.9 t/s ]
