@@ -1,6 +1,6 @@
 # 03: prefill host-placed dense models on a card (op offload) and measure PCIe
 
-Status: resolved (offload was never on; when on it computes garbage; not shipped; ticket 08)
+Status: resolved (offload is correct on healthy cards and lifts host prefill of gemma4 12B from 12.9 to 21.3 tok/s; not shipped until the compute buffer is bounded)
 Type: research
 Spec: `../spec.md` (user stories 12-14). Survey: `.scratch/firellama-maxperf/evidence/engine-survey-2026-11-04.md` §3.6 and shortlist item 3.
 
@@ -82,3 +82,25 @@ dev engine with the fix, card 1:
 - The fork's Dynamic MoE code lowers the offload threshold for mixed execution
   (`ggml-metal.cpp:854-859`). That offload never ran either. Ticket 08 must check the expert
   tier too.
+
+### 2026-11-07: the A/B again, on a healthy card 1 with offload correct (ticket 08)
+
+- Engine: worktree `xeonllm-wt-offload` (series 731b358fd + the scheduler fix), llama-bench sha256
+  `61346ad62fe6dd8e`. gemma4-coding 12B Q8_0 (12.67 GB, host-placed), `-ngl 0 -t 12 -p 512 -n 0 -b 512
+  -ub 512 -r 3 -fa 1`, `GGML_METAL_DEVICE_INDEX=1 -dev MTL0 TOSH_FA_AMD=1`, three processes per side
+  alternating, llama-bench's warmup discarded. Script and log `evidence/03/prefill-ab2.*`. No gpuRestart.
+
+  | process | offload on (`-nopo 0`) pp512 | offload off (`-nopo 1`) pp512 |
+  |---|---|---|
+  | 1 | 21.281 ± 0.019 | 12.918 ± 0.033 |
+  | 2 | 21.291 ± 0.010 | 12.957 ± 0.017 |
+  | 3 | 21.287 ± 0.011 | 12.932 ± 0.080 |
+
+- The offload control takes effect (ticket 08: 2064 prompt MUL_MATs on MTL0 with it on, 0 with it off),
+  and the text with it on is byte-identical to the host text.
+- Ticket 03's 11-04 prefill figures (host 10-12, offload 21-22) stand in size; only their text was wrong,
+  and that was the card.
+- **Before shipping:** the scheduler fix as a patch, and a bound on the card's compute buffer
+  (at llama-cli's default context the 12B asked the card for 5.37 GB; at -c 2048 it is 141 MiB).
+  The app's host placement would then pass `-dev` for one healthy card and a bounded `-c`/`-ub`.
+  Decode is unaffected (batch 1 is below the offload threshold).
