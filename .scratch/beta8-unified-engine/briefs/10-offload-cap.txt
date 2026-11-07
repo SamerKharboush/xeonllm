@@ -1,0 +1,60 @@
+You are working in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-offload (detached at commit 731b358fd "series": upstream pin d81235049 plus the XeonLLM fork's patch series). It already holds two UNCOMMITTED changes from an earlier run, both reviewed and kept: the scheduler fix in ggml/src/ggml-backend.cpp (around line 1156, "tosh: the last backend is the CPU only without an accelerator ...") and the op test tests/test-sched-offload.cpp (+ its line in tests/CMakeLists.txt). Keep both. You edit files there and leave everything UNCOMMITTED. You will NOT commit, stash, reset, checkout or clean anything. Do not create summary/report markdown files.
+
+TIME BUDGET: run `date` first and note it. At 1 h 30 min after that start, stop and write the report (contract at the end) with what you have. A run that ends without a report is a failed run.
+
+<machine>
+Mac Pro 6,1: Xeon E5-2697 v2 (AVX + F16C, NO AVX2/FMA), 64 GB RAM, two AMD FirePro D700 (GCN 1.0, 6 GB each, Metal only, private buffers only, "use shared buffers = false"), macOS 15. Metal device 0 drives the display.
+</machine>
+
+<safety — hard rules; breaking one has rebooted or wedged this machine>
+1. GPU programs ONLY on Metal device 0: GGML_METAL_DEVICE_INDEX=0 and `-dev MTL0` on llama tools.
+2. Every GPU-touching program under `perl -e 'alarm 600; exec @ARGV' <cmd>`. Nothing GPU-side in the background.
+3. Keep command buffers short; never `test-backend-ops -m perf`.
+4. No kernel reads a shared/host buffer; never set GGML_METAL_SHARED_BUFFERS_ENABLE.
+5. Before/after each GPU run check `ls -t /Library/Logs/DiagnosticReports/*.gpuRestart | head -1` (now: Kernel_2026-11-06-195514_Sams-Mac-Pro.gpuRestart). A newer one: STOP all GPU work, report it first.
+6. Models: /Users/sam/models/Qwen3-0.6B-Q8_0.gguf, /Users/sam/models/Qwen3-4B-Q4_K_M.gguf, and /Users/sam/models/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/gemma4-coding-Q8_0.gguf. ALWAYS `-ngl 0` for the 12B (weights on the host).
+7. **The over-cap case must never allocate:** a context whose card compute buffer exceeds the cap must be detected by size computation, not by trying the allocation. Until your guard is built and shown to work with a SMALL forced cap (step 3), run the 12B only with `-c 2048` or less. After that, prove the large case with the guard active only.
+8. Do not touch 127.0.0.1:8080, /Applications/XeonLLM.app, anything under /Users/sam/firellama, any defaults domain. Builds -j6.
+</safety>
+
+<why>
+With the scheduler fix, a model whose weights stay on the host (-ngl 0) computes its prompt batches' MUL_MATs on the card from copies of the weights. Measured on gemma4 12B Q8_0: prompt 12.9 -> 21.3 tok/s, generated text byte-identical. But at llama-cli's default context (the model's full trained context) the 12B asked card 0 for a 5371332608-byte compute buffer ("ggml_metal_buffer_init: error: failed to allocate buffer, size = 4520.00 MiB"; "failed to allocate MTL0_Private buffer of size 5371332608"); at -c 2048 it is 141.27 MiB. A card holds 6 GB and an over-large allocation on these cards has rebooted the Mac. So offload may ship only with a guard.
+</why>
+
+<what_to_build>
+1. Find out (and report) WHAT makes the card's compute buffer grow with context when op offload is on and -ngl 0 (use GGML_SCHED_DEBUG=2 and the per-backend sizes at small contexts, e.g. -c 2048, 4096, 8192 on the 0.6B and 4B; extrapolate, do not run a huge context unguarded). One or two sentences with evidence.
+2. The guard, in src/llama-context.cpp (sched_reserve(), around line 766-900; graph_reserve() around 2826 already has a sizes-only path through ggml_backend_sched_reserve_size()): when cparams.op_offload is on, first compute the per-backend compute-buffer sizes WITHOUT allocating. If any GPU backend (device type GPU) would need more than the cap, set op_offload off for this context, recreate the sched without it, reserve normally, and log once:
+   `llama_context: op offload off: <backend> compute buffer would be <N> MiB, cap <C> MiB (TOSH_OFFLOAD_MAX_COMPUTE_MB)`
+   Cap: env TOSH_OFFLOAD_MAX_COMPUTE_MB, default 1536. When offload stays on, log once: `llama_context: op offload on: <backend> compute buffer <N> MiB, cap <C> MiB`.
+   Keep the path for models with layers on a card unchanged except for this check (it must not turn offload off for them unless their buffer exceeds the cap too). Do not change any default other than adding the guard.
+3. Prove the guard with a forced small cap first: TOSH_OFFLOAD_MAX_COMPUTE_MB=50 on the 0.6B at -c 4096 must log "op offload off" and the run must show 0 MUL_MAT on MTL0 (GGML_SCHED_DEBUG=2) and produce the same text as --no-op-offload.
+4. Then the real case: gemma4 12B -ngl 0 at the default context (no -c) with the default cap: must log "op offload off ... would be ~5000+ MiB" and must NOT print any "failed to allocate" line; text equals --no-op-offload. And at -c 2048: "op offload on ... 141 MiB", text equals --no-op-offload.
+</what_to_build>
+
+<build>
+cd /Users/sam/Library/Caches/xeonllm-wt-offload
+cmake --build build-off -j6 --target llama-cli llama-bench test-backend-ops test-sched-offload
+(build-off is already configured: Metal, AVX1, static.)
+</build>
+
+<gates — run them yourself; paste the real output lines verbatim; never report output you did not see>
+1. GGML_METAL_DEVICE_INDEX=0 perl -e 'alarm 300; exec @ARGV' ./build-off/bin/test-sched-offload → "SUCCESS: 0 failure(s)".
+2. GGML_METAL_DEVICE_INDEX=0 perl -e 'alarm 1800; exec @ARGV' ./build-off/bin/test-backend-ops -b MTL0 -o MUL_MAT → summary line, 0 failures.
+3. Text, device 0, `-ngl 0 -t 12 -st --temp 0 -n 64 -b 512 -ub 512 -s 1`, prompt:
+   P="$(python3 -c 'print(("The history of the city of Paris begins with a small settlement on an island in the Seine. " * 30).strip())') Summarize the above in one sentence:"
+   For each cell print: the guard's log line, the count of `MUL_MAT):` lines on `[ MTL0` with GGML_SCHED_DEBUG=2, whether any "failed to allocate" line appeared, and whether the text equals the same model's --no-op-offload text (cmp of the generated text):
+   a) 0.6B -c 4096 default cap  b) 0.6B -c 4096 TOSH_OFFLOAD_MAX_COMPUTE_MB=50  c) 4B -c 4096 default cap  d) 12B -c 2048 default cap  e) 12B no -c, default cap.
+4. otool -tv build-off/bin/llama-cli | grep -cE 'vfmadd|vfmsub|vfnmadd|vpbroadcast|vinserti128|vextracti128|vpgather' → 0.
+5. Newest gpuRestart unchanged at the end.
+No llama-bench timings (the orchestrator times).
+</gates>
+
+<must_not>
+- Device 1, shared buffers for kernel inputs, long command buffers, unguarded large-context runs, other models.
+- Edit anything outside /Users/sam/Library/Caches/xeonllm-wt-offload; change Metal kernels; change defaults other than the guard.
+- git commit / stash / reset / checkout / clean / worktree.
+</must_not>
+
+<report>
+End with: what grows the card compute buffer (step 1, with evidence); files touched, one line each; the exact gate output lines (table for gate 3); how the logs prove the guard decides before allocating; decisions this brief did not dictate; anything you could not run.
+</report>

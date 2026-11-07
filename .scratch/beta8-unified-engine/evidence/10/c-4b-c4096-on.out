@@ -1,0 +1,38 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b11430-731b358fd
+model      : /Users/sam/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The history of the city of Paris begins with a small settlement on an island in the Seine. The history of the city of Paris begins with a small settlement on an island in the Seine. The history of the city of Paris begins with a small settlement on an island in the Seine. The history of the city of Paris begins with a small settlement on an island in the Seine. The history of the city of Paris begins with a small settlement on an island in the Seine. The history of the city of Paris begins with  ... (truncated)
+
+[Start thinking]
+
+Okay, the user provided a bunch of repeated sentences about the history of Paris starting with a small settlement on an island in the Seine. They want a one-sentence summary.
+
+First, I need to recognize that all the sentences are the same. So, the key is to condense that repetition into a
+
+[ Prompt: 57.5 t/s | Generation: 12.4 t/s ]
+
+
+Exiting...
