@@ -1,0 +1,40 @@
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.cpp b/ggml/src/ggml-metal/ggml-metal-device.cpp
+index 54b418b6e..b8e9d5c82 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -2004,6 +2004,35 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv(ggml_meta
+             }
+     };
+ 
++    // Per-type env overrides for nr0 and nsg for Q4_K and Q6_K wave64 decode experiments
++    if (tsrc0 == GGML_TYPE_Q4_K || tsrc0 == GGML_TYPE_Q6_K) {
++        const bool q4k = tsrc0 == GGML_TYPE_Q4_K;
++        const char * e_nr0 = TOSH_ENV(q4k ? "TOSH_MV_Q4K_NR0" : "TOSH_MV_Q6K_NR0");
++        const char * e_nsg = TOSH_ENV(q4k ? "TOSH_MV_Q4K_NSG" : "TOSH_MV_Q6K_NSG");
++        if (e_nr0 || e_nsg) {
++            if (TOSH_ENV("TOSH_MV_W64_LEGACY") != nullptr) {
++                // legacy mode: keep default
++            } else {
++                if (e_nr0) nr0 = atoi(e_nr0);
++                if (e_nsg) nsg = atoi(e_nsg);
++                // log first time per type
++                static bool logged_q4k = false;
++                static bool logged_q6k = false;
++                if (q4k) {
++                    if (!logged_q4k) {
++                        fprintf(stderr, "ggml_metal: mul_mv q4_K w64 nr0=%d nsg=%d\n", nr0, nsg);
++                        logged_q4k = true;
++                    }
++                } else {
++                    if (!logged_q6k) {
++                        fprintf(stderr, "ggml_metal: mul_mv q6_K w64 nr0=%d nsg=%d\n", nr0, nsg);
++                        logged_q6k = true;
++                    }
++                }
++            }
++        }
++    }
++
+     GGML_ASSERT(ne12 <= INT16_MAX && ne13 <= INT16_MAX);
+     const int16_t r2 = (int16_t) (ne12 / ne02);
+     const int16_t r3 = (int16_t) (ne13 / ne03);

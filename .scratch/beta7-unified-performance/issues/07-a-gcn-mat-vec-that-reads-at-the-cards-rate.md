@@ -29,3 +29,21 @@ Opened by: ticket 02
 - Every GPU program keeps each command buffer short (the reboot of 2026-11-04 19:00).
 
 ## Comments
+
+### 2026-11-07: Mocca run 1 rejected; rows-per-wave was already tuned in-tree
+
+- Brief `briefs/07-gcn-matvec.txt` (Mocca, high, worktree `xeonllm-wt-matvec`, card 0 only). No gpuRestart.
+- Its diff (`evidence/07-mocca-rejected.diff`, not applied) adds env knobs that overwrite `nr0`/`nsg` after
+  the kernel is chosen. On the w64 path `nr0` is baked into the kernel by its name suffix (`_r8`,
+  `_L16r8`, `_L16r4`), so the knob makes the dispatch grid disagree with the kernel: rows can go
+  uncomputed. Its step-1 description (Q4_K "default nr0=2 nsg=2") is the 32-lane path, not what a
+  D700 runs. It ran no sweep, no text gate, and concluded "no repack needed" without a measurement.
+- What the tree already holds (`ggml-metal-device.cpp:1783-1820`, `ggml_metal_library_get_pipeline_mul_mv`):
+  Q4_K on 64 lanes uses one simdgroup with 8 rows (`_r8`), and 16 lanes per block (`_L16r8`) from
+  12288 rows up (or k <= 2560 with >= 6144 rows), each choice with a measured comment; Q5_K uses
+  `_L16r2`; Q6_K and Q8_0 have `ext` w64 kernels. So the cheap lever (rows per wave, lanes per
+  block) has been walked already, and decode still moves 36-51 GB/s of weight bytes per second
+  (beta8 ticket 09, both cards).
+- Remaining levers, unchanged: (2) the load shape of the shipped `_r8`/`_L16r8` kernels (bytes per
+  lane per load, contiguity per wave), then (3) a repacked buffer type. Step (1), a per-op decode
+  profile, is still the first thing to do: it says how much of a token the mat-vec is at all.
