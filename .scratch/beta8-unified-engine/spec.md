@@ -25,3 +25,4 @@ every model on a GPU, and lands the work. CLAUDE.md's performance rules apply to
 | 15 | quantised KV on the cards' flash attention (measure) | orchestrator | - |
 | 16 | a dense model across both cards and RAM answers zeros (ticket 68) | orchestrator | - |
 | 17 | GCN mat-vec: per-op decode profile, then a load-shape kernel | orchestrator, then Mocca | - |
+| 18 | bound each prefill command buffer's GPU time (the 11-07 panic) | Mocca, then orchestrator gates | - |

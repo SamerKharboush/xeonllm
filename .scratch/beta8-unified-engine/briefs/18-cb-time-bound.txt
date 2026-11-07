@@ -1,0 +1,54 @@
+You are working in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-cb (detached at commit 731b358fd "series": upstream pin d81235049 plus the XeonLLM fork's patch series, committed). Edit files there and leave everything UNCOMMITTED. You will NOT commit, stash, reset, checkout or clean anything. Do not create summary/report markdown files.
+
+TIME BUDGET: run `date` first and note it. At 1 h 40 min after that start, stop and write the report (contract at the end) with what you have. A run that ends without the report is a failed run. Write the report in plain prose and tables; never repeat a line.
+
+<machine>
+Mac Pro 6,1: Xeon E5-2697 v2 (AVX + F16C, NO AVX2/FMA), 64 GB RAM, two AMD FirePro D700 (GCN 1.0, 6 GB each, Metal only, private buffers only), macOS 15. Metal device 0 drives the DISPLAY; device 1 is headless.
+</machine>
+
+<safety — hard rules; this machine panicked today>
+1. GPU programs ONLY on Metal device 1 (headless): GGML_METAL_DEVICE_INDEX=1 and `-dev MTL0` on llama tools (the index pins device 1 into slot 0). Never device 0: a long command buffer there starves the display server and macOS panics.
+2. Every GPU-touching program under `perl -e 'alarm 600; exec @ARGV' <cmd>`; nothing GPU-side in the background.
+3. Models: only /Users/sam/models/Qwen3-0.6B-Q8_0.gguf and /Users/sam/models/Qwen3-4B-Q4_K_M.gguf, all layers on device 1 (-ngl 99), context at most 8192, prompts at most 6000 tokens. Never `test-backend-ops -m perf`.
+4. No kernel reads a shared/host buffer; never set GGML_METAL_SHARED_BUFFERS_ENABLE.
+5. Before/after each GPU run: `ls -t /Library/Logs/DiagnosticReports/*.gpuRestart /Library/Logs/DiagnosticReports/*.panic 2>/dev/null | head -2`. Now the newest are Kernel-2026-11-07-144047.panic and Kernel_2026-11-06-195514_Sams-Mac-Pro.gpuRestart. A newer one: STOP all GPU work, report it first.
+6. Do not touch 127.0.0.1:8080, /Applications/XeonLLM.app, anything under /Users/sam/firellama, any defaults domain. Builds -j6.
+</safety>
+
+<why>
+Today the Mac panicked ("userspace watchdog timeout: no successful checkins from WindowServer ... in 120 seconds") while the app ran Qwen3-14B Q4_K_M split by layer over both cards at -c 16384 and prefilled an ~8300-token prompt on top of ~5500 cached tokens. The server reported 2048-token chunks taking 65-91 s. A batch (prefill) graph on a discrete card is cut into n_cb_prefill+1 command buffers (patch metal/0078; ggml/src/ggml-metal/ggml-metal-context.m around line 1203 (TOSH_MTL_PREFILL_CB, default 4) and around line 4371 (where ctx->n_cb is raised for a batch graph); GGML_METAL_MAX_COMMAND_BUFFERS is 8 at line 27). So each buffer ran for seconds on the display card. The cost of a batch graph grows with the cached context (attention), so a fixed number of buffers cannot bound the time of each.
+</why>
+
+<what_to_build>
+1. **Measure.** For every command buffer of a graph, record GPU time (MTLCommandBuffer GPUStartTime/GPUEndTime in its completed handler). With env TOSH_MTL_CB_STATS=1, log one line per batch graph: `ggml_metal: <device> cb stats: n_tokens=<t> n_cb=<k> max=<ms> sum=<ms>`. Keep a running "last batch graph total GPU ms per node" in the context regardless of the env.
+2. **Bound.** For a batch graph (the existing condition: discrete card, n_tokens >= 32, no abort callback), choose the number of command buffers so that the predicted time per buffer stays under a target: target = env TOSH_MTL_CB_TARGET_MS, default 50. Prediction: the previous batch graph's measured GPU time scaled by this graph's n_tokens and node count (say what scaling you used and why; a context that grew since the last graph makes it cost more, so scale conservatively upward, e.g. use the max of recent graphs per token). Raise GGML_METAL_MAX_COMMAND_BUFFERS (e.g. to 64), and check every array and loop sized by it. Keep TOSH_MTL_PREFILL_CB as the minimum count; TOSH_MTL_CB_TARGET_MS=0 disables the bound (today's behaviour). The first batch graph has no measurement: use today's count.
+3. **Floor.** Note in the log (once) when a single node's share already exceeds the target (the bound cannot go below one node per buffer); this tells the orchestrator a smaller ubatch is needed.
+Do not change decode (n_tokens < 32), kernels, or anything for unified-memory devices.
+</what_to_build>
+
+<build>
+cd /Users/sam/Library/Caches/xeonllm-wt-cb
+cmake -B build-cb -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON -DTOSH_ENABLE_DYNAMIC_MOE=ON -DGGML_NATIVE=OFF -DLLAMA_OPENSSL=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_F16C=ON -DGGML_BMI2=OFF -DGGML_AVX_VNNI=OFF -DGGML_AVX512=OFF
+cmake --build build-cb -j6 --target llama-cli llama-server llama-bench test-backend-ops
+</build>
+
+<gates — run them yourself; paste the real output lines verbatim; never report output you did not see>
+1. GGML_METAL_DEVICE_INDEX=1 perl -e 'alarm 1800; exec @ARGV' ./build-cb/bin/test-backend-ops -b MTL0 -o MUL_MAT → summary line, 0 failures. Same for -o FLASH_ATTN_EXT with TOSH_FA_AMD=1.
+2. Command-buffer times, device 1, Qwen3-4B-Q4_K_M, -ngl 99 -c 8192 -ub 512 -b 2048 -fa on, TOSH_FA_AMD=1 TOSH_MTL_CB_STATS=1, one prompt of ~6000 tokens (generate it with python, e.g. a repeated paragraph), -n 16, temp 0, llama-cli -st:
+   a) TOSH_MTL_CB_TARGET_MS=0 (today's layout)  b) default target 50  c) TOSH_MTL_CB_TARGET_MS=25.
+   For each: a table of the cb-stats lines (n_tokens, n_cb, max ms, sum ms) as the cached context grows, and the generated text. The text must be byte-identical across a, b and c (splitting command buffers does not change the math); say so with cmp.
+3. Decode unchanged: llama-cli on the 0.6B with -n 64 shows no cb-stats line for single-token graphs.
+4. otool -tv build-cb/bin/llama-cli | grep -cE 'vfmadd|vfmsub|vfnmadd|vpbroadcast|vinserti128|vextracti128|vpgather' → 0.
+5. Newest panic/gpuRestart files unchanged at the end.
+No llama-bench timing claims (the orchestrator times).
+</gates>
+
+<must_not>
+- Use device 0, larger models or contexts, shared buffers for kernel inputs, test-backend-ops -m perf.
+- Edit anything outside /Users/sam/Library/Caches/xeonllm-wt-cb; change kernels or decode.
+- git commit / stash / reset / checkout / clean / worktree.
+</must_not>
+
+<report>
+End with: files touched, one line each; the prediction rule and why; the gate-2 table for a/b/c; the other gate lines verbatim; whether any single node exceeded the target (gate 2b/2c) and at what n_tokens/context; decisions this brief did not dictate; anything you could not run.
+</report>

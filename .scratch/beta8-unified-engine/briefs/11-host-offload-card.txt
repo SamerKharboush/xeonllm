@@ -1,0 +1,37 @@
+You are working in a git worktree of the XeonLLM macOS app: /Users/sam/Library/Caches/xeonllm-app-wt (detached at the branch head). Swift package; sources in Sources/, tests in Tests/XeonLLMTests/. Edit files there and leave everything UNCOMMITTED. You will NOT commit, stash, reset, checkout or clean anything. Do not create summary/report markdown files. Read CLAUDE.md and specs/release-contract.md sections 5 and 7 first.
+
+TIME BUDGET: run `date` first. At 1 h 30 min after that start, stop and write the report. A run that ends without the report is a failed run. Plain prose and tables; never repeat a line.
+
+<safety>
+- Do NOT launch the app, llama-server, llama-cli or any GPU program, and do not run make-app.sh, build-engines.sh or make-dmg.sh. `swift build` and `swift test` only.
+- Never write to the defaults domains dev.xeonllm.app or dev.engel.toshllm or their Application Support folders; tests use their own suite/domain as the existing tests do.
+- Do not touch anything outside /Users/sam/Library/Caches/xeonllm-app-wt.
+</safety>
+
+<why>
+The engine is getting "prompt offload" (beta 8 ticket 10): for a model whose weights stay on the host (`-ngl 0`), large prompt batches are computed on a GPU from copies of the weights. Measured on gemma4 12B Q8_0: prompt 12.9 -> 21.3 tok/s, generated text byte-identical, decode unchanged. The engine offloads to the FIRST Metal device it sees. Today a host-placed model (`ModelPlacement.host`, Sources/Hardware/Hardware.swift:207) sets no device environment (Sources/Servers/Server.swift `environment`, around line 779-870), so the engine would pick device 0, the display card, and could pick a card the launch health check excluded (Sources/Hardware/CardHealth.swift, `CardHealth.excluded`).
+</why>
+
+<what_to_build>
+In Server.swift (`environment` and, if needed, `arguments` around line 352):
+1. Host placement, dense model (not MoE; GGUFMetadata has `isMoE`): name exactly one healthy discrete card with GGML_METAL_DEVICE_INDEX: prefer the highest-index healthy discrete card that does not drive the display (on the Mac Pro 6,1 that is card 1; if the app has no display flag, prefer the last healthy discrete card), else any healthy discrete card. Remove any inherited GGML_METAL_DEVICES / GGML_METAL_DEVICE_LIST so no second card is named.
+2. Host placement, MoE model: pass `--no-op-offload` (prompt offload for MoE is not yet validated, ticket 12) and name no card.
+3. Host placement with every card excluded (or no discrete card): pass `--no-op-offload`, name no card.
+4. Card, expertTier and split placements: unchanged.
+5. The server log header (around line 2314-2335, "placement:" / gpuSel "none (host placement)") states the chosen offload card or "prompt offload off (<reason>)".
+Keep the logic in a small pure static function (inputs: placement, isMoE, the GPU list, the excluded set; output: the card index or nil plus the reason) so it is testable without launching anything.
+</what_to_build>
+
+<tests>
+Add tests next to the existing CardHealth / Server tests (find them with grep -rln "CardHealth\|ServerSettings\|environment" Tests/XeonLLMTests). Cases: two healthy cards → card 1; card 1 excluded → card 0; both excluded → nil and --no-op-offload; MoE host → nil and --no-op-offload; card placement → the environment has no GGML_METAL_DEVICE_INDEX added by this rule. Use CardHealth.setExcludedForTesting where it helps and reset it in tearDown.
+</tests>
+
+<gates — run them yourself and paste the real summary lines>
+1. `swift build` succeeds.
+2. `swift test` → the "Executed N tests" summary; no failures except the known flaky MCPStdioTransportTests race (name every failing test).
+3. The new tests listed by name with their pass lines.
+</gates>
+
+<report>
+End with: files touched, one line each; the pure function's signature; how the display card is identified (or why the fallback is used); the gate lines verbatim; decisions this brief did not dictate.
+</report>

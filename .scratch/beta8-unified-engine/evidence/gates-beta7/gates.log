@@ -1,0 +1,75 @@
+== identity
+9d16ba85e4c79c51
+d46856718d828cea
+7d5b9112f1da6983
+version: 0.6.0-dev (build 11429, commit d81235049)
+built with AppleClang 17.0.0.17000013 for Darwin x86_64
+llama-server banner: XeonLLM engine %s (app %s)
+llama-bench banner: XeonLLM engine %s
+VERSION 0.87.31-beta.7
+assert[bundle]: engine commit d81235049 == pin
+assert[bundle]: bundle 0.87.31-beta.7 == VERSION
+assert[bundle]: sha256 9d16ba85e4c79c5108224c96e8ed263ba00149e727ba2fdd57224102f9bb9c90
+== 3.1 every op
+card 0 ALL:   13983/13983 tests passed FAIL=0
+card 0 FA TOSH_FA_AMD=1:   1993/1993 tests passed FAIL=0
+card 1 ALL:   13983/13983 tests passed FAIL=0
+card 1 FA TOSH_FA_AMD=1:   1993/1993 tests passed FAIL=0
+== 3.2 kernel coverage
+# path: engine self-check (TOSH_METAL_CHECK_KERNELS=1)
+# card 0: exit 0, missing 0
+# card 1: exit 0, missing 0
+PASS: 0 missing kernel names
+== 3.3 prefill bands
+card 0 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm layer Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+card 0 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+card 1 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=86 rows=0 handled (exit 86)
+both cards 0,1 -sm layer Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+35B host (-ngl 0) rc=0 rows=7
+== 3.4 preflight
+preflight rc=0
+preflight[baseline]: --version -> version: 0.6.0-dev (build 11429, commit d81235049)
+preflight[baseline]: -ngl 0 served, produced 32 tokens
+preflight[baseline]: -ngl 99 served, produced 32 tokens
+preflight[baseline]: drop counter reads 1 on a forced drop (the control passes)
+== 3.5 test-engine
+test-engine rc=0
+
+OK
+patches/llama/server/tests/test_mcp_cancel.py: ran 20, passed 20, failed 0, skipped 0
+== section 2 proofs
+card 0: ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+card 0: ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+card 0: ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+card 1: ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+card 1: ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+card 1: ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+X Qwen3-4B-Q4_K_M tg128 "16.644948" sd "0.007709"
+X Nemotron-3.5-Bolt-E4B-Q4_K_M tg128 "13.742500" sd "0.003448"
+TOSH_MV_ROWS8_DISABLE Qwen3-4B-Q4_K_M tg128 "14.115030" sd "0.006708"
+TOSH_MV_ROWS8_DISABLE Nemotron-3.5-Bolt-E4B-Q4_K_M tg128 "11.961565" sd "0.007196"
+TOSH_FULL_TG_DISABLE Qwen3-4B-Q4_K_M tg128 "16.600426" sd "0.004977"
+TOSH_FULL_TG_DISABLE Nemotron-3.5-Bolt-E4B-Q4_K_M tg128 "13.509208" sd "0.006254"
+== AVX2/FMA mnemonics
+llama-bench: 0
+llama-perplexity: 0
+llama-server: 0
+test-backend-ops: 0
+== 0078 on the shipped engine
+ship: 200 335.1 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"","reasoning_conten timeouts=0
+no servers of ours
+GATES DONE
