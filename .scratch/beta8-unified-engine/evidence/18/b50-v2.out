@@ -1,0 +1,36 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b11430-731b358fd
+model      : /Users/sam/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee  ... (truncated)
+
+[Start thinking]
+
+Okay, the user provided a lot of repeated sentences about a committee meeting
+
+[ Prompt: 42.5 t/s | Generation: 12.0 t/s ]
+
+
+Exiting...

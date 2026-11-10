@@ -1,0 +1,195 @@
+diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml-metal-context.m
+index 1ee33cba0..d54c20268 100644
+--- a/ggml/src/ggml-metal/ggml-metal-context.m
++++ b/ggml/src/ggml-metal/ggml-metal-context.m
+@@ -24,7 +24,7 @@
+ #define MAX(a, b) ((a) > (b) ? (a) : (b))
+ 
+ // max number of MTLCommandBuffer used to submit a graph for processing
+-#define GGML_METAL_MAX_COMMAND_BUFFERS 8
++#define GGML_METAL_MAX_COMMAND_BUFFERS 64
+ #define GGML_METAL_MAX_PENDING_WAITS   8
+ #define GGML_METAL_MAX_PREFETCH_STAGES 8
+ 
+@@ -149,6 +149,84 @@ static void tosh_cbp_attach(id<MTLCommandBuffer> cb, struct tosh_cbp_graph * g)
+     }];
+ }
+ 
++// tosh: GPU time per command buffer of a batch graph. A prefill graph's cost grows with the
++// cached context (attention), and on 2026-11-07 a 14B layer split at -c 16384 ran its five
++// buffers for seconds each on the display card until macOS panicked (WindowServer watchdog).
++// The estimate is picoseconds of GPU time per (token x node); it follows a higher measurement at
++// once and decays slowly, so a context that keeps growing is never predicted cheaper than it was.
++struct tosh_cb_est {
++    _Atomic uint64_t ps_per_tn;
++    _Atomic int      floor_logged;
++};
++
++struct tosh_cb_graph {
++    struct tosh_cb_est * est;
++    int64_t n_tokens;
++    int     n_nodes;
++    int     n_bufs;
++    int     target_ms;
++    bool    stats;
++    char    name[64];
++    _Atomic int      n_left;
++    _Atomic uint64_t max_ns;
++    _Atomic uint64_t sum_ns;
++};
++
++static bool tosh_cb_stats_on(void) {
++    static int st = -1;
++    if (st < 0) {
++        const char * e = getenv("TOSH_MTL_CB_STATS");
++        st = (e != NULL && strcmp(e, "0") != 0) ? 1 : 0;
++    }
++    return st == 1;
++}
++
++static void tosh_cb_release(struct tosh_cb_graph * g) {
++    if (g == NULL || atomic_fetch_sub_explicit(&g->n_left, 1, memory_order_acq_rel) != 1) {
++        return;
++    }
++    const uint64_t sum = atomic_load_explicit(&g->sum_ns, memory_order_relaxed);
++    const uint64_t mx  = atomic_load_explicit(&g->max_ns, memory_order_relaxed);
++    const double   tn  = (double) g->n_tokens * (double) g->n_nodes;
++    if (sum > 0 && tn > 0) {
++        const uint64_t meas = (uint64_t) (1000.0*(double) sum/tn);
++        const uint64_t old  = atomic_load_explicit(&g->est->ps_per_tn, memory_order_relaxed);
++        const uint64_t dec  = old - old/16;
++        atomic_store_explicit(&g->est->ps_per_tn, meas > dec ? meas : dec, memory_order_relaxed);
++    }
++    if (g->stats) {
++        fprintf(stderr, "ggml_metal: %s cb stats: n_tokens=%lld n_nodes=%d n_cb=%d max=%.1f ms sum=%.1f ms\n",
++                g->name, (long long) g->n_tokens, g->n_nodes, g->n_bufs, mx/1e6, sum/1e6);
++    }
++    // one node per buffer is the finest cut: past it only a smaller ubatch helps
++    if (g->target_ms > 0 && g->n_nodes > 0 && sum/(uint64_t) g->n_nodes > (uint64_t) g->target_ms*1000000ull &&
++        atomic_exchange(&g->est->floor_logged, 1) == 0) {
++        GGML_LOG_WARN("ggml_metal: %s: one node of a %lld-token batch averages %.1f ms, over the %d ms command-buffer target; use a smaller ubatch\n",
++                g->name, (long long) g->n_tokens, (double) sum/g->n_nodes/1e6, g->target_ms);
++    }
++    free(g);
++}
++
++static void tosh_cb_attach(id<MTLCommandBuffer> cb, struct tosh_cb_graph * g) {
++    if (g == NULL) {
++        return;
++    }
++    atomic_fetch_add_explicit(&g->n_left, 1, memory_order_relaxed);
++    [cb addCompletedHandler:^(id<MTLCommandBuffer> b) {
++        const double t0 = [b GPUStartTime];
++        const double t1 = [b GPUEndTime];
++        if (t1 > t0) {
++            const uint64_t d = (uint64_t)((t1 - t0)*1e9);
++            atomic_fetch_add_explicit(&g->sum_ns, d, memory_order_relaxed);
++            uint64_t m = atomic_load_explicit(&g->max_ns, memory_order_relaxed);
++            while (d > m) {
++                if (atomic_compare_exchange_weak(&g->max_ns, &m, d)) break;
++            }
++        }
++        tosh_cb_release(g);
++    }];
++}
++
+ // definidos en ggml-metal-device.m
+ extern _Atomic uint64_t g_tosh_d2h_ns, g_tosh_d2h_bytes, g_tosh_d2h_n;
+ extern _Atomic uint64_t g_tosh_h2d_ns, g_tosh_h2d_bytes, g_tosh_h2d_n;
+@@ -319,6 +397,8 @@ static void tosh_cbp_dump_dev(ggml_metal_device_t dev) {
+     int n_cb_set;       // n_cb as set by ggml_metal_set_n_cb; n_cb itself can grow for one graph
+     int n_cb_last;      // n_cb the previous graph was submitted with (its main buffer is cmd_bufs[n_cb_last])
+     int n_cb_prefill;   // n_cb for a batch graph on a discrete card, 0 = same as n_cb_set
++    int cb_target_ms;   // TOSH_MTL_CB_TARGET_MS: GPU-time bound per batch command buffer, 0 = off
++    struct tosh_cb_est * cb_est; // measured GPU cost of batch graphs (owned, never freed: handlers may outlive the context)
+     bool n_cb_logged;
+     int n_nodes_0;      // number of nodes submitted by the main thread
+     int n_nodes_1;      // remaining number of nodes submitted by the n_cb threads
+@@ -1207,6 +1287,9 @@ ggml_metal_t ggml_metal_init(ggml_metal_device_t dev, bool prefetch) {
+         if (!props_dev->has_unified_memory) {
+             const char * v = TOSH_ENV("TOSH_MTL_PREFILL_CB");
+             res->n_cb_prefill = MAX(1, MIN(v ? atoi(v) : 4, GGML_METAL_MAX_COMMAND_BUFFERS));
++            const char * t = TOSH_ENV("TOSH_MTL_CB_TARGET_MS");
++            res->cb_target_ms = t ? MAX(0, atoi(t)) : 50;
++            res->cb_est = (struct tosh_cb_est *) calloc(1, sizeof(struct tosh_cb_est));
+         }
+ 
+         {
+@@ -4381,6 +4464,35 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+         }
+     }
+ 
++    // tosh: bound each batch buffer's GPU time (see tosh_cb_est): from the measured cost per
++    // token x node, take as many buffers as keep each under cb_target_ms, and shrink the main
++    // thread's share so it is not the longest one
++    struct tosh_cb_graph * cbg = NULL;
++    const int64_t cb_n_tokens = ggml_metal_graph_n_tokens(gf);
++    if (ctx->cb_est != NULL && ctx->n_cb > ctx->n_cb_set && cb_n_tokens >= 32) {
++        const uint64_t ps = atomic_load_explicit(&ctx->cb_est->ps_per_tn, memory_order_relaxed);
++        if (ctx->cb_target_ms > 0 && ps > 0) {
++            const double pred_ms = (double) ps*(double) cb_n_tokens*(double) gf->n_nodes/1e9;
++            const int    need    = (int) ceil(pred_ms/ctx->cb_target_ms);
++            ctx->n_cb = MAX(ctx->n_cb, MIN(need - 1, GGML_METAL_MAX_COMMAND_BUFFERS));
++        } else if (ctx->cb_target_ms > 0) {
++            // nothing measured yet: the first batch graph was the longest buffer (1.5-4.3 s on
++            // a 4B), so cut it as finely as allowed until a measurement exists
++            ctx->n_cb = GGML_METAL_MAX_COMMAND_BUFFERS;
++        }
++        cbg = (struct tosh_cb_graph *) calloc(1, sizeof(struct tosh_cb_graph));
++        if (cbg != NULL) {
++            cbg->est       = ctx->cb_est;
++            cbg->n_tokens  = cb_n_tokens;
++            cbg->n_nodes   = gf->n_nodes;
++            cbg->n_bufs    = ctx->n_cb + 1;
++            cbg->target_ms = ctx->cb_target_ms;
++            cbg->stats     = tosh_cb_stats_on();
++            snprintf(cbg->name, sizeof(cbg->name), "%s", ctx->name);
++            atomic_store_explicit(&cbg->n_left, 1, memory_order_relaxed); // released after the buffers are attached
++        }
++    }
++
+     // number of threads in addition to the main thread
+     const int n_cb = ctx->n_cb;
+ 
+@@ -4391,6 +4503,9 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+     if (n_main_env < 0 && ctx->adapt_n_main) {
+         n_main = ggml_metal_adapt_n_main(ctx, gf->n_nodes, n_main);
+     }
++    if (cbg != NULL && n_main_env < 0 && n_cb > ctx->n_cb_prefill) {
++        n_main = MIN(n_main, MAX(1, gf->n_nodes/(n_cb + 1)));
++    }
+     ctx->n_cb_last = n_cb;
+ 
+     // keep the memory wired
+@@ -4563,6 +4678,7 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+                     free(cbp);
+                 }
+             }
++            tosh_cb_release(cbg);
+ 
+             // timeline: host span of this call (kind 22)
+             if (tl_on) { tosh_dmoe_timeline(22, gf->n_nodes, tl_enter, tosh_dmoe_host_seconds()); }
+@@ -4595,6 +4711,7 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+             }
+             ggml_metal_encode_pending_waits(ctx, cmd_buf);
+             tosh_cbp_attach(cmd_buf, cbp);
++            tosh_cb_attach(cmd_buf, cbg);
+ 
+             if (ctx->cmd_bufs[n_cb].obj) {
+                 [ctx->cmd_bufs[n_cb].obj release];
+@@ -4629,6 +4746,7 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+             id<MTLCommandBuffer> cmd_buf = [queue commandBufferWithUnretainedReferences];
+             ggml_metal_encode_pending_waits(ctx, cmd_buf);
+             tosh_cbp_attach(cmd_buf, cbp);
++            tosh_cb_attach(cmd_buf, cbg);
+             [cmd_buf retain];
+ 
+             if (ctx->cmd_bufs[cb_idx].obj) {
+@@ -4737,6 +4855,7 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
+             free(cbp);
+         }
+     }
++    tosh_cb_release(cbg);
+ 
+     // timeline: host span of this call (kind 22)
+     if (tl_on) { tosh_dmoe_timeline(22, gf->n_nodes, tl_enter, tosh_dmoe_host_seconds()); }
