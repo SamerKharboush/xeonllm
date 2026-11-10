@@ -1,7 +1,7 @@
 # 10: engine: prompt offload on, with a compute-buffer cap
 
 Type: task (Mocca)
-Status: done in a worktree (diff in evidence/10; enters patches/ as core/0081 after the beta.7 tag)
+Status: done in a worktree (diff in evidence/10; enters patches/ as core/0082 after the beta.7 tag)
 Spec: `../spec.md`. Evidence: beta7 tickets 03 and 08.
 
 ## What
@@ -28,7 +28,7 @@ was one `#include <cstdlib>`. The orchestrator wrote the guard: `src/llama-conte
 worst-case pp graph with `graph_reserve(..., split_only=true, sizes)` (→ `ggml_backend_sched_reserve_size`,
 no allocation), takes the largest GPU-device backend, and if it exceeds `TOSH_OFFLOAD_MAX_COMPUTE_MB`
 (default 1536) turns op offload off for the context and recreates the sched; logs either way.
-Diff: `evidence/10/0081-offload-with-a-compute-buffer-cap.diff` (scheduler fix + guard + op test).
+Diff: `evidence/10/0082-offload-with-a-compute-buffer-cap.diff` (scheduler fix + guard + op test).
 
 **Gate (card 1, `GGML_METAL_DEVICE_INDEX=1 -dev MTL0`, llama-cli `-ngl 0 -t 12 -st --temp 0 -n 64 -b 512
 -ub 512`, the 30x Paris prompt, `TOSH_FA_AMD=1`, N=1 per cell, no gpuRestart):**

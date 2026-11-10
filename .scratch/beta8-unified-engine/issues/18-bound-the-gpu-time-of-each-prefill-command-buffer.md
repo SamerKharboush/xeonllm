@@ -1,6 +1,6 @@
 # 18: bound the GPU time of each prefill command buffer (the 2026-11-07 panic)
 
-Type: bug (safety) · Status: engine part done in a worktree (diff evidence/18/0082-*.diff); app ubatch and the 14B gate open · Priority: before beta.7 ships
+Type: bug (safety) · Status: engine part done in a worktree (diff evidence/18/0081-*.diff); app ubatch and the 14B gate open · Priority: before beta.7 ships
 Evidence: `evidence/gates-beta7/out/set/Qwen3-14B-Q4_K_M/*-layer.server.log`, panic
 `Kernel-2026-11-07-144047.panic` ("no successful checkins from WindowServer ... in 120 seconds").
 
@@ -16,7 +16,7 @@ Gate: max command-buffer GPU ms logged per graph, card 1, before/after; then the
 
 ## 2026-11-10: engine part (orchestrator; Mocca's three runs stopped after a few minutes with no usable diff)
 
-Change (`ggml-metal-context.m`, diff `evidence/18/0082-bound-each-batch-command-buffer.diff`):
+Change (`ggml-metal-context.m`, diff `evidence/18/0081-bound-each-batch-command-buffer.diff`):
 GGML_METAL_MAX_COMMAND_BUFFERS 8 -> 64; every buffer of a batch graph gets a completion handler that
 adds its GPU time; when a graph's last buffer completes, a per-device estimate of GPU ps per
 (token x node) is updated (takes a higher value at once, decays 1/16 per graph); the next batch graph

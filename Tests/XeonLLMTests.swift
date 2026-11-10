@@ -2090,10 +2090,11 @@ final class ServerSettingsTests: XCTestCase {
         s.ubatch = 2048
 
         // a dense model measures slower with a big micro-batch, MoE gains with the experts
-        // wherever they are, so the gate is the model and not where they run
-        XCTAssertNil(s.effectiveUbatch)
-        XCTAssertFalse(s.arguments.contains("--ubatch-size"))
-        XCTAssertFalse(s.benchmarkArguments.contains("-ub"))
+        // wherever they are, so the user's setting is the model's and not where they run; a
+        // dense model on a card takes the short batch that bounds its command buffers (ticket 18)
+        XCTAssertEqual(s.effectiveUbatch, ServerSettings.denseCardUbatch)
+        XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "--ubatch-size")! + 1], "128")
+        XCTAssertEqual(s.benchmarkArguments[s.benchmarkArguments.firstIndex(of: "-ub")! + 1], "128")
 
         s.modelPath = model.path
         s.ncmoe = 0

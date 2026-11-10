@@ -1157,10 +1157,20 @@ struct ServerSettings {
     /// Dynamic MoE gains the most: on a 35B A3B its prefill went 317 to 1088 t/s from
     /// 512 to 2048, against 455 to 862 for the same model on plain expert offload.
     var effectiveUbatch: Int? {
+        if !routerMode && !Self.modelIsMoE(at: modelPath) {
+            return placement == .card && usesGPUs ? Self.denseCardUbatch : nil
+        }
         guard ubatch > 0 else { return nil }
-        guard routerMode || Self.modelIsMoE(at: modelPath) else { return nil }
         return ubatch
     }
+
+    /// A dense model on a card prefills in 128-token batches. One 512-token batch of a 4B on a
+    /// D700 costs 6.2 s of GPU time at an empty context and 17.7 s at 6k, and its heaviest node
+    /// (attention) cannot be cut across command buffers; on 2026-11-07 such buffers on the
+    /// display card starved WindowServer until macOS panicked (beta 8 ticket 18). At 128 the
+    /// longest buffer of a 6k prompt measured 127 ms against 497, and pp512 read 88.0 against
+    /// 82.5-83.0 tok/s (4B Q4_K_M, card 1, two processes each).
+    static let denseCardUbatch = 128
     /// Template defaults for requests that set none; the request's own kwargs override them key by key.
     var defaultTemplateKwargs: String? {
         switch defaultReasoning {

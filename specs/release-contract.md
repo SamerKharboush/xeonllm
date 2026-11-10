@@ -57,6 +57,19 @@ checked on the shipped binaries, not the dev tree.
 - **The app's launch defaults.** The server log header shows `TOSH_FA_AMD=1`, the placement
   rule (`placement: card` or `host` per the ticket 67 rule), and the DFlash auto line.
 - **The data migration** from ToshLLM (see section 5).
+- **LFM3** (model/0079): LFM3-1.7B-F16 loads at `-ngl 99` on card 0 and on card 1 and answers
+  "What is the capital of France? Answer in one sentence." (temperature 0, `--jinja`) with
+  "The capital of France is Paris.", byte-identical to `-ngl 0`.
+- **AVX1 multi-row expert dots** (core/0080): a MoE model at `-ngl 0` with a prompt of more than
+  one token prints `ggml_cpu: multi-row dot ON for <type> (AVX1)`; with `GGML_CPU_NO_MULTI_DOT=1`
+  it prints nothing, and the greedy text is byte-identical either way.
+- **Bounded batch command buffers** (metal/0081 and the app's 128-token dense card batch):
+  `TOSH_MTL_CB_STATS=1` on Qwen3-4B-Q4_K_M, card 1, `-c 8192`, a ~6000-token prompt, logs every
+  batch with `max` at most 200 ms at the app's `-ub 128`, while `TOSH_MTL_CB_TARGET_MS=0 -ub 512`
+  (the control) logs a `max` above 1000 ms; the generated text is byte-identical in both. The
+  app's `args:` for a dense card launch carry `--ubatch-size 128`.
+- **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
+  of the engine environment and shows the banner (the test in `swift test` covers the path).
 
 When a new optimisation lands, add a line here with its proof-of-presence check in the same
 commit.

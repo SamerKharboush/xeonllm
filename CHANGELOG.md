@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.87.31-beta.7] - 2026-11-07
+
+A maintenance beta: a card that has started computing wrong answers is now left out, the app
+no longer talks to another program on its port, LFM3 loads, and MoE models on the host use the
+Xeon's AVX1 for their expert mat-muls. It also fixes a way a long prompt could panic the Mac.
+The llama.cpp series is 91 patches on the pin `d81235049`; the new ones are `model/0079`,
+`core/0080` and `metal/0081`.
+
+### Added
+
+- **LFM3 models load** (`model/0079`, a backport of upstream's shared LFM base and LFM3 text
+  model). LFM3-1.7B F16 answers on card 0, on card 1 and on the host with byte-identical text.
+  On each card: pp512 230.3-230.4 and tg128 23.01-23.03 tok/s (shipped-engine figures in the
+  release ticket).
+- **A card check at launch.** Each discrete card runs a short known-answer test (a multiply-add
+  and block sums). A card that answers wrong is left out of the run and named in a banner; if
+  every card fails, nothing is left out. On 2026-11-04 one D700 returned wrong results after a
+  run of GPU resets, and every answer split across it was garbage until a cold power-off.
+  `XEONLLM_CARD_FAULT=<index>` injects a failure; Settings can force a card back on.
+- **AVX1 multi-row expert dots** (`core/0080`): when several tokens of a batch go to the same
+  expert, Q6_K, Q4_K and Q8_0 weight blocks are unpacked once for all of them. Until now this
+  path was AVX2-only. Results are bit-identical to the single-row dots (36 test cases), and a
+  MoE run prints `ggml_cpu: multi-row dot ON for <type> (AVX1)`. `GGML_CPU_NO_MULTI_DOT=1`
+  turns it off. Measured effect on the 35B is small: no change resolved at up to 4 tokens per
+  verify, and at 8 the processes with it sat below those without (589 and 612 ms against 656 and
+  670 ms per verify, sd 14-45 ms, two processes per side).
+
+### Fixed
+
+- **A long prompt on a model with layers on the display card could panic the Mac.** On
+  2026-11-07 the app's launch of Qwen3-14B split by layer over both D700s at a 16384 context
+  read an ~8300-token prompt on top of ~5500 cached tokens; each prompt batch's command buffers
+  ran for seconds on card 0, WindowServer stopped answering and macOS panicked. A batch's GPU
+  time grows with the cached context (a 512-token batch of a 4B on one D700: 6.2 s at an empty
+  context, 17.7 s at 6k). Two changes:
+  - **The engine bounds each batch command buffer by its measured GPU time** (`metal/0081`): it
+    times every buffer, predicts the next batch from that, and cuts it into as many buffers as
+    keep each near 50 ms (up to 64). `TOSH_MTL_CB_TARGET_MS` sets the target (0 restores the old
+    layout); `TOSH_MTL_CB_STATS=1` logs each batch.
+  - **A dense model on a card prefills in 128-token batches**, so no single attention node is
+    longer than a buffer should be. On the 4B with a 6k prompt the longest buffer went from
+    4307 ms to 127 ms, at the same prompt rate (43.1 against 42.4 tok/s) and with identical text;
+    pp512 measured 88.0 against 82.5-83.0 tok/s (card 1, two processes each).
+- **Another program on the engine's port took the chat.** A separate llama-server on
+  127.0.0.1:8080 answered every request meant for XeonLLM's engine. The app now checks the port
+  before launch, names what holds it (command and pid) and refuses to start with a message.
+- **A DFlash drafter on another card aborted at load** when the target's output head sat in
+  a different card's memory (`spec/0073` now copies the head from another device too). Placing
+  the drafter on the idle card is still not offered: measured, it did not pay.
+
+### Changed
+
+- The app icon is yellow.
+
 ## [0.87.31-beta.6] - 2026-11-03
 
 beta.5 loaded every model and then failed in chat (ticket 74). This beta fixes every cause
