@@ -1,0 +1,16 @@
+Work in the git worktree /Users/sam/Library/Caches/xeonllm-app-wt (XeonLLM macOS app, Swift package). Leave all changes UNCOMMITTED; never commit/stash/reset/checkout/clean. Do not launch the app or any engine; only `swift build` and `swift test`. Never write to the defaults domains dev.xeonllm.app or dev.engel.toshllm.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until everything below is done, then write the final report once.
+
+The worktree already has an unfinished edit in Sources/Servers/Server.swift (around line 372): it calls `Self.promptOffloadCard(placement:isMoE:gpus:excluded:)` and `Self.modelIsMoE(at:)`, which do not exist yet, so it does not compile. Finish it:
+
+1. Add to `struct ServerSettings` (same file):
+   - `static func promptOffloadCard(placement: ModelPlacement, isMoE: Bool, gpus: [<the element type ServerController.availableGPUs() returns>], excluded: Set<Int>) -> (Int?, String)`:
+     returns (nil, reason) unless placement == .host; for MoE returns (nil, "MoE prompt offload not validated (ticket 12)"); otherwise picks among gpus that are not integrated and not in `excluded` the one with the HIGHEST index (card 1 on this Mac, the headless card; card 0 drives the display) and returns (index, "card <i>"); if none, (nil, "no healthy card").
+   - `static func modelIsMoE(at path: String) -> Bool` using the existing GGUF metadata reader (grep Sources/Models/GGUFMetadata.swift for `isMoE` and how other code reads metadata for a path); false when unreadable.
+2. In `var environment` (around line 779-870): when placement == .host and promptOffloadCard returns a card, remove GGML_METAL_DEVICES and GGML_METAL_DEVICE_LIST from env and set GGML_METAL_DEVICE_INDEX to that card. Change nothing for other placements.
+3. In the server log header (around line 2314-2335, where `gpuSel = "none (host placement)"`): for host placement write "none (host placement); prompt offload: <reason>".
+4. Tests in a new file Tests/XeonLLMTests/PromptOffloadCardTests.swift (look at an existing test that builds the GPU element type, e.g. grep -rn "availableGPUs\|isIntegrated" Tests/XeonLLMTests, to construct values): two healthy discrete cards -> 1; card 1 excluded -> 0; both excluded -> nil; MoE -> nil; placement .card -> nil; an integrated GPU is never chosen.
+5. Gates (paste the real summary lines): `swift build`; `swift test` -> "Executed N tests ..." and the names of any failing tests (the known flaky one is MCPStdioTransportTests); the new test names with their pass lines.
+
+Report: files touched (one line each), the gate lines, decisions you made.

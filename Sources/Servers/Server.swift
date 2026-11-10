@@ -369,6 +369,15 @@ struct ServerSettings {
         let planOwnsMemory = usesAutoPlan || manualFullGPU
         // A model on the host has no experts on a card to offload from.
         if ncmoe > 0 && !planOwnsMemory && usesGPUs { args += ["--n-cpu-moe", String(ncmoe)] }
+        // Prompt offload for a host-placed model runs on one healthy card's copy of
+        // the weights. MoE and the all-cards-excluded case stay off (ticket 12).
+        if placement == .host {
+            let (offloadCard, _) = Self.promptOffloadCard(placement: placement,
+                                                          isMoE: Self.modelIsMoE(at: modelPath),
+                                                          gpus: ServerController.availableGPUs(),
+                                                          excluded: CardHealth.excluded)
+            if offloadCard == nil { args.append("--no-op-offload") }
+        }
         if !usesAutoPlan, let ub = effectiveUbatch { args += ["--ubatch-size", String(ub), "--batch-size", String(ub)] }
         if usesAutoPlan { args += ["--dynamic-moe", "on"] }
         let mode = Self.loadMode(noMmap: noMmap, mlock: mlock)
@@ -776,6 +785,18 @@ struct ServerSettings {
         cards.max { $0.freeMB < $1.freeMB }?.id
     }
 
+    /// The card a host-placed model names for the prompt offload, and why not.
+    /// The card that drives the display keeps it, so the headless card takes the
+    /// prompt; an MoE model stays card-free until ticket 12 gates it.
+    static func promptOffloadCard(placement: ModelPlacement, isMoE: Bool,
+                                  gpus: [GPUDevice], excluded: Set<Int>) -> (Int?, String) {
+        guard placement == .host else { return (nil, "not a host placement") }
+        guard !isMoE else { return (nil, "MoE prompt offload not validated (ticket 12)") }
+        let candidates = gpus.filter { !$0.isIntegrated && !excluded.contains($0.index) }
+        guard let card = candidates.max(by: { $0.index < $1.index }) else { return (nil, "no healthy card") }
+        return (card.index, "card \(card.index)")
+    }
+
     var environment: [String: String] {
         var env = ProcessInfo.processInfo.environment
         env.merge(EngineExtensions.environment()) { $1 }
@@ -857,6 +878,17 @@ struct ServerSettings {
         } else if usesGPUs, gpuIndex >= 0 {
             // Pin the engine to one physical GPU by index.
             env["GGML_METAL_DEVICE_INDEX"] = String(gpuIndex)
+        } else if placement == .host {
+            // A host-placed model keeps its weights on the CPU, but its prompt can
+            // still be computed on a card: name the one healthy card for it.
+            if let card = Self.promptOffloadCard(placement: placement,
+                                                 isMoE: Self.modelIsMoE(at: modelPath),
+                                                 gpus: gpus,
+                                                 excluded: excludedCards).0 {
+                env.removeValue(forKey: "GGML_METAL_DEVICES")
+                env.removeValue(forKey: "GGML_METAL_DEVICE_LIST")
+                env["GGML_METAL_DEVICE_INDEX"] = String(card)
+            }
         }
         // The backend forces shared buffers for external GPUs, which streams weights
         // over Thunderbolt every op. Auto-override when a selected card is external;
@@ -2316,7 +2348,16 @@ final class ServerController: ObservableObject {
             : settings.placement == .expertTier
             ? "expert tier (MoE, does not fit in VRAM: one card holds attention and the hot experts, the CPU computes the rest)"
             : "card"
-        if settings.placement == .host { gpuSel = "none (host placement)" }
+        if settings.placement == .host {
+            // The cards stay out of the run, but a host-placed model can still name
+            // one of them for the prompt offload; the log says which and why not.
+            let reason = ServerSettings.promptOffloadCard(
+                placement: settings.placement,
+                isMoE: ServerSettings.modelIsMoE(at: settings.modelPath),
+                gpus: availableGPUs(),
+                excluded: CardHealth.excluded).1
+            gpuSel = "none (host placement); prompt offload: \(reason)"
+        }
         if settings.tensorSplitDowngraded {
             gpuSel += " (tensor needs \(settings.splitDeviceCount) way split of experts this model only divides \(settings.tensorSplitLimit ?? 1) ways)"
         }

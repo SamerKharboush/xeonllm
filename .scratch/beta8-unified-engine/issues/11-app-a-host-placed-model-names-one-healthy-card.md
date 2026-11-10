@@ -1,7 +1,7 @@
 # 11: app: a host-placed model names one healthy card for prompt offload
 
 Type: task (Mocca)
-Status: ready-for-agent (after 10)
+Status: done (2026-11-10; Mocca, reviewed; swift test 537, only the known MCP race)
 
 ## What
 `Sources/Servers/Server.swift` `environment` (around line 779): today a host-placed model
