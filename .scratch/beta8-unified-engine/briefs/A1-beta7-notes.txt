@@ -5,7 +5,7 @@ IMPORTANT: do not stop to write commentary between steps. Keep calling tools unt
 TASK: prepare the beta.7 release text (step A1 of .scratch/beta8-unified-engine/plan-release-beta8-compare.md). Read first:
 - CHANGELOG.md, section "## [0.87.31-beta.7]" — the source of truth for what changed. Do not add claims that are not in it or in the gate logs below.
 - dist/beta31b6-notes.md — the previous release's notes; copy its structure (title line, the fork/credit paragraph, Install, the changes, "How it was gated", "Not covered"), its tone, and its credit to ToshLLM by Engelbert Delgado.
-- The gate logs of this build: .scratch/beta8-unified-engine/evidence/gates-beta7/gates-2.log (engine gates), .scratch/beta8-unified-engine/evidence/gates-beta7/out2/cb/*.out and *.log (command-buffer proof and the 14B layer-split steps), .scratch/beta8-unified-engine/evidence/18/ (ticket 18 measurements), .scratch/beta8-unified-engine/issues/18-*.md.
+- Do NOT read the gate logs or evidence directories (they are large); every number you need is given below.
 - CLAUDE.md "Performance claims" and specs/release-contract.md section 6: every number needs its method line (engine, model and quant, ctx, batch, N, card); no percentage against a modelled ideal; never call one split mode faster than another.
 
 WRITE:

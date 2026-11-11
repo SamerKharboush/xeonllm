@@ -1,0 +1,26 @@
+version: 0.87.31-beta.7
+no-AVX2 variant: true
+[0/1] Planning build
+Building for production...
+[0/3] Write sources
+[1/3] Write swift-version--58304C5D6DBC2206.txt
+[3/4] Compiling XeonLLM AboutTab.swift
+/Users/sam/firellama/Sources/Subtitles/SubtitleVideoExporter.swift:109:46: warning: 'exportPresets(compatibleWith:)' was deprecated in macOS 13.0 [#DeprecatedDeclaration]
+107 |     nonisolated private static func preset(for composition: AVAsset,
+108 |                                            source: AVAssetTrack) async -> String {
+109 |         let available = AVAssetExportSession.exportPresets(compatibleWith: composition)
+    |                                              `- warning: 'exportPresets(compatibleWith:)' was deprecated in macOS 13.0 [#DeprecatedDeclaration]
+110 |         guard let formats = try? await source.load(.formatDescriptions),
+111 |               formats.contains(where: { CMFormatDescriptionGetMediaSubType($0) == kCMVideoCodecType_HEVC }),
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+Build complete! (395.71s)
+bundled static llama-server/llama-bench from vendor/llama.cpp/build-static/bin
+bundled math runtime (3.13.16+20261001 sympy-1.14.0 mpmath-1.3.0 numpy-2.5.3 scipy-1.18.1 x86_64, helpers c79f446d547c)
+bundled image generation engine
+bundled Whisper.cpp speech-to-text engine
+in-app updates: off
+bundled Liquid Glass icon (Assets.car + rendered icns)
+dist/XeonLLM.app/Contents/Resources/tosh-sympy/python/lib/python3.13/site-packages/scipy/linalg/_fblas.cpython-313-darwin.so: replacing existing signature
+dist/XeonLLM.app/Contents/Resources/tosh-sympy/python/lib/python3.13/site-packages/scipy/odr/__odrpack.cpython-313-darwin.so: replacing existing signature
+Done: dist/XeonLLM.app

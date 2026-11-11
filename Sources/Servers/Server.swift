@@ -1486,8 +1486,21 @@ struct ServerSettings {
     /// sit in their own tensor span two buffers, which the meta backend cannot divide.
     nonisolated static func tensorSplitLimit(forModel path: String) -> Int? {
         guard !path.isEmpty else { return nil }
+        if let arch = ggufString("general.architecture", at: path), noTensorSplitArchitectures.contains(arch) {
+            return 1
+        }
         return GGUFMetadataCache.tensorFlags(at: path).hasExpertScaleTensor ? 1 : nil
     }
+
+    /// Architectures the engine refuses to tensor-split ("LLAMA_SPLIT_MODE_TENSOR not implemented
+    /// for architecture"): vendor/llama.cpp/src/llama-arch.cpp, llm_arch_supports_sm_tensor().
+    /// LFM3 failed to load with the user's tensor split in the beta.7 stress test.
+    nonisolated static let noTensorSplitArchitectures: Set<String> = [
+        "grok", "mpt", "plamo2", "minicpm3", "gemma3n", "mamba", "mamba2", "jamba", "falcon-h1",
+        "olmo2", "olmoe", "deepseek2", "deepseek32", "hy_v4", "dots3note", "glm-dsa", "bitnet", "t5",
+        "nemotron_h", "nemotron_h_moe", "granitehybrid", "lfm3", "minimax-01", "minimax-m2",
+        "minimax-m3", "mistral4", "kimi-linear", "bailingmoe3", "kimi-k3", "glm5-next", "qwen3tts",
+    ]
 
     /// True when the model is a Mixture-of-Experts (GGUF `<arch>.expert_count` > 0).
     /// Gates the `--n-cpu-moe` control, which a dense model ignores.

@@ -43,6 +43,9 @@ The llama.cpp series is 91 patches on the pin `d81235049`; the new ones are `mod
     longer than a buffer should be. On the 4B with a 6k prompt the longest buffer went from
     4307 ms to 127 ms, at the same prompt rate (43.1 against 42.4 tok/s) and with identical text;
     pp512 measured 88.0 against 82.5-83.0 tok/s (card 1, two processes each).
+- **LFM3 failed to load with a tensor split selected** ("LLAMA_SPLIT_MODE_TENSOR not
+  implemented for architecture 'lfm3'"). The app now falls back to a layer split for every
+  architecture the engine refuses to tensor-split (the engine's own list).
 - **Another program on the engine's port took the chat.** A separate llama-server on
   127.0.0.1:8080 answered every request meant for XeonLLM's engine. The app now checks the port
   before launch, names what holds it (command and pid) and refuses to start with a message.
