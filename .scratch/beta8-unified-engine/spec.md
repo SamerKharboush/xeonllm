@@ -27,3 +27,4 @@ every model on a GPU, and lands the work. CLAUDE.md's performance rules apply to
 | 17 | GCN mat-vec: per-op decode profile, then a load-shape kernel | orchestrator, then Mocca | - |
 | 18 | bound each prefill command buffer's GPU time (the 11-07 panic) | Mocca, then orchestrator gates | - |
 | 19 | flash attention off for deep prefill on GCN (measure) | orchestrator | 18 |
+| 20 | DFlash drafter loses the tool call on the 35B | orchestrator, then Mocca | - |

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Release contract section 3 (and the section 2 proofs) on the shipped beta.7 binaries.
 cd /Users/sam/firellama
-B=dist/XeonLLM.app/Contents/Resources/bin; O=$(dirname "$0")/out; mkdir -p $O
+B=dist/XeonLLM.app/Contents/Resources/bin; O=$(dirname "$0")/${GATES_OUT:-out}; mkdir -p $O
 M=/Users/sam/models
 # GATES_SECTIONS: comma list of {identity,ops,coverage,prefill,preflight,engine,proofs,avx,repro}
 # to run; default all. A rerun of a partially passed gate skips what already passed, e.g.
@@ -39,7 +39,7 @@ echo "== 3.3 prefill bands"
 ONECARD=5905580032
 PBANDS=16,128,256,448,512,1024,2048
 for m in Qwen3-0.6B-Q8_0 Qwen3-4B-Q4_K_M Qwen3-4B-Q6_K Qwen3-8B-Q4_K_M Qwen3-14B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M LFM3-1.7B-F16 Ternary-Bonsai-2-27B-PQ2_0 Underdog-Saluki-27B-1.0-IQ2-mix; do
-  sz=$(stat -f %z $M/$m.gguf 2>/dev/null)
+  sz=$(stat -L -f %z $M/$m.gguf 2>/dev/null)
   if [ -z "$sz" ]; then echo "$m missing at $M/$m.gguf"; continue; fi
   if [ "$sz" -ge "$ONECARD" ]; then
     for sm in layer tensor; do

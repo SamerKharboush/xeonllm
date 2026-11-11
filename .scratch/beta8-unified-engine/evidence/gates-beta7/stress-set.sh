@@ -6,7 +6,7 @@
 # both cards (the stress script refuses one card). Never port 8080.
 cd /Users/sam/firellama
 G=$PWD/.scratch/beta8-unified-engine/evidence/gates-beta7
-O=$G/out/set
+O=$G/out2/set
 mkdir -p $O
 BIN=$PWD/dist/XeonLLM.app/Contents/Resources/bin
 LOGS="$HOME/Library/Application Support/XeonLLMGateTest/logs"
