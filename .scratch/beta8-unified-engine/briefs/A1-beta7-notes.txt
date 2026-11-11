@@ -1,0 +1,16 @@
+Work in the repository /Users/sam/firellama (XeonLLM, a GPL-3.0 fork of ToshLLM by Engelbert Delgado). Leave everything UNCOMMITTED: no git commit, tag, push, stash, reset or checkout. Do not run any GPU program, llama-server, llama-bench, make-app.sh, build-engines.sh or make-dmg.sh. Do not edit anything under Sources/, Tests/, patches/, vendor/, scripts/ or specs/. Do not touch /Applications or any defaults domain.
+
+IMPORTANT: do not stop to write commentary between steps. Keep calling tools until all three files are written, then write the final report once.
+
+TASK: prepare the beta.7 release text (step A1 of .scratch/beta8-unified-engine/plan-release-beta8-compare.md). Read first:
+- CHANGELOG.md, section "## [0.87.31-beta.7]" — the source of truth for what changed. Do not add claims that are not in it or in the gate logs below.
+- dist/beta31b6-notes.md — the previous release's notes; copy its structure (title line, the fork/credit paragraph, Install, the changes, "How it was gated", "Not covered"), its tone, and its credit to ToshLLM by Engelbert Delgado.
+- The gate logs of this build: .scratch/beta8-unified-engine/evidence/gates-beta7/gates-2.log (engine gates), .scratch/beta8-unified-engine/evidence/gates-beta7/out2/cb/*.out and *.log (command-buffer proof and the 14B layer-split steps), .scratch/beta8-unified-engine/evidence/18/ (ticket 18 measurements), .scratch/beta8-unified-engine/issues/18-*.md.
+- CLAUDE.md "Performance claims" and specs/release-contract.md section 6: every number needs its method line (engine, model and quant, ctx, batch, N, card); no percentage against a modelled ideal; never call one split mode faster than another.
+
+WRITE:
+1. dist/beta31b7-notes.md — the release notes for "XeonLLM 0.87.31-beta.7 (no-AVX2, AVX1 engine)". Must include: the 2026-11-07 panic and its fix (metal/0081 + the 128-token dense card batch) with the measured numbers from the logs (4B, card 1, ~6000-token prompt: longest command buffer 4303.4 ms with the old layout vs 126.6 ms shipped, prompt 42.5 vs 43.1 t/s, same text; 14B layer split over both cards at -c 16384: longest buffer 172.7 / 250.1 / 349.9 ms at ~4k / 8k / 13k-token prompts, no timeouts); LFM3; the launch card check; AVX1 multi-row expert dots (with its small, unresolved effect stated honestly as in CHANGELOG); the port check; the drafter-head copy; the yellow icon; the gate summary (every op 13983/13983 and FA 1993/1993 on each card, 0 missing kernels, 91 of 91 patches, 0 AVX2/FMA, preflight, test-engine, swift test with only the known MCPStdioTransportTests race). Leave a clearly marked placeholder line "STRESS: <orchestrator fills in>" and "DMG sha256: <orchestrator fills in>" where those results go; do not invent them.
+2. dist/checksums-b7.txt — leave it with the single line "<orchestrator fills in after the final DMG>" (the DMG may be rebuilt).
+3. README.md — change only the "Fork release" block near the top (lines ~18-22) from v0.87.31-beta.6 to v0.87.31-beta.7 (download URL, notes URL, checksums URL), keeping every other line.
+
+REPORT: the three files with one line each on what changed; every number you put in the notes with the file it came from; anything in CHANGELOG you could not find evidence for in the logs.
