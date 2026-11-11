@@ -68,6 +68,12 @@ checked on the shipped binaries, not the dev tree.
   batch with `max` at most 200 ms at the app's `-ub 128`, while `TOSH_MTL_CB_TARGET_MS=0 -ub 512`
   (the control) logs a `max` above 1000 ms; the generated text is byte-identical in both. The
   app's `args:` for a dense card launch carry `--ubatch-size 128`.
+- **Prompt offload for host-placed models, with a compute-buffer cap** (core/0082 and the app's
+  host-placement card, beta 8 tickets 10/11): gemma4 12B Q8_0 at `-ngl 0 -c 2048` on card 1 logs
+  `op offload on: MTL0_Private compute buffer ... cap 1536 MiB` and its prompt rate is above
+  `--no-op-offload`'s, with byte-identical text; at the model's default context it logs
+  `op offload off: ... would be ... MiB` and no `failed to allocate` line. The app's server log
+  header for a host-placed dense model names `prompt offload: card <i>`.
 - **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
   of the engine environment and shows the banner (the test in `swift test` covers the path).
 

@@ -1,7 +1,7 @@
 # 10: engine: prompt offload on, with a compute-buffer cap
 
 Type: task (Mocca)
-Status: done in a worktree (diff in evidence/10; enters patches/ as core/0082 after the beta.7 tag)
+Status: landed as core/0082 (2026-11-11, after the beta.7 tag); 92 of 92 apply
 Spec: `../spec.md`. Evidence: beta7 tickets 03 and 08.
 
 ## What
