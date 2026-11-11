@@ -1,0 +1,34 @@
+Work in /Users/sam/firellama (XeonLLM). This is a MEASUREMENT ticket (beta 8 ticket 12). You may run the commands below; you write results only under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/12/. Never git commit/tag/push/stash/reset/checkout. Do not edit Sources/, Tests/, patches/, specs/, dist/ or vendor/ sources.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 1 h 45 min stop and report what you have.
+
+<safety — hard rules; this Mac froze twice this month>
+1. Before anything: `ls -t /Library/Logs/DiagnosticReports/ | head -3` and note the newest names. After every step check again; if a new *.panic, *watchdog*, or *.gpuRestart file appears, STOP all work and report it first.
+2. One heavy job at a time: never run two GPU programs, or a build and a GPU program, at the same time. Nothing GPU-side in the background.
+3. GPU programs only on card 1: `GGML_METAL_DEVICE_INDEX=1` and `-dev MTL0`. Wrap each in `perl -e 'alarm 1800; exec @ARGV' <cmd>`.
+4. The model: /Users/sam/models/Ornith-1.0-35B-GGUF/ornith-1.0-35b-Q6_K.gguf (28.5 GB). ALWAYS `-ngl 0` (weights on the host). Never put its layers on a card.
+5. Do not touch 127.0.0.1:8080, /Applications, or any defaults domain. Builds use 8 jobs at most.
+</safety>
+
+<why>
+Patch core/0082 (now in patches/llama/core/) turns on "prompt offload": with weights on the host (-ngl 0), large prompt batches run their mat-muls on a GPU from copies of the weights, guarded by a cap on the GPU's compute buffer (TOSH_OFFLOAD_MAX_COMPUTE_MB, default 1536; the log says "op offload on: ..." or "op offload off: ... would be ..."). On the dense gemma4 12B it raised prompt speed from 12.9 to 21.3 tok/s with byte-identical text. MoE models use MUL_MAT_ID; whether offload is correct and pays there is unknown. This ticket measures it on the 35B MoE.
+</why>
+
+<steps>
+1. Build the dev engine with the whole series (it re-applies patches/llama/* to vendor/llama.cpp and builds into vendor/llama.cpp/build-static/bin):
+   cd /Users/sam/firellama && TOSH_AVX1=1 TOSH_BUILD_JOBS=8 ./scripts/build-engines.sh > .scratch/beta8-unified-engine/evidence/12/build.log 2>&1; echo rc=$?
+   Then: B=/Users/sam/firellama/vendor/llama.cpp/build-static/bin; check `grep -c "op offload" <(strings $B/llama-server)` > 0.
+2. Text, greedy, 400 tokens, offload on vs off, card 1. Prompt file: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/18/prompt4k.txt.
+   For po in on off (off adds --no-op-offload):
+   GGML_METAL_DEVICE_INDEX=1 TOSH_FA_AMD=1 GGML_SCHED_DEBUG=2 perl -e 'alarm 1800; exec @ARGV' $B/llama-cli -m <model> -dev MTL0 -ngl 0 $flag -c 8192 -t 12 -b 512 -ub 512 -st --temp 0 -n 400 -f <prompt> -s 1 -v > evidence/12/text-$po.out 2> evidence/12/text-$po.err
+   Record: the "op offload" log line, the count of `MUL_MAT_ID):` and `MUL_MAT):` lines on `[ MTL0` in each run (grep the .err), any "failed to allocate" line, and whether the generated text (the part from "[Start thinking]" to "[ Prompt", without that last line) is byte-identical (cmp). If it differs, give the first differing character offset and 200 characters of each.
+3. Prompt speed, llama-bench, card 1, alternating, 3 processes per side:
+   for rep in 1 2 3; do for nopo in 0 1; do GGML_METAL_DEVICE_INDEX=1 TOSH_FA_AMD=1 perl -e 'alarm 1800; exec @ARGV' $B/llama-bench -m <model> -dev MTL0 -ngl 0 -nopo $nopo -t 12 -p 512 -n 0 -b 512 -ub 512 -r 3 -fa 1 -o csv 2>>evidence/12/bench.err | tail -1 >> evidence/12/bench.csv; done; done
+   (If llama-bench rejects -dev, drop it: GGML_METAL_DEVICE_INDEX=1 already pins card 1. Say which you used.)
+4. Write evidence/12/RESULT.md: a method line (engine build-static sha256 prefix of llama-bench, pin d81235049 + series, model and quant, ctx/batch/ubatch, card, N, warmup discarded by llama-bench), the text table, the pp512 table (mean ± sd per process, both sides), and a one-line verdict: offload is correct on MoE (text identical or explained) and pays (both sides' process ranges do not overlap) / does not.
+No percentages against modelled numbers; just the measured values.
+</steps>
+
+<report>
+End with: each step's real output lines (log line, MTL0 counts, cmp result, the six pp512 rows), the newest DiagnosticReports name before and after, and anything you could not run.
+</report>
