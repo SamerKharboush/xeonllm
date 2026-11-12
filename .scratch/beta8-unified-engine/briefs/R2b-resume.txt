@@ -1,0 +1,7 @@
+Continue R2 with the same rules as before (same brief, same safety; you are in the same session). The sections identity, ops, coverage and prefill are done and reviewed; do NOT rerun them. The 35B host abort is a separate ticket the orchestrator will open; do not investigate it now.
+
+Run the remaining sections in this order: preflight, engine, proofs, proofs8, avx, repro. Your shell tool timed out at 50 min last time, so start EVERY section like this and poll:
+  cd /Users/sam/firellama; nohup env GATES_SECTIONS=S bash .scratch/beta8-unified-engine/evidence/gates-beta8/gates.sh > .scratch/beta8-unified-engine/evidence/gates-beta8/gates-S.log 2>&1 &
+then every 3-5 minutes `tail -5` that log, until "GATES DONE" is in it (or "NEW CRASH REPORT": stop everything and report). Only then start the next section. Never two sections at once.
+
+Then append the results to .scratch/beta8-unified-engine/evidence/gates-beta8/R2-RESULT.md and report as the original brief's <report> asks, for these six sections. Quote lines from the logs; invent nothing. Stop at 2 h 30 min from now and report what you have.

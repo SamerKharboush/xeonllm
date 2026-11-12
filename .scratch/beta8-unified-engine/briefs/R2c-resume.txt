@@ -1,0 +1,15 @@
+Good catch on `env ... al` — that was the orchestrator's script bug. It is fixed in gates.sh (lines 85 and 91 now read `al 900 env $e=1 ...` / `al 1800 env $X ...`). Same rules and safety as before; same session. Do not edit any script.
+
+Part 1. Rerun, one at a time, with the nohup + poll pattern: GATES_SECTIONS=proofs (log gates-proofs.log) then GATES_SECTIONS=proofs8 (log gates-proofs8.log; it reruns 0084 too, that is fine). Quote the six tg128 lines and the four 0083 rows (pp512 @ d6144 and tg128 @ d6144 per process) and "0083 text identical".
+
+Part 2. A/B of the 0078 repro, because the shipped beta 8 took 751.9 s (prompt eval 8.70 tok/s, decode 0.49 tok/s) where beta.7 took 334.8 s (17.17 / 3.39) on the same request. Three engines:
+  b8   = B=/Users/sam/firellama/dist/XeonLLM.app/Contents/Resources/bin  (no extra env)
+  b7   = B=/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/beta7-bin   (the beta.7 engine, extracted from its DMG; sha256 prefix 1a68d3efcbf476e7)
+  b8w64 = the b8 bin with TOSH_FA_PF_W64=1 in the environment (metal/0083's old prefill block)
+Order, strictly one after another: b8-1, b7-1, b8w64-1, b8-2, b7-2. Each run, from /Users/sam/firellama:
+  ( uptime; ps -Ao %cpu,comm -r | head -6 ) > .scratch/beta8-unified-engine/evidence/gates-beta8/out/repro-ab/<label>.load 2>&1   (mkdir -p the dir first)
+  nohup env B=<bin> LOGDIR=.scratch/beta8-unified-engine/evidence/gates-beta8/out/repro-ab [TOSH_FA_PF_W64=1 only for b8w64] perl -e 'alarm 1800; exec @ARGV' bash .scratch/beta8-unified-engine/evidence/gates-beta8/repro.sh <label> > .scratch/beta8-unified-engine/evidence/gates-beta8/out/repro-ab/<label>.run 2>&1 &
+  poll until the .run file has the "<label>:" line (up to ~15 min), then `ls -t /Library/Logs/DiagnosticReports/ | head -3` (new panic/watchdog/gpuRestart: STOP and report), then the next run.
+For each run quote from repro-<label>.log: the `prompt eval time` and `eval time` lines, any `op offload` line, any line with `refused` or `not available`, and from <label>.run the status/seconds; and the first line of <label>.load (load averages) plus its top CPU process.
+
+Report: a table label | engine sha prefix | total s | prompt tok/s | decode tok/s | load avg | top process; say for prompt and for decode whether "b8 below b7" holds for BOTH b8 runs against BOTH b7 runs, and where b8w64 falls. No percentages. Append everything to R2-RESULT.md. Stop at 2 h from now and report what you have.

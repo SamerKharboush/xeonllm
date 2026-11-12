@@ -82,13 +82,13 @@ if want proofs; then
 echo "== section 2 proofs (wave64 lines, rows8 / full-tg controls; card 1, models under one card)"
 for c in 0 1; do grep -hE "SIMD-group width = 64 \(|wave64 decode ON|aligned mat-vec reads ON" $O/all-c$c.log | sort -u | sed "s/^/card $c: /"; done
 for e in X TOSH_MV_ROWS8_DISABLE TOSH_FULL_TG_DISABLE; do for m in Qwen3-4B-Q4_K_M Qwen3-0.6B-Q8_0; do
-  env $e=1 GGML_METAL_DEVICE_INDEX=1 al 900 $B/llama-bench -m $M/$m.gguf -ngl 99 -p 0 -n 128 -r 5 -fa 1 -o csv 2>/dev/null | tail -1 | awk -F, -v e=$e -v m=$m '{print e " " m " tg128 " $(NF-1) " sd " $NF}'; chk proofs-$e-$m; sleep 5; done; done
+  al 900 env $e=1 GGML_METAL_DEVICE_INDEX=1 $B/llama-bench -m $M/$m.gguf -ngl 99 -p 0 -n 128 -r 5 -fa 1 -o csv 2>/dev/null | tail -1 | awk -F, -v e=$e -v m=$m '{print e " " m " tg128 " $(NF-1) " sd " $NF}'; chk proofs-$e-$m; sleep 5; done; done
 fi
 if want proofs8; then
 echo "== metal/0083 decomposed prefill on 64-lane cards (card 1, Qwen3-4B-Q4_K_M, -ub 128)"
 for arm in new w64; do for p in 1 2; do
   if [ $arm = w64 ]; then X=TOSH_FA_PF_W64=1; else X=XEONLLM_NOOP=1; fi
-  env $X GGML_METAL_DEVICE_INDEX=1 al 1800 $B/llama-bench -m $M/Qwen3-4B-Q4_K_M.gguf -ngl 99 -fa 1 -ub 128 -p 512 -n 128 -d 6144 -r 3 -o csv > $O/p83-$arm-p$p.csv 2> $O/p83-$arm-p$p.err
+  al 1800 env $X GGML_METAL_DEVICE_INDEX=1 $B/llama-bench -m $M/Qwen3-4B-Q4_K_M.gguf -ngl 99 -fa 1 -ub 128 -p 512 -n 128 -d 6144 -r 3 -o csv > $O/p83-$arm-p$p.csv 2> $O/p83-$arm-p$p.err
   echo "0083 $arm process $p rc=$?"; awk -F, 'NR>1{print "  " $(NF-3) " " $(NF-2) " -> " $(NF-1) " sd " $NF}' $O/p83-$arm-p$p.csv; chk p83-$arm-p$p; sleep 5
 done; done
 python3 - $O/req83.json <<'PY'

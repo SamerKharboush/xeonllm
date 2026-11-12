@@ -1,0 +1,28 @@
+Work in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-fa (XeonLLM fork series 0001-0084 committed locally on pin d81235049; build dir build-fa configured). You may edit source there (leave it UNCOMMITTED; never commit/stash/reset/checkout/clean/worktree). Write results under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/22/ (create it). Do not edit anything under /Users/sam/firellama.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h 15 min stop and report what you have. Every claim must point to a file you saved; a previous report on another ticket claimed results that were never saved and was rejected.
+
+<safety — hard rules; this Mac froze twice this month>
+1. Before anything and after every GPU program: `ls -t /Library/Logs/DiagnosticReports/ | head -3`. A new *.panic, *watchdog* or *.gpuRestart: STOP all work and report it first.
+2. One heavy job at a time: never a GPU program during a build, never two GPU programs. Build with -j8 at most (cmake --build build-fa -j8 --target llama-bench llama-cli). Your shell tool times out at ~50 min: run anything long with nohup ... & and poll its log.
+3. Card 1 only: `GGML_METAL_DEVICE_INDEX=1` on every GPU program. Wrap every GPU program in `perl -e 'alarm 1800; exec @ARGV' <cmd>`.
+4. Model: /Users/sam/models/Ornith-1.0-35B-GGUF/ornith-1.0-35b-Q6_K.gguf ONLY, ALWAYS `-ngl 0` (weights on the host; op offload copies only the experts a batch uses). No other model.
+5. Never touch 127.0.0.1:8080, /Applications, or any defaults domain.
+</safety>
+
+<bug>
+Ticket /Users/sam/firellama/.scratch/beta8-unified-engine/issues/22-moe-host-offload-expert-id-assert.md (read it). The beta 8 llama-bench with this model at `-ngl 0 -fa 1 -n 0 -r 1` aborted at pp2048 (default -b 2048 -ub 512): ggml/src/ggml-backend.cpp ~2193 `GGML_ASSERT(id >= 0 && id < n_expert)` in the used-expert copy for an offloaded MUL_MAT_ID whose weights are in a host buffer. pp16..pp1024 passed. Op offload only started to happen in this fork with core/0082 (patches/llama/core/0082-core-prompt-offload-with-a-compute-buffer-cap.patch in /Users/sam/firellama: the scheduler change in ggml_backend_sched_backend_id_from_cur and the compute-buffer cap in llama_context::sched_reserve).
+</bug>
+
+<steps>
+1. Build (S=build-fa/bin), record sha256 prefixes of llama-bench and llama-cli.
+2. Reproduce, card 1, each a separate process, save csv+err under evidence/22/repro/: (a) `-ngl 0 -fa 1 -p 2048 -n 0 -r 1` twice; (b) the same with `--no-op-offload 1` (read `llama-bench --help` for the flag spelling); (c) `-p 2048 -b 512 -ub 512`; (d) `-p 2048 -ub 256`; (e) `-p 4096 -n 0 -r 1` only if (a) passes both times. Table: run, rc, the assert line or the pp row.
+3. Diagnose (reading plus at most a few temporary LOG lines you remove afterwards): where is the ids tensor of the failing MUL_MAT_ID computed (which backend: the router mul_mat / argsort / top-k), is it read before that backend finished (the `ggml_backend_synchronize(ids_backend)` and the input-copy loop just above the assert), and which id value is out of range (log the bad id, n_expert, i0/i1, the ids tensor name and its backend, once). Say what the root cause is, with file:line, or say you could not find it.
+4. Fix with the smallest correct change. If you found a real root cause (e.g. a missing synchronization or a wrong tensor read), fix that. If not, the fallback is: keep MUL_MAT_ID with host weights out of op offload by default (the app already keeps MoE off it, ticket 12), with env `TOSH_OFFLOAD_MOE=1` to allow it; say which you did and why. Dense MUL_MAT offload (core/0082's purpose) must stay on.
+5. Rebuild; rerun (a) twice, (b) once, and the full gate row `-ngl 0 -fa 1 -p 16,128,256,448,512,1024,2048 -n 0 -r 1` once: all must finish rc=0 with 7 rows. Then a text check: llama-cli `-m <35B> -ngl 0 -c 8192 -t 12 -fa on -st --temp 0 -s 1 -n 64 -f /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/18/prompt6k.txt` with the fixed build, offload default vs `--no-op-offload`; save both, say whether the generated text is identical (it may legitimately differ GPU-vs-CPU; just report the first differing char).
+6. Write evidence/22/RESULT.md: sha256 prefixes before/after, the repro table, root cause (or "not found"), the diff, the after-fix table, the text check, DiagnosticReports names before and after.
+</steps>
+
+<report>
+End with `git -C /Users/sam/Library/Caches/xeonllm-wt-fa diff`, the tables, the root cause, and anything you could not run and why.
+</report>
