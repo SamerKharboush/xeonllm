@@ -9,3 +9,4 @@ icon-1024.png
 /experiments/
 __pycache__/
 .scratch/firellama-maxperf/evidence/gates-beta6/models35/
+.scratch/beta8-unified-engine/evidence/gates-beta8/build-engines*.log

@@ -1,0 +1,24 @@
+== date: Fri Nov 13 00:44:56 CET 2026
+== dmg: dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg
+-- plist --
+  "CFBundleIdentifier" => "dev.xeonllm.app"
+  "CFBundleShortVersionString" => "0.87.31-beta.8"
+  "TOSHNoAVX2" => 1
+  "TOSHUpdatesDisabled" => 1
+-- codesign --
+verify-ok
+-- AVX2/FMA mnemonic counts (must be 0) --
+dist/XeonLLM.app/Contents/Resources/bin/llama-server 0
+dist/XeonLLM.app/Contents/Resources/bin/llama-bench 0
+dist/XeonLLM.app/Contents/Resources/bin/llama-perplexity 0
+dist/XeonLLM.app/Contents/Resources/bin/test-backend-ops 0
+-- banner --
+XeonLLM engine %s (app %s)
+-- sha256 --
+ad679f5cb2341067af43ef960bbd064874a899b6c87b65de2ec64c0d3750a62b  dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg
+llama-server 63eb2a01af361672
+llama-bench 93db3d0cd285ec50
+test-backend-ops b0f4e727923bd65f
+-- tunables present (>=1) --
+TOSH_FA_PF_DECOMP_MAX_MB: 1
+TOSH_OFFLOAD_MOE: 1
