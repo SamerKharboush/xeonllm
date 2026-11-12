@@ -1,0 +1,5 @@
+Same ticket, same session, same rules. Accepted: the cap stays at 256 MiB. One review fix, no GPU program at all in this step.
+
+1. In src/llama-graph.cpp the cap must apply only on 64 lanes (your own comment says so), but `decomposed_kq_bytes_ok(q, k)` is ANDed in for 32 lanes too. Change the condition so 32 lanes are unaffected, e.g. `(strcmp(metal_simd_width, "64") != 0 || decomposed_kq_bytes_ok(q, k))` (metal_simd_width is non-null there because of the earlier strcmp terms; check that this is true at that point and say so). Keep the comment accurate, and add one line: at the default -ub 512 the 14B prompt is 12.62/12.63 vs 17.07/17.15 tok/s with TOSH_FA_PF_W64=1, and at -ub 128 it is 22.61/22.56 vs 21.81/21.41 (evidence/23 repro2).
+2. Build: cd /Users/sam/Library/Caches/xeonllm-wt-fa && cmake --build build-fa -j8 --target llama-server llama-bench 2>&1 | tail -5. Nothing else heavy while it builds. No GPU program.
+3. Report: `git diff` of the worktree, the build tail, and the `shasum -a 256 | cut -c1-16` of both binaries. Do not commit.

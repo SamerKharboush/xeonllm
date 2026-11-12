@@ -187,3 +187,93 @@ cap, and the buffer did not need to grow past the reservation.
 
 - 14B repro with `-v` (reserve lines at 32k): not run, time.
 - llama-bench `-d 0,2048,6144` (ticket 21's full depth sweep): only `-d 6144` was run.
+---
+
+# 23, addendum: serial re-measure (2026-11-12, 18:36-19:45)
+
+## Safety note first
+
+My first attempt at the ticket-21 bench (group C of the previous section) ran two llama-bench
+processes at the same time (18:02-18:10, `bench/bench.log` interleaves the `b06-ub512` and
+`b4-ub128` arms; the orchestrator monitor logged 2 llama-bench processes for 9 minutes). That
+violated the one-GPU-program rule. Those numbers are void and are not used here.
+
+All runs in this addendum are strictly serial: `serialA.sh`, `serialBC.sh`, `serialC.sh` each
+call `waitfree()` (polls `pgrep -x llama-server` minus pid 747, and `pgrep -x llama-bench`)
+before starting, and log START/END with the clock in `serialA.log`, `serialBC.log`,
+`serialC.log`. pid 747 (`/Users/sam/llama.cpp/build-metal/bin/llama-server`, port 8080) was
+never touched. Each group also ran `ls -t /Library/Logs/DiagnosticReports/ | head -3` after every
+run (in the same logs).
+
+`new-1` (20.12 tok/s) of the earlier 14B table answered `@@@@` (ticket 24) and is excluded; its
+replacement runs are below. Code unchanged: same binaries, `llama-server` 03b09726db6ffed8,
+`llama-bench` 078d37ba20c2d2e1.
+
+## A. 14B, default ubatch (`repro.sh`, -c 32768, ub 512), LOGDIR repro2
+
+`repro2/repro-<label>.log`, `repro2/repro-<label>.out`, `repro2/run.log`.
+
+| run | start-end | status / s | first 40 chars of reasoning+content | prompt eval time | eval time |
+|---|---|---|---|---|---|
+| new-3 | 18:36:27-18:44:33 | 200 / 448.3 | `Okay, the user asked why the sky is blue` | 429811.64 ms / 5430 tokens, 12.63 tok/s | 18450.18 ms / 64 tokens, 3.41 tok/s |
+| w64-2 | 18:44:43-18:50:54 | 200 / 335.2 | `Okay, the user asked why the sky is blue` | 316672.78 ms / 5430 tokens, 17.15 tok/s | 18474.44 ms / 64 tokens, 3.41 tok/s |
+| new-4 | 18:51:05-18:59:09 | 200 / 449.0 | `Okay, the user asked why the sky is blue` | 430400.88 ms / 5430 tokens, 12.62 tok/s | 18562.80 ms / 64 tokens, 3.39 tok/s |
+| w64-3 | 18:59:20-19:05:33 | 200 / 336.5 | `Okay, the user asked why the sky is blue` | 318028.48 ms / 5430 tokens, 17.07 tok/s | 18466.26 ms / 64 tokens, 3.41 tok/s |
+
+No `@@@@` answers. `grep -c "does not match"` = 0 in all four logs (no compute buffer growth
+line printed at teardown).
+
+Verdict, prompt: both valid new (12.62, 12.63) below both valid w64 (17.07, 17.15) ->
+**new below w64**.
+
+Verdict, decode: new 3.41, 3.39; w64 3.41, 3.41 -> **not resolved** (one new below, one equal).
+
+Why: at ub 512 the cap only holds while n_kv <= 3276 (`512 * n_kv * 40 * 4 <= 256 MiB`), so the
+first ~2.5k tokens take the decomposed route and the rest flash attention. Per-batch progress
+lines show the mixed route is the slow one at this size:
+`prompt processing, n_tokens = 2048 ... 86.39 s / 23.71 tokens per second` (new-3) vs
+`68.62 s / 29.85` (w64-2). The cap therefore recovers part of the loss (12.6 vs 8.73 shipped
+beta 8) but not beta.7 speed (17.1), which is pure flash attention.
+
+## B. 14B at the app's dense batch (`--ubatch-size 128 --batch-size 128`), LOGDIR repro2
+
+| run | start-end | status / s | first 40 chars | prompt eval time | eval time |
+|---|---|---|---|---|---|
+| new128-1 | 19:05:46-19:10:40 | 200 / 258.5 | `Okay, the user asked why the sky is blue` | 240115.47 ms / 5430 tokens, 22.61 tok/s | 18330.50 ms / 64 tokens, 3.44 tok/s |
+| w64128-1 | 19:10:51-19:15:54 | 200 / 267.5 | `Okay, the user asked why the sky is blue` | 249018.03 ms / 5430 tokens, 21.81 tok/s | 18482.25 ms / 64 tokens, 3.41 tok/s |
+| new128-2 | 19:16:05-19:20:59 | 200 / 259.1 | `Okay, the user asked why the sky is blue` | 240678.04 ms / 5430 tokens, 22.56 tok/s | 18408.86 ms / 64 tokens, 3.42 tok/s |
+| w64128-2 | 19:21:10-19:26:18 | 200 / 272.0 | `Okay, the user asked why the sky is blue` | 253623.63 ms / 5430 tokens, 21.41 tok/s | 18352.49 ms / 64 tokens, 3.43 tok/s |
+
+No `@@@@`. `grep -c "does not match"` = 0 in all four logs.
+
+At ub 128 the whole prompt is under the cap (`128 * 6784 * 40 * 4` = 139 MB), so the new arm is
+pure decomposed.
+
+Verdict, prompt: both new (22.56, 22.61) above both w64 (21.41, 21.81) -> **new above w64**.
+
+Verdict, decode: new 3.44, 3.42; w64 3.41, 3.43 -> **not resolved**.
+
+## C. llama-bench, card 1, one process at a time, `-r 3` (`bench2/`)
+
+Each arm was run twice; both runs write the same file name (`bench2/<tag>-<arm>.csv`), so the
+file kept the second run and the first was overwritten. One valid run per arm is therefore on
+disk; the START/END log shows both runs completed (`serialC.log`).
+
+| model | ub | arm | pp512 tok/s (stddev) | tg128 tok/s (stddev) |
+|---|---|---|---|---|
+| Qwen3-0.6B-Q8_0 | 512 | new (19:28:35-19:29:13) | 236.066267 (0.036113) | 39.309697 (0.297544) |
+| Qwen3-0.6B-Q8_0 | 512 | w64 (19:29:21-19:30:32) | 86.285925 (0.041129) | 39.270653 (0.285530) |
+| Qwen3-4B-Q4_K_M | 128 | new (19:37:29-19:40:04) | 56.378932 (0.024010) | 12.129962 (0.007613) |
+| Qwen3-4B-Q4_K_M | 128 | w64 (19:40:12-19:44:09) | 27.610843 (0.000885) | 12.140996 (0.001457) |
+
+Both pp512 rows: new above w64, one run per arm. Decode rows differ by less than the spread
+seen in group A/B and are not a gate criterion here.
+
+## DiagnosticReports
+
+After the run the three newest entries are `XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag`,
+`codesign_2026-11-11-211515`, `cp_2026-11-11-092927`, with `Kernel-2026-11-11-083524.panic`
+fourth. No new `*.panic`, `*watchdog*` or `*.gpuRestart` appeared at any point (`serialA.log`,
+`serialBC.log`, `serialC.log` each carry the top-3 after every run). The new `XeonLLM_...diag`
+is a Microstackshots "disk writes" report for `/Applications/XeonLLM.app` (version
+0.87.31-beta.7, PID 35464, event `disk writes`), i.e. the user's own app, not a GPU fault.

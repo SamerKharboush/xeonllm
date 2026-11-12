@@ -1,0 +1,41 @@
+START b06 new 19:26:28
+END b06 new 19:27:07 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b06 w64 19:27:15
+END b06 w64 19:28:26 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b06 new 19:28:35
+END b06 new 19:29:13 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b06 w64 19:29:21
+END b06 w64 19:30:32 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b4 new 19:30:41
+END b4 new 19:33:16 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b4 w64 19:33:24
+END b4 w64 19:37:21 rc=0
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+Kernel-2026-11-11-083524.panic
+START b4 new 19:37:29
+END b4 new 19:40:04 rc=0
+XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+START b4 w64 19:40:12
+END b4 w64 19:44:09 rc=0
+XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag
+codesign_2026-11-11-211515_Sams-Mac-Pro.diag
+cp_2026-11-11-092927_Sams-Mac-Pro.diag
+DONE-C
