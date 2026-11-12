@@ -28,3 +28,4 @@ every model on a GPU, and lands the work. CLAUDE.md's performance rules apply to
 | 18 | bound each prefill command buffer's GPU time (the 11-07 panic) | Mocca, then orchestrator gates | - |
 | 19 | flash attention off for deep prefill on GCN (measure) | orchestrator | 18 |
 | 20 | DFlash drafter loses the tool call on the 35B | orchestrator, then Mocca | - |
+| 21 | decomposed prefill for head 64/128 on 64-lane cards | Mocca, orchestrator gates | 19 |
