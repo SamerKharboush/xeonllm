@@ -1,0 +1,26 @@
+diff --git a/common/sampling.cpp b/common/sampling.cpp
+index 5d42a62a5..59d904a21 100644
+--- a/common/sampling.cpp
++++ b/common/sampling.cpp
+@@ -478,7 +478,9 @@ void common_sampler_accept(struct common_sampler * gsmpl, llama_token token, boo
+     const auto tm = gsmpl->tm();
+ 
+     // grammar_should_apply() checks the reasoning budget state, so calculate this before we accept
++    // For drafted tokens that are accepted, also check if they should advance the grammar state
+     const auto accept_grammar = is_generated && grammar_should_apply(gsmpl);
++    const auto accept_grammar_for_draft = !is_generated && grammar_should_apply(gsmpl) && gsmpl->params.grammar_lazy;
+ 
+     if (gsmpl->rbudget && is_generated) {
+         llama_sampler_accept(gsmpl->rbudget, token);
+@@ -498,6 +500,11 @@ void common_sampler_accept(struct common_sampler * gsmpl, llama_token token, boo
+     if (gsmpl->grmr && accept_grammar) {
+         llama_sampler_accept(gsmpl->grmr, token);
+     }
++    
++    // Also accept drafted tokens when using lazy grammar
++    if (gsmpl->grmr && accept_grammar_for_draft) {
++        llama_sampler_accept(gsmpl->grmr, token);
++    }
+ 
+     llama_sampler_accept(gsmpl->chain, token);
+ 
