@@ -1,10 +1,18 @@
 DiagnosticReports at start: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
-Thu Nov 12 15:20:49 CET 2026
+Thu Nov 12 16:06:55 CET 2026
 == metal/0083 decomposed prefill on 64-lane cards (card 1, Qwen3-4B-Q4_K_M, -ub 128)
-0083 new process 1 rc=127
-0083 new process 2 rc=127
-0083 w64 process 1 rc=127
-0083 w64 process 2 rc=127
+0083 new process 1 rc=0
+  "9078106307" "8090681" -> "56.399458" sd "0.050254"
+  "10549716333" "2004953" -> "12.133028" sd "0.002303"
+0083 new process 2 rc=0
+  "9085361191" "2116800" -> "56.354393" sd "0.013130"
+  "10549942980" "1122913" -> "12.132767" sd "0.001291"
+0083 w64 process 1 rc=0
+  "18543577100" "121268" -> "27.610638" sd "0.000181"
+  "10546398233" "2438621" -> "12.136845" sd "0.002804"
+0083 w64 process 2 rc=0
+  "18550488438" "686137" -> "27.600351" sd "0.001021"
+  "10547803834" "267595" -> "12.135228" sd "0.000259"
 0083 text new: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
 0083 text w64: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
 0083 text identical
@@ -18,7 +26,7 @@ Thu Nov 12 15:20:49 CET 2026
 kernels one12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
 kernels two12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=0_fold=0 
 kernels two12-multi: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
-42824 /bin/zsh -c source /Users/sam/.claude/shell-snapshots/snapshot-zsh-1794382685368-g52z43.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'which'; \builtin unset -f -- 'which'; } >/dev/null 2>&1 || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /Users/sam/firellama; M=.scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2b.log; CR0=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); sleep 40; while pgrep -f "relay.mjs --brief.*R2b-resume" >/dev/null; do s=$(pgrep -f "Resources/bin/llama-server" | wc -l | tr -d '"'"' '"'"'); b=$(pgrep -x llama-bench | wc -l | tr -d '"'"' '"'"'); t=$(pgrep -x test-backend-ops | wc -l | tr -d '"'"' '"'"'); cc=$(pgrep -x clang | wc -l | tr -d '"'"' '"'"'); gs=$(pgrep -f "gates-beta8/gates.sh" | wc -l | tr -d '"'"' '"'"'); echo "$(date +%H:%M) srv=$s bench=$b tbo=$t clang=$cc gates=$gs" >> $M; [ $((s+b+t)) -gt 1 ] && echo "NOTE: $((s+b+t)) GPU programs at once" >> $M; n=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); if [ "$n" != "$CR0" ]; then echo "CRASH REPORT: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '"'"'\n'"'"' '"'"' '"'"')" >> $M; pkill -f "gates-beta8/gates.sh"; pkill -f "Resources/bin/llama-server"; pkill -x llama-bench; pkill -x test-backend-ops; break; fi; sleep 60; done; echo "monitor end $(date +%H:%M)" >> $M' < /dev/null && pwd -P >| /tmp/claude-654a-cwd
+72352 /bin/zsh -c source /Users/sam/.claude/shell-snapshots/snapshot-zsh-1794382685368-g52z43.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'which'; \builtin unset -f -- 'which'; } >/dev/null 2>&1 || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /Users/sam/firellama; M=.scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2c.log; CR0=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); sleep 20; while pgrep -f "relay.mjs --brief.*R2c-resume" >/dev/null; do s=$(pgrep -f "bin/llama-server" | grep -v "^747$" | wc -l | tr -d '"'"' '"'"'); b=$(pgrep -x llama-bench | wc -l | tr -d '"'"' '"'"'); cc=$(pgrep -x clang | wc -l | tr -d '"'"' '"'"'); echo "$(date +%H:%M) srv=$s bench=$b clang=$cc load=$(uptime | sed '"'"'s/.*averages: //'"'"')" >> $M; [ $((s+b)) -gt 1 ] && echo "NOTE: $((s+b)) GPU programs at once" >> $M; n=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); if [ "$n" != "$CR0" ]; then echo "CRASH REPORT: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '"'"'\n'"'"' '"'"' '"'"')" >> $M; pkill -f "gates-beta8/gates.sh"; pkill -f "gates-beta8/repro.sh"; pkill -f "Resources/bin/llama-server"; pkill -f "beta7-bin/llama-server"; pkill -x llama-bench; break; fi; sleep 60; done; echo "monitor end $(date +%H:%M)" >> $M' < /dev/null && pwd -P >| /tmp/claude-a1b3-cwd
 DiagnosticReports at end: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
-Thu Nov 12 15:28:43 CET 2026
+Thu Nov 12 16:27:20 CET 2026
 GATES DONE

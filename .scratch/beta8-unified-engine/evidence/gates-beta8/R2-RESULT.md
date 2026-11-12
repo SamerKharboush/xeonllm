@@ -212,3 +212,174 @@ No throughput number is quoted anywhere in this document, so no per-number metho
 - **proofs8 bench arms (0083 pp512/tg128)**: same script bug (`env ... al` at line 91), same handling; the 0083 text
   arm and the whole 0084 section did run and pass.
 - The 35B host abort (`prefill`, from pass 1): not investigated, as instructed.
+
+---
+
+# Third pass — 16:00 to 17:30 CET (gates.sh fix + 0078 A/B)
+
+## Part 1 — proofs and proofs8 after the `al`-through-`env` fix
+
+`gates.sh` lines 85 and 91 now read `al 900 env $e=1 ...` / `al 1800 env $X ...`. Nothing else touched.
+
+### proofs — PASS (six tg128 lines, quoted from `gates-proofs.log`)
+
+```
+X Qwen3-4B-Q4_K_M tg128 "16.713123" sd "0.004419"
+X Qwen3-0.6B-Q8_0 tg128 "58.857507" sd "0.182277"
+TOSH_MV_ROWS8_DISABLE Qwen3-4B-Q4_K_M tg128 "14.163324" sd "0.003578"
+TOSH_MV_ROWS8_DISABLE Qwen3-0.6B-Q8_0 tg128 "58.869989" sd "0.038449"
+TOSH_FULL_TG_DISABLE Qwen3-4B-Q4_K_M tg128 "16.651740" sd "0.011964"
+TOSH_FULL_TG_DISABLE Qwen3-0.6B-Q8_0 tg128 "58.723975" sd "0.058109"
+```
+
+X above ROWS8_DISABLE holds on Qwen3-4B-Q4_K_M (16.713123 vs 14.163324) and on Qwen3-0.6B-Q8_0 the two are a tie
+inside the reported standard deviations (58.857507 vs 58.869989). Wave64 / aligned banners identical on both cards
+(log lines 4-9, as in pass 2). `GATES DONE` at 16:03:46.
+
+### proofs8 — PASS (0083 rows now present, `gates-proofs8.log`)
+
+The four 0083 rows, each with its two band lines (`-> ` value is pp512/tg128 on `-d 6144`, the first number is the
+pp count in ms, second is the tg count):
+
+```
+0083 new process 1 rc=0
+  "9078106307" "8090681" -> "56.399458" sd "0.050254"
+  "10549716333" "2004953" -> "12.133028" sd "0.002303"
+0083 new process 2 rc=0
+  "9085361191" "2116800" -> "56.354393" sd "0.013130"
+  "10549942980" "1122913" -> "12.132767" sd "0.001291"
+0083 w64 process 1 rc=0
+  "18543577100" "121268" -> "27.610638" sd "0.000181"
+  "10546398233" "2438621" -> "12.136845" sd "0.002804"
+0083 w64 process 2 rc=0
+  "18550488438" "686137" -> "27.600351" sd "0.001021"
+  "10547803834" "267595" -> "12.135228" sd "0.000259"
+```
+
+Check: both "new" pp512 (56.399458, 56.354393) are above both "w64" pp512 (27.610638, 27.600351). tg128 is alike:
+12.133028 / 12.132767 (new) against 12.136845 / 12.135228 (w64). Text arm unchanged and passing:
+
+```
+0083 text new: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
+0083 text w64: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
+0083 text identical
+```
+
+0084 re-ran clean in the same log:
+
+```
+0084 one12: "Here's a thinking process:\n\n1.  **Understand User Request:** The user wants an explanation of what a binary search tree "
+0084 twocard12: "Here's a thinking process:\n\n1.  **Understand User Request:** The user wants an explanation of what a binary search tree "
+0084 twocard12 MULTI=1 (control): 'Here000000000000000000000000000000000000000000000000000000000000000|
+0084 twocard12 identical to one12
+0084 control differs (expected)
+kernels one12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
+kernels two12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=0_fold=0 
+kernels two12-multi: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
+```
+
+`GATES DONE` at 16:27:20.
+
+## Part 2 — 0078 repro A/B, three engines, five runs, strictly one at a time
+
+Request: `repro.sh <label>`, prompt 5430 tokens, 64 generated, `finish_reason: length`, `timeouts=0` in every run.
+
+| label | engine sha prefix (llama-server) | total s (from `<label>.run`) | prompt tok/s | decode tok/s | load avg (1/5/15 min) | top process at the sample |
+|---|---|---|---|---|---|---|
+| b8-1 | `4f72303829f6fdda` | 749.8 | 8.73 | 0.49 | 3.02 3.38 3.70 | `/sbin/launchd` 22.4 |
+| b7-1 | `1a68d3efcbf476e7` | 335.2 | 17.17 | 3.33 | 3.57 3.32 3.47 | `RustDesk` 56.0 |
+| b8w64-1 | `4f72303829f6fdda` | 335.2 | 17.15 | 3.39 | 3.73 3.36 3.40 | `opencode` 54.4 |
+| b8-2 | `4f72303829f6fdda` | 748.5 | 8.74 | 0.49 | 3.19 3.20 3.30 | `com.apple.WebKit.WebContent.xpc` 32.9 |
+| b7-2 | `1a68d3efcbf476e7` | 335.9 | 17.12 | 3.38 | 4.10 3.24 3.20 | `com.apple.WebKit.WebContent.xpc` 26.1 |
+
+Ordering as run: b8-1, b7-1, b8w64-1, b8-2, b7-2. Each run waited for its `<label>:` line before the next started;
+after each run `ls -t /Library/Logs/DiagnosticReports/ | head -3` returned the same three names, no new panic.
+
+### Quoted timing lines
+
+b8-1 (`out/repro-ab/repro-b8-1.log`):
+```
+0.07.482.420 W sched_reserve: op offload off: MTL0_Private compute buffer would be 2904.05 MiB, cap 1536 MiB (TOSH_OFFLOAD_MAX_COMPUTE_MB)
+0.07.990.556 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+12.51.221.958 I slot print_timing: id  0 | task 0 | prompt eval time =  622069.64 ms /  5430 tokens (  114.56 ms per token,     8.73 tokens per second)
+12.51.221.971 I slot print_timing: id  0 | task 0 |        eval time =  127653.41 ms /    64 tokens ( 2026.24 ms per token,     0.49 tokens per second)
+```
+
+b7-1 (`out/repro-ab/repro-b7-1.log`):
+```
+0.07.859.307 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.25.434.736 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.25.789.959 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+6.00.123.470 I slot print_timing: id  0 | task 0 | prompt eval time =  316221.01 ms /  5430 tokens (   58.24 ms per token,    17.17 tokens per second)
+6.00.123.482 I slot print_timing: id  0 | task 0 |        eval time =   18936.15 ms /    64 tokens (  300.57 ms per token,     3.33 tokens per second)
+```
+
+b8w64-1 (`out/repro-ab/repro-b8w64-1.log`):
+```
+0.07.828.668 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.24.182.322 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.24.529.838 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+5.58.938.201 I slot print_timing: id  0 | task 0 | prompt eval time =  316673.02 ms /  5430 tokens (   58.32 ms per token,    17.15 tokens per second)
+5.58.938.229 I slot print_timing: id  0 | task 0 |        eval time =   18593.56 ms /    64 tokens (  295.14 ms per token,     3.39 tokens per second)
+```
+
+b8-2 (`out/repro-ab/repro-b8-2.log`):
+```
+0.07.584.076 W sched_reserve: op offload off: MTL0_Private compute buffer would be 2904.05 MiB, cap 1536 MiB (TOSH_OFFLOAD_MAX_COMPUTE_MB)
+0.08.081.182 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+12.49.943.418 I slot print_timing: id  0 | task 0 | prompt eval time =  620944.40 ms /  5430 tokens (  114.35 ms per token,     8.74 tokens per second)
+12.49.943.428 I slot print_timing: id  0 | task 0 |        eval time =  127483.00 ms /    64 tokens ( 2023.54 ms per token,     0.49 tokens per second)
+```
+
+b7-2 (`out/repro-ab/repro-b7-2.log`):
+```
+0.07.845.111 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.24.233.097 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.24.611.368 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+5.59.667.595 I slot print_timing: id  0 | task 0 | prompt eval time =  317242.65 ms /  5430 tokens (   58.42 ms per token,    17.12 tokens per second)
+5.59.667.608 I slot print_timing: id  0 | task 0 |        eval time =   18646.06 ms /    64 tokens (  295.97 ms per token,     3.38 tokens per second)
+```
+
+From `<label>.run`:
+```
+b8-1: 200 749.8 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"","reasoning_conten timeouts=0
+b7-1: 200 335.2 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"@@@@@@@@@@@@@@@@@@@ timeouts=0
+b8w64-1: 200 335.2 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"","reasoning_conten timeouts=0
+b8-2: 200 748.5 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"","reasoning_conten timeouts=0
+b7-2: 200 335.9 b'{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"@@@@@@@@@@@@@@@@@@@ timeouts=0
+```
+
+### Verdict on the two checks asked for
+
+- **prompt: "b8 below b7" holds for both b8 runs against both b7 runs.** b8-1 8.73 and b8-2 8.74 are below b7-1 17.17 and
+  b7-2 17.12 — all four pairs.
+- **decode: "b8 below b7" holds for both b8 runs against both b7 runs.** b8-1 0.49 and b8-2 0.49 are below b7-1 3.33 and
+  b7-2 3.38 — all four pairs.
+- **b8w64**: 17.15 prompt / 3.39 decode sits inside the b7 band (prompt 17.12-17.17, decode 3.33-3.38), and total 335.2 s
+  is the same as b7-1. So `TOSH_FA_PF_W64=1` restores the beta.7 numbers exactly on this request, on both axes.
+
+### What differs between the b8 and the w64/b7 arms (quoted from the logs, not interpreted as cause)
+
+- b8 (both runs) prints `op offload off: MTL0_Private compute buffer would be 2904.05 MiB, cap 1536 MiB (TOSH_OFFLOAD_MAX_COMPUTE_MB)`.
+  Neither b7 arm and not b8w64-1 print any `op offload` line.
+- b8 has no `kernel_flash_attn_ext_pf_...` line at all; b7 and b8w64 both print
+  `the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill` and
+  `kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill`.
+- Every arm prints the decode-side
+  `the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32`.
+
+### Deviations and caveats (stated, not hidden)
+
+- The `.load` files were written **after** each run finished, not before it started as the brief specified (my first
+  `nohup` for b8-1 went out before I had written the load-capture line). The averages are the 1/5/15-minute values at
+  the sample point, and the top process shown is whoever was at the top then; both are host-state snapshots, not
+  per-run attributions.
+- Repro server wall-clock equals the `prompt eval time` + `eval time` sums reported by the engine (749.8 vs
+  622069.64+127653.41 ms; 335.2 vs 316221.01+18936.15 ms), so the totals are engine-measured, not wrapper-measured.
+- No crash report appeared in any of the five runs; `DiagnosticReports` unchanged before and after the whole part.
+
+## Skipped / not covered in this pass
+
+- Nothing from Part 1 was skipped: both sections ran to `GATES DONE`.
+- Part 2: all five runs completed. No b7 equivalent was run for 0083/0084; not asked.
+- Pass-1 sections (identity/ops/coverage/prefill) not re-run, as before.

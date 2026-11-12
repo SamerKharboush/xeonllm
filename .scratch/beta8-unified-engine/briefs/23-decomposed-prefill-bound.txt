@@ -1,0 +1,33 @@
+Work in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-fa (XeonLLM fork series 0001-0084 committed locally on pin d81235049; build dir build-fa configured). You may edit source there (leave it UNCOMMITTED; never commit/stash/reset/checkout/clean/worktree). Write results under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/23/ (create it). Do not edit anything under /Users/sam/firellama.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h 30 min stop and report what you have. Every claim must point to a file you saved. No percentages; quote measured numbers only.
+
+<safety — hard rules; this Mac froze twice this month; some runs use card 0, which drives the display>
+1. Before anything and after every GPU program: `ls -t /Library/Logs/DiagnosticReports/ | head -3`. A new *.panic, *watchdog* or *.gpuRestart: STOP all work and report it first.
+2. One heavy job at a time: never a GPU program during a build, never two GPU programs. Build with -j8 at most: `cmake --build build-fa -j8 --target llama-server llama-bench`. Your shell tool times out at ~50 min: run anything long with nohup ... & and poll its log.
+3. Wrap every GPU program in `perl -e 'alarm 1800; exec @ARGV' <cmd>`. Never put a model of 5905580032 bytes or more on one card (size with `stat -L -f %z`); the 14B (9001753376 bytes) runs ONLY over both cards as given below.
+4. Models: Qwen3-4B-Q4_K_M, Qwen3-0.6B-Q8_0 (card 1 only: GGML_METAL_DEVICE_INDEX=1, llama-bench `-dev MTL0` not needed), Qwen3-14B-Q4_K_M (both cards, only via the repro script below). All in /Users/sam/models.
+5. Never touch 127.0.0.1:8080, /Applications, or any defaults domain.
+</safety>
+
+<bug>
+Read /Users/sam/firellama/.scratch/beta8-unified-engine/issues/23-decomposed-prefill-needs-a-size-bound.md and issues/21-*.md. In src/llama-graph.cpp (~line 2927-2976) metal/0083 turned the blocked FA prefill off on 64-lane cards, so prompt batches take the decomposed route (`amd_prefill_decomposed`): KQ = mul_mat(k, q) materialises n_tokens x n_kv x n_head f32. At the app-like 14B launch (-c 32768, ub 512, 40 heads) that is ~2.7 GB and the run becomes 2x slower in prompt and 7x slower in decode (the card is overcommitted). The wins of ticket 21 were all at small KQ (4B ub128 d6144 ~111 MB; 0.6B ub512 d6144 ~222 MB).
+</bug>
+
+<change>
+On 64-lane cards only (simd width "64"; leave the 32-lane rule exactly as it is), take the decomposed route only when the KQ matrix it would build, n_tokens(q) x n_kv(k) x n_head(q) x 4 bytes, is at most a cap: default 256 MiB, env `TOSH_FA_PF_DECOMP_MAX_MB` overrides (0 or unset = default). Above the cap the batch uses flash attention exactly as beta.7 did (as with TOSH_FA_PF_W64=1). Read which tensor dims hold n_tokens / n_kv / n_head after the permutes at that point and say which you used. Keep TOSH_FA_PF_W64. Update the comment with the 14B numbers above. Note: the scheduler reserves the graph at worst case (n_kv = n_ctx), so a large context reserves the FA graph; check in a -v server log (compute buffer size lines) that a later small-n_kv decomposed batch still runs (the allocator grows the buffer) and quote the compute buffer lines.
+</change>
+
+<gates — run them yourself after the build; paste real output lines>
+B=build-fa/bin. Record sha256 prefixes of llama-server and llama-bench.
+1. The 14B repro (both cards), two runs, alternating with the old block as control:
+   new-1, w64-1, new-2 :  env B=$PWD/build-fa/bin LOGDIR=/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/23/repro [TOSH_FA_PF_W64=1 for w64] perl -e 'alarm 1800; exec @ARGV' bash /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/repro.sh <label>   (run from the worktree dir; label new-1 etc.). Quote `prompt eval time` / `eval time` lines. Pass: new within the w64 band (beta.7 engine read 17.17/17.12 prompt, 3.33/3.38 decode on this request), no `op offload off ... 2904` line.
+2. Ticket 21's wins kept (card 1, llama-bench, two processes per arm alternating, -r 3): 4B `-fa 1 -ub 128 -p 512 -n 128 -d 6144`; 0.6B `-fa 1 -ub 512 -p 512 -n 128 -d 6144`; each new vs TOSH_FA_PF_W64=1. Pass: new pp512 above w64 in both processes (shipped beta 8 read 4B 56.40/56.35 vs 27.61/27.60). Also one row above the cap: 4B `-ub 512 -p 512 -n 0 -d 6144` new vs w64 (expect alike: both take FA).
+3. Text: the shipped gate's text check with your build — llama-server on card 1, 4B, `-ngl 99 -c 8192 -ub 128 -b 2048 -fa on -t 12 --jinja --parallel 1 --cache-ram 0`, request = /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/req83.json (curl POST /v1/chat/completions), new vs TOSH_FA_PF_W64=1: content+reasoning_content byte-identical.
+4. otool -tv build-fa/bin/llama-server | grep -cE 'vfmadd|vfmsub|vfnmadd|vpbroadcast|vinserti128|vextracti128|vpgather' -> 0.
+5. Write evidence/23/RESULT.md: method line (sha256 prefixes, series 0001-0084 + this diff on d81235049, card, model+quant, -ub, -d, -r, processes), the diff, the tables, the compute buffer lines, DiagnosticReports names before and after.
+</gates>
+
+<report>
+End with `git -C /Users/sam/Library/Caches/xeonllm-wt-fa diff`, the tables, and anything you could not run and why.
+</report>
