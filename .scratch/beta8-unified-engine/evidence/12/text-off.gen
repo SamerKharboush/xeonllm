@@ -1,0 +1,31 @@
+[Start thinking]
+
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - The user provided a very long, repetitive text: "The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long." repeated many times.
+   - The prompt ends with: "Summarize the meeting in one sentence."
+
+2.  **Identify Key Information:**
+   - Who: A committee
+   - When: Tuesday
+   - What: Reviewed the budget, hiring plan, and schedule for the new library wing
+   - Additional details: Every member spoke in turn, notes were long
+   - The repetition is clearly a test/distraction. The core content is just one sentence.
+
+3.  **Formulate Summary (One Sentence):**
+   - Need to capture the essence concisely.
+   - Draft: On Tuesday, the committee reviewed the budget, hiring plan, and schedule for the new library wing, with all members participating and extensive notes taken.
+   - Check length: One sentence. Covers all key points. Matches the original content without the repetition.
+
+   Alternative: During a Tuesday meeting, all committee members discussed the budget, hiring plan, and construction schedule for the new library wing, resulting in extensive notes.
+   - Both work. I'll go with a clear, direct version.
+
+4.  **Final Output Generation:**
+   - Ensure it's exactly one sentence.
+   - Capture: committee, Tuesday, reviewed budget/hiring plan/schedule for new library wing, all members spoke, lengthy notes.
+   - "On Tuesday, the committee reviewed the budget, hiring plan, and schedule for the new library wing, with every member contributing to lengthy meeting notes." (1 sentence)✅
+   - Matches requirement. Ready.✅
+[End thinking]
+
+On Tuesday, the committee reviewed the budget, hiring plan,

@@ -1,0 +1,67 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b11429-d81235049
+model      : /Users/sam/models/Ornith-1.0-35B-GGUF/ornith-1.0-35b-Q6_K.gguf
+ftype      : Q6_K
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee  ... (truncated)
+
+[Start thinking]
+
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Input Text:** A single sentence repeated many times: "The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long."
+   - **Task:** Summarize the meeting in one sentence.
+
+2.  **Identify Key Information:**
+   - Who: The committee
+   - When: Tuesday
+   - What: Reviewed the budget, hiring plan, and schedule for the new library wing
+   - Additional details: Every member spoke, notes were long
+   - The repetition is just a formatting/input quirk; the core content is one sentence.
+
+3.  **Determine Summary Requirements:**
+   - Must be exactly one sentence.
+   - Must capture the essence of the meeting.
+   - Should be concise.
+
+4.  **Draft Summary (Mental):**
+   On Tuesday, the committee thoroughly discussed the budget, hiring plan, and construction schedule for the new library wing, with full participation from all members.
+
+5.  **Refine & Check against Constraints:**
+   - One sentence? Yes.
+   - Captures key points? Yes (Tuesday, committee, budget/hiring/schedule for library wing, full participation).
+   - Concise? Yes.
+   - Matches original meaning? Yes.
+
+   Let's make it slightly tighter: "On Tuesday, the committee thoroughly reviewed the budget, hiring plan, and schedule for the new library wing, with every member participating in the lengthy discussion."
+
+6.  **Final Output Generation:** (matches the refined version)
+   "On Tuesday, the committee thoroughly reviewed the budget, hiring plan, and schedule for the new library wing, with full participation from every member." (One sentence, captures all key elements, concise.)✅
+   I'll output this
+
+[ Prompt: 43.7 t/s | Generation: 9.6 t/s ]
+
+
+Exiting...

@@ -213,7 +213,7 @@ build_engine() {
     reset_stale_cmake_cache build-static
     sync_tosh_version build-static
     cmake -B build-static "${CMAKE_FLAGS[@]}"
-    cmake --build build-static --config Release -j "${TOSH_BUILD_JOBS:-8}" -t llama-server llama-bench llama-perplexity test-backend-ops
+    cmake --build build-static --config Release -j "${TOSH_BUILD_JOBS:-8}" -t llama-server llama-bench llama-cli llama-perplexity test-backend-ops
     check_tosh_version build-static/bin/llama-server
     check_tosh_version build-static/bin/llama-bench
 
