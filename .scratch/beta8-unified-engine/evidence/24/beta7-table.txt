@@ -1,0 +1,5 @@
+label status  secs    prompt                 prompt_ms_tok eval_ms_tok text     mismatch timeouts
+b1   200     336.2   17.09 tok/s 293.33 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+b2   200     336.2   17.09 tok/s 291.88 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+b3   200     336.2   17.09 tok/s 291.77 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+b4   200     336.5   17.07 tok/s 292.27 ms/tok text ok 'Okay, the user asked why the sk 0        0       

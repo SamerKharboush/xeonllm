@@ -1,0 +1,29 @@
+--- /tmp/a.txt	2026-11-12 21:25:16
++++ /tmp/b.txt	2026-11-12 21:25:16
+@@ -18,18 +18,18 @@
+ W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+ I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+ I srv  llama_server: model loaded
+-I srv  llama_server: listening on http://127.0.0.1:18578
++I srv  llama_server: listening on http://127.0.0.1:18844
+ I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+ I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+ W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+ W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+-I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   2048, progress = 0.38, t =  68.67 s / 29.82 tokens per second
+-I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   4096, progress = 0.75, t = 184.53 s / 22.20 tokens per second
+-W ggml_metal: MTL0: one node of a 512-token batch averages 50.2 ms, over the 50 ms command-buffer target; use a smaller ubatch
+-W ggml_metal: MTL1: one node of a 512-token batch averages 50.7 ms, over the 50 ms command-buffer target; use a smaller ubatch
+-I slot print_timing: id  0 | task 0 | prompt eval time =  316190.77 ms /  5430 tokens (   58.23 ms per token,    17.17 tokens per second)
+-I slot print_timing: id  0 | task 0 |        eval time =   18573.62 ms /    64 tokens (  294.82 ms per token,     3.39 tokens per second)
+-I slot print_timing: id  0 | task 0 |       total time =  334764.39 ms /  5494 tokens
++I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   2048, progress = 0.38, t =  68.71 s / 29.81 tokens per second
++I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   4096, progress = 0.75, t = 184.78 s / 22.17 tokens per second
++W ggml_metal: MTL1: one node of a 512-token batch averages 50.5 ms, over the 50 ms command-buffer target; use a smaller ubatch
++W ggml_metal: MTL0: one node of a 512-token batch averages 54.9 ms, over the 50 ms command-buffer target; use a smaller ubatch
++I slot print_timing: id  0 | task 0 | prompt eval time =  316221.01 ms /  5430 tokens (   58.24 ms per token,    17.17 tokens per second)
++I slot print_timing: id  0 | task 0 |        eval time =   18936.15 ms /    64 tokens (  300.57 ms per token,     3.33 tokens per second)
++I slot print_timing: id  0 | task 0 |       total time =  335157.16 ms /  5494 tokens
+ I slot print_timing: id  0 | task 0 |    graphs reused =         63
+ I slot      release: id  0 | task 0 | stop processing: n_tokens = 5493, truncated = 0
+ I srv    operator(): operator(): cleaning up before exit...

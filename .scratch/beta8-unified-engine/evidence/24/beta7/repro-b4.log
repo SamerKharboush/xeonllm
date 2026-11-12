@@ -1,0 +1,35 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.247.501 I srv  llama_server: initializing ...
+0.00.247.519 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.7 (app standalone)
+0.00.247.520 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.248.111 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.250.361 I srv    load_model: loading model '/Users/sam/models/Qwen3-14B-Q4_K_M.gguf'
+0.00.250.394 I Tosh MoE: standard
+0.00.667.137 W common_fit_params: not fitting params to free device memory: n_gpu_layers already set by user to 99, abort; continuing with the parameters as given
+0.00.902.346 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.07.231.687 I cmn          init: llama threadpool init, n_threads = 10
+0.07.559.941 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.22.417.319 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.22.434.499 I srv  llama_server: model loaded
+0.22.434.522 I srv  llama_server: listening on http://127.0.0.1:18382
+0.22.744.901 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.22.744.962 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.23.214.376 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.23.589.595 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+1.31.442.366 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   2048, progress = 0.38, t =  68.70 s / 29.81 tokens per second
+3.28.546.606 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   4096, progress = 0.75, t = 185.80 s / 22.05 tokens per second
+4.05.823.011 W ggml_metal: MTL0: one node of a 512-token batch averages 50.4 ms, over the 50 ms command-buffer target; use a smaller ubatch
+4.39.912.530 W ggml_metal: MTL1: one node of a 512-token batch averages 50.8 ms, over the 50 ms command-buffer target; use a smaller ubatch
+5.59.250.507 I slot print_timing: id  0 | task 0 | prompt eval time =  318092.27 ms /  5430 tokens (   58.58 ms per token,    17.07 tokens per second)
+5.59.250.517 I slot print_timing: id  0 | task 0 |        eval time =   18413.23 ms /    64 tokens (  292.27 ms per token,     3.42 tokens per second)
+5.59.250.518 I slot print_timing: id  0 | task 0 |       total time =  336505.50 ms /  5494 tokens
+5.59.250.519 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+5.59.250.710 I slot      release: id  0 | task 0 | stop processing: n_tokens = 5493, truncated = 0
+5.59.262.385 I srv    operator(): operator(): cleaning up before exit...

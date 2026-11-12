@@ -1,0 +1,5 @@
+2026-11-12_23:15:11
+"inUseVidMemoryBytes"=4853846016	"vramFreeBytes"=1414254528	"Temperature(C)"=82
+"inUseVidMemoryBytes"=4853846016	"vramFreeBytes"=1414254528	"Temperature(C)"=82
+"inUseVidMemoryBytes"=4854833152	"vramFreeBytes"=1575993280	"Temperature(C)"=84
+"inUseVidMemoryBytes"=4854833152	"vramFreeBytes"=1575993280	"Temperature(C)"=84

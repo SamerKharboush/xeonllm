@@ -12,3 +12,14 @@ own gate runs (gates-beta7/out/repro-ship.out); ticket 23 w64-1, new-2.
 Per metal/0078's note this launch overcommits each card (~6.9 GB vs 6.44 GB working set). "@" repeated
 is the signature of NaN/garbage logits. The repro gate only checked HTTP 200 + no Timeout lines; it
 must also check the answer text.
+
+## 2026-11-12 diagnosis (Mocca, evidence/24/RESULT.md) — not reproduced, not isolated
+
+Strictly serial (one GPU program at a time, orchestrator monitor clean): 0 TEXT BAD in 22 runs
+(build-fa 53546683d2539c54: 10 at default ub, 4 at ub 128, 4 extra; beta.7 engine 1a68d3efcbf476e7: 4).
+Across all recorded runs 3 bad of 40. Bad and good logs of the same engine differ only in timings and
+warning order; no nan/failed/evict lines. '@' is token 31; a NaN argmax would give token 0 ('!'), so
+this is not plain NaN logits. new-1's window (≈17:35-17:40) shows no second llama-server/bench in the
+monitor; the user's own app was running during the day and cannot be ruled out as a GPU-memory neighbour.
+Status: open, known issue for beta 8 notes. The repro gate now fails on such an answer (TEXT BAD), so a
+release cannot pass with it unseen.

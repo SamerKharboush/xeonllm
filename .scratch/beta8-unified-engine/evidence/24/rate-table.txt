@@ -1,0 +1,11 @@
+label status  secs    prompt                 prompt_ms_tok eval_ms_tok text     mismatch timeouts
+d1   200     448.5   12.63 tok/s 293.48 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+d2   200     447.9   12.65 tok/s 292.96 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+d3   200     448.2   12.64 tok/s 293.29 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+d4   200     448.3   12.63 tok/s 292.03 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+d5   200     448.2   12.63 tok/s 291.78 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+d6   200     448.6   12.62 tok/s 292.91 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+u1   200     258.5   22.61 tok/s 290.74 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+u2   200     258.5   22.62 tok/s 290.84 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+u3   200     258.5   22.60 tok/s 289.70 ms/tok text ok 'Okay, the user asked why the sk 0        0       
+u4   200     258.4   22.62 tok/s 290.80 ms/tok text ok 'Okay, the user asked why the sk 0        0       
