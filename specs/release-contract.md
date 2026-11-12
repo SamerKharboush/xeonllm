@@ -82,6 +82,12 @@ checked on the shipped binaries, not the dev tree.
   dense qwen35 27B Q6_K with `GGML_METAL_DEVICE_LIST=0,1 -ngl 12 --split-mode layer`, greedy, answers
   coherent text identical to the one-card `-ngl 12` run; `TOSH_GDN_STATE_FUSION_MULTI=1` (the control)
   answers "0000..." again. On one card the fused `rows=1_fold=1` kernel is still compiled.
+- **Decomposed prefill KQ capped at 256 MiB on 64-lane cards** (metal/0085, beta 8 ticket 23):
+  the gates' repro (Qwen3-14B Q4_K_M layer split over both cards, `-c 32768`, ~5.4k-token prompt)
+  answers coherent text (not `@@@@`) with decode near `TOSH_FA_PF_W64=1`'s (3.39-3.41 both ways in
+  evidence/23, against 0.49 without the cap); `TOSH_FA_PF_DECOMP_MAX_MB` overrides the cap. Known
+  limit: at the default `-ub 512` this prompt reads 12.6 vs 17.1 tok/s with `TOSH_FA_PF_W64=1`;
+  at the app's `-ub 128` 22.6 vs 21.4-21.8.
 - **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
   of the engine environment and shows the banner (the test in `swift test` covers the path).
 
