@@ -1,4 +1,4 @@
-Work in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-fa (XeonLLM fork series 0001-0084 committed locally on pin d81235049; build dir build-fa configured). You may edit source there (leave it UNCOMMITTED; never commit/stash/reset/checkout/clean/worktree). Write results under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/22/ (create it). Do not edit anything under /Users/sam/firellama.
+Work in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-fa (XeonLLM fork series 0001-0085 committed locally on pin d81235049; build dir build-fa configured). You may edit source there (leave it UNCOMMITTED; never commit/stash/reset/checkout/clean/worktree). Write results under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/22/ (create it). Do not edit anything under /Users/sam/firellama.
 
 IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h 15 min stop and report what you have. Every claim must point to a file you saved; a previous report on another ticket claimed results that were never saved and was rejected.
 
