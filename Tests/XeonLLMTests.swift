@@ -13,6 +13,7 @@ final class WhisperTranscriptTests: XCTestCase {
     func testWhisperRuntimeForcesAMDFlashAttentionAndSafeMetalPolicy() {
         let environment = SpeechDictationController.runtimeEnvironment(base: [:])
         XCTAssertEqual(environment["TOSH_FA_AMD"], "1")
+        XCTAssertNil(environment["TOSH_FA_AMD_DISABLE"])
         XCTAssertEqual(environment["GGML_METAL_CONCURRENCY_DISABLE"], "1")
         XCTAssertEqual(environment["GGML_METAL_SHARED_BUFFERS_DISABLE"], "1")
     }
@@ -2062,6 +2063,7 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
         XCTAssertEqual(s.benchmarkArguments[s.benchmarkArguments.firstIndex(of: "-fa")! + 1], "1")
         XCTAssertNil(s.environment["TOSH_FA_AMD"])
+        XCTAssertEqual(s.environment["TOSH_FA_AMD_DISABLE"], "1")
     }
 
     func testAmdFlashAttentionIsOnlyUserToggle() {
@@ -2073,11 +2075,13 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertFalse(s.effectiveFaAmd)
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
         XCTAssertNil(s.environment["TOSH_FA_AMD"])
+        XCTAssertEqual(s.environment["TOSH_FA_AMD_DISABLE"], "1")
 
         s.faAmd = true
         XCTAssertTrue(s.effectiveFaAmd)
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
         XCTAssertEqual(s.environment["TOSH_FA_AMD"], "1")
+        XCTAssertNil(s.environment["TOSH_FA_AMD_DISABLE"])
     }
 
     func testMicroBatchOnlyAppliesToMoEModels() throws {

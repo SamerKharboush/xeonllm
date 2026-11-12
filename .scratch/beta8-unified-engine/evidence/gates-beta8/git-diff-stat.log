@@ -1,0 +1,5 @@
+ Sources/App/AboutTab.swift   | 2 +-
+ Sources/Servers/Server.swift | 7 ++++++-
+ Tests/XeonLLMTests.swift     | 4 ++++
+ VERSION                      | 2 +-
+ 4 files changed, 12 insertions(+), 3 deletions(-)

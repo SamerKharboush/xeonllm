@@ -902,7 +902,12 @@ struct ServerSettings {
         if forcePrivateBuffers || selectedExternal || anyExternalInSplit {
             env["GGML_METAL_SHARED_BUFFERS_DISABLE"] = "1"
         }
-        if effectiveFaAmd { env["TOSH_FA_AMD"] = "1" }
+        if effectiveFaAmd {
+            env["TOSH_FA_AMD"] = "1"
+            env.removeValue(forKey: "TOSH_FA_AMD_DISABLE")
+        } else {
+            env["TOSH_FA_AMD_DISABLE"] = "1"
+        }
         // Only a tensor split reduces across cards, which is the copy the bridge speeds up.
         // A layer split has nothing for it to carry.
         if mgpuPeer && usesGPUs && isSplitting && effectiveSplitMode == "tensor" && Self.peerBridgeAvailable {
