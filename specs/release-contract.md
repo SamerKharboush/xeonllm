@@ -78,6 +78,10 @@ checked on the shipped binaries, not the dev tree.
   Qwen3-4B-Q4_K_M on card 1, `-fa 1 -ub 128`, llama-bench pp512 at depth 6144 reads above
   `TOSH_FA_PF_W64=1`'s (the old block; 56.4 vs 27.6 tok/s on the build-fa engine) with tg128 the
   same, and a ~6000-token greedy prompt gives byte-identical text in both.
+- **Gated-delta-net state fusion off across several cards** (metal/0084, beta 8 ticket 16): the
+  dense qwen35 27B Q6_K with `GGML_METAL_DEVICE_LIST=0,1 -ngl 12 --split-mode layer`, greedy, answers
+  coherent text identical to the one-card `-ngl 12` run; `TOSH_GDN_STATE_FUSION_MULTI=1` (the control)
+  answers "0000..." again. On one card the fused `rows=1_fold=1` kernel is still compiled.
 - **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
   of the engine environment and shows the banner (the test in `swift test` covers the path).
 
