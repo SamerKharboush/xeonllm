@@ -1,0 +1,37 @@
+Work in /Users/sam/firellama (XeonLLM). Beta 8 ticket 16: a dense model layer-split across BOTH cards with the remaining layers on the host answered with zeros (2026-10-22). First reproduce on today's engine; bisect only if it still happens. Write results only under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/16/ (create it). Never git commit/tag/push/stash/reset/checkout/clean. Do NOT edit any source, patch, script or spec, and do NOT build anything.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h stop and report what you have.
+
+<safety — hard rules; this Mac froze twice this month, and this ticket uses card 0, which drives the display>
+1. Before anything and after every GPU program: `ls -t /Library/Logs/DiagnosticReports/ | head -3`. A new *.panic, *watchdog* or *.gpuRestart: STOP all work and report it first.
+2. One GPU program at a time, in the foreground, never two, nothing GPU-side in the background, nothing else heavy running.
+3. Wrap every GPU program in `perl -e 'alarm 900; exec @ARGV' <cmd>`. Use llama-cli only (no server, no bench).
+4. The model: /Users/sam/models/Qwen3.6-27B-Heretic-Uncensored-FINETUNE-NEO-CODE-Di-IMatrix-MAX-GGUF/Qwen3.6-27B-NEO-CODE-HERE-2T-OT-Q6_K.gguf (dense, 64 layers). Only these placements: host `-ngl 0`; two24 `-ngl 24 --split-mode layer`; two28 `-ngl 28 --split-mode layer` (two28 only after two24 has run cleanly). Never more layers, never `-sm tensor`, never `-ngl 99`.
+5. Always: `-c 4096 -ub 128 -b 512 -t 12 -fa on`, a SHORT prompt (the one below), at most `-n 64`. No long prompts.
+6. After loading, read each card's buffer line from the log (`MTL0_Private`/`MTL1_Private` model buffer size). If any one card's model+KV+compute would exceed 5600 MiB, stop that cell and report.
+7. Do not touch 127.0.0.1:8080, /Applications, or any defaults domain.
+</safety>
+
+<engine>
+B=/Users/sam/firellama/vendor/llama.cpp/build-static/bin   (the dev engine, full series through core/0082)
+Put `shasum -a 256 $B/llama-cli | cut -c1-16` in the method line.
+Both cards: the fork selects cards with `GGML_METAL_DEVICE_LIST=0,1` (the app's env). For the host cell use `GGML_METAL_DEVICE_INDEX=1`. Confirm from each log which MTLn devices were used and which layers went where (`load_tensors:` / `offloaded N/65 layers`, per-device buffer lines). If GGML_METAL_DEVICE_LIST is not honoured, find the right variable by grepping ggml/src/ggml-metal in vendor/llama.cpp for getenv and say what you used.
+</engine>
+
+<steps>
+Common flags: -m <model> -c 4096 -ub 128 -b 512 -t 12 -fa on -st --temp 0 -s 1 -n 64 -p "Explain what a binary search tree is." -v
+Output: <cell>.out (stdout), <cell>.err (stderr). Extract the generated text (stdout after the prompt echo, up to but not including the "[ Prompt" line) into <cell>.gen.
+
+1. host reference: GGML_METAL_DEVICE_INDEX=1 ... -ngl 0  -> host.gen
+2. two24: GGML_METAL_DEVICE_LIST=0,1 ... -ngl 24 --split-mode layer  -> two24.gen.  cmp with host.gen; say whether the answer is zeros / garbage / coherent; first differing byte and 200 chars of each if it differs.
+3. If two24 is coherent: run two24 once more and two28 once (same flags). If all are coherent the bug is gone on today's engine: record which and stop here (skip step 4).
+4. Only if zeros/garbage: bisect on two24, one change per run, each a fresh process:
+   a. Fusions off: grep vendor/llama.cpp/ggml/src/ggml-metal and src/ for getenv names containing FUSE/FUSION/FUSED (e.g. GGML_METAL_FUSION_DISABLE, TOSH_*FUSE*). Run once with ALL of them set to disable; if that fixes it, re-enable them one at a time (one run each) to find the one.
+   b. If fusions are not it: `-fa off`; then `TOSH_MTL_CB_TARGET_MS=0`; then `--no-op-offload`; then `-ngl 24 --split-mode layer` with only card 1 (`GGML_METAL_DEVICE_INDEX=1`, this is one-card + host and must fit; only if per-card buffer < 5600 MiB).
+   c. Report, for each run: the setting, coherent/zeros/garbage, first 120 chars.
+   Also grep each zeros run's .err for "nan", "inf", "failed", "copy", "split" lines and paste up to 20.
+</steps>
+
+<report>
+Write evidence/16/RESULT.md: method line (llama-cli sha256 prefix, pin d81235049 + series, model + quant, flags, device variable, per-card buffer lines), a table of every run (cell / setting / devices used / result / first 120 chars / cmp vs host), and the conclusion: fixed on today's engine, or the setting that removes the zeros. End your reply with the same table, the DiagnosticReports names before and after, and anything you could not run and why.
+</report>
