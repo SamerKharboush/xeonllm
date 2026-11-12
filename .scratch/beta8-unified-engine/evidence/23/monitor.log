@@ -1,0 +1,73 @@
+17:33 srv=0 bench=0 clang++=0 clang=0
+17:34 srv=0 bench=0 clang++=0 clang=0
+17:35 srv=0 bench=0 clang++=0 clang=0
+17:36 srv=1 bench=0 clang++=0 clang=0
+17:37 srv=1 bench=0 clang++=0 clang=0
+17:38 srv=1 bench=0 clang++=0 clang=0
+17:39 srv=1 bench=0 clang++=0 clang=0
+17:40 srv=1 bench=0 clang++=0 clang=0
+17:41 srv=1 bench=0 clang++=0 clang=0
+17:42 srv=1 bench=0 clang++=0 clang=0
+17:43 srv=1 bench=0 clang++=0 clang=0
+17:44 srv=1 bench=0 clang++=0 clang=0
+17:45 srv=1 bench=0 clang++=0 clang=0
+17:46 srv=1 bench=0 clang++=0 clang=0
+17:47 srv=0 bench=0 clang++=0 clang=0
+17:48 srv=1 bench=0 clang++=0 clang=0
+17:49 srv=1 bench=0 clang++=0 clang=0
+17:50 srv=1 bench=0 clang++=0 clang=0
+17:51 srv=1 bench=0 clang++=0 clang=0
+17:52 srv=1 bench=0 clang++=0 clang=0
+17:53 srv=1 bench=0 clang++=0 clang=0
+17:54 srv=1 bench=0 clang++=0 clang=0
+17:55 srv=0 bench=0 clang++=0 clang=0
+17:56 srv=0 bench=0 clang++=0 clang=0
+17:57 srv=1 bench=0 clang++=0 clang=0
+17:58 srv=1 bench=0 clang++=0 clang=0
+17:59 srv=1 bench=0 clang++=0 clang=0
+18:00 srv=1 bench=0 clang++=0 clang=0
+18:01 srv=1 bench=0 clang++=0 clang=0
+18:02 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:03 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:04 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:05 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:06 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:07 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:08 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:09 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:10 srv=0 bench=2 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+18:11 srv=0 bench=1 clang++=0 clang=0
+18:12 srv=0 bench=1 clang++=0 clang=0
+18:13 srv=0 bench=1 clang++=0 clang=0
+18:14 srv=0 bench=1 clang++=0 clang=0
+18:15 srv=0 bench=1 clang++=0 clang=0
+18:16 srv=0 bench=1 clang++=0 clang=0
+18:17 srv=0 bench=1 clang++=0 clang=0
+18:18 srv=1 bench=0 clang++=0 clang=0
+18:19 srv=2 bench=0 clang++=0 clang=0
+VIOLATION: 2 GPU programs
+monitor restart 18:21
+18:21 srv=0 bench=1 clang++=0 clang=0
+18:22 srv=0 bench=1 clang++=0 clang=0
+18:23 srv=0 bench=1 clang++=0 clang=0
+18:24 srv=0 bench=1 clang++=0 clang=0
+18:25 srv=0 bench=1 clang++=0 clang=0
+18:26 srv=0 bench=1 clang++=0 clang=0
+18:27 srv=0 bench=1 clang++=0 clang=0
+18:28 srv=0 bench=1 clang++=0 clang=0
+18:29 srv=0 bench=1 clang++=0 clang=0
+18:30 srv=0 bench=1 clang++=0 clang=0
+18:31 srv=0 bench=1 clang++=0 clang=0
+18:32 srv=0 bench=1 clang++=0 clang=0
+18:33 srv=0 bench=1 clang++=0 clang=0
+18:34 srv=0 bench=1 clang++=0 clang=0
+monitor end 18:35

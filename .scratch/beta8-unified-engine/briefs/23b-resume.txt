@@ -1,0 +1,14 @@
+Same ticket, same session, same rules. Two things first.
+
+1. SAFETY VIOLATION, do not repeat: from 18:02 to 18:10 two llama-bench processes ran at the same time on card 1 (bench/bench.log interleaves "b06-ub512" and "b4-ub128" arms; the orchestrator's monitor counted 2 llama-bench processes for 9 minutes). The rule is ONE GPU program at a time, ever. Start the next GPU program only after the previous one's process has exited (check with `pgrep -x llama-bench; pgrep -x llama-server` — note pid 747 is the user's own server, ignore it, never kill it). Never use `pkill -f llama-server` (it matches other processes); kill the exact pid you started. Those concurrent bench numbers are void (0.6B new 235.966 vs 148.598 shows the interference).
+2. new-1 of the 14B repro answered "@@@@..." (a known intermittent fault, ticket 24, also seen on the beta.7 engine), so its 20.12 tok/s does not count. With one valid run per arm (new-2 12.64, w64-1 17.17 prompt) nothing is decided yet.
+
+Do not change the code. Re-measure with the build you have (llama-server 03b09726db6ffed8, llama-bench 078d37ba20c2d2e1), strictly one process at a time, `ls -t /Library/Logs/DiagnosticReports/ | head -3` after each:
+
+A. 14B repro, default ub (the gate's launch): order new-3, w64-2, new-4, w64-3 (same command as before, LOGDIR=.../evidence/23/repro2).
+B. 14B repro at the app's dense-card batch: the same script with extra server args `--ubatch-size 128 --batch-size 128` (repro.sh passes arguments after the label to llama-server): order new128-1, w64128-1, new128-2, w64128-2 (LOGDIR=.../evidence/23/repro2).
+C. llama-bench, card 1, sequential, one process at a time: 0.6B `-fa 1 -ub 512 -p 512 -n 128 -d 6144 -r 3` new, w64, new, w64; then 4B `-fa 1 -ub 128 -p 512 -n 128 -d 6144 -r 3` new, w64, new, w64. Save each as its own csv/err under bench2/.
+
+For every repro run record: status/seconds, whether content+reasoning_content is normal text or "@@@@" (quote the first 40 chars), the `prompt eval time` and `eval time` lines, and any `compute buffer size ... does not match` lines. A run that answers "@@@@" is reported but excluded from the rates.
+
+Report a table per group and, for prompt and decode separately, whether "new above w64" or "new below w64" holds for both valid new runs against both valid w64 runs; otherwise "not resolved". No percentages. Append to evidence/23/RESULT.md. Stop at 2 h and report what you have.
