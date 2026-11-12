@@ -1,0 +1,32 @@
+Work in /Users/sam/firellama (XeonLLM). This is a MEASUREMENT ticket (beta 8 ticket 19). You run the commands below and write results only under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/19/. Never git commit/tag/push/stash/reset/checkout. Do not edit any source, script, patch or spec.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 1 h 50 min stop and report what you have.
+
+<safety — hard rules; this Mac froze twice this month>
+1. Before anything and after every llama-bench process: `ls -t /Library/Logs/DiagnosticReports/ | head -3`. A new *.panic, *watchdog* or *.gpuRestart file: STOP all work and report it first.
+2. One GPU program at a time, never in the background, never during a build. Do NOT build anything: use the existing binaries.
+3. Card 1 only: `GGML_METAL_DEVICE_INDEX=1` and `-dev MTL0`; wrap each run in `perl -e 'alarm 2400; exec @ARGV' <cmd>`.
+4. Models (all fit card 1): /Users/sam/models/Qwen3-0.6B-Q8_0.gguf and /Users/sam/models/Qwen3-4B-Q4_K_M.gguf, `-ngl 99`. No other model, no split over two cards, depth at most 6144.
+5. Do not touch 127.0.0.1:8080, /Applications or any defaults domain.
+</safety>
+
+<why>
+On 2026-11-10, with flash attention off, a ~6000-token prompt on Qwen3-4B Q4_K_M (card 1) was read at 67.9 tok/s against 42.4 with it on, with byte-identical text (one run each). The FA kernel's cost seems to grow with the cached context faster than the separate attention path. Before the app changes its FA default, prefill AND decode must be measured at several depths. The app now prefills dense card models with -ub 128 and launches with `-fa auto` and TOSH_FA_AMD=1.
+</why>
+
+<steps>
+B=/Users/sam/firellama/vendor/llama.cpp/build-static/bin (the dev engine: 92-patch series; check `$B/llama-bench --help | grep -c -- "-d, --n-depth"` is 1 and write its sha256 prefix in the method line).
+For each model (0.6B first, then 4B), for rep in 1 2, for fa in 1 0 (alternating):
+  GGML_METAL_DEVICE_INDEX=1 TOSH_FA_AMD=1 perl -e 'alarm 2400; exec @ARGV' $B/llama-bench -m <model> -dev MTL0 -ngl 99 -fa $fa -ub 128 -b 2048 -p 512 -n 128 -d 0,2048,6144 -r 2 -o csv 2>>evidence/19/bench.err >> evidence/19/bench-<model short name>.csv
+(If -dev is rejected, drop it and say so.) Keep every CSV row (pp512 and tg128 at each depth).
+
+Then a text check at depth for the 4B, fa 1 vs 0, card 1, with the existing prompt file /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/18/prompt6k.txt:
+  GGML_METAL_DEVICE_INDEX=1 TOSH_FA_AMD=1 perl -e 'alarm 2400; exec @ARGV' $B/llama-cli -m /Users/sam/models/Qwen3-4B-Q4_K_M.gguf -dev MTL0 -ngl 99 -c 8192 -ub 128 -b 2048 -fa <on|off> -st --temp 0 -n 64 -f <prompt> -s 1 > evidence/19/text-fa<on|off>.out 2>/dev/null
+  Compare only the generated text (from "[Start thinking]" up to, not including, the "[ Prompt" line) with cmp.
+
+Write evidence/19/RESULT.md: a method line (engine sha256 prefix, pin d81235049 + series, model+quant, -ub 128 -b 2048, card 1, -r 2, two processes per FA setting alternating, llama-bench's own warmup), one table per model: rows = test (pp512 @ d0, d2048, d6144; tg128 @ d0, d2048, d6144), columns = FA on process 1, FA on process 2, FA off process 1, FA off process 2 (mean ± sd as printed). Then: for each row, say "FA off higher", "FA on higher" or "not resolved" — "higher" only when both of one side's processes lie above both of the other side's. Then the text result. No percentages against anything modelled.
+</steps>
+
+<report>
+End with: the two tables, the text cmp line, the DiagnosticReports names before and after, and anything you could not run.
+</report>
