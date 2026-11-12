@@ -6,7 +6,8 @@
 # both cards (the stress script refuses one card). Never port 8080.
 cd /Users/sam/firellama
 G=$PWD/.scratch/beta8-unified-engine/evidence/gates-beta8
-O=$G/out2/set
+O=$G/out/set
+PREV=$PWD/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set   # beta.7 texts, for the previous-release comparison
 mkdir -p $O
 BIN=$PWD/dist/XeonLLM.app/Contents/Resources/bin
 LOGS="$HOME/Library/Application Support/XeonLLMGateTest/logs"
@@ -35,15 +36,20 @@ run() {   # model modes
     local stem; stem=$(basename "$1" .gguf)
     appstart "$1"
     APPLOG=$O/$stem.applog OUT=$O/$stem MODES="$2" NGL0_CELLS="band16 band300 band1100" \
+        PREV_OUT=$PREV/$stem \
         scripts/stress-release.sh $BIN "$1"
     for t in $O/$stem/*.cells.tsv; do echo "-- $(basename $t): $(cut -f2 $t | sort | uniq -c | tr '\n' ' ')"; done
     grep -h "identical\|drafter" $O/$stem/tables/*.tsv 2>/dev/null
 }
 
-for m in Qwen3-0.6B-Q8_0 Qwen3-4B-Q4_K_M Qwen3-4B-Q6_K Qwen3-8B-Q4_K_M Qwen3-14B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M LFM3-1.7B-F16; do
-    echo "### $m"; run $M/$m.gguf "tensor layer ngl0"
+# STRESS_MODELS: space list of stems to run (default: the whole set, in this order)
+ALL="Qwen3-0.6B-Q8_0 Qwen3-4B-Q4_K_M Qwen3-4B-Q6_K Qwen3-8B-Q4_K_M Qwen3-14B-Q4_K_M Nemotron-3.5-Bolt-E4B-Q4_K_M LFM3-1.7B-F16 Ternary-Bonsai-2-27B-PQ2_0 ornith-1.0-35b-Q6_K"
+for m in ${STRESS_MODELS:-$ALL}; do
+    echo "### $m $(date +%H:%M)"
+    case $m in
+        ornith-1.0-35b-Q6_K) run $L/ornith-1.0-35b-Q6_K.gguf "tensor draft" ;;
+        *) run $M/$m.gguf "tensor layer ngl0" ;;
+    esac
 done
-echo "### Ternary-Bonsai-2-27B-PQ2_0"; run $M/Ternary-Bonsai-2-27B-PQ2_0.gguf "tensor layer ngl0"
-echo "### ornith-1.0-35b-Q6_K"; run $L/ornith-1.0-35b-Q6_K.gguf "tensor draft"
 bash $G/testapp.sh clean
 echo "### done"

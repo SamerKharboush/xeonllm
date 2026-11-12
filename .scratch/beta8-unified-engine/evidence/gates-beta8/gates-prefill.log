@@ -1,0 +1,26 @@
+DiagnosticReports at start: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
+Thu Nov 12 13:35:23 CET 2026
+== 3.3 prefill bands
+card 0 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm layer Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+card 0 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+card 1 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=86 rows=0 handled (exit 86)
+both cards 0,1 -sm layer Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+35B host (-ngl 0) rc=134 rows=6
+77602 /bin/zsh -c source /Users/sam/.claude/shell-snapshots/snapshot-zsh-1794382685368-g52z43.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'which'; \builtin unset -f -- 'which'; } >/dev/null 2>&1 || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /Users/sam/firellama; M=.scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2.log; CR0=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); sleep 30; while pgrep -f "relay.mjs --brief.*R2-beta8" >/dev/null; do s=$(pgrep -f "Resources/bin/llama-server" | wc -l | tr -d '"'"' '"'"'); b=$(pgrep -x llama-bench | wc -l | tr -d '"'"' '"'"'); t=$(pgrep -x test-backend-ops | wc -l | tr -d '"'"' '"'"'); cl=$(pgrep -x llama-cli | wc -l | tr -d '"'"' '"'"'); cc=$(pgrep -x clang | wc -l | tr -d '"'"' '"'"'); g=$((s+b+t+cl)); echo "$(date +%H:%M) srv=$s bench=$b tbo=$t cli=$cl clang=$cc" >> $M; [ $g -gt 1 ] && echo "VIOLATION: $g GPU programs at once" >> $M; [ $cc -gt 0 ] && echo "VIOLATION: compile during R2" >> $M; n=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); if [ "$n" != "$CR0" ]; then echo "CRASH REPORT: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '"'"'\n'"'"' '"'"' '"'"')" >> $M; pkill -f "Resources/bin/llama-server"; pkill -x llama-bench; pkill -x test-backend-ops; break; fi; sleep 60; done; echo "monitor end $(date +%H:%M)" >> $M' < /dev/null && pwd -P >| /tmp/claude-ebf9-cwd
+DiagnosticReports at end: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
+Thu Nov 12 14:35:00 CET 2026
+GATES DONE

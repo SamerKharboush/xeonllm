@@ -1,0 +1,11 @@
+DiagnosticReports at start: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
+Thu Nov 12 12:42:40 CET 2026
+== 3.2 kernel coverage
+# path: engine self-check (TOSH_METAL_CHECK_KERNELS=1)
+# card 0: exit 0, missing 0
+# card 1: exit 0, missing 0
+PASS: 0 missing kernel names
+77602 /bin/zsh -c source /Users/sam/.claude/shell-snapshots/snapshot-zsh-1794382685368-g52z43.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && { \builtin unalias -- 'which'; \builtin unset -f -- 'which'; } >/dev/null 2>&1 || true && { \builtin unalias -- 'unsetenv'; \builtin unset -f -- 'unsetenv'; } >/dev/null 2>&1 || true && eval 'cd /Users/sam/firellama; M=.scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2.log; CR0=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); sleep 30; while pgrep -f "relay.mjs --brief.*R2-beta8" >/dev/null; do s=$(pgrep -f "Resources/bin/llama-server" | wc -l | tr -d '"'"' '"'"'); b=$(pgrep -x llama-bench | wc -l | tr -d '"'"' '"'"'); t=$(pgrep -x test-backend-ops | wc -l | tr -d '"'"' '"'"'); cl=$(pgrep -x llama-cli | wc -l | tr -d '"'"' '"'"'); cc=$(pgrep -x clang | wc -l | tr -d '"'"' '"'"'); g=$((s+b+t+cl)); echo "$(date +%H:%M) srv=$s bench=$b tbo=$t cli=$cl clang=$cc" >> $M; [ $g -gt 1 ] && echo "VIOLATION: $g GPU programs at once" >> $M; [ $cc -gt 0 ] && echo "VIOLATION: compile during R2" >> $M; n=$(ls /Library/Logs/DiagnosticReports/ | grep -cE '"'"'panic|watchdog|gpuRestart'"'"'); if [ "$n" != "$CR0" ]; then echo "CRASH REPORT: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '"'"'\n'"'"' '"'"' '"'"')" >> $M; pkill -f "Resources/bin/llama-server"; pkill -x llama-bench; pkill -x test-backend-ops; break; fi; sleep 60; done; echo "monitor end $(date +%H:%M)" >> $M' < /dev/null && pwd -P >| /tmp/claude-ebf9-cwd
+DiagnosticReports at end: codesign_2026-11-11-211515_Sams-Mac-Pro.diag cp_2026-11-11-092927_Sams-Mac-Pro.diag Kernel-2026-11-11-083524.panic 
+Thu Nov 12 12:42:43 CET 2026
+GATES DONE

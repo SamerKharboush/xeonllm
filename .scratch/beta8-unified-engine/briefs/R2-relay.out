@@ -1,0 +1,70 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e3094afa6ffe6e5FC7g1nEPO7L): ses_e3094afa6ffe6e5FC7g1nEPO7L
+cost: $0
+touched files: 139
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/stress-set.sh
+  ?? .scratch/beta7-unified-performance/briefs/04-avx1-relay.out
+  ?? .scratch/beta7-unified-performance/evidence/02/readceiling
+  ?? .scratch/beta7-unified-performance/evidence/03/hostcopy
+  ?? .scratch/beta7-unified-performance/evidence/03/prefill-ab2.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-unset.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-unset.err
+  ?? .scratch/beta8-unified-engine/briefs/11-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/11-resume.txt
+  ?? .scratch/beta8-unified-engine/briefs/12-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/14-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/15-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/17-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/19-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/21-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay4.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay5.out
+  ?? .scratch/beta8-unified-engine/briefs/R2-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/lfm3-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/lfm3-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/lfm3-relay3.out
+  ?? .scratch/beta8-unified-engine/evidence/16/host.err
+  ?? .scratch/beta8-unified-engine/evidence/16/host.out
+  ?? .scratch/beta8-unified-engine/evidence/16/one12.err
+  ?? .scratch/beta8-unified-engine/evidence/16/one12.out
+  ?? .scratch/beta8-unified-engine/evidence/16/two24-fusdbg.err
+  ?? .scratch/beta8-unified-engine/evidence/16/two24-fusdbg.out
+  … and 99 more
+
+--- opencode final report ---
+I'll start with the date check and crash-report baseline.Report written: `.scratch/beta8-unified-engine/evidence/gates-beta8/R2-RESULT.md`
+
+**Ran 4 of 10 sections. Budget cut at 14:46.**
+
+identity **PASS**, ops **PASS**, coverage **PASS** — all three cards clean.
+
+prefill **FAIL on 1 row**: every Metal row `rc=0 rows=7` (Ternary-Bonsai tensor-split `handled (exit 86)` = allowed), but the host row `35B host (-ngl 0) rc=134 rows=6` aborted on an MoE assert in `out/pp-35b-host.err`:
+
+```
+/vendor/llama.cpp/ggml/src/ggml-backend.cpp:2193: GGML_ASSERT(id >= 0 && id < n_expert) failed
+.scratch/.../gates.sh: line 13: 37283 Abort trap: 6
+```
+
+CPU path, `-ngl 0`, no Metal — 6 of 7 bands done. Untouched, re-verify before calling 3.3 clean.
+
+Not run: preflight, engine, proofs, proofs8, avx, repro. Cause: prefill needs ~60 min per pass and I ran it twice — first attempt killed by my shell tool's 50-min timeout at 13:34, second finished 14:35. No gate-harness bug, no workaround.
+
+DiagnosticReports identical before/after (`codesign_2026-11-11-211515`, `cp_2026-11-11-092927`, `Kernel-2026-11-11-083524` — the last predates this run). No `NEW CRASH REPORT`, no exit 9; monitor log 0 violations.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-12T11-01-18-528Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.
