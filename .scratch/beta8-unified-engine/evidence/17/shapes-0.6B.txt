@@ -1,0 +1,22 @@
+model: /Users/sam/models/Qwen3-0.6B-Q8_0.gguf
+  general.architecture = qwen3
+  qwen3.block_count = 28
+  qwen3.embedding_length = 1024
+  qwen3.feed_forward_length = 3072
+  qwen3.attention.head_count = 16
+  qwen3.attention.head_count_kv = 8
+
+pattern    type      ne0    ne1        bytes n_layers  layers
+attn_k     Q8_0     1024   1024      1114112       28  0..27
+attn_out   Q8_0     2048   1024      2228224       28  0..27
+attn_q     Q8_0     1024   2048      2228224       28  0..27
+attn_v     Q8_0     1024   1024      1114112       28  0..27
+ffn_down   Q8_0     3072   1024      3342336       28  0..27
+ffn_gate   Q8_0     1024   3072      3342336       28  0..27
+ffn_up     Q8_0     1024   3072      3342336       28  0..27
+
+total bytes over 2-D per-layer weight tensors: 467927040
+
+other 2-D tensors (not per-layer):
+  token_embd.weight                        Q8_0     1024 x 151936  165306368 bytes
+====================================================================================================
