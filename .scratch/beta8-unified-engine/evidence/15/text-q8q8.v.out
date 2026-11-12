@@ -1,0 +1,38 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b11431-6a40e47b1
+model      : /Users/sam/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee met on Tuesday to review the budget, the hiring plan and the schedule for the new library wing; every member spoke in turn and the notes were long. The committee  ... (truncated)
+
+[Start thinking]
+
+Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the committee met on Tuesday to review the budget, hiring plan, and schedule for the new library wing. Every member spoke in turn, and the notes were long. The user wants a summary in one sentence.
+
+First, I need to identify the key elements: the date (Tuesday), the purpose (reviewing budget, hiring plan, schedule for the new library wing), and the fact that all members participated and the notes were lengthy. Since the original text is repetitive, I should condense it without losing the essential details. Make sure to mention the date, the topics discussed, and the participation of all members. Also, note that the meeting notes were long. Let me check if there's any other important detail. The user might be looking for a concise summary for a report or a quick reference. Avoid redundancy by combining the repeated elements into a single, clear sentence
+
+[ Prompt: 69.3 t/s | Generation: 10.4 t/s ]
+
+
+Exiting...
