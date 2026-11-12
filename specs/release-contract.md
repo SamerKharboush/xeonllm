@@ -74,6 +74,10 @@ checked on the shipped binaries, not the dev tree.
   `--no-op-offload`'s, with byte-identical text; at the model's default context it logs
   `op offload off: ... would be ... MiB` and no `failed to allocate` line. The app's server log
   header for a host-placed dense model names `prompt offload: card <i>`.
+- **Decomposed prefill for head 64/128 on 64-lane cards** (metal/0083, beta 8 ticket 21):
+  Qwen3-4B-Q4_K_M on card 1, `-fa 1 -ub 128`, llama-bench pp512 at depth 6144 reads above
+  `TOSH_FA_PF_W64=1`'s (the old block; 56.4 vs 27.6 tok/s on the build-fa engine) with tg128 the
+  same, and a ~6000-token greedy prompt gives byte-identical text in both.
 - **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
   of the engine environment and shows the banner (the test in `swift test` covers the path).
 
