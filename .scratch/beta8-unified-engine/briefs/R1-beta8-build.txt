@@ -1,0 +1,22 @@
+Work in /Users/sam/firellama (XeonLLM, branch phase1-metal-d700-optimization). Beta 8 release, step R1: one small app fix, the version, and the build (engines, app, DMG). Follow specs/release-contract.md sections 1, 2 and 7. Never git commit/tag/push/stash/reset/checkout/clean; never install into /Applications; never touch the user's defaults domains (dev.xeonllm.app, dev.engel.toshllm) or their Application Support folders, 127.0.0.1:8080, or the user's running app. Write logs under .scratch/beta8-unified-engine/evidence/gates-beta8/ (create it).
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h 15 min stop and report what you have. Every claim in your report must point to a log file you saved.
+
+<safety — this Mac froze twice this month (once under a 24-job build)>
+- One heavy job at a time: the steps below run strictly one after another, never in parallel, never in the background. At most 8 compile jobs. No GPU program in this step at all (swift test is fine).
+- Before starting and after each build step: `ls -t /Library/Logs/DiagnosticReports/ | head -3`; a new *.panic / *watchdog* / *.gpuRestart: STOP and report.
+</safety>
+
+<steps>
+1. App fix (Sources/Servers/Server.swift ~line 905): the engine turns AMD flash attention ON by default on 64-lane GPUs and only reads `TOSH_FA_AMD_DISABLE` (grep `TOSH_FA_AMD_DISABLE` in vendor/llama.cpp/ggml/src/ggml-metal/ggml-metal-ops.cpp to confirm); `TOSH_FA_AMD=1` is read by nothing. So when the app's FA-AMD setting is off, the engine still uses the AMD kernel. Keep `env["TOSH_FA_AMD"] = "1"` when `effectiveFaAmd` is true (the contract's log check expects it) and set `env["TOSH_FA_AMD_DISABLE"] = "1"` when it is false; make sure TOSH_FA_AMD_DISABLE is not inherited when effectiveFaAmd is true (remove it from env in that branch). Update Tests/XeonLLMTests.swift: the tests at ~lines 2064 and 2075 that assert `environment["TOSH_FA_AMD"]` is nil should also assert `environment["TOSH_FA_AMD_DISABLE"] == "1"`, and the test at ~line 15 should assert TOSH_FA_AMD_DISABLE is nil. Read those tests first to see what they set up. Nothing else in Sources/ changes.
+2. `swift test > .scratch/beta8-unified-engine/evidence/gates-beta8/swift-test.log 2>&1`; report the summary line and name every failure (the known MCPStdioTransportTests race is allowed, name it).
+3. VERSION: set the VERSION file to `0.87.31-beta.8` (one line, same format as now).
+4. Engines: `TOSH_AVX1=1 TOSH_BUILD_JOBS=8 ./scripts/build-engines.sh > .scratch/beta8-unified-engine/evidence/gates-beta8/build-engines.log 2>&1; echo rc=$?`. It re-applies patches/llama/* (94 patches, through metal/0084) to vendor/llama.cpp. Report rc, and grep the log for the patch-apply summary and any "error:" lines.
+5. App: `TOSH_UPDATES=0 TOSH_NO_AVX2=1 TOSH_NO_BUMP=1 ./make-app.sh > .scratch/beta8-unified-engine/evidence/gates-beta8/make-app.log 2>&1; echo rc=$?`. Check `head -3` of the log says version 0.87.31-beta.8 and no-AVX2 true.
+6. DMG: `TOSH_UPDATES=0 TOSH_NO_AVX2=1 TOSH_NO_BUMP=1 ./scripts/make-dmg.sh > .scratch/beta8-unified-engine/evidence/gates-beta8/make-dmg.log 2>&1; echo rc=$?` (read scripts/make-dmg.sh first for its expected env/args; if it needs different ones, use what it needs and say so). Expect dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg.
+7. Static checks on dist/XeonLLM.app (no GPU): `plutil -p dist/XeonLLM.app/Contents/Info.plist | grep -E "CFBundleIdentifier|CFBundleShortVersionString|TOSHNoAVX2|TOSHUpdatesDisabled"`; `codesign --verify --deep dist/XeonLLM.app && echo verify-ok`; for each Mach-O in dist/XeonLLM.app/Contents/Resources/bin: the AVX2/FMA mnemonic count `otool -tv <f> | grep -cE '\b(vfmadd|vfmsub|vfnmadd|vpbroadcast[bwdq]|vpermd|vpermq|vperm2i128|vinserti128|vextracti128|vpgatherdd|vgatherdps|vpsllvd|vpsrlvd)'` (must be 0); `strings dist/XeonLLM.app/Contents/Resources/bin/llama-server | grep -m1 -o 'XeonLLM engine.*'` (must name 0.87.31-beta.8); `shasum -a 256 dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg`.
+</steps>
+
+<report>
+End with: `git diff --stat` and `git diff Sources Tests VERSION`, each step's rc and summary line (quoted from the saved logs), the static check output, the DiagnosticReports names before and after, and anything you could not run.
+</report>
