@@ -11,10 +11,11 @@ M=/Users/sam/models
 SECTIONS=${GATES_SECTIONS:-identity,ops,coverage,prefill,preflight,engine,proofs,proofs8,avx,repro}
 want() { case ",$SECTIONS," in *",$1,"*) return 0;; *) return 1;; esac; }
 al() { local t=$1; shift; perl -e 'alarm shift; exec @ARGV' "$t" "$@"; }
-CR0=$(ls /Library/Logs/DiagnosticReports/ | grep -cE 'panic|watchdog|gpuRestart')
+# Crash check by NAME: the system prunes old reports, so a falling count is not a crash.
+CRL=$(mktemp); ls /Library/Logs/DiagnosticReports/ | grep -E 'panic|watchdog|gpuRestart' | sort > $CRL
 chk() {
-    local n; n=$(ls /Library/Logs/DiagnosticReports/ | grep -cE 'panic|watchdog|gpuRestart')
-    if [ "$n" != "$CR0" ]; then echo "NEW CRASH REPORT after $1: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '\n' ' ') - STOP"; exit 9; fi
+    local new; new=$(ls /Library/Logs/DiagnosticReports/ | grep -E 'panic|watchdog|gpuRestart' | sort | comm -13 $CRL -)
+    if [ -n "$new" ]; then echo "NEW CRASH REPORT after $1: $(echo $new | tr '\n' ' ') - STOP"; exit 9; fi
 }
 echo "DiagnosticReports at start: $(ls -t /Library/Logs/DiagnosticReports/ | head -3 | tr '\n' ' ')"
 date
