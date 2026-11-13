@@ -1,6 +1,6 @@
 # 24: Qwen3-14B layer split over both cards at -c 32768 sometimes answers "@@@@..." (pre-existing)
 
-Type: bug (Mocca diagnose, orchestrator gates) · Status: open · From: beta 8 R2 repro A/B and ticket 23
+Type: bug (Mocca diagnose, orchestrator gates) · Status: closed for beta 8 (known issue, documented; not reproduced serially) · From: beta 8 R2 repro A/B and ticket 23
 
 The 0078 repro (gates-beta8/repro.sh: Qwen3-14B Q4_K_M, GGML_METAL_DEVICE_LIST=0,1, -ngl 99 -c 32768
 --split-mode layer -fa auto, ~5.4k-token prompt, max_tokens 64, temperature 0) answered with
@@ -23,3 +23,11 @@ this is not plain NaN logits. new-1's window (≈17:35-17:40) shows no second ll
 monitor; the user's own app was running during the day and cannot be ruled out as a GPU-memory neighbour.
 Status: open, known issue for beta 8 notes. The repro gate now fails on such an answer (TEXT BAD), so a
 release cannot pass with it unseen.
+
+## Closed for beta 8 (2026-11-13, orchestrator)
+
+Not reproduced in 22 strictly serial runs; the 3 bad of 40 all fall in windows where another GPU program
+(the user's own app) may have held card memory. The launch needs -c 32768 on the 14B layer split over
+both cards, which overcommits each card's working set; the app never launches it (its planner caps the
+14B at 16384, stress group B). The repro gate fails on such an answer (TEXT BAD) and passed on the R1b
+binaries ("text ok"). Named in the beta 8 notes as a known issue. Reopen if it appears in an app launch.

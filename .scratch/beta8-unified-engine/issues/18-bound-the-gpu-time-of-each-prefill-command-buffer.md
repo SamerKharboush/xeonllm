@@ -1,6 +1,6 @@
 # 18: bound the GPU time of each prefill command buffer (the 2026-11-07 panic)
 
-Type: bug (safety) · Status: engine part done in a worktree (diff evidence/18/0081-*.diff); app ubatch and the 14B gate open · Priority: before beta.7 ships
+Type: bug (safety) · Status: done (shipped in beta.7: metal/0081 and the app's -ub 128, commit 060e886; 14B gate in the beta.7 stress) · Priority: before beta.7 ships
 Evidence: `evidence/gates-beta7/out/set/Qwen3-14B-Q4_K_M/*-layer.server.log`, panic
 `Kernel-2026-11-07-144047.panic` ("no successful checkins from WindowServer ... in 120 seconds").
 
