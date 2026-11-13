@@ -94,3 +94,4 @@ monitor 25d start 13:54
 15:28 srv=0 bench=0 clang++=0 clang=0
 15:29 srv=0 bench=0 clang++=0 clang=0
 15:30 srv=0 bench=0 clang++=0 clang=0
+monitor end 15:31
