@@ -1,0 +1,25 @@
+RUNS (all beta 8 unless noted; d1/d2/d3/t1/t2/t3 = repeats)
+
+label   mode   engine        band16   band300  band1100 len sha       vs beta8-tensor
+d1      draft  beta.8   SAME     DIFF      274 79a3dc8c  SAME
+d2      draft  beta.8   SAME     DIFF      269 9830335f  diff@100
+d3      draft  beta.8   n/a      n/a       266 49266056  diff@91
+t1      tensor beta.8   SAME     SAME      266 49266056  diff@91
+t2      tensor beta.8   SAME     SAME      267 985364fb  diff@0
+t3      tensor beta.8   n/a      n/a       274 79a3dc8c  SAME
+b7d     draft  beta.7   SAME     SAME      267 985364fb  diff@0
+moe     draft  beta.8   SAME     DIFF      267 985364fb  diff@0
+nopo    draft  beta.8   SAME     SAME      274 79a3dc8c  SAME
+nopo2   draft  beta.8   n/a      n/a       266 49266056  diff@91
+ub512   draft  beta.8   SAME     SAME      274 79a3dc8c  SAME
+
+REFERENCES
+  beta8-tensor band1100 len=274 sha=79a3dc8c
+  beta8-draft  band1100 len=267 sha=985364fb
+  beta7-draft  band1100 len=274 sha=79a3dc8c
+
+DISTINCT band1100 OUTPUTS SEEN (sha -> runs)
+  79a3dc8c n= 6  d1(draft), t3(tensor), nopo(draft), ub512(draft), REF:beta8-tensor, REF:beta7-draft
+  985364fb n= 4  t2(tensor), b7d(draft), moe(draft), REF:beta8-draft
+  49266056 n= 3  d3(draft), t1(tensor), nopo2(draft)
+  9830335f n= 1  d2(draft)

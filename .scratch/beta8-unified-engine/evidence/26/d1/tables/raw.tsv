@@ -1,0 +1,6 @@
+ornith-1.0-35b-Q6_K.gguf	draft	band16	PASS	prompt_tokens=83 completion_tokens=64 12.0s	83
+ornith-1.0-35b-Q6_K.gguf	draft	band300	PASS	prompt_tokens=451 completion_tokens=64 14.0s	451
+ornith-1.0-35b-Q6_K.gguf	draft	band1100	PASS	prompt_tokens=1486 completion_tokens=64 28.2s	1486
+ornith-1.0-35b-Q6_K.gguf	draft	drafter-head	SKIP	the target's head is on a card; no copy is made	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-tensor	SKIP	no tensor run of this model	0

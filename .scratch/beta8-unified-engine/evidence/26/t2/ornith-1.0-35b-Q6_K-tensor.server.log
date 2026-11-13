@@ -1,0 +1,49 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.243.031 I srv  llama_server: initializing ...
+0.00.243.061 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app standalone)
+0.00.243.062 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.243.598 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.245.586 I srv    load_model: loading model '/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/models35/ornith-1.0-35b-Q6_K.gguf'
+0.05.585.334 I Tosh Dynamic MoE: mode=PLAN_FULL_HOST_DMOE reason=FULL_HOST_SAFE warnings=COVERAGE_CONSTRAINED rss=28.8GiB vram=10.0GiB warm=0.0GiB hot=4.6GiB coverage=1.19 CONSTRAINED ctx=32768 kv=f16 ub=1024
+0.33.767.913 I cmn          init: llama threadpool init, n_threads = 2
+ggml_cpu: multi-row dot ON for q6_K (AVX1)
+0.34.195.871 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_lds32
+0.34.506.648 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.34.517.128 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.34.517.169 I srv  llama_server: model loaded
+0.34.517.173 I srv  llama_server: listening on http://127.0.0.1:58529
+0.36.171.251 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.36.171.305 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.36.847.326 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.37.216.180 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+0.43.627.955 I slot print_timing: id  0 | task 0 | prompt eval time =    3081.46 ms /    83 tokens (   37.13 ms per token,    26.94 tokens per second)
+0.43.627.964 I slot print_timing: id  0 | task 0 |        eval time =    4375.15 ms /    64 tokens (   69.45 ms per token,    14.40 tokens per second)
+0.43.627.967 I slot print_timing: id  0 | task 0 |       total time =    7456.61 ms /   147 tokens
+0.43.627.968 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+0.43.628.018 I slot      release: id  0 | task 0 | stop processing: n_tokens = 146, truncated = 0
+0.43.636.107 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.144 (> 0.100 thold), f_keep = 0.445
+0.43.682.583 I slot launch_slot_: id  0 | task 66 | processing task, is_child = 0
+0.49.948.191 I slot print_timing: id  0 | task 66 | prompt processing, n_tokens =    447, progress = 0.99, t =   6.27 s / 71.34 tokens per second
+0.54.537.675 I slot print_timing: id  0 | task 66 | prompt eval time =    6477.84 ms /   451 tokens (   14.36 ms per token,    69.62 tokens per second)
+0.54.537.685 I slot print_timing: id  0 | task 66 |        eval time =    4377.22 ms /    64 tokens (   69.48 ms per token,    14.39 tokens per second)
+0.54.537.686 I slot print_timing: id  0 | task 66 |       total time =   10855.06 ms /   515 tokens
+0.54.537.687 I slot print_timing: id  0 | task 66 |    graphs reused =        124
+0.54.537.743 I slot      release: id  0 | task 66 | stop processing: n_tokens = 514, truncated = 0
+0.54.546.213 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.291 (> 0.100 thold), f_keep = 0.842
+0.54.546.550 I slot launch_slot_: id  0 | task 132 | processing task, is_child = 0
+1.01.147.060 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    458, progress = 0.31, t =   6.60 s / 69.39 tokens per second
+1.13.213.945 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =   1482, progress = 1.00, t =  18.67 s / 79.39 tokens per second
+1.13.487.030 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_wg32; using kernel_flash_attn_ext_vec_amd_dk256_kf16_vf16_w64_wg32_lds32
+1.18.031.266 I slot print_timing: id  0 | task 132 | prompt eval time =   18887.82 ms /  1486 tokens (   12.71 ms per token,    78.68 tokens per second)
+1.18.031.276 I slot print_timing: id  0 | task 132 |        eval time =    4596.87 ms /    64 tokens (   72.97 ms per token,    13.70 tokens per second)
+1.18.031.277 I slot print_timing: id  0 | task 132 |       total time =   23484.69 ms /  1550 tokens
+1.18.031.278 I slot print_timing: id  0 | task 132 |    graphs reused =        185
+1.18.031.348 I slot      release: id  0 | task 132 | stop processing: n_tokens = 1549, truncated = 0
+1.18.048.453 I srv    operator(): operator(): cleaning up before exit...

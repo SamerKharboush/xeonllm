@@ -1,0 +1,10 @@
+ref-b8-tensor  len= 274 first40="Here's a thinking process:\n\n1.  **Analyz"
+ref-b8-draft   len= 267 first40='Thinking Process:\n\n1.  **Analyze the Req'
+ref-b7-draft   len= 274 first40="Here's a thinking process:\n\n1.  **Analyz"
+d1             len= 274 first40="Here's a thinking process:\n\n1.  **Analyz"
+d2             len= 269 first40="Here's a thinking process:\n\n1.  **Analyz"
+t1             len= 266 first40="Here's a thinking process:\n\n1.  **Analyz"
+b7d            len= 267 first40='Thinking Process:\n\n1.  **Analyze the Req'
+moe            len= 267 first40='Thinking Process:\n\n1.  **Analyze the Req'
+nopo           len= 267 first40='Thinking Process:\n\n1.  **Analyze the Req'
+ub512          len= 274 first40="Here's a thinking process:\n\n1.  **Analyz"

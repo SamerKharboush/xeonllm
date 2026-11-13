@@ -1,0 +1,25 @@
+== per-run band1100 sha (8) vs beta8-tensor / beta8-draft ==
+d1     draft  len=274 sha=79a3dc8c tensor:SAME     b8draft:diff@0   b7draft:SAME
+d2     draft  len=269 sha=9830335f tensor:diff@100 b8draft:diff@0   b7draft:diff@100
+d3     draft  len=266 sha=49266056 tensor:diff@91  b8draft:diff@0   b7draft:diff@91
+t1     tensor len=266 sha=49266056 tensor:diff@91  b8draft:diff@0   b7draft:diff@91
+t2     tensor len=267 sha=985364fb tensor:diff@0   b8draft:SAME     b7draft:diff@0
+t3     tensor len=274 sha=79a3dc8c tensor:SAME     b8draft:diff@0   b7draft:SAME
+b7d    draft  len=267 sha=985364fb tensor:diff@0   b8draft:SAME     b7draft:diff@0
+moe    draft  len=267 sha=985364fb tensor:diff@0   b8draft:SAME     b7draft:diff@0
+nopo   draft  len=274 sha=79a3dc8c tensor:SAME     b8draft:diff@0   b7draft:SAME
+nopo2  draft  len=266 sha=49266056 tensor:diff@91  b8draft:diff@0   b7draft:diff@91
+ub512  draft  len=274 sha=79a3dc8c tensor:SAME     b8draft:diff@0   b7draft:SAME
+
+== band16 / band300 length+identity vs beta8-tensor ==
+d1     band16 SAME       band300 DIFF@73
+d2     band16 SAME       band300 DIFF@73
+d3     band16 missing    band300 missing
+t1     band16 SAME       band300 SAME
+t2     band16 SAME       band300 SAME
+t3     band16 missing    band300 missing
+b7d    band16 SAME       band300 SAME
+moe    band16 SAME       band300 DIFF@73
+nopo   band16 SAME       band300 SAME
+nopo2  band16 missing    band300 missing
+ub512  band16 SAME       band300 SAME

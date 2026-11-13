@@ -160,6 +160,12 @@ backend. A patch that changes which route or backend computes `-ngl 0` may move 
 when its opt-out restores the previous release's text on every moved cell, and the notes name it.
 Beta 8 (ticket 25): metal/0083 moves the head-64/128 models (`TOSH_FA_PF_W64=1` restores beta.7's
 text) and core/0082's prompt offload moves Ternary-Bonsai-2-27B (`--no-op-offload` restores it).
+A launch with dynamic MoE (`--dynamic-moe on`, the 35B) is the exception: which experts sit on a
+card is planned at load from free VRAM (card 0 shares it with the display) and routing, so the
+same engine and mode answer differently run to run (beta 8 ticket 26: two identical draft runs
+and a repeated tensor run each differed; beta.7's engine flips the same way). For such a launch
+byte-identity is reported, not gated; its cells must still pass and its tools cell must carry
+`tool_calls`.
 GPU text against `-ngl 0` is reported, not gated: the Metal and CPU backends sum in a
 different order and part ways after a few hundred characters on some models (Qwen3-4B Q4_K_M,
 Qwen3-8B, Nemotron, Underdog-27B on beta.4 and beta.6 alike). The report is a table: model x

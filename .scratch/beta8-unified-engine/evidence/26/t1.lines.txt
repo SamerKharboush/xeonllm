@@ -1,0 +1,1 @@
+0.05.777.657 I Tosh Dynamic MoE: mode=PLAN_FULL_HOST_DMOE reason=FULL_HOST_SAFE warnings=COVERAGE_CONSTRAINED rss=28.8GiB vram=9.9GiB warm=0.0GiB hot=4.6GiB coverage=1.19 CONSTRAINED ctx=32768 kv=f16 ub=1024

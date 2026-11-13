@@ -1,0 +1,3 @@
+band16	PASS	prompt_tokens=83 completion_tokens=64 13.7s	83
+band300	PASS	prompt_tokens=451 completion_tokens=64 15.5s	451
+band1100	PASS	prompt_tokens=1486 completion_tokens=64 29.8s	1486

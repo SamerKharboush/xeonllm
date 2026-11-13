@@ -1,0 +1,6 @@
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A highly repetitive paragraph about "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--

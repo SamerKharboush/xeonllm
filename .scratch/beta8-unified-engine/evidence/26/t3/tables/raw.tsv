@@ -1,0 +1,2 @@
+ornith-1.0-35b-Q6_K.gguf	tensor	band1100	PASS	prompt_tokens=1486 completion_tokens=64 24.4s	1486
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
