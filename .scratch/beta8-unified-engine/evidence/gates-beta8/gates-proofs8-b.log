@@ -1,0 +1,32 @@
+DiagnosticReports at start: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 02:14:29 CET 2026
+== metal/0083 decomposed prefill on 64-lane cards (card 1, Qwen3-4B-Q4_K_M, -ub 128)
+0083 new process 1 rc=0
+  "9079701214" "8897589" -> "56.389557" sd "0.055252"
+  "10548405066" "1236080" -> "12.134536" sd "0.001417"
+0083 new process 2 rc=0
+  "9083967068" "4684956" -> "56.363050" sd "0.029067"
+  "10548659354" "5713130" -> "12.134246" sd "0.006569"
+0083 w64 process 1 rc=0
+  "18544170462" "4210069" -> "27.609756" sd "0.006268"
+  "10543512058" "2045824" -> "12.140168" sd "0.002353"
+0083 w64 process 2 rc=0
+  "18547051962" "1666158" -> "27.605465" sd "0.002472"
+  "10547491005" "803745" -> "12.135588" sd "0.000925"
+0083 text new: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
+0083 text w64: 'Okay, the user provided a lot of repeated sentences about a committee meeting. Let me see. The main points are that the '
+0083 text identical
+== metal/0084 gated-delta-net fusion off across several cards (dense qwen35 27B Q6_K, -ngl 12)
+0084 one12: "Here's a thinking process:\n\n1.  **Understand User Request:** The user wants an explanation of what a binary search tree "
+0084 twocard12: "Here's a thinking process:\n\n1.  **Understand User Request:** The user wants an explanation of what a binary search tree "
+0084 twocard12 MULTI=1 (control): 'Here000000000000000000000000000000000000000000000000000000000000000|'
+0084 twocard12 identical to one12
+/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out-b/t84-one12.txt /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out-b/t84-two12-multi.txt differ: char 5, line 1
+0084 control differs (expected)
+kernels one12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
+kernels two12: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=0_fold=0 
+kernels two12-multi: gated_delta_net_f32_lpr16_ne20=128_ne30=1_K=1_rows=1_fold=1 
+no servers of ours
+DiagnosticReports at end: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 02:35:16 CET 2026
+GATES DONE

@@ -1,0 +1,19 @@
+DiagnosticReports at start: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 02:10:27 CET 2026
+== section 2 proofs (wave64 lines, rows8 / full-tg controls; card 1, models under one card)
+card 0: ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+card 0: ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+card 0: ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+card 1: ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+card 1: ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+card 1: ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+X Qwen3-4B-Q4_K_M tg128 "16.711207" sd "0.009489"
+X Qwen3-0.6B-Q8_0 tg128 "58.886377" sd "0.160908"
+TOSH_MV_ROWS8_DISABLE Qwen3-4B-Q4_K_M tg128 "14.164909" sd "0.009280"
+TOSH_MV_ROWS8_DISABLE Qwen3-0.6B-Q8_0 tg128 "58.881532" sd "0.094107"
+TOSH_FULL_TG_DISABLE Qwen3-4B-Q4_K_M tg128 "16.655278" sd "0.005733"
+TOSH_FULL_TG_DISABLE Qwen3-0.6B-Q8_0 tg128 "58.717888" sd "0.090090"
+no servers of ours
+DiagnosticReports at end: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 02:13:44 CET 2026
+GATES DONE

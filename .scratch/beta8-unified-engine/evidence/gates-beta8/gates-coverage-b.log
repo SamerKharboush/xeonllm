@@ -1,0 +1,11 @@
+DiagnosticReports at start: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 01:34:02 CET 2026
+== 3.2 kernel coverage
+# path: engine self-check (TOSH_METAL_CHECK_KERNELS=1)
+# card 0: exit 0, missing 0
+# card 1: exit 0, missing 0
+PASS: 0 missing kernel names
+no servers of ours
+DiagnosticReports at end: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 01:34:06 CET 2026
+GATES DONE
