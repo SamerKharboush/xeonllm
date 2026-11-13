@@ -20,16 +20,16 @@ ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) p
 ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
 ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
 ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
-0.00.276.394 I srv  llama_server: initializing ...
-0.00.276.414 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app 0.87.31-beta.8)
-0.00.276.415 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
-0.00.281.276 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
-0.00.286.428 I srv    load_model: loading model '/Users/sam/models/Qwen3-0.6B-Q8_0.gguf'
-0.00.287.104 I Tosh MoE: standard
-0.00.289.217 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
-0.00.566.142 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
-0.01.826.649 I cmn          init: llama threadpool init, n_threads = 12
-0.02.227.024 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
-0.02.345.743 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
-0.02.373.763 I srv  llama_server: model loaded
-0.02.373.776 I srv  llama_server: listening on http://127.0.0.1:18099
+0.00.206.727 I srv  llama_server: initializing ...
+0.00.206.744 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app 0.87.31-beta.8)
+0.00.206.753 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.208.140 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.210.972 I srv    load_model: loading model '/Users/sam/models/Qwen3-0.6B-Q8_0.gguf'
+0.00.211.093 I Tosh MoE: standard
+0.00.211.477 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.00.464.347 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.628.375 I cmn          init: llama threadpool init, n_threads = 12
+0.02.013.439 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.02.130.540 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.02.160.430 I srv  llama_server: model loaded
+0.02.160.456 I srv  llama_server: listening on http://127.0.0.1:18099

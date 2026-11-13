@@ -1,0 +1,5 @@
+{
+ "band16": "Okay, let's see. The user provided a text that's a poem about a quick brown fox, a compiler, a GPU, and a dog. The last line is \"the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile\". The question\n--\n",
+ "band300": "Okay, let's see. The user provided a long text that's a repetition of the same lines about a quick brown fox, the compiler, and the GPU. The question is asking for the color of the sky in one word.\n\nFirst, I need to look through the text to find any mention of the\n--\n",
+ "band1100": "Okay, let's see. The user provided a long text that's a repetition of the same lines about a quick brown fox, the compiler, and the GPU. The question is asking for the color of the sky in one word.\n\nFirst, I need to check if there's any mention of the sky in\n--\n"
+}

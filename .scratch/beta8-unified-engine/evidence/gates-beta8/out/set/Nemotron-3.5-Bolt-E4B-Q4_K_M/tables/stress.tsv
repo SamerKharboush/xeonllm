@@ -1,0 +1,52 @@
+model	split	cell	verdict	detail	prompt_tokens
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band16	PASS	prompt_tokens=90 completion_tokens=64 6.1s	90
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band300	PASS	prompt_tokens=458 completion_tokens=64 8.9s	458
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band450	PASS	prompt_tokens=665 completion_tokens=64 8.1s	665
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band520	PASS	prompt_tokens=734 completion_tokens=64 6.2s	734
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band1100	PASS	prompt_tokens=1493 completion_tokens=64 11.6s	1493
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band4200	PASS	prompt_tokens=5449 completion_tokens=64 38.0s	5449
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	band8300	PASS	prompt_tokens=10693 completion_tokens=64 49.7s	10693
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn0	PASS	prompt_tokens=227 completion_tokens=2 4.3s	227
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn1	PASS	prompt_tokens=449 completion_tokens=2 3.0s	449
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn2	PASS	prompt_tokens=671 completion_tokens=2 3.4s	671
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn3	PASS	prompt_tokens=893 completion_tokens=2 3.4s	893
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn4	PASS	prompt_tokens=1115 completion_tokens=2 3.3s	1115
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	conv6-turn5	PASS	prompt_tokens=1337 completion_tokens=2 3.3s	1337
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	evict	PASS	prompt_tokens=20514 completion_tokens=64 95.4s	20514
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	after-evict	PASS	prompt_tokens=113 completion_tokens=64 8.7s	113
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	over-ctx	PASS	refused with 400 at n_ctx=31744	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	after-over-ctx	PASS	prompt_tokens=113 completion_tokens=64 7.5s	113
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	tools	PASS	prompt_tokens=68 completion_tokens=144 10.7s	68
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	parallel2	SKIP	--parallel 1 does not allow it	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	cancel-stream	PASS	stream closed after 64 bytes	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	after-cancel	PASS	prompt_tokens=159 completion_tokens=64 6.1s	159
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band16	PASS	prompt_tokens=90 completion_tokens=64 7.4s	90
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band300	PASS	prompt_tokens=458 completion_tokens=64 10.6s	458
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band450	PASS	prompt_tokens=665 completion_tokens=64 9.9s	665
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band520	PASS	prompt_tokens=734 completion_tokens=64 6.8s	734
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band1100	PASS	prompt_tokens=1493 completion_tokens=64 15.4s	1493
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band4200	PASS	prompt_tokens=5449 completion_tokens=64 57.2s	5449
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	band8300	PASS	prompt_tokens=10693 completion_tokens=64 78.4s	10693
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn0	PASS	prompt_tokens=227 completion_tokens=2 3.3s	227
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn1	PASS	prompt_tokens=449 completion_tokens=2 3.4s	449
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn2	PASS	prompt_tokens=671 completion_tokens=2 3.5s	671
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn3	PASS	prompt_tokens=893 completion_tokens=2 3.3s	893
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn4	PASS	prompt_tokens=1115 completion_tokens=2 3.4s	1115
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	conv6-turn5	PASS	prompt_tokens=1337 completion_tokens=2 3.4s	1337
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	evict	PASS	prompt_tokens=20514 completion_tokens=64 155.2s	20514
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	after-evict	PASS	prompt_tokens=113 completion_tokens=64 7.1s	113
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	over-ctx	PASS	refused with 400 at n_ctx=31744	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	after-over-ctx	PASS	prompt_tokens=113 completion_tokens=64 5.4s	113
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	tools	PASS	prompt_tokens=68 completion_tokens=144 13.1s	68
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	parallel2	SKIP	--parallel 1 does not allow it	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	cancel-stream	PASS	stream closed after 64 bytes	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	after-cancel	PASS	prompt_tokens=159 completion_tokens=64 7.7s	159
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	band16	PASS	prompt_tokens=90 completion_tokens=64 11.2s	90
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	band300	PASS	prompt_tokens=458 completion_tokens=64 27.7s	458
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	band1100	PASS	prompt_tokens=1493 completion_tokens=64 62.0s	1493
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0

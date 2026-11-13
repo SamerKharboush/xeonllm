@@ -1,0 +1,20 @@
+{
+ "band16": "Thinking Process:\n1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question.\n2.  **Analyze the text:** \"the quick brown fox jumps over the lazy dog while the compiler waits for the next token\n--\n",
+ "band300": "Thinking Process:\n1.  **Analyze the Request:** The user wants me to act as a \"terse assistant,\" read the provided text, and answer the final question in one word.\n2.  **Analyze the Text:** The text is a repetitive string: \"the quick brown fox jumps\n--\n",
+ "band450": "Thinking Process:\n1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question in one word.\n2.  **Analyze the text:** The text is a repetitive string: \"the quick brown fox jumps over the\n--\n",
+ "band520": "Thinking Process:\n1.  **Analyze the request:** The user wants me to act as a terse assistant, read the provided text, and answer the final question in one word.\n2.  **Analyze the text:** The text is a repetitive string: \"the quick brown fox jumps over the\n--\n",
+ "band1100": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants me to act as a \"terse assistant,\" read the provided text, and answer the final question in *one word*.\n2.  **Analyze the Text:** The text is a repetitive string: \"the quick brown fox\n--\n",
+ "band4200": "1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question (\"In one word, what colour is the sky?\").\n2.  **Analyze the Text:** The text is a repetition of: \"\n--\n",
+ "band8300": "1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question in one word: \"In one word, what colour is the sky?\"\n\n2.  **Analyze the Text:** The text is a massive\n--\n",
+ "conv6-turn0": "\n--\nblue",
+ "conv6-turn1": "\n--\nred",
+ "conv6-turn2": "\n--\nblue",
+ "conv6-turn3": "\n--\nblue",
+ "conv6-turn4": "\n--\nblue",
+ "conv6-turn5": "\n--\nblue",
+ "evict": "1.  **Analyze the Request:** The user wants me to act as a terse assistant, read a very long, repetitive text, and answer a final question in one word: \"In one word, what colour is the sky?\"\n\n2.  **Analyze the Text:** The text is a massive\n--\n",
+ "after-evict": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants me to act as a \"terse assistant,\" read the provided text, and answer the final question.\n2.  **Analyze the Text:** The text is repetitive: \"the quick brown fox jumps over the lazy dog while\n--\n",
+ "after-over-ctx": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants me to act as a \"terse assistant,\" read the provided text, and answer the final question.\n2.  **Analyze the Text:** The text is repetitive: \"the quick brown fox jumps over the lazy dog while\n--\n",
+ "tools": "1. **Analyze the user request:** The user is asking for the weather in \"Lisbon\" and explicitly instructs to \"Use the tool.\"\n2. **Examine available tools:** The only available tool is `get_weather`.\n3. **Check tool requirements:** `get_weather` requires a `city` parameter (type STRING).\n4. **Extract parameters from the request:** The city provided is \"Lisbon\".\n5. **Construct the tool call:** `get_weather(city=\"Lisbon\")`\n6. **Format the output:** Generate the JSON tool call structure.\n--\n",
+ "after-cancel": "Thinking Process:\n1.  **Analyze the request:** The user wants me to act as a \"terse assistant,\" read the provided text, and answer the final question.\n2.  **Analyze the text:** The text is a repetitive string: \"the quick brown fox jumps over the lazy\n--\n"
+}

@@ -1,0 +1,82 @@
+### Qwen3-14B-Q4_K_M 06:00
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Qwen3-14B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Qwen3-14B-Q4_K_M
+ placement: card
+ context: 32768 -> 16384 (f16 KV, 2 cards, 6144 MiB each: the requested context does not fit)
+ args: -m /Users/sam/models/Qwen3-14B-Q4_K_M.gguf -ngl 99 -c 16384 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 20
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-14B-Q4_K_M.applog
+== Qwen3-14B-Q4_K_M.gguf [tensor] port 56554
+== Qwen3-14B-Q4_K_M.gguf [layer] port 56982
+== Qwen3-14B-Q4_K_M.gguf [ngl0] port 57681
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-14B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-14B-Q4_K_M
+-- Qwen3-14B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-14B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-14B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-14B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 6	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 6	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band300 differs at offset 6	0
+Qwen3-14B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 6	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 6	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-14B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band300 differs at offset 6	0
+### Nemotron-3.5-Bolt-E4B-Q4_K_M 06:35
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Nemotron-3.5-Bolt-E4B-Q4_K_M
+ placement: card
+ context: 32768 -> 31744 (f16 KV, 2 cards, 6144 MiB each: the requested context does not fit)
+ args: -m /Users/sam/models/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf -ngl 99 -c 31744 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M.applog
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [tensor] port 57878
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [layer] port 58101
+== Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf [ngl0] port 58371
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Nemotron-3.5-Bolt-E4B-Q4_K_M
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Nemotron-3.5-Bolt-E4B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 0	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf	ngl0	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+### Ternary-Bonsai-2-27B-PQ2_0 06:50
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf ctx=32768 tensor, port 18099)
+== Ternary-Bonsai-2-27B-PQ2_0
+ placement: card
+ args: -m /Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --ca
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Ternary-Bonsai-2-27B-PQ2_0.applog
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [tensor] port 58508
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [layer] port 59749
+== Ternary-Bonsai-2-27B-PQ2_0.gguf [ngl0] port 60911
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Ternary-Bonsai-2-27B-PQ2_0/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Ternary-Bonsai-2-27B-PQ2_0
+-- Ternary-Bonsai-2-27B-PQ2_0-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Ternary-Bonsai-2-27B-PQ2_0-ngl0.cells.tsv:    3 PASS 
+-- Ternary-Bonsai-2-27B-PQ2_0-tensor.cells.tsv:   20 PASS    1 SKIP 
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 226	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 226	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	identical-vs-previous	FAIL	band300 differs at offset 226	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-ngl0	DIFFERS	band300 differs at offset 226	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-ngl0	DIFFERS	band300 differs at offset 226	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	identical-vs-previous	FAIL	band300 differs at offset 226	0
+cleaned
+### done

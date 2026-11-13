@@ -1,0 +1,30 @@
+Work in the llama.cpp worktree /Users/sam/Library/Caches/xeonllm-wt-fa (series 0001-0086 committed locally on pin d81235049; build dir build-fa configured) and with the shipped engines. DIAGNOSIS. You may apply/revert patches in the worktree as UNCOMMITTED changes; at the end the worktree must be back to clean (`git status --short` empty). Never commit/stash/reset/checkout/clean/worktree. Write results under /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/25/ (create it). Do not edit anything under /Users/sam/firellama except that folder.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until every step is done, then write the report once. Run `date` first; at 2 h 30 min stop and report what you have. Every claim must point to a file you saved. Never invent or round a number.
+
+<safety — this Mac froze twice this month>
+- ONE GPU/engine program at a time; never one during a build; build with -j8 at most. Before each run: no llama-server except pid 747, no llama-bench/llama-cli. Never pkill/killall; kill only pids you started. Never touch pid 747, 127.0.0.1:8080, /Applications, any defaults domain.
+- Before anything and after every run: `ls -t /Library/Logs/DiagnosticReports/ | head -3`; a NEW *.panic/*watchdog*/*.gpuRestart name: STOP and report.
+- Model: /Users/sam/models/Qwen3-0.6B-Q8_0.gguf only (and Qwen3-8B-Q4_K_M.gguf in step 4 only). -ngl 0 runs only.
+</safety>
+
+<bug>
+Ticket /Users/sam/firellama/.scratch/beta8-unified-engine/issues/25-cpu-text-changed-since-beta7.md (read it). Reference texts: beta.7 = /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/Qwen3-0.6B-Q8_0/ (its ngl0 band1100 answer file), beta 8 = .../gates-beta8/out/set/Qwen3-0.6B-Q8_0/ (ngl0 band1100). Find the answer-file naming there first.
+</bug>
+
+<how to run one cell>
+cd /Users/sam/firellama && G=.scratch/beta8-unified-engine/evidence/gates-beta8 && APPLOG=$G/out/set/Qwen3-0.6B-Q8_0.applog OUT=/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/25/<label> MODES=ngl0 NGL0_CELLS="band1100" scripts/stress-release.sh <BIN dir> /Users/sam/models/Qwen3-0.6B-Q8_0.gguf > .scratch/beta8-unified-engine/evidence/25/<label>.log 2>&1
+(BIN dir must hold llama-server; the build-fa/bin dir works.) Compare the produced band1100 answer with both references (cmp; first differing offset with python).
+</how to run one cell>
+
+<steps>
+1. Determinism / environment: run the cell with the beta.7 engine (BIN=/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/beta7-bin), label b7-1, then the shipped beta 8 engine (BIN=/Users/sam/firellama/dist/XeonLLM.app/Contents/Resources/bin), label b8-1. Expect b7-1 == beta.7 reference and b8-1 == beta 8 reference. If b7-1 does NOT reproduce beta.7's text, run it once more (b7-2) and report: the difference is then environmental, not a patch; stop the bisect and go to step 5.
+2. Bisect on the worktree build (cmake --build build-fa -j8 --target llama-server; record sha prefix each time): HEAD (0001-0086) label h; then revert core/0082 only: `git apply -R /Users/sam/firellama/patches/llama/core/0082-core-prompt-offload-with-a-compute-buffer-cap.patch` (if it does not reverse-apply cleanly because 0086 sits on top, first `git apply -R` core/0086, then 0082; say which), build, label no82. Restore with `git apply` in the opposite order and confirm `git status --short` is empty. If no82 gives beta.7's text, 0082 is the cause. If not, try reverting metal/0085, 0083, 0084 one at a time the same way (each alone), labels no85/no83/no84.
+3. For the culprit patch, read its diff and find which hunk can change CPU-only arithmetic (e.g. a graph change, ubatch/split change, a reserve change that changes n_threads/chunking, a different op order). Prove it with one more build that reverts only that hunk (temporary edit), label hunk. Say what it is, with file:line.
+4. If found: with the culprit hunk reverted, run the 8B band16 cell (same command with the 8B applog $G/out/set/Qwen3-8B-Q4_K_M.applog and model, NGL0_CELLS="band16"), label hunk-8b, against the 8B references.
+5. Restore the worktree to clean. Write evidence/25/RESULT.md: sha prefixes, a table label -> engine/patch state -> vs beta.7 ref -> vs beta 8 ref, the culprit (file:line) or "not found" with what was ruled out, whether the change is a correctness bug or a legitimate reordering (e.g. a different but valid summation order), and DiagnosticReports before/after. Do not propose code changes beyond naming the hunk.
+</steps>
+
+<report>
+End with `git -C /Users/sam/Library/Caches/xeonllm-wt-fa status --short`, the table, and the finding.
+</report>
