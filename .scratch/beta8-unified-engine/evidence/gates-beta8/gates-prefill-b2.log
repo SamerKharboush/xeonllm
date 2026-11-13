@@ -1,0 +1,26 @@
+DiagnosticReports at start: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 02:55:30 CET 2026
+== 3.3 prefill bands
+card 0 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7 
+card 0 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+card 1 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm layer Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7 
+card 0 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+card 1 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7 
+both cards 0,1 -sm layer Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=86 rows=0 handled (exit 86)
+both cards 0,1 -sm layer Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+both cards 0,1 -sm tensor Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7 
+35B host (-ngl 0) rc=0 rows=7
+no servers of ours
+DiagnosticReports at end: XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag 
+Fri Nov 13 03:56:53 CET 2026
+GATES DONE

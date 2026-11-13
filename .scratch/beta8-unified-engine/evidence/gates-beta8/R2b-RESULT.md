@@ -225,3 +225,99 @@ the old `gates.sh` in memory, before 02:03:58; `gates-prefill-b.log` (mtime 02:0
 the commit. I did not edit `gates.sh`, `srv.sh` or `repro.sh` (all three are identical to HEAD: `git status --porcelain`
 on them is empty; `gates.sh` hash `798bc62948b320c4d03a9abb5174dd802749fe3b`). The false stop stands as reported:
 no new report (top-3 unchanged, count 20 at 02:06 / 02:49 / 02:52), 12 rows pass, 8 rows not measured.
+
+---
+
+# Beta 8 R2b — prefill re-run with the name-based crash check (commit d0ea97c)
+
+Run: `GATES_OUT=out-b GATES_SECTIONS=prefill bash .scratch/beta8-unified-engine/evidence/gates-beta8/gates.sh`
+started `Fri Nov 13 02:55:30 CET 2026` by hand (not `nohup`; the shell tool waited), finished `03:56:53`, exit `rc=0`, `GATES DONE`.
+Log: `gates-prefill-b2.log`. `out-b/` was overwritten by the run (same rows as the first R2's `out/`, which is untouched).
+`gates.sh` / `srv.sh` / `repro.sh` unchanged from HEAD. No GPU program outside this section, one at a time, no pkill/killall.
+
+## Table
+
+| section | rc | verdict | quoted evidence |
+|---|---|---|---|
+| prefill | 0 | **PASS** — 20/20 rows as required | all 20 row lines below; `35B host (-ngl 0) rc=0 rows=7` with `grep -c GGML_ASSERT out-b/pp-35b-host.err` = **0** |
+
+Every row (`gates-prefill-b2.log`):
+
+```
+card 0 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7
+card 1 Qwen3-0.6B-Q8_0 (639446688 bytes, fits one card) rc=0 rows=7
+card 0 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7
+card 1 Qwen3-4B-Q4_K_M (2497280256 bytes, fits one card) rc=0 rows=7
+card 0 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7
+card 1 Qwen3-4B-Q6_K (3306260704 bytes, fits one card) rc=0 rows=7
+card 0 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7
+card 1 Qwen3-8B-Q4_K_M (5027783488 bytes, fits one card) rc=0 rows=7
+both cards 0,1 -sm layer Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7
+both cards 0,1 -sm tensor Qwen3-14B-Q4_K_M (9001753376 bytes, over one card) rc=0 rows=7
+both cards 0,1 -sm layer Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7
+both cards 0,1 -sm tensor Nemotron-3.5-Bolt-E4B-Q4_K_M (6180446208 bytes, over one card) rc=0 rows=7
+card 0 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7
+card 1 LFM3-1.7B-F16 (3466626336 bytes, fits one card) rc=0 rows=7
+both cards 0,1 -sm layer Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=0 rows=7
+both cards 0,1 -sm tensor Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=86 rows=0 handled (exit 86)
+both cards 0,1 -sm layer Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7
+both cards 0,1 -sm tensor Underdog-Saluki-27B-1.0-IQ2-mix (7898369152 bytes, over one card) rc=0 rows=7
+35B host (-ngl 0) rc=0 rows=7
+```
+
+No `NEW CRASH REPORT` line, no `kernel not found` / `error` / `unknown model` note on any row.
+
+## 35B host row
+
+`35B host (-ngl 0) rc=0 rows=7` — the row that failed in the first R2 with `rc=134 rows=6`. Assert count:
+
+```
+$ grep -c GGML_ASSERT out-b/pp-35b-host.err
+0
+```
+
+`out-b/pp-35b-host.csv` has 8 lines (header + 7 rows); the seven `n_prompt`/`avg_ns` pairs:
+`16 837373432` · `128 3738848516` · `256 6329532582` · `448 10197598433` · `512 11476254160` · `1024 22558094318` · `2048 45981659602` (ns/token).
+The only non-Metal stderr lines are `ggml_cpu: multi-row dot ON for q6_K (AVX1)` (×2); no `GGML_ASSERT`, no backtrace.
+
+First R2, for comparison (`out/pp-35b-host.err`, 2026-11-12 14:35, engine `d81235049` before 0085/0086):
+`/Users/sam/firellama/vendor/llama.cpp/ggml/src/ggml-backend.cpp:2193: GGML_ASSERT(id >= 0 && id < n_expert) failed` — `grep -c` = 1, `rc=134 rows=6`.
+
+## Tensor-split rows — ran or refused
+
+| row | first R2 (`gates-prefill.log`, Nov 12 13:35) | this run (`gates-prefill-b2.log`, Nov 13 02:55) |
+|---|---|---|
+| Qwen3-14B-Q4_K_M tensor | `rc=0 rows=7` | `rc=0 rows=7` (ran) |
+| Nemotron-3.5-Bolt-E4B-Q4_K_M tensor | `rc=0 rows=7` | `rc=0 rows=7` (ran) |
+| Ternary-Bonsai-2-27B-PQ2_0 tensor | `rc=86 rows=0 handled (exit 86)` | `rc=86 rows=0 handled (exit 86)` (refused, unchanged) |
+| Underdog-Saluki-27B-1.0-IQ2-mix tensor | `rc=0 rows=7` | `rc=0 rows=7` (ran) |
+
+The refusal line is identical in both logs:
+
+```
+both cards 0,1 -sm tensor Ternary-Bonsai-2-27B-PQ2_0 (7206168928 bytes, over one card) rc=86 rows=0 handled (exit 86)
+```
+
+and the reason is the same model property in both runs (`out-b/pp-Ternary-Bonsai-2-27B-PQ2_0-both-tensor.err`, last two lines):
+
+```
+ggml_backend_meta: RESHAPE cannot be tensor-split: src 0 ne[0]=6144 x ratio 1 does not divide ne[0]=9216 (axis 2)
+This model has no two-way tensor split. Restart with --split-mode layer.
+```
+
+So only Ternary-Bonsai refuses; the other three models' `-sm tensor` rows run with 7 rows on both cards. The first R2
+had the same four outcomes (three ran, one refused) — the difference is the 35B host row, not the tensor rows.
+
+## DiagnosticReports before and after
+
+- Start (log line 1, 02:55:30) and end (log line 24, 03:56:53), both verbatim:
+  `XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag`
+- Same three names from `ls -t /Library/Logs/DiagnosticReports/ | head -3` run by hand before the start (02:55:24) and after the end (04:00).
+- `ls /Library/Logs/DiagnosticReports/ | grep -cE 'panic|watchdog|gpuRestart'` = **20** before (02:55:24) and **20** after (04:00).
+  No new panic/watchdog/gpuRestart report; none pruned during the run.
+
+## Bottom line
+
+Prefill section 3.3 is **clean on the R1b binaries**: 20/20 rows, one expected tensor-split refusal (Ternary-Bonsai, exit 86),
+and the `35B host (-ngl 0)` row now `rc=0 rows=7` with 0 `GGML_ASSERT` — the core/0086 guard holds on the shipped engine
+(`llama-server` sha256 `63eb2a01af361672…`, VERSION `0.87.31-beta.8`, engine `d81235049`).
