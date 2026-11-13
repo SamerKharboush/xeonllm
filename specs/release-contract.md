@@ -156,7 +156,11 @@ A cell passes when the server stays up, the log has no `kernel not found`, no `e
 code`, no `GGML_ASSERT`, and the answer is non-empty and on topic (a reviewer reads a sample of
 answers). Greedy text is byte-identical across the split modes of one backend (layer against
 tensor), and byte-identical to the previous release's text for the same prompt, model and
-backend. GPU text against `-ngl 0` is reported, not gated: the Metal and CPU backends sum in a
+backend. A patch that changes which route or backend computes `-ngl 0` may move that text only
+when its opt-out restores the previous release's text on every moved cell, and the notes name it.
+Beta 8 (ticket 25): metal/0083 moves the head-64/128 models (`TOSH_FA_PF_W64=1` restores beta.7's
+text) and core/0082's prompt offload moves Ternary-Bonsai-2-27B (`--no-op-offload` restores it).
+GPU text against `-ngl 0` is reported, not gated: the Metal and CPU backends sum in a
 different order and part ways after a few hundred characters on some models (Qwen3-4B Q4_K_M,
 Qwen3-8B, Nemotron, Underdog-27B on beta.4 and beta.6 alike). The report is a table: model x
 cell -> pass/fail with the log line that failed.

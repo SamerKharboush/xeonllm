@@ -1,0 +1,88 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e2aae1b44ffeUIYWMQ2mHtrijJ): ses_e2aae1b44ffeUIYWMQ2mHtrijJ
+cost: $0
+touched files: 198
+   M .scratch/beta8-unified-engine/evidence/24/monitor.log
+   M .scratch/beta8-unified-engine/evidence/25/monitor-25d.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/Qwen3-4B-Q6_K-ngl0.cells.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/Qwen3-4B-Q6_K-ngl0.server.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/current.pid
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/knob-env.txt
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/tables/raw.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/tables/stress.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/RESULT.md
+   D .scratch/beta8-unified-engine/evidence/25/w64-set/Ternary-Bonsai-2-27B-PQ2_0/knob-env.tmp
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/compare.txt
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R1b.log
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2b.log
+   M specs/release-contract.md
+  ?? .scratch/beta7-unified-performance/briefs/04-avx1-relay.out
+  ?? .scratch/beta7-unified-performance/evidence/02/readceiling
+  ?? .scratch/beta7-unified-performance/evidence/03/hostcopy
+  ?? .scratch/beta7-unified-performance/evidence/03/prefill-ab2.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-unset.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-unset.err
+  ?? .scratch/beta8-unified-engine/briefs/11-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/11-resume.txt
+  ?? .scratch/beta8-unified-engine/briefs/12-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/14-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/15-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/17-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/19-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/21-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/22-relay.out
+  … and 158 more
+
+--- opencode final report ---
+Baseline: diag reports 39 names saved; server pid 747 (user's, untouched). Run 1 of 3.Relative `OUT` broke server launch (script `cd`s into OUT before redirect). Use absolute paths.Relative `OUT` again. Absolute paths only.Run 3 (base).Report: `.scratch/beta8-unified-engine/evidence/25/ternary-offload/RESULT.md`.
+
+**rc per run** (all foreground, one server at a time, `-ngl 0` only):
+- nopo rc=0 (`nopo/`)
+- mb rc=0 (`mb/`)
+- base rc=0 (`base/`)
+- nopo2 rc=0 (`nopo2/`, repeat of nopo to catch args + drift)
+
+**run x cell**
+
+| run | cell | vs beta.7 | vs beta 8 | cell time |
+|---|---|---|---|---|
+| nopo | band16 | IDENTICAL | IDENTICAL | 159.7s |
+| nopo | band300 | IDENTICAL | diff@226 (274 vs 276) | 234.7s |
+| nopo | band1100 | IDENTICAL | IDENTICAL | 414.1s |
+| mb | band16 | IDENTICAL | IDENTICAL | 159.5s |
+| mb | band300 | IDENTICAL | diff@226 (274 vs 276) | 232.8s |
+| mb | band1100 | IDENTICAL | IDENTICAL | 416.7s |
+| base | band16 | IDENTICAL | IDENTICAL | 135.7s |
+| base | band300 | diff@226 (276 vs 274) | IDENTICAL | 161.3s |
+| base | band1100 | IDENTICAL | IDENTICAL | 236.0s |
+| nopo2 | band16 | IDENTICAL | IDENTICAL | 160.4s |
+| nopo2 | band300 | IDENTICAL | diff@226 (274 vs 276) | 233.6s |
+| nopo2 | band1100 | IDENTICAL | IDENTICAL | 419.4s |
+
+Diff is one char at 226: beta.7/nopo/mb `Likely blue.`, beta 8/base `Likely "blue".` nopo vs mb all three cells IDENTICAL; mb vs base band300 DIFFERS.
+
+**Control proof (a)**, `nopo-cmd.txt` (ps of live server):
+`.../bin/llama-server -ngl 99 ... --split-mode layer -n 2048 -m /Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf --host 127.0.0.1 --port 53534 -ngl 0 --no-op-offload`
+
+**Control proof (b)**, `mb-env.txt` (only that line, while server ran):
+`GGML_OP_OFFLOAD_MIN_BATCH=100000`
+
+**DiagnosticReports**: `diagreports-first.txt` 39 names before first run; after mb, base, nopo2 = 39 names each, `comm -13` empty. No new panic/watchdog/gpuRestart. Pre-existing 2026-11-06/07/10/11 names only.
+
+Verdict: at `-ngl 0` beta 8 does offload prompt mat-muls to D700 (base band1100 236s vs 414-419s without). Both controls remove it and give beta.7's band300 exactly. band16/band1100 never differed, no signal there. core/0082 rule confirmed as cause, by flag and by threshold.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-13T14-31-15-642Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.

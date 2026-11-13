@@ -1,0 +1,6 @@
+model	split	cell	verdict	detail	prompt_tokens
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0nopo	band16	PASS	prompt_tokens=125 completion_tokens=64 160.4s	125
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0nopo	band300	PASS	prompt_tokens=493 completion_tokens=64 233.6s	493
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0nopo	band1100	PASS	prompt_tokens=1528 completion_tokens=64 419.4s	1528
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0nopo	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0nopo	identical-vs-tensor	SKIP	no tensor run of this model	0

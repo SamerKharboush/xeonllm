@@ -1,0 +1,18 @@
+nopo	band16	len=309	b7: IDENTICAL	b8: IDENTICAL
+nopo	band300	len=274	b7: IDENTICAL	b8: diff@226 (len 274 vs 276)
+nopo	band1100	len=255	b7: IDENTICAL	b8: IDENTICAL
+nopo2	band16	len=309	b7: IDENTICAL	b8: IDENTICAL
+nopo2	band300	len=274	b7: IDENTICAL	b8: diff@226 (len 274 vs 276)
+nopo2	band1100	len=255	b7: IDENTICAL	b8: IDENTICAL
+mb	band16	len=309	b7: IDENTICAL	b8: IDENTICAL
+mb	band300	len=274	b7: IDENTICAL	b8: diff@226 (len 274 vs 276)
+mb	band1100	len=255	b7: IDENTICAL	b8: IDENTICAL
+base	band16	len=309	b7: IDENTICAL	b8: IDENTICAL
+base	band300	len=276	b7: diff@226 (len 276 vs 274)	b8: IDENTICAL
+base	band1100	len=255	b7: IDENTICAL	b8: IDENTICAL
+nopo-vs-mb	band16	IDENTICAL
+nopo-vs-mb	band300	IDENTICAL
+nopo-vs-mb	band1100	IDENTICAL
+mb-vs-base	band16	IDENTICAL
+mb-vs-base	band300	DIFFERS
+mb-vs-base	band1100	IDENTICAL

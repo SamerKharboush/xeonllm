@@ -1,0 +1,1 @@
+/Users/sam/firellama/dist/XeonLLM.app/Contents/Resources/bin/llama-server -ngl 99 -c 32768 -t 12 -fa auto --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode layer -n 2048 -m /Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf --host 127.0.0.1 --port 53221 -ngl 0
