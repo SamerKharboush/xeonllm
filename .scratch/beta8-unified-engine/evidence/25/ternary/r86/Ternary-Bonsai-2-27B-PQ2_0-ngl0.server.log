@@ -1,0 +1,28 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.516.623 W DEPRECATED: argument '-ngl' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.516.653 W server tools or MCP servers are enabled, using localhost as default CORS origin (change via --cors-origins)
+0.00.516.808 I srv  llama_server: initializing ...
+0.00.516.823 I cmn  common_param: common_params_print_info: XeonLLM engine unknown (app standalone)
+0.00.516.824 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.517.250 W srv  llama_server: security: MCP proxy (experimental), server tools (experimental) enabled - do not expose to untrusted environments
+0.00.519.240 I srv    load_model: loading model '/Users/sam/models/Ternary-Bonsai-2-27B-PQ2_0.gguf'
+0.00.519.272 I Tosh MoE: standard
+0.00.519.359 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.06.728.197 I cmn          init: llama threadpool init, n_threads = 10
+0.14.622.040 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.14.632.603 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.14.632.643 I srv  llama_server: model loaded
+0.14.632.647 I srv  llama_server: listening on http://127.0.0.1:59658
+0.15.871.957 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.15.872.050 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.31.519.260 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =     42, progress = 0.09, t =  15.65 s / 2.68 tokens per second
+1.51.465.392 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    489, progress = 0.99, t =  95.59 s / 5.12 tokens per second
+4.01.134.913 I slot print_timing: id  0 | task 0 | prompt eval time =  103143.37 ms /   493 tokens (  209.22 ms per token,     4.78 tokens per second)
+4.01.134.925 I slot print_timing: id  0 | task 0 |        eval time =  122119.45 ms /    64 tokens ( 1938.40 ms per token,     0.52 tokens per second)
+4.01.134.927 I slot print_timing: id  0 | task 0 |       total time =  225262.82 ms /   557 tokens
+4.01.134.929 I slot print_timing: id  0 | task 0 |    graphs reused =         62
+4.01.134.996 I slot      release: id  0 | task 0 | stop processing: n_tokens = 556, truncated = 0
+4.01.151.066 I srv    operator(): operator(): cleaning up before exit...

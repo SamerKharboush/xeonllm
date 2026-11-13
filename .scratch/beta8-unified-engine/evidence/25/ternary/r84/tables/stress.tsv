@@ -1,0 +1,2 @@
+model	split	cell	verdict	detail	prompt_tokens
+Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	band300	PASS	prompt_tokens=493 completion_tokens=64 226.4s	493
