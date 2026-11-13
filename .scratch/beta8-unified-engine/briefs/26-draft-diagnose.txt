@@ -1,0 +1,32 @@
+Work in /Users/sam/firellama (XeonLLM, branch phase1-metal-d700-optimization). Beta 8 ticket 26: DIAGNOSIS by switches only, on the shipped engines. Read .scratch/beta8-unified-engine/issues/26-35b-draft-band1100-first-token.md first. Do not edit any source or script, do not build. Never git commit/tag/push/stash/reset/checkout/clean; never install into /Applications; never touch the user's defaults domains (dev.xeonllm.app, dev.engel.toshllm), their Application Support folders, 127.0.0.1:8080 (the user's own llama-server, pid 747: never kill it, never query it) or the user's running app. Write results only under .scratch/beta8-unified-engine/evidence/26/ (create it). Never save a full process environment (`ps eww`, `env`); it holds tokens.
+
+IMPORTANT: do not stop to write commentary. Run every step, then write RESULT.md and the report once. Run `date` first; at 2 h stop and report what you have. Every claim must point to a file you saved.
+
+<safety — this Mac froze twice this month and panicked on GPU work; card 0 drives the display>
+- STRICTLY SEQUENTIAL. One server at a time (the script starts and stops it). No builds, no other GPU program. Run each command in the foreground with a long tool timeout; if your shell cannot wait, nohup ONE run and poll its log until the script prints "logs:" and exits, before starting the next.
+- Before the first run and after every run: `ls /Library/Logs/DiagnosticReports/ | sort > <file>`; compare NAMES with the first listing (`comm -13`). A new *panic*, *watchdog* or *gpuRestart* name: STOP ALL WORK and report it first.
+</safety>
+
+<runner>
+From /Users/sam/firellama. G=.scratch/beta8-unified-engine/evidence/gates-beta8; E=.scratch/beta8-unified-engine/evidence/26; S=ornith-1.0-35b-Q6_K; M=$G/models35/$S.gguf (the drafter $G/models35/$S.dflash.gguf sits beside it); B8=dist/XeonLLM.app/Contents/Resources/bin; B7=$G/beta7-bin
+One run, label L, bin B, mode MODE, extra env X (may be empty), extra drafter flags D (may be empty):
+  X APPLOG=$G/out/set/$S.applog OUT=$E/L MODES=MODE CELLS="band16 band300 band1100" DRAFT_EXTRA="D" scripts/stress-release.sh B $M > $E/L.log 2>&1; echo "L rc=$?"
+After each run save from $E/L/$S-MODE.server.log the lines matching "Tosh Dynamic MoE: mode|dmoe_init|llama_tosh_dmoe_budget|op offload|draft acceptance" into $E/L.lines.txt.
+</runner>
+
+<runs, in this order>
+1. d1: B8, MODE=draft.                 2. d2: B8, MODE=draft (repeat).
+3. t1: B8, MODE=tensor.
+4. b7d: B7, MODE=draft (beta.7's engine, today's machine state).
+5. moe: B8, MODE=draft, X=TOSH_OFFLOAD_MOE=1 (undoes core/0086).
+6. nopo: B8, MODE=draft, D=--no-op-offload.
+7. ub512: B8, MODE=draft, D=-ub 512 (beta.7's planned micro-batch; check the server log's args/plan line shows it took effect and say what you see).
+</runs>
+
+<compare>
+For every label compare each cell's answer (the answers.json in $E/L/) with: beta 8 tensor ($G/out/set/$S/$S-tensor.answers.json), beta 8 draft ($G/out/set/$S/$S-draft.answers.json), beta.7 draft (.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/$S/$S-draft.answers.json): IDENTICAL or first differing offset and both lengths, plus the first 40 chars of band1100. Save $E/compare.txt (python, exact equality).
+</compare>
+
+<report>
+Write $E/RESULT.md and end your reply with: rc per run; the compare table; per run the dmoe plan line (ub, hot, coverage), the device 0/1 quota lines and the op offload line; whether d1 == d2 (determinism); which switch, if any, gives tensor's band1100 text in draft mode; the DiagnosticReports name comparison; anything skipped and why.
+</report>

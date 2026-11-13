@@ -268,3 +268,31 @@ monitor R3B start 05:58
 08:30 srv=0 bench=0 clang++=0 clang=0
 08:31 srv=0 bench=0 clang++=0 clang=0
 monitor end 08:32
+monitor R3C start 16:38
+16:38 srv=0 bench=0 clang++=0 clang=0
+16:39 srv=0 bench=0 clang++=0 clang=0
+16:40 srv=1 bench=0 clang++=0 clang=0
+16:41 srv=1 bench=0 clang++=0 clang=0
+16:42 srv=1 bench=0 clang++=0 clang=0
+16:43 srv=1 bench=0 clang++=0 clang=0
+16:44 srv=1 bench=0 clang++=0 clang=0
+16:45 srv=1 bench=0 clang++=0 clang=0
+16:46 srv=1 bench=0 clang++=0 clang=0
+16:47 srv=1 bench=0 clang++=0 clang=0
+16:48 srv=1 bench=0 clang++=0 clang=0
+16:49 srv=1 bench=0 clang++=0 clang=0
+16:50 srv=1 bench=0 clang++=0 clang=0
+16:51 srv=1 bench=0 clang++=0 clang=0
+16:52 srv=1 bench=0 clang++=0 clang=0
+16:53 srv=1 bench=0 clang++=0 clang=0
+16:54 srv=1 bench=0 clang++=0 clang=0
+16:55 srv=1 bench=0 clang++=0 clang=0
+16:56 srv=1 bench=0 clang++=0 clang=0
+16:57 srv=1 bench=0 clang++=0 clang=0
+16:58 srv=1 bench=0 clang++=0 clang=0
+16:59 srv=1 bench=0 clang++=0 clang=0
+17:00 srv=0 bench=0 clang++=0 clang=0
+17:01 srv=0 bench=0 clang++=0 clang=0
+17:02 srv=0 bench=0 clang++=0 clang=0
+17:03 srv=0 bench=0 clang++=0 clang=0
+monitor end 17:04

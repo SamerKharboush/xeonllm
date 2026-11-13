@@ -1,0 +1,26 @@
+### ornith-1.0-35b-Q6_K 16:38
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/models35/ornith-1.0-35b-Q6_K.gguf ctx=32768 tensor, port 18099)
+== ornith-1.0-35b-Q6_K
+ placement: expert tier (MoE, does not fit in VRAM: one card holds attention and the hot experts, the CPU computes the rest)
+ args: -m /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/models35/ornith-1.0-35b-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa 1 --host 127.0.0.1 --port 18099 --dynamic-moe on --load-mode none --jinja --n
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/ornith-1.0-35b-Q6_K.applog
+== ornith-1.0-35b-Q6_K.gguf [tensor] port 54201
+== ornith-1.0-35b-Q6_K.gguf [draft] port 54727
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/ornith-1.0-35b-Q6_K/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/ornith-1.0-35b-Q6_K
+-- ornith-1.0-35b-Q6_K-draft.cells.tsv:   20 PASS    1 SKIP 
+-- ornith-1.0-35b-Q6_K-tensor.cells.tsv:   20 PASS    1 SKIP 
+ornith-1.0-35b-Q6_K.gguf	draft	drafter-head	SKIP	the target's head is on a card; no copy is made	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-tensor	FAIL	band1100 differs at offset 0	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-previous	FAIL	band1100 differs at offset 0	0
+ornith-1.0-35b-Q6_K.gguf	draft	drafter-head	SKIP	the target's head is on a card; no copy is made	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-tensor	FAIL	band1100 differs at offset 0	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-previous	FAIL	band1100 differs at offset 0	0
+cleaned
+### done

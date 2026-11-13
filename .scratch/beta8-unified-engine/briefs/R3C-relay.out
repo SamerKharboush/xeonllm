@@ -1,0 +1,105 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e2a710c5fffeBVda4mw2cJPDFD): ses_e2a710c5fffeBVda4mw2cJPDFD
+cost: $0
+touched files: 200
+   M .scratch/beta8-unified-engine/evidence/24/monitor.log
+   M .scratch/beta8-unified-engine/evidence/25/monitor-25d.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/Qwen3-4B-Q6_K-ngl0.cells.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/Qwen3-4B-Q6_K-ngl0.server.log
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/current.pid
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/knob-env.txt
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/tables/raw.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/Qwen3-4B-Q6_K/tables/stress.tsv
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/RESULT.md
+   D .scratch/beta8-unified-engine/evidence/25/w64-set/Ternary-Bonsai-2-27B-PQ2_0/knob-env.tmp
+   M .scratch/beta8-unified-engine/evidence/25/w64-set/compare.txt
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R1b.log
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R2b.log
+   M .scratch/beta8-unified-engine/evidence/gates-beta8/monitor-R3.log
+  ?? .scratch/beta7-unified-performance/briefs/04-avx1-relay.out
+  ?? .scratch/beta7-unified-performance/evidence/02/readceiling
+  ?? .scratch/beta7-unified-performance/evidence/03/hostcopy
+  ?? .scratch/beta7-unified-performance/evidence/03/prefill-ab2.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-unset.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-unset.err
+  ?? .scratch/beta8-unified-engine/briefs/11-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/11-resume.txt
+  ?? .scratch/beta8-unified-engine/briefs/12-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/14-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/15-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/17-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/19-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/21-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/22-relay.out
+  … and 160 more
+
+--- opencode final report ---
+Report: `.scratch/beta8-unified-engine/evidence/gates-beta8/R3-C-RESULT.md`
+
+## ornith-1.0-35b-Q6_K
+
+Launch lines (`out/set/ornith-1.0-35b-Q6_K.applog`):
+```
+== ornith-1.0-35b-Q6_K
+ placement: expert tier (MoE, does not fit in VRAM: one card holds attention and the hot experts, the CPU computes the rest)
+ args: -m .../models35/ornith-1.0-35b-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa 1 --host 127.0.0.1 --port 18099 --dynamic-moe on --load-mode none --jinja --n
+launch flags from: .../out/set/ornith-1.0-35b-Q6_K.applog
+```
+No `context:` line; `dflash : off by memory planner (need 30.99 GiB, budget 10.5 GiB)`; memory plan line says `32K context · KV F16`.
+
+Modes run: `tensor`, `draft` (script case for this model). No layer, no ngl0.
+```
+-- ornith-1.0-35b-Q6_K-draft.cells.tsv:   20 PASS    1 SKIP
+-- ornith-1.0-35b-Q6_K-tensor.cells.tsv:   20 PASS    1 SKIP
+```
+Only non-PASS cells:
+```
+parallel2	SKIP	--parallel 1 does not allow it	0
+draft	drafter-head	SKIP	the target's head is on a card; no copy is made	0
+tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+draft	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+```
+
+Identical/drafter:
+```
+tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+draft	identical-vs-tensor	FAIL	band1100 differs at offset 0	0
+draft	identical-vs-previous	FAIL	band1100 differs at offset 0	0
+```
+
+Answers (first 100 chars):
+- tensor band4200 `Thinking Process:\n\n1.  **Analyze the Request:**\n    *   Input text: A very long, repetitive string o` — on topic
+- tensor band8300 `Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Text:** A massively repetitive paragr` — on topic
+- tensor tools `The user is asking for the weather in Lisbon and explicitly requested to use the tool.\nI need to cal` — on topic
+- draft band4200 / band8300 `Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Text:** A massively repetitive paragr` (same opening for both) — on topic
+- draft tools same string as tensor.
+
+All bands end at `completion_tokens=64` (mid-plan), no `@@@@`, no empty answer.
+
+Tools cell: PASS both modes — `tools	PASS	prompt_tokens=277 completion_tokens=81 13.0s	277`; `tool_calls` present (driver fails the cell without it). Name/args not saved to any file; saved text names `get_weather`, city `Lisbon`. Beta.7 loss did not reproduce.
+
+Draft acceptance (draft log): `draft acceptance = 0.82500 (   33 accepted /    40 generated), mean len =  3.36` and `0.78788 (   26 accepted /    33 generated)`; 18 such lines; `dflash lm head copied from MTL1_Private to MTL0_Private (397.9 MiB, q6_K)`.
+
+Greps (tensor / draft): `kernel not found` 0/0, `exited with code` 0/0, `GGML_ASSERT` 0/0, `TEXT BAD` 0/0, `@@@@` 0/0.
+
+DiagnosticReports before and after (16:38 / 17:00), same names: `XeonLLM_2026-11-12-230458_Sams-Mac-Pro.diag`, `XeonLLM_2026-11-12-200559_Sams-Mac-Pro.cpu_resource.diag`, `XeonLLM_2026-11-12-193807_Sams-Mac-Pro.diag`. No new panic/watchdog file.
+
+Nothing failed to run. Start 16:38, done 17:00 (`stat` stress-C.log 17:00:25, `### done`). Prompt-offload control not run: no ngl0 run existed to compare with beta.7.
+
+One gap worth naming: drafter's band1100 differs from tensor and from beta.7 at offset 0 while band16/band300 match — a real drafter-vs-target divergence above ~1100 tokens, not a text-move of the kind ticket 25 covers.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-13T15-37-57-386Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.

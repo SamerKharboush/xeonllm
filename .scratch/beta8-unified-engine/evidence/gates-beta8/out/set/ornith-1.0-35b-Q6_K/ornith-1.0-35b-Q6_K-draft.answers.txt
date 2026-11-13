@@ -1,0 +1,161 @@
+== band16
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text provided:** "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile the quick brown fox jumps over the lazy dog while the compiler waits for the next token
+--
+
+
+== band300
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A highly repetitive paragraph about "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--
+
+
+== band450
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A highly repetitive paragraph about "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--
+
+
+== band520
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A highly repetitive string: "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--
+
+
+== band1100
+Thinking Process:
+
+1.  **Analyze the Request:**
+    *   Input text: A repetitive string of "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+    *   Question: "In one word,
+--
+
+
+== band4200
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A massively repetitive paragraph: "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--
+
+
+== band8300
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A massively repetitive paragraph: "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated many times.
+   - **Question:** "In
+--
+
+
+== conv6-turn0
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - The user says: "Turn 0: name a colour (one word)."
+   - Followed by a massive amount of "filler" text (repeated "filler" words).
+   - The core
+--
+
+
+== conv6-turn1
+The user is asking me to name a color in one word.
+This is a simple, direct request.
+I should respond with a single color word.
+I'll choose "red" as it's a primary color and commonly used.
+No additional explanation or filler is needed since the user specified "one word
+--
+
+
+== conv6-turn2
+The user is asking me to name a color in one word.
+I have already answered "blue" in the previous turns.
+The prompt is identical to the previous ones, just with a different turn number.
+I should provide a color name.
+I can choose a different color or repeat "blue".
+
+--
+
+
+== conv6-turn3
+The user is asking me to name a color in one word.
+I have already answered "blue" three times in the previous turns.
+The prompt includes a lot of "filler" text, which seems to be an attempt to confuse or test the model's attention.
+The instruction is clear: "name
+--
+
+
+== conv6-turn4
+The user is asking me to name a color in one word.
+I have been repeating "blue" for the previous turns.
+I should continue with the same response to maintain consistency, or perhaps vary it slightly if the pattern suggests a change, but the prompt structure is identical each time.
+The safest and most
+--
+
+
+== conv6-turn5
+The user is asking me to name a color in one word.
+I have been repeating "blue" for the last 5 turns.
+I should change the color to something else to avoid repetition, or perhaps the user is testing if I will change.
+Let's pick a different color. "Red" is
+--
+
+
+== evict
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A massively repetitive paragraph: "the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile" repeated hundreds of times.
+   - **Question:** "
+--
+
+
+== after-evict
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text provided:** A repetitive sentence about a fox, a dog, a compiler, and a GPU. It's clearly filler/distraction.
+   - **Question:** "In one word, what colour is the sky?"
+--
+
+
+== after-over-ctx
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A repetitive sentence about a fox, a dog, a compiler, and a GPU. It's clearly filler/distraction.
+   - **Question:** "In one word, what colour is the sky?"
+
+--
+
+
+== tools
+The user is asking for the weather in Lisbon and explicitly requested to use the tool.
+I need to call the `get_weather` function with the city parameter set to "Lisbon".
+Then I will provide the result to the user.
+
+--
+
+
+== after-cancel
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Text:** A repetitive sentence about a fox, a dog, a compiler, and a GPU. It's clearly filler/distraction.
+   - **Question:** "In one word, what colour is the sky?"
+
+--
+
+

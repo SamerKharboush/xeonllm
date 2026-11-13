@@ -1,0 +1,48 @@
+ornith-1.0-35b-Q6_K.gguf	tensor	band16	PASS	prompt_tokens=83 completion_tokens=64 7.5s	83
+ornith-1.0-35b-Q6_K.gguf	tensor	band300	PASS	prompt_tokens=451 completion_tokens=64 11.0s	451
+ornith-1.0-35b-Q6_K.gguf	tensor	band450	PASS	prompt_tokens=658 completion_tokens=64 13.5s	658
+ornith-1.0-35b-Q6_K.gguf	tensor	band520	PASS	prompt_tokens=727 completion_tokens=64 14.0s	727
+ornith-1.0-35b-Q6_K.gguf	tensor	band1100	PASS	prompt_tokens=1486 completion_tokens=64 23.5s	1486
+ornith-1.0-35b-Q6_K.gguf	tensor	band4200	PASS	prompt_tokens=5442 completion_tokens=64 67.3s	5442
+ornith-1.0-35b-Q6_K.gguf	tensor	band8300	PASS	prompt_tokens=10686 completion_tokens=64 104.1s	10686
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn0	PASS	prompt_tokens=221 completion_tokens=64 8.1s	221
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn1	PASS	prompt_tokens=447 completion_tokens=64 8.2s	447
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn2	PASS	prompt_tokens=673 completion_tokens=64 8.2s	673
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn3	PASS	prompt_tokens=899 completion_tokens=64 8.2s	899
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn4	PASS	prompt_tokens=1125 completion_tokens=64 8.1s	1125
+ornith-1.0-35b-Q6_K.gguf	tensor	conv6-turn5	PASS	prompt_tokens=1351 completion_tokens=64 8.1s	1351
+ornith-1.0-35b-Q6_K.gguf	tensor	evict	PASS	prompt_tokens=20507 completion_tokens=64 217.3s	20507
+ornith-1.0-35b-Q6_K.gguf	tensor	after-evict	PASS	prompt_tokens=106 completion_tokens=64 6.4s	106
+ornith-1.0-35b-Q6_K.gguf	tensor	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+ornith-1.0-35b-Q6_K.gguf	tensor	after-over-ctx	PASS	prompt_tokens=106 completion_tokens=64 4.9s	106
+ornith-1.0-35b-Q6_K.gguf	tensor	tools	PASS	prompt_tokens=277 completion_tokens=81 10.1s	277
+ornith-1.0-35b-Q6_K.gguf	tensor	parallel2	SKIP	--parallel 1 does not allow it	0
+ornith-1.0-35b-Q6_K.gguf	tensor	cancel-stream	PASS	stream closed after 64 bytes	0
+ornith-1.0-35b-Q6_K.gguf	tensor	after-cancel	PASS	prompt_tokens=152 completion_tokens=64 7.0s	152
+ornith-1.0-35b-Q6_K.gguf	draft	band16	PASS	prompt_tokens=83 completion_tokens=64 10.9s	83
+ornith-1.0-35b-Q6_K.gguf	draft	band300	PASS	prompt_tokens=451 completion_tokens=64 12.9s	451
+ornith-1.0-35b-Q6_K.gguf	draft	band450	PASS	prompt_tokens=658 completion_tokens=64 15.0s	658
+ornith-1.0-35b-Q6_K.gguf	draft	band520	PASS	prompt_tokens=727 completion_tokens=64 15.4s	727
+ornith-1.0-35b-Q6_K.gguf	draft	band1100	PASS	prompt_tokens=1486 completion_tokens=64 27.4s	1486
+ornith-1.0-35b-Q6_K.gguf	draft	band4200	PASS	prompt_tokens=5442 completion_tokens=64 72.8s	5442
+ornith-1.0-35b-Q6_K.gguf	draft	band8300	PASS	prompt_tokens=10686 completion_tokens=64 111.1s	10686
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn0	PASS	prompt_tokens=221 completion_tokens=64 10.1s	221
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn1	PASS	prompt_tokens=447 completion_tokens=64 11.7s	447
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn2	PASS	prompt_tokens=673 completion_tokens=64 10.5s	673
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn3	PASS	prompt_tokens=899 completion_tokens=64 10.9s	899
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn4	PASS	prompt_tokens=1125 completion_tokens=64 10.2s	1125
+ornith-1.0-35b-Q6_K.gguf	draft	conv6-turn5	PASS	prompt_tokens=1351 completion_tokens=64 11.0s	1351
+ornith-1.0-35b-Q6_K.gguf	draft	evict	PASS	prompt_tokens=20507 completion_tokens=64 229.8s	20507
+ornith-1.0-35b-Q6_K.gguf	draft	after-evict	PASS	prompt_tokens=106 completion_tokens=64 8.1s	106
+ornith-1.0-35b-Q6_K.gguf	draft	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+ornith-1.0-35b-Q6_K.gguf	draft	after-over-ctx	PASS	prompt_tokens=106 completion_tokens=64 5.5s	106
+ornith-1.0-35b-Q6_K.gguf	draft	tools	PASS	prompt_tokens=277 completion_tokens=81 13.0s	277
+ornith-1.0-35b-Q6_K.gguf	draft	parallel2	SKIP	--parallel 1 does not allow it	0
+ornith-1.0-35b-Q6_K.gguf	draft	cancel-stream	PASS	stream closed after 64 bytes	0
+ornith-1.0-35b-Q6_K.gguf	draft	after-cancel	PASS	prompt_tokens=152 completion_tokens=64 7.6s	152
+ornith-1.0-35b-Q6_K.gguf	draft	drafter-head	SKIP	the target's head is on a card; no copy is made	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-tensor	FAIL	band1100 differs at offset 0	0
+ornith-1.0-35b-Q6_K.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+ornith-1.0-35b-Q6_K.gguf	draft	identical-vs-previous	FAIL	band1100 differs at offset 0	0
