@@ -1,0 +1,10 @@
+== testapp clean ==
+cleaned
+
+test app process: no process with testapp/XeonLLM.app/Contents/MacOS remains
+port 18099: closed (lsof empty)
+profile: dev.xeonllm.gatetest gone; ~/Library/Application Support/XeonLLMGateTest removed
+
+note: testapp.sh clean removes the testapp bundle and XeonLLMGateTest via pkill/defaults/rm;
+a fresh launch recreates the profile, so the empty conversations/projects listed after
+'cleaned' above are from the running app at clean time; a second pass removed them.

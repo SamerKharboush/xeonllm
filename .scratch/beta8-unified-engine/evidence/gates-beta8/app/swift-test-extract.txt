@@ -1,0 +1,43 @@
+== swift test: summary ==
+1323:	 Executed 541 tests, with 16 tests skipped and 2 failures (1 unexpected) in 22.473 (22.592) seconds
+1325:	 Executed 541 tests, with 16 tests skipped and 2 failures (1 unexpected) in 22.473 (22.609) seconds
+
+== failing tests ==
+599:Test Case '-[XeonLLMTests.MCPStdioTransportTests testAnswersRacingTheirDeadlinesResolveEachRequestOnce]' failed (11.595 seconds).
+
+== error lines ==
+597:/Users/sam/firellama/Tests/XeonLLMTests/MCPStdioTransportTests.swift:181: error: -[XeonLLMTests.MCPStdioTransportTests testAnswersRacingTheirDeadlinesResolveEachRequestOnce] : XCTAssertTrue failed - answers and deadlines did not both occur
+598:/Users/sam/firellama/Tests/XeonLLMTests/MCPStdioTransportTests.swift:185: error: -[XeonLLMTests.MCPStdioTransportTests testAnswersRacingTheirDeadlinesResolveEachRequestOnce] : XCTAssertEqual failed: threw error "launchFailed("probe did not answer in time.")"
+
+== migration tests ==
+449:Test Case '-[XeonLLMTests.IdentityMigrationTests testASecondRunChangesNothing]' passed (0.010 seconds).
+451:Test Case '-[XeonLLMTests.IdentityMigrationTests testASecondRunCopiesNothing]' passed (0.007 seconds).
+453:Test Case '-[XeonLLMTests.IdentityMigrationTests testConversationsAndProjectsAreMergedByID]' passed (0.011 seconds).
+455:Test Case '-[XeonLLMTests.IdentityMigrationTests testCopiesSettingsAndDataFolder]' passed (0.007 seconds).
+457:Test Case '-[XeonLLMTests.IdentityMigrationTests testDoesNotOverwriteAnExistingSetting]' passed (0.006 seconds).
+459:Test Case '-[XeonLLMTests.IdentityMigrationTests testFolderMergeRunsOnceForBeta5MigratedUsers]' passed (0.007 seconds).
+461:Test Case '-[XeonLLMTests.IdentityMigrationTests testKeychainItemsAreCopiedNotMovedOrOverwritten]' passed (0.118 seconds).
+463:Test Case '-[XeonLLMTests.IdentityMigrationTests testMergesMissingItemsIntoAnExistingNewDataFolder]' passed (0.012 seconds).
+465:Test Case '-[XeonLLMTests.IdentityMigrationTests testNeverDeletesTheOldDataFolder]' passed (0.007 seconds).
+467:Test Case '-[XeonLLMTests.IdentityMigrationTests testSkipsSystemStateKeys]' passed (0.007 seconds).
+
+== login-shell PATH tests ==
+1258:Test Case '-[XeonLLMTests.UserShellPathTests testFallsBackSilentlyWhenTheShellFails]' passed (0.001 seconds).
+1260:Test Case '-[XeonLLMTests.UserShellPathTests testMergesTheLoginShellPathAndFixedExtras]' passed (0.005 seconds).
+1262:Test Case '-[XeonLLMTests.UserShellPathTests testReadsTheLoginShellOnlyOnce]' passed (0.001 seconds).
+
+== command-not-found by name: no matching test case ==
+(grep for 'was not found' / 'not executable' / launchFailed in Test Case lines: none)
+  none
+
+== remote MCP over HTTPS ==
+-- origin/redirect tests (MCPRemoteOriginTests, all http loopback):
+574:Test Case '-[XeonLLMTests.MCPRemoteOriginTests testAnAnnouncedEndpointOnAnotherOriginReceivesNothing]' passed (0.060 seconds).
+576:Test Case '-[XeonLLMTests.MCPRemoteOriginTests testAnOriginIsTheSchemeHostAndEffectivePort]' passed (0.106 seconds).
+578:Test Case '-[XeonLLMTests.MCPRemoteOriginTests testARedirectedEventStreamNeverReachesAnotherOrigin]' passed (0.008 seconds).
+-- any Test Case line mentioning https/TLS:
+282:Test Case '-[XeonLLMTests.CompactionTests testStreamingErrorIsExtractedFromSuccessfulHTTPStream]' started.
+283:Test Case '-[XeonLLMTests.CompactionTests testStreamingErrorIsExtractedFromSuccessfulHTTPStream]' passed (0.000 seconds).
+-- relay tests:
+353:Test Case '-[XeonLLMTests.EngineExtensionsTests testEntriesFillPlaceholdersFollowTheirSwitchAndRelayRemoteServers]' passed (0.005 seconds).
+1153:Test Case '-[XeonLLMTests.SymPyToolsTests testAnApprovedRemoteServerReachesTheEngineThroughTheRelay]' passed (0.014 seconds).

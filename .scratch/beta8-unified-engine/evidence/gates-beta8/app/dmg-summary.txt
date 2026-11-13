@@ -1,0 +1,60 @@
+DMG: dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg
+sha256: ad679f5cb2341067af43ef960bbd064874a899b6c87b65de2ec64c0d3750a62b (matches the brief)
+
+-- mounted app Info.plist (plutil -p | grep):
+  "CFBundleIdentifier" => "dev.xeonllm.app"
+  "CFBundleShortVersionString" => "0.87.31-beta.8"
+  "CFBundleVersion" => "0.87.31-beta.8"
+  "TOSHNoAVX2" => 1
+  "TOSHUpdatesDisabled" => 1
+
+-- codesign --verify --deep --strict:
+verify-ok
+
+-- volume root:
+total 128
+drwx------@    7 sam  staff     224 Nov 13 00:44 .
+drwx------@ 5358 sam  staff  171456 Nov 13 17:56 ..
+drwxr-xr-x     3 sam  staff      96 Nov 13 00:44 .background
+-rw-r--r--     1 sam  staff   10244 Nov 13 00:44 .DS_Store
+-rw-r--r--     1 sam  staff   52660 Nov 13 00:44 .VolumeIcon.icns
+lrwxr-xr-x     1 sam  staff      13 Nov 13 00:44 Applications -> /Applications
+drwxr-xr-x     3 sam  staff      96 Nov 13 00:44 XeonLLM.app
+
+-- .background:
+total 2880
+drwxr-xr-x  3 sam  staff       96 Nov 13 00:44 .
+drwx------@ 7 sam  staff      224 Nov 13 00:44 ..
+-rw-r--r--  1 sam  staff  1473784 Nov 13 00:44 background.tiff
+
+-- Applications symlink:
+/Applications
+
+-- .DS_Store parse vs issue 73 (beta.5):
+== .DS_Store parse (shipped DMG, no Finder) ==
+file: .DS_Store (10244 bytes), magic Bud1
+
+bwsp (window bounds, from bplist at 0x101e):
+  WindowBounds = '{{200, 532}, {640, 428}}'  -> window 640 x 428
+  ContainerShowSidebar = False
+  ShowStatusBar = False, ShowToolbar = False, ShowSidebar = False
+
+icvp (icon view options, bplist at 0x10e8):
+  iconSize = 128.0
+  arrangeBy = 'none', labelOnBottom = True, textSize = 13.0
+  gridOffsetX = 0.0, gridOffsetY = 0.0, gridSpacing = 100.0
+  backgroundType = 2, backgroundColorRed/Green/Blue = 1.0, showIconPreview = True
+  backgroundImageAlias -> /Volumes/XeonLLM/.background/background.tiff (alias kCurrentDirectory...)
+
+Iloc positions (Bud1 sub-directory, u32 x, u32 y):
+  Applications -> x=475 y=194  (Iloc at 7121: size 16, x=475 y=194)
+  XeonLLM.app  -> x=165 y=194  (Iloc at 7175: size 16, x=165 y=194)
+
+pBBk (volume bookmark, at 5563):
+  path: /Volumes/XeonLLM/.background/background.tiff
+  ascii strings: 'Volumes', 'XeonLLM', '.background', 'background.tiff', 'file:///Volumes/XeonLLM/'
+
+== issue 73 (beta.5) reference values ==
+  window 640 x 428, icons 128 px, XeonLLM.app (165,194), Applications (475,194),
+  pBBk -> /Volumes/XeonLLM/.background/background.tiff
+  -> all identical in beta.8

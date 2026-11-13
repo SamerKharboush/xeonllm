@@ -1,0 +1,5 @@
+  "CFBundleIdentifier" => "dev.xeonllm.app"
+  "CFBundleShortVersionString" => "0.87.31-beta.8"
+  "CFBundleVersion" => "0.87.31-beta.8"
+  "TOSHNoAVX2" => 1
+  "TOSHUpdatesDisabled" => 1

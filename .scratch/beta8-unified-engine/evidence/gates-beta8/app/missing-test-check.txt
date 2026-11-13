@@ -1,0 +1,3 @@
+tests mentioning not-found/launchFailed: none
+
+MCPStdioTransport init lines 31-47: throws MCPError.launchFailed("...was not found, or is not executable.")

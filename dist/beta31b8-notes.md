@@ -119,7 +119,16 @@ a six-turn conversation, a context-filling prompt and a request after it, an ove
 - the `0078` repro (Qwen3-14B layer split over both cards, `-c 32768`, ~5.4k-token prompt):
   HTTP 200, answer text checked (not `@@@@`), decode 292.76 ms per token;
 - `swift test`: 541 tests, 16 skipped, the only failure the pre-existing `MCPStdioTransportTests` race;
-APPGATES
+- migration from ToshLLM: the `IdentityMigrationTests` pass (Keychain items copied, not moved;
+  conversations and projects merged by id; a second run changes nothing; missing items merged
+  into an existing folder); the login-shell PATH merge test passes;
+- the mounted DMG: bundle id `dev.xeonllm.app`, version 0.87.31-beta.8, `TOSHNoAVX2` and
+  `TOSHUpdatesDisabled` true, `codesign --verify --deep --strict` passes; the window read from the
+  DMG's `.DS_Store`: 640 x 428, 128 px icons, XeonLLM.app at (165, 194), Applications at (475, 194),
+  background `/Volumes/XeonLLM/.background/background.tiff`, the same as beta.5-beta.7;
+- one real chat through the built app (test id, LFM3-1.7B F16): the server log header reads
+  `XeonLLM engine 0.87.31-beta.8 (app 0.87.31-beta.8)` and the answer is "The capital of France
+  is Paris."
 
 DMG sha256: `ad679f5cb2341067af43ef960bbd064874a899b6c87b65de2ec64c0d3750a62b`.
 
@@ -134,4 +143,8 @@ DMG sha256: `ad679f5cb2341067af43ef960bbd064874a899b6c87b65de2ec64c0d3750a62b`.
 - **Two parallel requests** were not tested, because the app launches `--parallel 1`.
 - **A 32-lane GPU:** there is none here. The D700 rules sit inside `simd_width == 64` checks.
 - **The real chat went through the engine's API, not the chat window.**
+- **Two tool-server rules have no dedicated test**, only the code, unchanged since beta.7: a
+  tool server whose command is missing fails with "<command> was not found, or is not
+  executable." (`MCPStdioTransport.swift`), and a remote MCP server is reached through the app's
+  own `URLSession`, so HTTPS does not depend on the engine's HTTP library.
 - The tag is annotated, not signed.

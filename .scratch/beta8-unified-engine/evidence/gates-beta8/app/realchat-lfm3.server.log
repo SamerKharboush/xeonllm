@@ -1,0 +1,42 @@
+========================================================
+ XeonLLM 0.87.31-beta.8 — server start (x86_64 · no-AVX2 build)
+ engine : bundled (official) · kernels fae2c1f1f84a
+ model  : LFM3-1.7B-F16.gguf
+ GPUs detected:
+    [0] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+    [1] AMD Radeon HD - FirePro D700 · 6 GB · no peer group
+ GPU select: split-all · split-mode layer | force-VRAM-buffers: no
+ settings: ngl=99 ncmoe=0 ctx=8192 fa=auto ctk=f16 ctv=f16 cacheRAM=2048
+ placement: card
+ dflash : not installed
+ env: GGML_METAL_DEVICES=2 TOSH_FA_AMD=1
+ args: -m /Users/sam/models/LFM3-1.7B-F16.gguf -ngl 99 -c 8192 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode layer -n 2048 --path /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app/Contents/Resources/web-ui --ui-config {"maxImageMPixels":1,"pdfAsImage":false}
+========================================================
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.225.192 I srv  llama_server: initializing ...
+0.00.225.212 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app 0.87.31-beta.8)
+0.00.225.215 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.226.619 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.229.097 I srv    load_model: loading model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+0.00.229.192 I Tosh MoE: standard
+0.05.158.037 I cmn          init: llama threadpool init, n_threads = 12
+0.05.528.807 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.05.596.924 W srv    load_model: cache_reuse is not supported by this context, it will be disabled
+0.05.652.903 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 8192, kv_unified = 'false'
+0.05.666.747 I srv          init: chat template supports preserving reasoning, consider enabling it via --reasoning-preserve
+0.05.666.806 I srv  llama_server: model loaded
+0.05.666.810 I srv  llama_server: listening on http://127.0.0.1:18099
+0.20.300.360 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.20.300.493 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.23.735.255 I slot print_timing: id  0 | task 0 | prompt eval time =     392.15 ms /    22 tokens (   17.82 ms per token,    56.10 tokens per second)
+0.23.735.266 I slot print_timing: id  0 | task 0 |        eval time =    3042.39 ms /    71 tokens (   43.46 ms per token,    23.01 tokens per second)
+0.23.735.267 I slot print_timing: id  0 | task 0 |       total time =    3434.54 ms /    93 tokens
+0.23.735.268 I slot print_timing: id  0 | task 0 |    graphs reused =         70
+0.23.735.382 I slot      release: id  0 | task 0 | stop processing: n_tokens = 92, truncated = 0

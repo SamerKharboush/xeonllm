@@ -1,0 +1,2 @@
+59d6e09 beta 8 R1: FA-AMD off switch reaches the engine (TOSH_FA_AMD_DISABLE=1), VERSION 0.87.31-beta.8, engines/app/DMG built and static checks (Mocca; orchestrator re-ran swift test + static checks)
+---status---

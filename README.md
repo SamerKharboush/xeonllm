@@ -15,11 +15,11 @@ Native macOS app · Metal acceleration · No cloud, no accounts, no per-token co
 
 ### [⬇️ Download XeonLLM](https://github.com/SamerKharboush/xeonllm/releases) · [📝 Changelog](CHANGELOG.md)
 
-> ### Fork release: v0.87.31-beta.7
+> ### Fork release: v0.87.31-beta.8
 >
-> **[⬇️ XeonLLM-v0.87.31-beta.7-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.7/XeonLLM-v0.87.31-beta.7-noavx2.dmg)**
-> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.87.31-beta.7) ·
-> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.7/checksums.txt))
+> **[⬇️ XeonLLM-v0.87.31-beta.8-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.8/XeonLLM-v0.87.31-beta.8-noavx2.dmg)**
+> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.87.31-beta.8) ·
+> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.87.31-beta.8/checksums.txt))
 >
 > **This build is x86_64 only. It will not run on Apple Silicon.** There is no arm64 slice,
 > and Rosetta cannot help: an Apple GPU never enters the code these fixes touch — the Metal

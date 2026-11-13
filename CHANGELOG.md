@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.87.31-beta.8] - 2026-11-13
+
+Deep prompts on the D700s read faster, a model in RAM reads its prompt on a card, a dense model
+split over both cards and RAM no longer answers zeros, and the app's "AMD flash attention" switch
+really turns it off. The llama.cpp series is 96 patches on the pin `d81235049`; the new ones are
+`core/0082`, `metal/0083`, `metal/0084`, `metal/0085` and `core/0086`. Details, method lines and
+gates: `dist/beta31b8-notes.md`.
+
+### Added
+
+- **Prompt offload for a model in RAM** (`core/0082`): large prompt mat-muls run on a D700 from
+  copies of host weights, kept off when the card's compute buffer would pass 1536 MiB
+  (`TOSH_OFFLOAD_MAX_COMPUTE_MB`). MoE experts stay on the host (`core/0086`;
+  `TOSH_OFFLOAD_MOE=1` allows them).
+- **Decomposed prompt attention on 64-lane cards** for head 64/128 (`metal/0083`): Qwen3-4B
+  Q4_K_M pp512 at depth 6144, card 1, `-ub 128`: 56.36 tok/s against 27.61 with the old route
+  (`TOSH_FA_PF_W64=1`), dev build, N=1 each. Capped at 256 MiB per score matrix (`metal/0085`,
+  `TOSH_FA_PF_DECOMP_MAX_MB`).
+
+### Fixed
+
+- A dense model split over several cards answered "0000..." (`metal/0084`: the fused
+  gated-delta-net state kernel is off across cards; `TOSH_GDN_STATE_FUSION_MULTI=1` turns it on).
+- The app's "AMD flash attention" switch now sets `TOSH_FA_AMD_DISABLE=1` when off; before, the
+  engine kept the AMD kernel.
+- The 35B with the DFlash drafter makes the tool call (beta.7 ticket 20; not reproduced).
+
+### Changed
+
+- `-ngl 0` text moved since beta.7 on some models: `metal/0083` (`TOSH_FA_PF_W64=1` restores
+  it) and `core/0082` on Ternary-Bonsai-2-27B (`--no-op-offload` restores it).
+
 ## [0.87.31-beta.7] - 2026-11-07
 
 A maintenance beta: a card that has started computing wrong answers is now left out, the app
