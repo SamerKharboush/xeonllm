@@ -1121,7 +1121,7 @@ final class ServerSettingsTests: XCTestCase {
                        cacheTypeK: "f16", cacheTypeV: "f16", mlock: false)
     }
 
-    private func writeMinimalMoEGGUF(_ url: URL) throws {
+    private func writeMinimalMoEGGUF(_ url: URL, extra: [(String, UInt32)] = []) throws {
         var data = Data("GGUF".utf8)
         func u32(_ value: UInt32) {
             withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
@@ -1136,7 +1136,7 @@ final class ServerSettingsTests: XCTestCase {
             ("qwen35moe.block_count", 40),
             ("qwen35moe.expert_count", 256),
             ("qwen35moe.expert_used_count", 8),
-        ]
+        ] + extra
         u32(3); u64(0); u64(UInt64(values.count))
         for (key, value) in values {
             string(key); u32(4); u32(value)
@@ -1229,6 +1229,84 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertNil(env["GGML_METAL_DEVICE_LIST"])
     }
 
+    func testAutoKVMayFallBackToTurbo4OnlyWhereTheModelSupportsIt() throws {
+        let model = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tosh-auto-turbo-\(UUID().uuidString).gguf")
+        try writeMinimalMoEGGUF(model, extra: [("qwen35moe.embedding_length", 2048),
+                                               ("qwen35moe.attention.head_count", 16)])
+        defer { try? FileManager.default.removeItem(at: model) }
+        let supports = ServerSettings.modelSupportsTurboKV(at: model.path)
+        var s = makeSettings()
+        s.modelPath = model.path
+        s.dynamicMoeEnabled = true
+        XCTAssertTrue(s.usesAutoPlan)
+        // the model has a head size turbo4 supports; what the card allows is the branch rule's
+        if supports {
+            XCTAssertEqual(s.environment["TOSH_AUTO_KV_TURBO4"],
+                           ServerSettings.turbo4AutoKVAllowed(architectures: Self.machineArchitectures) ? "1" : nil)
+        } else {
+            XCTAssertNil(s.environment["TOSH_AUTO_KV_TURBO4"], "no head size to tell whether turbo4 fits")
+        }
+        XCTAssertNil(s.environment["TOSH_AUTO_HOST_BANK"], "the whole bank stays in RAM unless asked")
+        s.dynamicMoeLeanRAM = true
+        XCTAssertEqual(s.environment["TOSH_AUTO_HOST_BANK"], "lean")
+    }
+
+    /// The branch rule behind the env: a known 32-lane card takes the turbo4 fallback, a 64-lane one
+    /// does not, and an unknown architecture fails closed.
+    func testTurbo4AutoKVIsAllowedOn32LaneCardsOnly() {
+        XCTAssertTrue(ServerSettings.turbo4AutoKVAllowed(architecture: "RDNA 2"))
+        XCTAssertFalse(ServerSettings.turbo4AutoKVAllowed(architecture: "GCN / Vega"))
+        XCTAssertFalse(ServerSettings.turbo4AutoKVAllowed(architecture: nil),
+                       "an architecture this build cannot place may be 64-lane")
+    }
+
+    /// The rule over a set of cards: one 64-lane or unknown card refuses for all of them.
+    func testTurbo4AutoKVIsRefusedWhenAnyCardIs64LaneOrUnknown() {
+        XCTAssertTrue(ServerSettings.turbo4AutoKVAllowed(architectures: ["RDNA 2", "RDNA 1"]))
+        XCTAssertFalse(ServerSettings.turbo4AutoKVAllowed(architectures: ["RDNA 2", "GCN / Vega"]),
+                       "a mixed set with one GCN card")
+        XCTAssertFalse(ServerSettings.turbo4AutoKVAllowed(architectures: ["RDNA 2", nil]),
+                       "an unclassified card in the set")
+        XCTAssertFalse(ServerSettings.turbo4AutoKVAllowed(architectures: []), "no card says nothing")
+    }
+
+    /// The architectures of this machine's cards, the set the host placement is judged on.
+    private static var machineArchitectures: [String?] {
+        ServerController.availableGPUs().map { GPUArchitectureClassifier.architecture(for: $0.name) }
+    }
+
+    /// Which cards report a 64-wide SIMD group: GCN/Vega only, RDNA and unknown do not.
+    func testOnlyGCNorVegaReportsASimdWidthOf64() {
+        XCTAssertTrue(ServerSettings.isSIMDWidth64("GCN / Vega"))
+        XCTAssertFalse(ServerSettings.isSIMDWidth64("RDNA 2"))
+        XCTAssertFalse(ServerSettings.isSIMDWidth64("Apple Silicon"))
+        XCTAssertFalse(ServerSettings.isSIMDWidth64(nil))
+    }
+
+    /// The env line of a launch with Auto KV says whether the turbo4 fallback was asked for.
+    func testLaunchEnvCarriesTheTurbo4FallbackKey() throws {
+        var s = makeSettings()
+        s.modelPath = try writeAutoPlanModel()
+        XCTAssertEqual(s.environment["TOSH_AUTO_KV_TURBO4"],
+                       ServerSettings.turbo4AutoKVAllowed(architectures: Self.machineArchitectures) ? "1" : nil,
+                       "the env follows the branch rule, not the model")
+        // a manually chosen cache keeps the env out, whatever the card
+        s.autoKVMode = "q8_0"
+        XCTAssertNil(s.environment["TOSH_AUTO_KV_TURBO4"], "a cache chosen by hand is kept")
+    }
+
+    /// A sparse MoE model with a head size the turbo4 KV supports (head dim 128).
+    private func writeAutoPlanModel() throws -> String {
+        let url = try sparseModel(bytes: Int64(26.56 * 1_073_741_824))
+        try writeMinimalMoEGGUF(url, extra: [("qwen35moe.embedding_length", 2048),
+                                             ("qwen35moe.attention.head_count", 16)])
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(26.56 * 1_073_741_824))
+        try handle.close()
+        return url.path
+    }
+
     func testTheExpertTierTakesTheCardWithTheMostFreeVRAM() {
         // The pair measured on 2026-10-22: the display card had 3.88 GiB free, the other 5.77.
         let display = GPUStat(id: 0, name: "AMD Radeon HD - FirePro D700", usedMB: 2_175, totalMB: 6_144)
@@ -1238,6 +1316,20 @@ final class ServerSettingsTests: XCTestCase {
             GPUStat(id: 1 - $0.id, name: $0.name, usedMB: $0.usedMB, totalMB: $0.totalMB)
         }), 0)
         XCTAssertNil(ServerSettings.expertTierCard([]))
+    }
+
+    func testPlanSaysWhenAutoPickedTurbo4() throws {
+        func plan(_ warnings: String) throws -> AutoMemoryPlan {
+            let json = #"{"plan_schema_version": 1, "product": {"mode": "PLAN_BOUNDED_DMOE", "mode_label_key": "plan.mode.x", "reason": "CURRENT_RAM_LIMIT", "warnings": [\#(warnings)], "limits": [], "limiting_resource": "HOST_RAM", "memory": {"physical_bytes": 1, "reclaimable_bytes": 1, "projected_rss_bytes": 1, "projected_vram_bytes": 1}, "dmoe": {"expert_bank_bytes": 1, "hot_bytes": 1, "warm_bytes": 1, "coverage": 1.07, "coverage_state": "CONSTRAINED"}, "runtime": {"context": 8192, "kv_type": "turbo4", "kv_bytes": 1, "ubatch": 1024, "ncmoe_layers": 0}}, "state": "DMOE_BOUNDED_HOST", "mode": "dmoe_bounded", "reason": "r", "fallback": "", "kv": "turbo4", "n_ctx": 8192, "ubatch": 1024, "ncmoe": 0, "reserve_mib": 975, "arena_mib": 1200, "min_arena_mib": 546, "projected_private_mib": 1, "projected_free_mib": 800, "vram_total_mib": 8192, "vram_free_mib": 7000, "host_required_mib": 1, "host_ram_mib": 40960, "host_available_mib": 1, "host_reserve_mib": 1, "bank_mib": 17000, "mlock": "required", "dispersion": "normal", "candidates": []}"#
+            return try XCTUnwrap(AutoMemoryPlan.decode(Data(json.utf8)))
+        }
+        let picked = try plan(#""KV_TURBO4_AUTO""#)
+        let chosen = try plan("")
+        XCTAssertTrue(picked.autoPickedTurbo4)
+        XCTAssertFalse(chosen.autoPickedTurbo4, "turbo4 set by hand needs no warning")
+        XCTAssertNotEqual(AutoMemoryText.summary(picked, runtime: nil), AutoMemoryText.summary(chosen, runtime: nil))
+        XCTAssertTrue(AutoMemoryText.reason(picked).hasPrefix(AutoMemoryText.reason(chosen)))
+        XCTAssertNotEqual(AutoMemoryText.reason(picked), AutoMemoryText.reason(chosen))
     }
 
     func testAPickedCardOverridesTheExpertTierChoice() throws {

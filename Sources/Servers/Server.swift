@@ -966,6 +966,17 @@ struct ServerSettings {
             // --dynamic-moe runs the plan; a forced mode or the retry without it rides on TOSH_AUTO
             if planWithoutDMoE { env["TOSH_AUTO"] = "nodmoe" } else if executionMode == "dmoe" { env["TOSH_AUTO"] = "dmoe" }
             env["TOSH_AUTO_KV"] = autoKVMode
+            // Auto falls back to turbo4 only where F16 and Q8 leave the experts on the CPU.
+            // An unset or mixed selection is judged over every card: a host placement names none.
+            if autoKVMode == "auto", !Self.isAppleSilicon, Self.modelSupportsTurboKV(at: modelPath) {
+                let arch = selectedGPUArchitecture
+                let archs = arch == nil
+                    ? ServerController.availableGPUs().map { GPUArchitectureClassifier.architecture(for: $0.name) }
+                    : [arch]
+                if Self.turbo4AutoKVAllowed(architectures: archs) {
+                    env["TOSH_AUTO_KV_TURBO4"] = "1"
+                }
+            }
             if dynamicMoeLeanRAM { env["TOSH_AUTO_HOST_BANK"] = "lean" }
             env["TOSH_AUTO_PLAN_FILE"] = AutoMemoryPlan.planURL(port: port).path
         } else if prefetchExperts && usesGPUs && ((ncmoe > 0 && !manualFullGPU) || routerMode) {
@@ -1475,6 +1486,28 @@ struct ServerSettings {
             .map { GPUArchitectureClassifier.architecture(for: $0.name) ?? "" })
         guard archs.count == 1, let arch = archs.first, !arch.isEmpty else { return nil }
         return arch
+    }
+
+    /// Whether the app may set TOSH_AUTO_KV_TURBO4, so Auto can try a turbo4 cache before it leaves
+    /// the experts on the host. On a 64-lane card (D700, GCN) a quantised KV costs decode: beta 8
+    /// ticket 15 measured 4B tg128 d6144 at 12.13 t/s on f16 against 10.52 on q8_0, so the fallback
+    /// stays off until a measurement says otherwise.
+    /// Fail closed: an architecture this build cannot place keeps the fallback off, because a card
+    /// it does not know may be a 64-lane one.
+    nonisolated static func turbo4AutoKVAllowed(architecture: String?) -> Bool {
+        guard let architecture else { return false }
+        return !isSIMDWidth64(architecture)
+    }
+
+    /// The same rule over every card the run touches: one 64-lane or unknown card is enough to
+    /// refuse, since any of them may hold the KV cache the plan fills.
+    nonisolated static func turbo4AutoKVAllowed(architectures: [String?]) -> Bool {
+        !architectures.isEmpty && architectures.allSatisfy(turbo4AutoKVAllowed(architecture:))
+    }
+
+    /// A card whose Metal SIMD-group width is 64 (GCN/Vega against RDNA), as the kernel reports it.
+    nonisolated static func isSIMDWidth64(_ architecture: String?) -> Bool {
+        architecture == "GCN / Vega"
     }
 
     nonisolated static func modelUsesMTP(at path: String) -> Bool {
@@ -2384,7 +2417,7 @@ final class ServerController: ObservableObject {
             }
             return "\n card check: [\(result.index)] FAILED (\(result.detail)) — \(outcome)"
         }.joined()
-        let envKeys = ["TOSH_AUTO", "TOSH_AUTO_KV", "TOSH_AUTO_HOST_BANK", "GGML_METAL_VRAM_RESERVE_MB",
+        let envKeys = ["TOSH_AUTO", "TOSH_AUTO_KV", "TOSH_AUTO_KV_TURBO4", "TOSH_AUTO_HOST_BANK", "GGML_METAL_VRAM_RESERVE_MB",
                        "GGML_METAL_DEVICE_INDEX", "GGML_METAL_DEVICES", "GGML_METAL_DEVICE_LIST",
                        "GGML_METAL_SHARED_BUFFERS_DISABLE", "TOSH_FA_AMD",
                        "GGML_SCHED_PREFETCH_EXPERTS", "GGML_CPU_NO_REPACK",
