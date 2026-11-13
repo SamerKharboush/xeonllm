@@ -1278,6 +1278,33 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertFalse(s.arguments.contains("--kv-unified"), "one slot has nothing to share")
     }
 
+    func testAutoGPULayersAreFittedByTheEngineWithTheVRAMReserve() {
+        var s = makeSettings()
+        s.ngl = -1
+        s.ncmoe = 0
+        var args = s.arguments
+        XCTAssertEqual(args[args.firstIndex(of: "-ngl")! + 1], "auto")
+        XCTAssertEqual(args[args.firstIndex(of: "--fit-target")! + 1], "1024")
+        args = s.benchmarkArguments
+        XCTAssertFalse(args.contains("-ngl"), "llama-bench fits only when it gets no layer count")
+        XCTAssertEqual(args[args.firstIndex(of: "--fit-target")! + 1], "1024")
+        // the server's fit leaves the layers alone once experts are on the CPU, so all of them load
+        s.ncmoe = 24
+        args = s.benchmarkArguments
+        XCTAssertEqual(args[args.firstIndex(of: "-ngl")! + 1], "99")
+        XCTAssertFalse(args.contains("--fit-target"))
+
+        s.dynamicMoeEnabled = true
+        s.executionMode = "full"
+        args = s.arguments
+        XCTAssertEqual(args[args.firstIndex(of: "-ngl")! + 1], "all", "Full GPU by hand keeps every layer")
+        XCTAssertFalse(args.contains("--fit-target"))
+
+        s = makeSettings()
+        XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-ngl")! + 1], "99")
+        XCTAssertFalse(s.arguments.contains("--fit-target"))
+    }
+
     func testBaseArguments() {
         let args = makeSettings().arguments
         XCTAssertEqual(args[args.firstIndex(of: "--load-mode")! + 1], "none")
@@ -1869,7 +1896,7 @@ final class ServerSettingsTests: XCTestCase {
         func u64(_ v: UInt64) { withUnsafeBytes(of: v.littleEndian) { d.append(contentsOf: $0) } }
         func str(_ s: String) { u64(UInt64(s.utf8.count)); d.append(contentsOf: Array(s.utf8)) }
         u32(3)                          // version
-        u64(1)                          // tensor count
+        u64(tensorName.contains(".nextn.") ? 2 : 1) // tensor count
         u64(nextnLayers != nil ? 1 : 0) // kv count
         if let layers = nextnLayers {
             str("qwen35moe.nextn_predict_layers")
@@ -1878,6 +1905,10 @@ final class ServerSettingsTests: XCTestCase {
         }
         str(tensorName)                 // tensor info: name, n_dims, dims, type, offset
         u32(1); u64(8); u32(0); u64(0)
+        // the head is the last block, so a file that carries it carries a late one
+        if tensorName.contains(".nextn.") {
+            str("blk.49.nextn.eh_proj.weight"); u32(1); u64(8); u32(0); u64(0)
+        }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("mtp-\(UUID().uuidString).gguf")
         try? d.write(to: url)
@@ -1885,13 +1916,26 @@ final class ServerSettingsTests: XCTestCase {
     }
 
     func testMTPDetectionReadsKeyValueAndTensors() {
-        // Key present decides by value: 1 = MTP, 0 = stripped head (the common
-        // quantizer case that used to false-positive on a bare "nextn" grep).
-        XCTAssertTrue(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: 1, tensorName: "blk.0.attn_q.weight").path))
+        XCTAssertTrue(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: 1, tensorName: "blk.32.nextn.eh_proj.weight").path))
         XCTAssertFalse(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: 0, tensorName: "blk.0.attn_q.weight").path))
+        // a quantizer dropped the head's tensors and kept the key
+        XCTAssertFalse(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: 1, tensorName: "blk.0.attn_q.weight").path))
         // No key: the .nextn. tensor names decide.
         XCTAssertTrue(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: nil, tensorName: "blk.0.nextn.eh_proj.weight").path))
         XCTAssertFalse(ServerSettings.modelHasMTP(at: makeGGUF(nextnLayers: nil, tensorName: "blk.0.attn_q.weight").path))
+    }
+
+    func testMTPHeadInALaterPartOfASplitModelIsFound() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mtp-split-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let first = dir.appendingPathComponent("Qwen3.6-27B-Q8_0-00001-of-00002.gguf")
+        let second = dir.appendingPathComponent("Qwen3.6-27B-Q8_0-00002-of-00002.gguf")
+        try FileManager.default.moveItem(at: makeGGUF(nextnLayers: 1, tensorName: "blk.0.attn_q.weight"), to: first)
+        try FileManager.default.moveItem(at: makeGGUF(nextnLayers: nil, tensorName: "blk.64.nextn.eh_proj.weight"), to: second)
+
+        XCTAssertTrue(ServerSettings.modelHasMTP(at: first.path))
     }
 
     func testSeparateMTPAssistantIsHiddenPairedAndPassedAsDraft() throws {
@@ -1969,6 +2013,9 @@ final class ServerSettingsTests: XCTestCase {
             u32(3); u64(tensors); u64(2)
             str("qwen35moe.block_count"); u32(4); u32(blocks)
             str("qwen35moe.nextn_predict_layers"); u32(4); u32(1)
+            // the head is the last block, so a model carrying it carries a late nextn tensor
+            str("blk.\(blocks - 1).nextn.eh_proj.weight")
+            u32(1); u64(8); u32(0); u64(0)
             return d
         }
         let dir = FileManager.default.temporaryDirectory
@@ -3146,6 +3193,16 @@ final class RouterModeTests: XCTestCase {
         let denseSection = ini.components(separatedBy: "\n\n").first { $0.contains("dense-4b") } ?? ""
         XCTAssertFalse(denseSection.contains("n-cpu-moe"))
         XCTAssertTrue(ini.contains("--host") == false, "el router no repite --host/--port por modelo")
+    }
+
+    func testRouterPresetPassesAutoGPULayersWithTheVRAMReserve() {
+        var s = makeSettings()
+        s.ngl = -1
+        let ini = s.routerPresetINI(modelPaths: ["/models/dense-4b.gguf"], ncmoeByPath: [:])
+        XCTAssertTrue(ini.contains("n-gpu-layers = auto"))
+        XCTAssertTrue(ini.contains("fit-target = 1024"))
+        XCTAssertTrue(makeSettings().routerPresetINI(modelPaths: ["/models/dense-4b.gguf"], ncmoeByPath: [:])
+            .contains("n-gpu-layers = 99"))
     }
 
     func testRouterPresetAliasCollisionIsDisambiguated() {

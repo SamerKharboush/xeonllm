@@ -240,6 +240,28 @@ struct ServerSettings {
     /// this run may use runs on the host, so nothing is offloaded.
     var effectiveNgl: Int { usesGPUs ? ngl : 0 }
 
+    /// `-ngl` as the engine takes it. Auto (below 0) leaves the layers to the engine's fit,
+    /// except under Full GPU chosen by hand. A host placement still offloads nothing.
+    var nglArgument: String {
+        guard effectiveNgl >= 0 else { return manualFullGPU ? "all" : "auto" }
+        return String(effectiveNgl)
+    }
+
+    /// Under Auto the fit keeps free the same VRAM reserve as the memory plan.
+    var fitTargetArguments: [String] {
+        guard nglArgument == "auto" else { return [] }
+        let indices = selectedGPUIndices
+        let vramMB = ServerController.availableGPUs().filter { indices.contains($0.index) }.map(\.vramMB).max() ?? 0
+        return ["--fit-target", String(Self.effectiveVramReserveMB(vramReserveMB, vramMB: vramMB))]
+    }
+
+    /// llama-bench takes no `-ngl auto`, but fits with a target. The server's fit leaves the
+    /// layers alone once experts are placed on the CPU, so that case loads them all.
+    private var benchmarkLayerArguments: [String] {
+        guard ngl < 0 else { return ["-ngl", String(ngl)] }
+        return nglArgument == "auto" && ncmoe == 0 ? fitTargetArguments : ["-ngl", "99"]
+    }
+
     /// Layer counts per GPU that even out the bytes rather than the layer count.
     /// `--n-cpu-moe` empties the experts of the first N layers, and llama.cpp still hands
     /// out layers by index, so without this the last GPUs take every expert and overflow.
@@ -358,13 +380,13 @@ struct ServerSettings {
 
         var args = [
             "-m", modelPath,
-            "-ngl", String(effectiveNgl),
+            "-ngl", nglArgument,
             "-c", String(cardFit?.ctx ?? ctx),
             "-t", String(threads),
             "-fa", faValue,
             "--host", localNetworkDiscovery ? "0.0.0.0" : "127.0.0.1",
             "--port", String(port),
-        ]
+        ] + fitTargetArguments
         // under the plan the engine picks offload and batch; by hand, Full GPU offloads nothing
         let planOwnsMemory = usesAutoPlan || manualFullGPU
         // A model on the host has no experts on a card to offload from.
@@ -552,8 +574,9 @@ struct ServerSettings {
             let modelCtx = Self.routerCtx(forModel: path, requested: ctx, ncmoe: ncmoeByPath[path] ?? 0,
                                           kvScale: Estimator.kvTypeScale(cacheTypeK),
                                           reserveMB: vramReserveMB)
-            var lines = ["[\(alias)]", "model = \(path)", "n-gpu-layers = \(ngl)",
+            var lines = ["[\(alias)]", "model = \(path)", "n-gpu-layers = \(nglArgument)",
                          "ctx-size = \(modelCtx)", "threads = \(threads)", "flash-attn = \(faValue)"]
+            if let target = fitTargetArguments.last { lines.append("fit-target = \(target)") }
             if let ncmoe = ncmoeByPath[path], ncmoe > 0 { lines.append("n-cpu-moe = \(ncmoe)") }
             if let mode = Self.loadMode(noMmap: noMmap, mlock: mlock) { lines.append("load-mode = \(mode)") }
             let mmproj = loadVision ? Self.mmprojPath(forModel: path) : nil
@@ -634,7 +657,7 @@ struct ServerSettings {
         // Same load mode as the server, or the numbers are not the ones the app
         // delivers: with experts on the CPU, locking the model is worth most of
         // the prompt speed.
-        var args = ["-m", modelPath, "-ngl", String(ngl), "-r", "2",
+        var args = ["-m", modelPath] + benchmarkLayerArguments + ["-r", "2",
                     "-p", String(benchPPClamped), "-n", String(benchTGClamped)]
         let mode = Self.loadMode(noMmap: noMmap, mlock: mlock)
         if let mode { args += ["--load-mode", mode] }
@@ -1327,13 +1350,11 @@ struct ServerSettings {
         }
     }
 
-    /// Whether a GGUF ships the MTP (multi-token prediction) head. Quantizers often
-    /// strip it but leave the key at 0, and the server aborts on the missing tensors,
-    /// so trust the value and fall back to the tensor names.
+    /// Whether a GGUF ships the MTP (multi-token prediction) head. Quantizers often strip
+    /// the head and keep `nextn_predict_layers`, at 0 or at its original count, so the
+    /// tensors decide: the server cannot draft from a head the file does not carry.
     nonisolated static func modelHasMTP(at path: String) -> Bool {
-        if let layers = ggufUInt32("nextn_predict_layers", at: path) {
-            return layers >= 1
-        }
+        if ggufUInt32("nextn_predict_layers", at: path) == 0 { return false }
         return GGUFMetadataCache.hasNextNTensor(at: path)
     }
 
@@ -1975,6 +1996,11 @@ final class ServerController: ObservableObject {
     private var dflashMemoryTask: Task<Void, Never>?
     private var launchedSettings: ServerSettings?
     private var lastStoppedPID: Int32?
+    /// The model file the running engine loaded, without its extension; the settings may already name another.
+    var loadedModelName: String? {
+        guard state == .running, let path = launchedSettings?.modelPath, !path.isEmpty else { return nil }
+        return URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
+    }
     /// After a projector load failure, makes the next launch drop `--mmproj`
     /// (text-only). Reset on every fresh `start()`.
     private var retryWithoutMmproj = false
@@ -2065,6 +2091,13 @@ final class ServerController: ObservableObject {
     /// VRAM-resident-weights option, which fixes eGPU slowness over Thunderbolt.
     nonisolated static func hasExternalGPU() -> Bool {
         availableGPUs().contains { $0.isExternal }
+    }
+
+    func startOnLaunchIfEnabled() {
+        let settings = ServerSettings.fromDefaults()
+        guard UserDefaults.standard.bool(forKey: SettingsKeys.autoStart), state == .stopped,
+              settings.routerMode || !settings.modelPath.isEmpty else { return }
+        start(settings)
     }
 
     func start(_ settings: ServerSettings) {
@@ -2389,6 +2422,8 @@ final class ServerController: ObservableObject {
         if settings.tensorSplitDowngraded {
             gpuSel += " (tensor needs \(settings.splitDeviceCount) way split of experts this model only divides \(settings.tensorSplitLimit ?? 1) ways)"
         }
+        // the plan sets the cache type itself, so the keys/values pickers would only mislead here
+        let kvLine = settings.usesAutoPlan ? "" : " ctk=\(settings.cacheTypeK) ctv=\(settings.cacheTypeV)"
         let contextLine = settings.cardFit.map { f in
             "\n context: \(settings.ctx) -> \(f.ctx) (\(f.kv) KV, \(f.devices) card\(f.devices == 1 ? "" : "s"), \(f.perCardMB) MiB each: the requested context does not fit)"
         } ?? ""
@@ -2400,7 +2435,7 @@ final class ServerController: ObservableObject {
          GPUs detected:
         \(gpus.isEmpty ? "    (none)" : gpus)\(cardLines)
          GPU select: \(gpuSel) | force-VRAM-buffers: \(env["GGML_METAL_SHARED_BUFFERS_DISABLE"] == "1" ? "yes" : "no")
-         settings: ngl=\(settings.effectiveNgl) \(moeLine) ctx=\(settings.ctx) fa=\(settings.flashAttn) ctk=\(settings.cacheTypeK) ctv=\(settings.cacheTypeV) cacheRAM=\(settings.cacheRAM)
+         settings: ngl=\(settings.nglArgument) \(moeLine) ctx=\(settings.ctx) fa=\(settings.flashAttn)\(kvLine) cacheRAM=\(settings.cacheRAM)
          placement: \(placementLine)\(contextLine)
          dflash : \(settings.routerMode ? "per-model router plan" : settings.dflashPlanSummary)
          env: \(envLine)
