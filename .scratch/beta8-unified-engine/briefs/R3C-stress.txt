@@ -26,3 +26,10 @@ Write .scratch/beta8-unified-engine/evidence/gates-beta8/R3-C-RESULT.md and end 
 - grep counts over the model's server logs for "kernel not found", "exited with code", "GGML_ASSERT", "TEXT BAD"/"@@@@";
 - DiagnosticReports names before and after, the start/end times, and anything the script could not run and why.
 </report>
+
+<addendum 2026-11-13, after ticket 25>
+- If the 35B's ngl0 text differs from beta.7 (the script's "vs beta.7" line), run, after the main script has ended and only then, the prompt-offload control on the shipped engine (foreground or nohup, one server):
+    cd /Users/sam/firellama && G=.scratch/beta8-unified-engine/evidence/gates-beta8 && S=ornith-1.0-35b-Q6_K && mkdir -p $G/out/set-nopo && APPLOG=$G/out/set/$S.applog OUT=$G/out/set-nopo/$S MODES=ngl0nopo NGL0_CELLS="band16 band300 band1100" PREV_OUT=$G/../gates-beta7/out2/set/$S scripts/stress-release.sh dist/XeonLLM.app/Contents/Resources/bin /Users/sam/models/$S.gguf > $G/out/set-nopo/$S.log 2>&1
+  and report its per-cell text vs beta.7 and vs the beta 8 ngl0 run (python, exact equality, first differing offset). Ticket 25 found core/0082's prompt offload legitimately moves -ngl 0 text; --no-op-offload restores the previous text when that is the cause.
+- Never save a full process environment (`ps eww`, `env`); it holds tokens. Never start a build or a second server while the script runs.
+</addendum>
