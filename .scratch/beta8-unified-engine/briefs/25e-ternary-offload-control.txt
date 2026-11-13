@@ -1,0 +1,25 @@
+Work in /Users/sam/firellama (XeonLLM, branch phase1-metal-d700-optimization). Beta 8 ticket 25, step 5: MEASUREMENT ONLY with the shipped engine. Do not edit any source, do not build. Never git commit/tag/push/stash/reset/checkout/clean; never install into /Applications; never touch the user's defaults domains (dev.xeonllm.app, dev.engel.toshllm), their Application Support folders, 127.0.0.1:8080 (the user's own llama-server, pid 747: never kill it, never query it) or the user's running app. Write results only under .scratch/beta8-unified-engine/evidence/25/ternary-offload/ (create it). Never save a full process environment (`ps eww`, `env`); it holds tokens.
+
+IMPORTANT: do not stop to write commentary. Run every step, then write RESULT.md and the report once. Run `date` first; at 1 h 30 min stop and report what you have. Every claim must point to a file you saved.
+
+<safety — this Mac froze twice this month>
+- STRICTLY SEQUENTIAL, FOREGROUND ONLY (no nohup, no &). -ngl 0 only. One server at a time; the script starts and stops it. No builds.
+- Before the first run and after every run: `ls /Library/Logs/DiagnosticReports/ | sort > <file>`; compare NAMES with the first listing (`comm -13`). A new *panic*, *watchdog* or *gpuRestart* name: STOP ALL WORK and report it first.
+</safety>
+
+<background>
+Ternary-Bonsai-2-27B-PQ2_0 at -ngl 0: band300 differs between beta.7 and beta 8 at char 226. Step 25d (evidence/25/ternary-all5) found core/0082 alone is the cause: removing only 0082 from the full series gives beta.7's text; removing only its sched_reserve cap does not. The remaining 0082 change is the scheduler rule in ggml/src/ggml-backend.cpp that lets a GPU take a large-batch MUL_MAT whose weights are on a host backend (CPU or ACCEL/BLAS). That rule only acts when an offload happens, so the expected cause is: at -ngl 0 beta 8 runs Ternary's prompt mat-muls on a D700. An earlier control (25c "envoff") ran without APPLOG and without proof the variable reached the server, so it proves nothing.
+</background>
+
+<runs>
+From /Users/sam/firellama, in the foreground. G=.scratch/beta8-unified-engine/evidence/gates-beta8; E=.scratch/beta8-unified-engine/evidence/25/ternary-offload; S=Ternary-Bonsai-2-27B-PQ2_0; B=dist/XeonLLM.app/Contents/Resources/bin
+  nopo:  APPLOG=$G/out/set/$S.applog OUT=$E/nopo MODES=ngl0nopo NGL0_CELLS="band16 band300 band1100" scripts/stress-release.sh $B /Users/sam/models/$S.gguf > $E/nopo.log 2>&1; echo "nopo rc=$?"
+  mb:    GGML_OP_OFFLOAD_MIN_BATCH=100000 APPLOG=$G/out/set/$S.applog OUT=$E/mb MODES=ngl0 NGL0_CELLS="band16 band300 band1100" scripts/stress-release.sh $B /Users/sam/models/$S.gguf > $E/mb.log 2>&1; echo "mb rc=$?"
+  base:  APPLOG=$G/out/set/$S.applog OUT=$E/base MODES=ngl0 NGL0_CELLS="band16 band300 band1100" scripts/stress-release.sh $B /Users/sam/models/$S.gguf > $E/base.log 2>&1; echo "base rc=$?"
+Proof the controls took effect: (a) for nopo, quote the server command line from the saved server log or the script's printed args showing --no-op-offload; (b) for mb, while the server runs (after /health is ok), save `ps -E -o command= -p <server pid> | tr ' ' '\n' | grep -E '^GGML_OP_OFFLOAD_MIN_BATCH='` to $E/mb-env.txt (only that line). (c) For every run, save the time of each cell (cells.tsv) — a CPU-only prefill is slower than one with GPU offload, so band1100's time is a second signal.
+Compare each cell's answers.json with beta.7 (.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/$S/$S-ngl0.answers.json) and beta 8 (.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/$S/$S-ngl0.answers.json); you may use evidence/25/ternary-all5/cmpall.py. Save $E/compare.txt.
+</runs>
+
+<report>
+Write $E/RESULT.md and end your reply with: rc per run; a table run x cell with vs beta.7, vs beta 8, and the cell time; the control proof lines (a) and (b); the DiagnosticReports name comparison.
+</report>

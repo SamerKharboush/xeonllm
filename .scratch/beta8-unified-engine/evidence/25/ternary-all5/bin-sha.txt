@@ -1,0 +1,4 @@
+# b8 sha
+63eb2a01af3616727827eb7bcdf90acf5b4919658cced1251575a4f8190c2221  /Users/sam/firellama/dist/XeonLLM.app/Contents/Resources/bin/llama-server
+# b7 sha
+1a68d3efcbf476e79b279425a2a367930439290abaa6a09629e96f828a12df90  /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/beta7-bin/llama-server

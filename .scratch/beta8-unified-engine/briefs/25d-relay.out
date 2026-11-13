@@ -1,0 +1,43 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e2b06d21cffe5Jr14eRLsLZONQ): ses_e2b06d21cffe5Jr14eRLsLZONQ
+cost: $0
+touched files: 0
+
+--- opencode final report ---
+Root cause of missing cells: relative `OUT` + `cd "$OUT"` in subshell. Use absolute paths.Reverse-apply fails when all checked at once: 0082 and 0083 depend on later patches (0086, 0085) being reverted first. Applying sequentially in given order.all5 = beta.7 text (274, "Likely blue."). Bisect: add back one at a time.add82 flips back to beta 8 text.CULPRIT: core/0082.Restored to HEAD clean. Now confirm: revert only 0082 from clean HEAD (label only82).Now manually revert 0082's hunk in ggml-backend.cpp, keeping 0086's guard.only82 = beta.7 text. Culprit confirmed: core/0082. Now narrow to hunk.Narrowing further: 0082 has two code hunks. Test each separately.no82ctx = beta 8 text. The backend hunk (ggml-backend.cpp) is the culprit. Restore now.Clean. Verify HEAD state, rebuild, confirm sha.Restore verified (clean, sha 53546683d2539c54). One confirmation run with restored engine.Now save the two hunks of 0082 separately for the report, and confirm the culprit hunk is the backend one by naming exactly which hunk only82 vs no82ctx differ on.Culprit hunk identified: 0082's `ggml-backend.cpp` change (op offload now fires for host weights on ACCEL, not just last backend). Confirming mechanism with one runtime run.Now let me get precise per-cell numbers from each run's cell files for the report.Done. Worktree clean, sha restored, no crashes.
+
+**Label table** (all rc=0; cells vs beta.7 / vs beta 8; band16 & band1100 IDENTICAL to both in every run)
+
+| label | patch state | sha prefix | rc | band300 len | vs beta.7 | vs beta 8 |
+|---|---|---|---|---|---|---|
+| b8 | shipped beta 8 engine | `63eb2a01af361672` | 0 | 276 | diff@226 (276 vs 274) | IDENTICAL |
+| b7 | beta.7 gate engine | `1a68d3efcbf476e7` | 0 | 274 | IDENTICAL | diff@226 (274 vs 276) |
+| all5 | all five reverted | `8bd15fbb1d1e15fd` | 0 | 274 | IDENTICAL | diff@226 |
+| add82 | all5 + core/0082 | `71fdf177c84abdc3` | 0 | 276 | diff@226 | IDENTICAL |
+| only82 | only core/0082 reverted | `81c3ca8264068fc5` | 0 | 274 | IDENTICAL | diff@226 |
+| no82ctx | only 0082's llama-context hunk reverted | `d0991ba08d9ca04d` | 0 | 276 | diff@226 | IDENTICAL |
+| final | clean HEAD | `53546683d2539c54` | 0 | 276 | diff@226 | IDENTICAL |
+
+**Culprit: `core/0082`, hunk 1** — the `ggml/src/ggml-backend.cpp` `src_type`/`src_on_host` block.
+
+Reasoning:
+- all5 (never run before) gives beta.7's text: 274 chars, "Likely blue.". Flip is fully reversible.
+- add82 flips straight back to beta 8 at the first patch added, so 0082 alone is sufficient.
+- only82 (0082 reverted from clean HEAD) reproduces beta.7 on all three cells.
+- no82ctx reverts only 0082's other hunk (`llama-context.cpp` compute-buffer cap) → still beta 8. So the backend hunk is the one that matters.
+- Mechanism: build has Accelerate registered, so host weights map to ACCEL, not `n_backends - 1`. Old test never matched → no op offload → prefill on 12 CPU threads. 0082 widens it to any host backend → prefill batch runs on a D700 → different summation order on the PQ2_0 dots → one near-tied logit at char 226 flips to `"blue"`.
+- Corroborated by timing (`timing.tsv`): beta.7 shape 235/420 s at band300/1100, beta 8 shape 161/238 s — clean ~2.6x split, reproduced across engines and rebuilds.
+- Not a kernel bug: band16 and band1100 byte-identical; single-token punctuation change.
+
+**Final state**
+- `git status --short` (worktree): empty
+- `build-fa/bin/llama-server`: `53546683d2539c54464672ed57d7e34f048e0e3bc9575735e4b53d9e04637b94`
+- DiagnosticReports: `comm -13` first vs every later listing — no new names; all seven listings byte-identical (md5 `4402067459f1cc81`). No panic/watchdog/gpuRestart.
+- pid 747 never touched; all work foreground and sequential.
+
+Report: `/Users/sam/firellama/.scratch/beta8-unified-engine/evidence/25/ternary-all5/RESULT.md`
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/xeonllm-wt-fa-2026-11-13T12-54-21-866Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.
