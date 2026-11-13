@@ -1,0 +1,26 @@
+Work in /Users/sam/firellama (XeonLLM, branch phase1-metal-d700-optimization). Beta 8 ticket 25, step 2: PROOF ONLY. Do not edit any source, do not build. Never git commit/tag/push/stash/reset/checkout/clean; never install into /Applications; never touch the user's defaults domains (dev.xeonllm.app, dev.engel.toshllm), their Application Support folders, 127.0.0.1:8080 (the user's own llama-server, pid 747: never kill it, never query it) or the user's running app.
+
+IMPORTANT: do not stop to write commentary. Run every step, then write the report once. Run `date` first; at 1 h 45 min stop and report what you have. Every claim must be quoted from a file you saved.
+
+<background>
+Step 1 (.scratch/beta8-unified-engine/evidence/25/RESULT.md) found that the -ngl 0 (CPU) greedy text changed since beta.7 because metal/0083 switches CPU prefill attention from the decomposed route to ggml_flash_attn_ext, and that TOSH_FA_PF_W64=1 (0083's opt-out) restores beta.7's text on Qwen3-0.6B (3 cells) and the 8B band16 cell. This step checks the same on the four other models whose ngl0 text moved.
+</background>
+
+<safety — this Mac froze twice this month; card 0 drives the display>
+- -ngl 0 only (the ngl0 mode below). One server at a time; the script starts and stops it. Nothing else heavy while it runs; no builds.
+- Before the first run and after every run: `ls /Library/Logs/DiagnosticReports/ | sort > <file>` and compare NAMES with the first listing (`comm -13`). A new *panic*, *watchdog* or *gpuRestart* name: STOP ALL WORK and report it first. A falling count is not a crash (the OS prunes old reports).
+</safety>
+
+<runs>
+For each stem, in this order: Qwen3-4B-Q4_K_M, Qwen3-4B-Q6_K, Qwen3-14B-Q4_K_M, Ternary-Bonsai-2-27B-PQ2_0, run from /Users/sam/firellama, in the foreground (each can take up to ~30 min; if your shell tool cannot wait, use nohup and poll the log until the script exits):
+  G=.scratch/beta8-unified-engine/evidence/gates-beta8; E=.scratch/beta8-unified-engine/evidence/25; mkdir -p $E/w64-set
+  TOSH_FA_PF_W64=1 APPLOG=$G/out/set/<stem>.applog OUT=$E/w64-set/<stem> MODES=ngl0 NGL0_CELLS="band16 band300 band1100" PREV_OUT=$G/../gates-beta7/out2/set/<stem> scripts/stress-release.sh dist/XeonLLM.app/Contents/Resources/bin /Users/sam/models/<stem>.gguf > $E/w64-set/<stem>.log 2>&1; echo "<stem> rc=$?"
+Then confirm the knob took effect: grep the server log the script saved under $E/w64-set/<stem>/ for TOSH_FA_PF_W64 or for the prefill route line (if no log line names it, say so). Then compare with python, per cell, the saved $E/w64-set/<stem>/<stem>-ngl0.answers.json against BOTH
+  beta.7: .scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/<stem>/<stem>-ngl0.answers.json
+  beta 8: .scratch/beta8-unified-engine/evidence/gates-beta8/out/set/<stem>/<stem>-ngl0.answers.json
+printing IDENTICAL or the first differing offset and both lengths. Save it as $E/w64-set/compare.txt.
+</runs>
+
+<report>
+Write $E/w64-set/RESULT.md and end your reply with: rc per stem; a table stem x cell with "vs beta.7" and "vs beta 8" (from compare.txt); the knob evidence lines; any "GGML_ASSERT", "kernel not found" or "@@@@" in the saved logs (grep, quote or say 0); the DiagnosticReports names comparison before/after; anything skipped and why.
+</report>

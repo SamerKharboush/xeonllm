@@ -1,0 +1,5 @@
+launch flags from: .scratch/beta8-unified-engine/evidence/25/../gates-beta8/out/set/Qwen3-0.6B-Q8_0.applog
+== Qwen3-0.6B-Q8_0.gguf [tensor] port 64102
+== Qwen3-0.6B-Q8_0.gguf [layer] port 64219
+== Qwen3-0.6B-Q8_0.gguf [ngl0] port 64381
+scripts/stress-release.sh: line 319: 20681 Terminated: 15          python3 "$DRIVER" 127.0.0.1 "$port" "$model" "$OUT" "$PARALLEL" "$(basename "$model" .gguf)-$label" "${CELL_TIMEOUT:-900}" "$(if [ "$label" = ngl0 ] || [ "$label" = ngl0nopo ]; then echo "${NGL0_CELLS:-}"; else echo "${CELLS:-}"; fi)" > "$OUT/$(basename "$model" .gguf)-$label.cells.tsv" 2>&1

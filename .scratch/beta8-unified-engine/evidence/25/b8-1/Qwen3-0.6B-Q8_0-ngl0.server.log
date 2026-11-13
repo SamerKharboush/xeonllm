@@ -1,0 +1,33 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.210.870 W DEPRECATED: argument '-ngl' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.211.028 I srv  llama_server: initializing ...
+0.00.211.047 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app standalone)
+0.00.211.048 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.211.496 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.213.620 I srv    load_model: loading model '/Users/sam/models/Qwen3-0.6B-Q8_0.gguf'
+0.00.213.653 I Tosh MoE: standard
+0.00.213.773 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.00.460.770 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.03.006.984 I cmn          init: llama threadpool init, n_threads = 12
+0.03.977.604 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.03.993.091 I srv  llama_server: model loaded
+0.03.993.101 I srv  llama_server: listening on http://127.0.0.1:62652
+0.05.180.056 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.05.180.113 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.09.177.783 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    512, progress = 0.35, t =   4.00 s / 128.08 tokens per second
+0.10.278.102 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    640, progress = 0.43, t =   5.10 s / 125.54 tokens per second
+0.11.484.780 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    768, progress = 0.52, t =   6.30 s / 121.82 tokens per second
+0.12.681.166 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    896, progress = 0.60, t =   7.50 s / 119.45 tokens per second
+0.13.903.987 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   1024, progress = 0.69, t =   8.72 s / 117.38 tokens per second
+0.15.217.480 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   1152, progress = 0.78, t =  10.04 s / 114.77 tokens per second
+0.16.689.186 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   1280, progress = 0.86, t =  11.51 s / 111.22 tokens per second
+0.18.214.927 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =   1408, progress = 0.95, t =  13.03 s / 108.02 tokens per second
+0.21.262.576 I slot print_timing: id  0 | task 0 | prompt eval time =   14071.46 ms /  1483 tokens (    9.49 ms per token,   105.39 tokens per second)
+0.21.262.591 I slot print_timing: id  0 | task 0 |        eval time =    2010.96 ms /    64 tokens (   31.92 ms per token,    31.33 tokens per second)
+0.21.262.593 I slot print_timing: id  0 | task 0 |       total time =   16082.42 ms /  1547 tokens
+0.21.262.595 I slot print_timing: id  0 | task 0 |    graphs reused =         67
+0.21.262.777 I slot      release: id  0 | task 0 | stop processing: n_tokens = 1546, truncated = 0
+0.21.277.495 I srv    operator(): operator(): cleaning up before exit...

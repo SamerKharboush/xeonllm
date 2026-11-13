@@ -1,0 +1,45 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.532.638 W DEPRECATED: argument '-ngl' specified multiple times, use comma-separated values instead (only last value will be used)
+0.00.532.821 I srv  llama_server: initializing ...
+0.00.532.841 I cmn  common_param: common_params_print_info: XeonLLM engine unknown (app standalone)
+0.00.532.842 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.533.292 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.535.383 I srv    load_model: loading model '/Users/sam/models/Qwen3-0.6B-Q8_0.gguf'
+0.00.535.416 I Tosh MoE: standard
+0.00.535.487 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.00.789.183 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.03.361.405 I cmn          init: llama threadpool init, n_threads = 12
+0.04.342.440 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.04.357.599 I srv  llama_server: model loaded
+0.04.357.622 I srv  llama_server: listening on http://127.0.0.1:65379
+0.05.159.220 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.05.159.294 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.07.158.685 I slot print_timing: id  0 | task 0 | prompt eval time =     798.43 ms /    80 tokens (    9.98 ms per token,   100.20 tokens per second)
+0.07.158.698 I slot print_timing: id  0 | task 0 |        eval time =    1200.89 ms /    64 tokens (   19.06 ms per token,    52.46 tokens per second)
+0.07.158.699 I slot print_timing: id  0 | task 0 |       total time =    1999.33 ms /   144 tokens
+0.07.158.700 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+0.07.158.749 I slot      release: id  0 | task 0 | stop processing: n_tokens = 143, truncated = 0
+0.07.174.871 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.143 (> 0.100 thold), f_keep = 0.448
+0.07.188.311 I slot launch_slot_: id  0 | task 65 | processing task, is_child = 0
+0.11.649.479 I slot print_timing: id  0 | task 65 | prompt eval time =    3031.62 ms /   384 tokens (    7.89 ms per token,   126.67 tokens per second)
+0.11.649.491 I slot print_timing: id  0 | task 65 |        eval time =    1429.52 ms /    64 tokens (   22.69 ms per token,    44.07 tokens per second)
+0.11.649.492 I slot print_timing: id  0 | task 65 |       total time =    4461.13 ms /   448 tokens
+0.11.649.493 I slot print_timing: id  0 | task 65 |    graphs reused =        125
+0.11.649.566 I slot      release: id  0 | task 65 | stop processing: n_tokens = 511, truncated = 0
+0.11.672.978 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.291 (> 0.100 thold), f_keep = 0.845
+0.11.673.243 I slot launch_slot_: id  0 | task 132 | processing task, is_child = 0
+0.15.097.026 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    384, progress = 0.55, t =   3.42 s / 112.16 tokens per second
+0.16.345.263 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    512, progress = 0.64, t =   4.67 s / 109.59 tokens per second
+0.17.680.477 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    640, progress = 0.72, t =   6.01 s / 106.54 tokens per second
+0.18.971.172 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    768, progress = 0.81, t =   7.30 s / 105.24 tokens per second
+0.20.354.237 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =    896, progress = 0.90, t =   8.68 s / 103.21 tokens per second
+0.21.822.715 I slot print_timing: id  0 | task 132 | prompt processing, n_tokens =   1024, progress = 0.98, t =  10.15 s / 100.89 tokens per second
+0.24.013.892 I slot print_timing: id  0 | task 132 | prompt eval time =   10475.53 ms /  1051 tokens (    9.97 ms per token,   100.33 tokens per second)
+0.24.013.903 I slot print_timing: id  0 | task 132 |        eval time =    1865.09 ms /    64 tokens (   29.60 ms per token,    33.78 tokens per second)
+0.24.013.904 I slot print_timing: id  0 | task 132 |       total time =   12340.62 ms /  1115 tokens
+0.24.013.905 I slot print_timing: id  0 | task 132 |    graphs reused =        190
+0.24.013.976 I slot      release: id  0 | task 132 | stop processing: n_tokens = 1546, truncated = 0
+0.24.030.071 I srv    operator(): operator(): cleaning up before exit...
