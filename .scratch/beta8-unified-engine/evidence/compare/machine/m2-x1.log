@@ -1,0 +1,33 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.190.047 I srv  llama_server: initializing ...
+0.00.190.077 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app standalone)
+0.00.190.078 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.190.857 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.192.903 I srv    load_model: loading model '/Users/sam/models/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/gemma4-coding-Q8_0.gguf'
+0.00.192.933 I Tosh MoE: standard
+0.01.999.893 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.004.919 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.017.403 W load: '</s>' is a normal token here, removing it from EOG list
+0.10.767.874 I cmn          init: llama threadpool init, n_threads = 12
+0.11.720.235 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 8192, kv_unified = 'false'
+0.11.720.360 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.11.739.218 I srv  llama_server: model loaded
+0.11.739.229 I srv  llama_server: listening on http://127.0.0.1:18130
+0.20.445.183 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.20.445.223 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.22.481.631 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16_w64_lg16; the tile kernel takes the prefill
+0.22.838.315 W ggml_metal_op_flash_attn_ext: kernel_flash_attn_ext_pf_amd_dk256_kf16_vf16 is not available on this card; the tile kernel takes the prefill
+0.23.022.031 W ggml_metal: MTL0: one node of a 491-token batch averages 99.1 ms, over the 50 ms command-buffer target; use a smaller ubatch
+0.46.303.499 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    499, progress = 0.99, t =  25.86 s / 19.30 tokens per second
+1.17.179.162 I slot print_timing: id  0 | task 0 | n_gen =    100, tg =   3.31 t/s, tg_3s =   3.34 t/s
+1.20.226.686 I slot print_timing: id  0 | task 0 | n_gen =    110, tg =   3.30 t/s, tg_3s =   3.28 t/s
+1.23.269.044 I slot print_timing: id  0 | task 0 | n_gen =    120, tg =   3.30 t/s, tg_3s =   3.29 t/s
+1.25.648.421 I slot print_timing: id  0 | task 0 | prompt eval time =   26789.25 ms /   503 tokens (   53.26 ms per token,    18.78 tokens per second)
+1.25.648.436 I slot print_timing: id  0 | task 0 |        eval time =   38413.91 ms /   128 tokens (  302.47 ms per token,     3.31 tokens per second)
+1.25.648.438 I slot print_timing: id  0 | task 0 |       total time =   65203.16 ms /   631 tokens
+1.25.648.439 I slot print_timing: id  0 | task 0 |    graphs reused =        126
+1.25.648.581 I slot      release: id  0 | task 0 | stop processing: n_tokens = 630, truncated = 0
+1.25.668.442 I srv    operator(): operator(): cleaning up before exit...

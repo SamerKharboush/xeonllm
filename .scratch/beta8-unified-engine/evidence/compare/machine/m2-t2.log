@@ -1,0 +1,31 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.133.395 I srv  llama_server: initializing ...
+0.00.133.413 I cmn  common_param: common_params_print_info: ToshLLM engine 0.87.33 (app standalone)
+0.00.133.413 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.133.908 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.135.781 I srv    load_model: loading model '/Users/sam/models/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF/gemma4-coding-Q8_0.gguf'
+0.00.135.799 I Tosh MoE: standard
+0.02.099.072 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.106.954 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.125.010 W load: '</s>' is a normal token here, removing it from EOG list
+0.10.851.324 I cmn          init: llama threadpool init, n_threads = 12
+0.11.835.609 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 8192, kv_unified = 'false'
+0.11.835.689 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.11.851.109 I srv  llama_server: model loaded
+0.11.851.118 I srv  llama_server: listening on http://127.0.0.1:18130
+0.20.490.388 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.20.490.436 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+1.05.031.809 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    499, progress = 0.99, t =  44.54 s / 11.20 tokens per second
+1.44.694.292 I slot print_timing: id  0 | task 0 | n_gen =    100, tg =   2.57 t/s, tg_3s =   2.60 t/s
+1.47.883.148 I slot print_timing: id  0 | task 0 | n_gen =    108, tg =   2.57 t/s, tg_3s =   2.51 t/s
+1.51.144.127 I slot print_timing: id  0 | task 0 | n_gen =    116, tg =   2.56 t/s, tg_3s =   2.45 t/s
+1.54.512.561 I slot print_timing: id  0 | task 0 | n_gen =    125, tg =   2.57 t/s, tg_3s =   2.67 t/s
+1.55.731.600 I slot print_timing: id  0 | task 0 | prompt eval time =   45684.73 ms /   503 tokens (   90.82 ms per token,    11.01 tokens per second)
+1.55.731.614 I slot print_timing: id  0 | task 0 |        eval time =   49556.39 ms /   128 tokens (  390.21 ms per token,     2.56 tokens per second)
+1.55.731.618 I slot print_timing: id  0 | task 0 |       total time =   95241.12 ms /   631 tokens
+1.55.731.620 I slot print_timing: id  0 | task 0 |    graphs reused =        126
+1.55.731.791 I slot      release: id  0 | task 0 | stop processing: n_tokens = 630, truncated = 0
+1.55.753.290 I srv    operator(): operator(): cleaning up before exit...

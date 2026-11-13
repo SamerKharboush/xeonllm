@@ -1,0 +1,33 @@
+ggml_metal: device 0: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+ggml_metal: device 1: AMD Radeon HD - FirePro D700 (peer group 0, not bridged) probed SIMD-group width = 64 (32 = Apple/AMD RDNA, 64 = AMD GCN/Vega)
+ggml_metal: wave64 mode (SIMD width 64): GPU prefill matmul, CPU decode/reductions for correct output
+ggml_metal: aligned mat-vec reads ON by amdgpu_gfx600 (override with TOSH_MV_ALIGN=1 or =0)
+ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU (see the allowlist in ggml_metal_library_get_pipeline_mul_mv)
+0.00.227.341 I srv  llama_server: initializing ...
+0.00.227.359 I cmn  common_param: common_params_print_info: XeonLLM engine 0.87.31-beta.8 (app standalone)
+0.00.227.360 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.230.608 W srv  llama_server: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.232.950 I srv    load_model: loading model '/Users/sam/models/Qwen3-14B-Q4_K_M.gguf'
+0.00.233.008 I Tosh MoE: standard
+0.00.233.379 W common_fit_params: not fitting params to free device memory: automatic fitting is not implemented for --split-mode tensor; continuing with the parameters as given
+0.00.532.496 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.07.237.442 I cmn          init: llama threadpool init, n_threads = 12
+0.07.639.885 W ggml_metal_op_flash_attn_ext: the driver refused kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64; using kernel_flash_attn_ext_vec_amd_dk128_kf16_vf16_w64_lds32
+0.08.073.406 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 16384, kv_unified = 'false'
+0.08.094.012 I srv  llama_server: model loaded
+0.08.094.035 I srv  llama_server: listening on http://127.0.0.1:18130
+0.10.316.813 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.10.316.986 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.15.806.774 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    256, progress = 0.50, t =   5.49 s / 46.63 tokens per second
+0.18.578.269 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    384, progress = 0.75, t =   8.26 s / 46.48 tokens per second
+0.21.318.593 I slot print_timing: id  0 | task 0 | prompt processing, n_tokens =    512, progress = 1.00, t =  11.00 s / 46.54 tokens per second
+0.31.335.060 I slot print_timing: id  0 | task 0 | n_gen =    100, tg =  10.00 t/s, tg_3s =  10.10 t/s
+0.34.132.984 I slot print_timing: id  0 | task 0 | prompt eval time =   11119.78 ms /   513 tokens (   21.68 ms per token,    46.13 tokens per second)
+0.34.132.995 I slot print_timing: id  0 | task 0 |        eval time =   12696.03 ms /   128 tokens (   99.97 ms per token,    10.00 tokens per second)
+0.34.132.996 I slot print_timing: id  0 | task 0 |       total time =   23815.81 ms /   641 tokens
+0.34.132.997 I slot print_timing: id  0 | task 0 |    graphs reused =        130
+0.34.133.189 I slot      release: id  0 | task 0 | stop processing: n_tokens = 640, truncated = 0
+0.34.147.484 I srv    operator(): operator(): cleaning up before exit...
