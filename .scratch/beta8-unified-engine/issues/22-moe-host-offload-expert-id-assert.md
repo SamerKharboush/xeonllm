@@ -1,6 +1,6 @@
 # 22: 35B MoE at -ngl 0 aborts at pp2048 with op offload (GGML_ASSERT id < n_expert)
 
-Type: bug (Mocca diagnose + fix, orchestrator gates) · Status: open · From: beta 8 R2 gate 3.3
+Type: bug (Mocca diagnose + fix, orchestrator gates) · Status: done (core/0086; gate row 35B -ngl 0 rc=0 7 rows on the R1b binaries, 0 asserts; root cause not isolated) · From: beta 8 R2 gate 3.3
 
 The shipped beta 8 llama-bench, Ornith-1.0-35B Q6_K, `-ngl 0 -fa 1 -p 16,...,2048 -n 0 -r 1` (default
 -b 2048 -ub 512, op offload on by default, card 0 = MTL0): six bands pass, pp2048 aborts in

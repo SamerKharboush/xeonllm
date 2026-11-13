@@ -1,6 +1,6 @@
 # 23: metal/0083's decomposed prefill needs a size bound (14B at 32k context: 2x slower prompt, 7x slower decode)
 
-Type: bug (Mocca code + measurement, orchestrator gates) · Status: open · From: beta 8 R2 repro A/B
+Type: bug (Mocca code + measurement, orchestrator gates) · Status: done (metal/0085, 256 MiB cap on 64 lanes; known limit at -ub 512 in the notes) · From: beta 8 R2 repro A/B
 
 Shipped beta 8, Qwen3-14B Q4_K_M layer split over both cards, -c 32768, default -ub 512, ~5.4k prompt
 (gates-beta8/repro.sh), two processes per arm alternating: beta 8 prompt 8.73/8.74 tok/s, decode

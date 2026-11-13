@@ -1,0 +1,26 @@
+Work in /Users/sam/firellama (XeonLLM, branch phase1-metal-d700-optimization). Beta 8 release, step R3: the stress test of the shipped app's real launch (specs/release-contract.md section 4 — read it) on dist/XeonLLM.app (0.87.31-beta.8, llama-server sha256 prefix 63eb2a01af361672). You RUN a prepared script and REPORT; you change no source, no script. Never git commit/tag/push/stash/reset/checkout/clean; never install into /Applications; never touch the user's defaults domains (dev.xeonllm.app, dev.engel.toshllm) or their Application Support folders (the test profile is dev.xeonllm.gatetest / XeonLLMGateTest, which the script uses), 127.0.0.1:8080 (pid 747), or the user's running XeonLLM app.
+
+IMPORTANT: do not stop to write commentary. Keep calling tools until the group is done, then write the report once. Run `date` first; at 3 h stop and report what you have. Every claim must be quoted from a file the script saved. Never invent or round a number.
+
+<safety — this Mac froze twice this month and panicked on GPU work; card 0 drives the display>
+- The script runs ONE server at a time. Nothing else heavy while it runs: no builds, no other GPU program, no second copy of the script.
+- Never use pkill/killall yourself (the script's own pkill of the test app is fine). Kill only pids you started.
+- Before starting and after it ends: `ls -t /Library/Logs/DiagnosticReports/ | head -3`. A NEW *.panic / *watchdog* / *.gpuRestart file name (compare names, not the count: the system prunes old ones): STOP at once, kill the script (its pid) and report that first.
+- Your shell tool times out at ~50 min: start it with nohup and poll the log with tail every few minutes until "### done".
+</safety>
+
+<run>
+  cd /Users/sam/firellama && STRESS_MODELS="GROUP" nohup bash .scratch/beta8-unified-engine/evidence/gates-beta8/stress-set.sh > .scratch/beta8-unified-engine/evidence/gates-beta8/stress-LABEL.log 2>&1 &
+Outputs: .scratch/beta8-unified-engine/evidence/gates-beta8/out/set/<stem>/ (cells.tsv, tables/*.tsv, logs, answers) and <stem>.applog.
+</run>
+
+<report>
+Write .scratch/beta8-unified-engine/evidence/gates-beta8/R3-LABEL-RESULT.md and end your reply with, per model:
+- the app launch lines from the log ("== <stem>" and the placement/context/args lines);
+- per mode (tensor / layer / ngl0 / draft) the cells.tsv summary line the script prints ("-- x.cells.tsv: N PASS ...") and every non-PASS cell with its reason column, quoted;
+- the identical/drafter lines (layer vs tensor byte-identical; vs the beta.7 text PREV_OUT; GPU vs -ngl 0 is reported only);
+- for 3 cells per model (one short band, the 4200 or 8300 band, the tools cell) the first 100 chars of the answer and whether it is on topic (your reading);
+- the tools cell: tool_calls present? (name + arguments);
+- grep counts over the model's server logs for "kernel not found", "exited with code", "GGML_ASSERT", "TEXT BAD"/"@@@@";
+- DiagnosticReports names before and after, the start/end times, and anything the script could not run and why.
+</report>
