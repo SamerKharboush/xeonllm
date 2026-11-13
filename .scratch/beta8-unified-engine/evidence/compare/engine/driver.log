@@ -1,0 +1,774 @@
+########## MODEL Qwen3-0.6B-Q8_0 ##########
+=== START Qwen3-0.6B-Q8_0 A t1 18:24:45 ===
+=== END   Qwen3-0.6B-Q8_0 A t1 rc=0 18:25:49 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:24:47Z","1144051895","264627","447.532164","0.101820"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:24:55Z","7165737554","1018260","285.804499","0.040469"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:25:38Z","2170981920","7462409","58.960051","0.201938"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '4' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 A x1 18:25:49 ===
+=== END   Qwen3-0.6B-Q8_0 A x1 rc=0 18:26:38 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:25:50Z","1029492096","4388751","497.339837","2.116739"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:25:57Z","5000491507","21252208","409.565644","1.736581"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:26:27Z","2171912430","4220322","58.934414","0.114544"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-0.6B-Q8_0 A t2 18:26:38 ===
+=== END   Qwen3-0.6B-Q8_0 A t2 rc=0 18:27:41 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:26:39Z","1143454812","696386","447.765968","0.272286"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:26:47Z","7164458907","917136","285.855506","0.036435"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:27:30Z","2166536886","1467977","59.080484","0.040009"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 A x2 18:27:41 ===
+=== END   Qwen3-0.6B-Q8_0 A x2 rc=0 18:28:30 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:27:42Z","1031572605","4458116","496.337010","2.148573"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:27:49Z","4998337218","14471800","409.738998","1.182047"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:28:19Z","2167830258","2482681","59.045275","0.067571"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-0.6B-Q8_0 A t3 18:28:30 ===
+=== END   Qwen3-0.6B-Q8_0 A t3 rc=0 18:29:33 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:28:31Z","1142974829","683970","447.954000","0.268047"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:28:39Z","7165175362","2132982","285.826940","0.085110"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:29:22Z","2164630323","3074970","59.132594","0.083968"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 A x3 18:29:33 ===
+=== END   Qwen3-0.6B-Q8_0 A x3 rc=0 18:30:22 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:29:34Z","1029852781","6401627","497.173879","3.105215"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:29:41Z","5010136021","12377114","408.773328","1.007223"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:30:11Z","2168485277","2073206","59.027421","0.056459"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-0.6B-Q8_0 D t1 18:30:22 ===
+=== END   Qwen3-0.6B-Q8_0 D t1 rc=0 18:30:46 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:30:23Z","2814685488","2876073","45.475811","0.046394"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 D x1 18:30:46 ===
+=== END   Qwen3-0.6B-Q8_0 D x1 rc=0 18:31:07 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:30:48Z","2816395605","2146377","45.448182","0.034602"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-0.6B-Q8_0 D t2 18:31:08 ===
+=== END   Qwen3-0.6B-Q8_0 D t2 rc=0 18:31:32 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:31:09Z","2814573871","2673663","45.477610","0.043187"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 D x2 18:31:32 ===
+=== END   Qwen3-0.6B-Q8_0 D x2 rc=0 18:31:53 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:31:33Z","2817646075","2535772","45.428020","0.040835"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-0.6B-Q8_0 D t3 18:31:53 ===
+=== END   Qwen3-0.6B-Q8_0 D t3 rc=0 18:32:17 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:31:54Z","2818096685","3131922","45.420772","0.050504"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-0.6B-Q8_0 D x3 18:32:18 ===
+=== END   Qwen3-0.6B-Q8_0 D x3 rc=0 18:32:39 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-0.6B-Q8_0.gguf","qwen3 0.6B Q8_0","633495552","596049920","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:32:19Z","2818332523","4752022","45.417029","0.076409"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+########## MODEL Qwen3-4B-Q4_K_M ##########
+=== START Qwen3-4B-Q4_K_M A t1 18:32:39 ===
+=== END   Qwen3-4B-Q4_K_M A t1 rc=0 18:37:02 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:32:43Z","5815946419","4469155","88.033865","0.067661"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:33:19Z","29446629789","796896","69.549555","0.001860"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:36:16Z","9049475514","1639003","14.144467","0.002557"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '4' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M A x1 18:37:02 ===
+=== END   Qwen3-4B-Q4_K_M A x1 rc=0 18:40:39 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:37:04Z","5502591985","4242783","93.047103","0.071763"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:37:37Z","23825604529","9473530","85.957956","0.034174"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:40:00Z","7658688812","2900430","16.713046","0.006329"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q4_K_M A t2 18:40:39 ===
+=== END   Qwen3-4B-Q4_K_M A t2 rc=0 18:44:59 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:40:41Z","5816510052","3505052","88.025318","0.053042"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:41:17Z","29446738906","10475951","69.549304","0.024747"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:44:13Z","9051589254","3794401","14.141165","0.005926"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M A x2 18:44:59 ===
+=== END   Qwen3-4B-Q4_K_M A x2 rc=0 18:48:36 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:45:01Z","5500534920","3947073","93.081894","0.066819"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:45:34Z","23822324813","7275369","85.969785","0.026243"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:47:57Z","7658921659","2879354","16.712537","0.006284"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q4_K_M A t3 18:48:36 ===
+=== END   Qwen3-4B-Q4_K_M A t3 rc=0 18:52:56 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:48:38Z","5818031378","3274589","88.002298","0.049538"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:49:14Z","29449439364","6844504","69.542923","0.016157"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:52:11Z","9052874952","2608423","14.139156","0.004069"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M A x3 18:52:57 ===
+=== END   Qwen3-4B-Q4_K_M A x3 rc=0 18:56:33 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T17:52:58Z","5503149662","2026410","93.037640","0.034221"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T17:53:31Z","23821996255","9778732","85.970976","0.035284"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T17:55:54Z","7659833067","4530214","16.710552","0.009877"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q4_K_M D t1 18:56:34 ===
+=== END   Qwen3-4B-Q4_K_M D t1 rc=0 18:57:57 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:56:35Z","10009995761","1994507","12.787219","0.002546"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M D x1 18:57:57 ===
+=== END   Qwen3-4B-Q4_K_M D x1 rc=0 18:59:07 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:57:59Z","8622710252","2646952","14.844522","0.004555"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q4_K_M D t2 18:59:08 ===
+=== END   Qwen3-4B-Q4_K_M D t2 rc=0 19:00:31 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T17:59:09Z","10012547830","1780491","12.783959","0.002268"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M D x2 19:00:31 ===
+=== END   Qwen3-4B-Q4_K_M D x2 rc=0 19:01:41 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:00:33Z","8625041693","3432694","14.840510","0.005904"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q4_K_M D t3 19:01:41 ===
+=== END   Qwen3-4B-Q4_K_M D t3 rc=0 19:03:05 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:01:43Z","10011875131","2350934","12.784818","0.002999"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q4_K_M D x3 19:03:05 ===
+=== END   Qwen3-4B-Q4_K_M D x3 rc=0 19:04:15 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q4_K_M.gguf","qwen3 4B Q4_K - Medium","2491323904","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:03:07Z","8622611613","2775406","14.844692","0.004776"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+########## MODEL Qwen3-4B-Q6_K ##########
+=== START Qwen3-4B-Q6_K A t1 19:04:15 ===
+=== END   Qwen3-4B-Q6_K A t1 rc=0 19:08:55 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:04:20Z","6145065496","2532614","83.318895","0.034331"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:04:58Z","30665452688","9759608","66.785258","0.021240"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:08:02Z","10576403613","3641731","12.102414","0.004163"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K A x1 19:08:56 ===
+=== END   Qwen3-4B-Q6_K A x1 rc=0 19:12:50 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:08:58Z","5839403211","2970994","87.680211","0.044605"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:09:33Z","25148934285","9490292","81.434872","0.030719"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:12:04Z","9198848830","3188832","13.914786","0.004824"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q6_K A t2 19:12:51 ===
+=== END   Qwen3-4B-Q6_K A t2 rc=0 19:17:28 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:12:53Z","6146814039","1821740","83.295189","0.024683"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:13:31Z","30668470691","5166547","66.778682","0.011236"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:16:35Z","10573779082","3032294","12.105417","0.003472"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K A x2 19:17:28 ===
+=== END   Qwen3-4B-Q6_K A x2 rc=0 19:21:23 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:17:30Z","5837347682","2153686","87.711078","0.032313"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:18:05Z","25142235273","8325740","81.456567","0.026967"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:20:36Z","9199335267","3645623","13.914051","0.005514"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q6_K A t3 19:21:23 ===
+=== END   Qwen3-4B-Q6_K A t3 rc=0 19:26:00 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:21:25Z","6144749187","3052479","83.323190","0.041383"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:22:03Z","30673867571","8692389","66.766935","0.018918"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:25:07Z","10576855365","4142252","12.101897","0.004737"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K A x3 19:26:01 ===
+=== END   Qwen3-4B-Q6_K A x3 rc=0 19:29:55 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:26:03Z","5842440718","4246492","87.634645","0.063691"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:26:38Z","25150880051","7042384","81.428567","0.022789"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:29:09Z","9197395049","855559","13.916984","0.001286"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q6_K D t1 19:29:56 ===
+=== END   Qwen3-4B-Q6_K D t1 rc=0 19:31:28 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:29:58Z","11535426344","4104446","11.096253","0.003947"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K D x1 19:31:28 ===
+=== END   Qwen3-4B-Q6_K D x1 rc=0 19:32:48 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:31:31Z","10157518249","2696343","12.601504","0.003343"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q6_K D t2 19:32:48 ===
+=== END   Qwen3-4B-Q6_K D t2 rc=0 19:34:20 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:32:50Z","11535666289","1895619","11.096022","0.001819"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K D x2 19:34:21 ===
+=== END   Qwen3-4B-Q6_K D x2 rc=0 19:35:40 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:34:23Z","10158367353","2655262","12.600451","0.003290"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-4B-Q6_K D t3 19:35:40 ===
+=== END   Qwen3-4B-Q6_K D t3 rc=0 19:37:12 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:35:42Z","11536119670","2877012","11.095586","0.002766"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-4B-Q6_K D x3 19:37:13 ===
+=== END   Qwen3-4B-Q6_K D x3 rc=0 19:38:32 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-4B-Q6_K.gguf","qwen3 4B Q6_K","3300304384","4022468096","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T18:37:15Z","10157349966","875151","12.601712","0.001086"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+########## MODEL Qwen3-8B-Q4_K_M ##########
+=== START Qwen3-8B-Q4_K_M A t1 19:38:32 ===
+=== END   Qwen3-8B-Q4_K_M A t1 rc=0 19:45:26 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:38:40Z","9596980021","3317302","53.350121","0.018436"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:39:39Z","44956584849","9029964","45.555063","0.009146"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:44:08Z","15474427593","3605286","8.271712","0.001926"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M A x1 19:45:26 ===
+=== END   Qwen3-8B-Q4_K_M A x1 rc=0 19:51:22 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:45:29Z","9286774451","1505455","55.132168","0.008918"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:46:25Z","38985731957","6255188","52.532040","0.008421"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:50:19Z","12491307295","3409959","10.247127","0.002795"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-8B-Q4_K_M A t2 19:51:22 ===
+=== END   Qwen3-8B-Q4_K_M A t2 rc=0 19:58:11 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:51:25Z","9596683978","3153841","53.351767","0.017533"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:52:23Z","44954463497","12025994","45.557214","0.012186"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T18:56:53Z","15476181095","3874588","8.270775","0.002069"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M A x2 19:58:11 ===
+=== END   Qwen3-8B-Q4_K_M A x2 rc=0 20:04:07 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T18:58:14Z","9286285657","4383708","55.135079","0.026031"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T18:59:10Z","38979203531","4394941","52.540838","0.005924"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:03:04Z","12489647460","951956","10.248488","0.000781"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-8B-Q4_K_M A t3 20:04:07 ===
+=== END   Qwen3-8B-Q4_K_M A t3 rc=0 20:10:56 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T19:04:10Z","9596441221","3411187","53.353117","0.018952"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T19:05:08Z","44952436230","9344802","45.559268","0.009469"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:09:38Z","15471500700","3086285","8.273277","0.001649"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '3' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M A x3 20:10:56 ===
+=== END   Qwen3-8B-Q4_K_M A x3 rc=0 20:16:52 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T19:10:59Z","9285007232","3914888","55.142668","0.023245"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T19:11:55Z","38976635015","3995414","52.544300","0.005373"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:15:49Z","12491613590","2072992","10.246875","0.001697"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-8B-Q4_K_M D t1 20:16:52 ===
+=== END   Qwen3-8B-Q4_K_M D t1 rc=0 20:19:04 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:16:55Z","16425130453","1627915","7.792937","0.000771"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M D x1 20:19:04 ===
+=== END   Qwen3-8B-Q4_K_M D x1 rc=0 20:20:54 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:19:07Z","13462670636","2244874","9.507772","0.001585"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-8B-Q4_K_M D t2 20:20:55 ===
+=== END   Qwen3-8B-Q4_K_M D t2 rc=0 20:23:07 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:20:58Z","16427680647","3833696","7.791727","0.001816"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M D x2 20:23:07 ===
+=== END   Qwen3-8B-Q4_K_M D x2 rc=0 20:24:57 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:23:10Z","13464152441","2046865","9.506726","0.001445"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START Qwen3-8B-Q4_K_M D t3 20:24:58 ===
+=== END   Qwen3-8B-Q4_K_M D t3 rc=0 20:27:09 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:25:00Z","16426082230","1119753","7.792485","0.000529"
+run:print:18: bad option: - 
+SC compilation failure
+GPGPU, exceed the local data storage limit" UserInfo={NSLocalizedDescription=
+Linking two modules of different data layouts: '' is '' whereas '2' is 'e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-v512:512:512-v1024:1024:1024-n8:16:32'
+SC compilation failure
+GPGPU, exceed the local data storage limit}
+
+=== START Qwen3-8B-Q4_K_M D x3 20:27:10 ===
+=== END   Qwen3-8B-Q4_K_M D x3 rc=0 20:29:00 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/Qwen3-8B-Q4_K_M.gguf","qwen3 8B Q4_K - Medium","5021827072","8190735360","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:27:12Z","13466204644","5746603","9.505278","0.004053"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+########## MODEL LFM3-1.7B-F16 ##########
+=== START LFM3-1.7B-F16 A t1 20:29:00 ===
+=== END   LFM3-1.7B-F16 A t1 rc=1 20:29:01 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 A x1 20:29:01 ===
+=== END   LFM3-1.7B-F16 A x1 rc=0 20:30:33 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T19:29:04Z","2013932510","2888391","254.229394","0.364127"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T19:29:16Z","8188175697","2067197","250.116776","0.063058"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:30:05Z","5547807101","6168181","23.072202","0.025669"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START LFM3-1.7B-F16 A t2 20:30:34 ===
+=== END   LFM3-1.7B-F16 A t2 rc=1 20:30:34 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 A x2 20:30:35 ===
+=== END   LFM3-1.7B-F16 A x2 rc=0 20:32:07 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T19:30:37Z","2012265792","2700657","254.439915","0.341094"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T19:30:49Z","8186086770","2905606","250.180613","0.088762"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:31:38Z","5548927203","4563133","23.067534","0.018975"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START LFM3-1.7B-F16 A t3 20:32:07 ===
+=== END   LFM3-1.7B-F16 A t3 rc=1 20:32:08 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 A x3 20:32:08 ===
+=== END   LFM3-1.7B-F16 A x3 rc=0 20:33:40 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","512","0","0","2026-11-13T19:32:11Z","2012814669","3513984","254.370785","0.443988"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","2048","0","0","2026-11-13T19:32:23Z","8192106291","3185405","249.996786","0.097129"
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","0","2026-11-13T19:33:12Z","5551397177","931107","23.057259","0.003843"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START LFM3-1.7B-F16 D t1 20:33:41 ===
+=== END   LFM3-1.7B-F16 D t1 rc=1 20:33:41 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 D x1 20:33:42 ===
+=== END   LFM3-1.7B-F16 D x1 rc=0 20:34:22 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:33:44Z","5698369970","4455788","22.462575","0.017571"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START LFM3-1.7B-F16 D t2 20:34:22 ===
+=== END   LFM3-1.7B-F16 D t2 rc=1 20:34:23 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 D x2 20:34:23 ===
+=== END   LFM3-1.7B-F16 D x2 rc=0 20:35:03 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:34:25Z","5691071001","2578636","22.491377","0.010181"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+=== START LFM3-1.7B-F16 D t3 20:35:03 ===
+=== END   LFM3-1.7B-F16 D t3 rc=1 20:35:04 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+run:print:18: bad option: - 
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+
+=== START LFM3-1.7B-F16 D x3 20:35:04 ===
+=== END   LFM3-1.7B-F16 D x3 rc=0 20:35:44 ===
+run:print:17: bad option: - 
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,load_mode,lazy_mode,embeddings,no_op_offload,no_host,repack,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"d81235049","11429","Accelerate, Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","AMD Radeon HD - FirePro D700","MTL,BLAS","/Users/sam/models/LFM3-1.7B-F16.gguf","lfm3 1.7B F16","3458379008","1728801600","2048","128","12","0x0","0","50","f16","f16","99","0","layer","0","0","1","auto","0.00","none","auto","auto","0","0","0","1","0","0","0","128","2048","2026-11-13T19:35:06Z","5692981312","1156401","22.483827","0.004562"
+run:print:18: bad option: - 
+ggml_metal_device_init: has bfloat            = false
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = false
+ggml_metal_device_init: recommendedMaxWorkingSetSize  =  6442.45 MB
+
+########## DRIVER DONE 20:35:44 ##########

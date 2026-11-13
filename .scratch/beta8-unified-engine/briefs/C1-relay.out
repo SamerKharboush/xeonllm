@@ -1,0 +1,151 @@
+
+relay: completed (exit 0)  ·  opencode opencode v2.2.2
+session id (resume with: --session ses_e2a10412bffed1QpEj5rMypmRX): ses_e2a10412bffed1QpEj5rMypmRX
+cost: $0
+touched files: 180
+  ?? .scratch/beta7-unified-performance/briefs/04-avx1-relay.out
+  ?? .scratch/beta7-unified-performance/evidence/02/readceiling
+  ?? .scratch/beta7-unified-performance/evidence/03/hostcopy
+  ?? .scratch/beta7-unified-performance/evidence/03/prefill-ab2.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-1-unset.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-set.err
+  ?? .scratch/beta7-unified-performance/evidence/04/port-2-unset.err
+  ?? .scratch/beta8-unified-engine/briefs/11-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/11-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/11-resume.txt
+  ?? .scratch/beta8-unified-engine/briefs/12-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/14-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/15-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/16b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/17-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/18-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/19-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/20b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/21-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/22-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/23b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/23c-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/24-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay2.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay3.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay4.out
+  ?? .scratch/beta8-unified-engine/briefs/A1-relay5.out
+  ?? .scratch/beta8-unified-engine/briefs/C1-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/R1b-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/R2b-prefill-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/R2b-regate-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/R3A-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/R3B-relay.out
+  ?? .scratch/beta8-unified-engine/briefs/lfm3-relay.out
+  … and 140 more
+
+--- opencode final report ---
+I'll set up the evidence directory and record identity first, then run the benchmark matrix strictly sequentially.Both engines see card index 1 (FirePro D700) as Metal device 0. Starting the sequential run matrix.Driver bug: `.gguf` missing from model filenames. Fixing and rerunning.All 60 cells done. Checking LFM3 ToshLLM failures and CSV contents.All CSVs present (60 cells). LFM3 ToshLLM = `unknown model architecture: 'lfm3'` on all 6, so its cells are "not loadable". Now collecting exact avg_ts/stddev_ts from each CSV.Done. 54 processes, all foreground sequential, 18:23→20:35 CET. Report at `.scratch/beta8-unified-engine/evidence/compare/engine/RESULT.md`.
+
+## Qwen3-0.6B-Q8_0
+
+| metric | t1 | t2 | t3 | x1 | x2 | x3 | both above/below |
+|---|---|---|---|---|---|---|---|
+| pp512 | 447.532164 ± 0.101820 | 447.765968 ± 0.272286 | 447.954000 ± 0.268047 | 497.339837 ± 2.116739 | 496.337010 ± 2.148573 | 497.173879 ± 3.105215 | X above |
+| pp2048 | 285.804499 ± 0.040469 | 285.855506 ± 0.036435 | 285.826940 ± 0.085110 | 409.565644 ± 1.736581 | 409.738998 ± 1.182047 | 408.773328 ± 1.007223 | X above |
+| tg128 | 58.960051 ± 0.201938 | 59.080484 ± 0.040009 | 59.132594 ± 0.083968 | 58.934414 ± 0.114544 | 59.045275 ± 0.067571 | 59.027421 ± 0.056459 | overlap |
+| tg128 @ d2048 | 45.475811 ± 0.046394 | 45.477610 ± 0.043187 | 45.420772 ± 0.050504 | 45.448182 ± 0.034602 | 45.428020 ± 0.040835 | 45.417029 ± 0.076409 | overlap |
+
+Method: ToshLLM `5977c1a9e6379dcd`/0.87.33, XeonLLM `93db3d0cd285ec50`/0.87.31-beta.8; card 1 (D700); Qwen3-0.6B-Q8_0; `-fa 1 -ub 128 -r 5`; A `-p 512,2048 -n 128`, D `-p 0 -n 128 -d 2048`; N=3 per side alternating; warmup run discarded; `TOSH_FA_AMD=1`.
+
+## Qwen3-4B-Q4_K_M
+
+| metric | t1 | t2 | t3 | x1 | x2 | x3 | both above/below |
+|---|---|---|---|---|---|---|---|
+| pp512 | 88.033865 ± 0.067661 | 88.025318 ± 0.053042 | 88.002298 ± 0.049538 | 93.047103 ± 0.071763 | 93.081894 ± 0.066819 | 93.037640 ± 0.034221 | X above |
+| pp2048 | 69.549555 ± 0.001860 | 69.549304 ± 0.024747 | 69.542923 ± 0.016157 | 85.957956 ± 0.034174 | 85.969785 ± 0.026243 | 85.970976 ± 0.035284 | X above |
+| tg128 | 14.144467 ± 0.002557 | 14.141165 ± 0.005926 | 14.139156 ± 0.004069 | 16.713046 ± 0.006329 | 16.712537 ± 0.006284 | 16.710552 ± 0.009877 | X above |
+| tg128 @ d2048 | 12.787219 ± 0.002546 | 12.783959 ± 0.002268 | 12.784818 ± 0.002999 | 14.844522 ± 0.004555 | 14.840510 ± 0.005904 | 14.844692 ± 0.004776 | X above |
+
+Method: same as above; model Qwen3-4B-Q4_K_M.
+
+## Qwen3-4B-Q6_K
+
+| metric | t1 | t2 | t3 | x1 | x2 | x3 | both above/below |
+|---|---|---|---|---|---|---|---|
+| pp512 | 83.318895 ± 0.034331 | 83.295189 ± 0.024683 | 83.323190 ± 0.041383 | 87.680211 ± 0.044605 | 87.711078 ± 0.032313 | 87.634645 ± 0.063691 | X above |
+| pp2048 | 66.785258 ± 0.021240 | 66.778682 ± 0.011236 | 66.766935 ± 0.018918 | 81.434872 ± 0.030719 | 81.456567 ± 0.026967 | 81.428567 ± 0.022789 | X above |
+| tg128 | 12.102414 ± 0.004163 | 12.105417 ± 0.003472 | 12.101897 ± 0.004737 | 13.914786 ± 0.004824 | 13.914051 ± 0.005514 | 13.916984 ± 0.001286 | X above |
+| tg128 @ d2048 | 11.096253 ± 0.003947 | 11.096022 ± 0.001819 | 11.095586 ± 0.002766 | 12.601504 ± 0.003343 | 12.600451 ± 0.003290 | 12.601712 ± 0.001086 | X above |
+
+Method: same as above; model Qwen3-4B-Q6_K.
+
+## Qwen3-8B-Q4_K_M
+
+| metric | t1 | t2 | t3 | x1 | x2 | x3 | both above/below |
+|---|---|---|---|---|---|---|---|
+| pp512 | 53.350121 ± 0.018436 | 53.351767 ± 0.017533 | 53.353117 ± 0.018952 | 55.132168 ± 0.008918 | 55.135079 ± 0.026031 | 55.142668 ± 0.023245 | X above |
+| pp2048 | 45.555063 ± 0.009146 | 45.557214 ± 0.012186 | 45.559268 ± 0.009469 | 52.532040 ± 0.008421 | 52.540838 ± 0.005924 | 52.544300 ± 0.005373 | X above |
+| tg128 | 8.271712 ± 0.001926 | 8.270775 ± 0.002069 | 8.273277 ± 0.001649 | 10.247127 ± 0.002795 | 10.248488 ± 0.000781 | 10.246875 ± 0.001697 | X above |
+| tg128 @ d2048 | 7.792937 ± 0.000771 | 7.791727 ± 0.001816 | 7.792485 ± 0.000529 | 9.507772 ± 0.001585 | 9.506726 ± 0.001445 | 9.505278 ± 0.004053 | X above |
+
+Method: same as above; model Qwen3-8B-Q4_K_M.
+
+## LFM3-1.7B-F16
+
+| metric | t1 | t2 | t3 | x1 | x2 | x3 | both above/below |
+|---|---|---|---|---|---|---|---|
+| pp512 | not run | not run | not run | 254.229394 ± 0.364127 | 254.439915 ± 0.341094 | 254.370785 ± 0.443988 | n/a |
+| pp2048 | not run | not run | not run | 250.116776 ± 0.063058 | 250.180613 ± 0.088762 | 249.996786 ± 0.097129 | n/a |
+| tg128 | not run | not run | not run | 23.072202 ± 0.025669 | 23.067534 ± 0.018975 | 23.057259 ± 0.003843 | n/a |
+| tg128 @ d2048 | not run | not run | not run | 22.462575 ± 0.017571 | 22.491377 ± 0.010181 | 22.483827 ± 0.004562 | n/a |
+
+Not run — all 6 ToshLLM cells, rc=1, header-only CSV:
+```
+llama_model_load: error loading model: unknown model architecture: 'lfm3'
+llama_model_load_from_file_impl: failed to load model
+llama_bench: error: failed to load model '/Users/sam/models/LFM3-1.7B-F16.gguf'
+```
+Not loadable on ToshLLM 0.87.33.
+
+## Identity
+
+```
+date: Fri Nov 13 18:23:52 CET 2026
+engine sha256 (first 16 hex):
+  5977c1a9e6379dcd  ToshLLM  llama-bench
+  93db3d0cd285ec50  XeonLLM  llama-bench
+  f3e4ec060b77430c  ToshLLM  llama-server
+  63eb2a01af361672  XeonLLM  llama-server
+bundle versions:  ToshLLM 0.87.33 | XeonLLM 0.87.31-beta.8
+engine build strings:
+  ToshLLM : version 0.6.0-dev (build 11429, commit d81235049) AppleClang 21.0.0.21000101 Darwin x86_64
+  XeonLLM : version 0.6.0-dev (build 11429, commit d81235049) AppleClang 17.0.0.17000013 Darwin x86_64
+kernel fingerprints: ToshLLM e12176b637c7 | XeonLLM f43dd4109052
+hardware: Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz | hw.memsize 68719476736
+Metal device index 1: MTL0 AMD Radeon HD - FirePro D700 (6144 MiB, 6143 MiB free)
+models: Qwen3-0.6B-Q8_0.gguf 639446688 | Qwen3-4B-Q4_K_M.gguf 2497280256 |
+        Qwen3-4B-Q6_K.gguf 3306260704 | Qwen3-8B-Q4_K_M.gguf 5027783488 |
+        LFM3-1.7B-F16.gguf 3466626336
+```
+
+## DiagnosticReports
+
+```
+comm -13 diag-first.txt diag-after.txt  →  (empty)
+```
+No new `panic` / `watchdog` / `gpuRestart`. Baseline had 39 entries (Nov 6–11, incl. 14 gpuRestart and 2 panic); none added.
+
+## Application Support
+
+```
+diff appsupport-before.txt appsupport-after.txt  →  IDENTICAL
+```
+Both `~/Library/Application Support/ToshLLM` and `.../XeonLLM` listings unchanged.
+
+Aside worth noting for part 2: ToshLLM logged 3362–4322 `failed to create pipeline state: kernel_flash_attn_ext_pf_amd_dk128_kf16_vf16[_w64_lg16]` errors per process (`CompilerError Code=2 … exceed the local data storage limit`); XeonLLM logged zero. Recorded as stderr observation only, not used to explain any number.
+--- end report ---
+
+result: /var/folders/rb/dwn6jj5x4yd6685p4vc0n8c40000gn/T/delegate-relay/firellama-2026-11-13T17-23-40-855Z/result.json
+relay does not commit. Review the diff, re-run the project gates yourself, then commit from the orchestrator.

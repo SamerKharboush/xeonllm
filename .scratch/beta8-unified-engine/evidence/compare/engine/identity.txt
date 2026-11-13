@@ -1,0 +1,26 @@
+date: Fri Nov 13 18:23:52 CET 2026
+engine sha256 (first 16 hex):
+  5977c1a9e6379dcd  ToshLLM  llama-bench
+  93db3d0cd285ec50  XeonLLM  llama-bench
+  f3e4ec060b77430c  ToshLLM  llama-server
+  63eb2a01af361672  XeonLLM  llama-server
+bundle versions:
+  ToshLLM 0.87.33
+  XeonLLM 0.87.31-beta.8
+engine build strings (llama-bench --version):
+  ToshLLM : version 0.6.0-dev (build 11429, commit d81235049) AppleClang 21.0.0.21000101 Darwin x86_64
+  XeonLLM : version 0.6.0-dev (build 11429, commit d81235049) AppleClang 17.0.0.17000013 Darwin x86_64
+kernel fingerprints (ggml_metal_library_init):
+  ToshLLM : e12176b637c7
+  XeonLLM : f43dd4109052
+hardware:
+  machdep.cpu.brand_string = Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz
+  hw.memsize = 68719476736 (64 GiB)
+  Metal device index 1 = MTL0: AMD Radeon HD - FirePro D700 (6144 MiB, 6143 MiB free)
+  GPU family MTLGPUFamilyCommon3 (3003); simdgroup reduction=false, matrix mul=false, bfloat=false, tensor=false
+models: /Users/sam/models/
+  Qwen3-0.6B-Q8_0.gguf  639446688
+  Qwen3-4B-Q4_K_M.gguf  2497280256
+  Qwen3-4B-Q6_K.gguf    3306260704
+  Qwen3-8B-Q4_K_M.gguf  5027783488
+  LFM3-1.7B-F16.gguf    3466626336
