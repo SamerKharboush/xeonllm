@@ -14,6 +14,12 @@ IMPORTANT: do not stop to write commentary. Keep calling tools until the group i
 Outputs: .scratch/beta8-unified-engine/evidence/gates-beta8/out/set/<stem>/ (cells.tsv, tables/*.tsv, logs, answers) and <stem>.applog.
 </run>
 
+<extra — after "### done" of the group, one more short run>
+In group A, "ngl0 identical-vs-previous" FAILED for Qwen3-0.6B (band1100), 4B Q4/Q6, and 8B (band16): beta 8's -ngl 0 text differs from beta.7's. Suspected cause: core/0082 (new in beta 8) offloads the prompt to a card even at -ngl 0, so it is no longer the pure CPU backend. scripts/stress-release.sh now has a mode ngl0nopo (= -ngl 0 --no-op-offload). Run, one at a time, for Qwen3-8B-Q4_K_M and then Qwen3-0.6B-Q8_0:
+  cd /Users/sam/firellama && G=.scratch/beta8-unified-engine/evidence/gates-beta8 && APPLOG=$G/out/set/<stem>.applog OUT=$G/out/set-nopo/<stem> MODES=ngl0nopo NGL0_CELLS="band16 band300 band1100" PREV_OUT=$G/../gates-beta7/out2/set/<stem> scripts/stress-release.sh dist/XeonLLM.app/Contents/Resources/bin /Users/sam/models/<stem>.gguf > $G/out/set-nopo/<stem>.log 2>&1
+Then compare byte for byte (cmp, and python for the first differing offset) the band16/band300/band1100 answer files of out/set-nopo/<stem> against the same cells of beta.7's ngl0 run in gates-beta7/out2/set/<stem>/ and against beta 8's ngl0 in out/set/<stem>/ (find the answer file names in those folders). Report a table: model x band -> nopo vs beta.7 ngl0 (identical / differs at N), nopo vs beta 8 ngl0. Also grep the beta 8 ngl0 server log in out/set/<stem>/ for "op offload" / "prompt offload" lines and quote them.
+</extra>
+
 <report>
 Write .scratch/beta8-unified-engine/evidence/gates-beta8/R3-B-RESULT.md and end your reply with, per model:
 - the app launch lines from the log ("== <stem>" and the placement/context/args lines);

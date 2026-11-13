@@ -376,7 +376,7 @@ run_server() {
     fi
 
     python3 "$DRIVER" 127.0.0.1 "$port" "$model" "$OUT" "$PARALLEL" "$(basename "$model" .gguf)-$label" "${CELL_TIMEOUT:-900}" \
-        "$(if [ "$label" = ngl0 ]; then echo "${NGL0_CELLS:-}"; else echo "${CELLS:-}"; fi)" \
+        "$(if [ "$label" = ngl0 ] || [ "$label" = ngl0nopo ]; then echo "${NGL0_CELLS:-}"; else echo "${CELLS:-}"; fi)" \
         > "$OUT/$(basename "$model" .gguf)-$label.cells.tsv" 2>&1
 
     kill_server "$pid"
@@ -472,6 +472,9 @@ for model in "${MODELS[@]}"; do
             tensor) run_server "$model" "tensor" ;;
             layer)  run_server "$model" "layer" --split-mode layer ;;
             ngl0)   run_server "$model" "ngl0" -ngl 0 ;;
+            # -ngl 0 with the prompt kept off the cards (core/0082 offloads it by default):
+            # the pure CPU backend, for comparing with releases before 0082
+            ngl0nopo) run_server "$model" "ngl0nopo" -ngl 0 --no-op-offload ;;
             draft)
                 # the app's rule: the drafter is <stem>.dflash.gguf next to the model
                 draft="${model%.gguf}.dflash.gguf"

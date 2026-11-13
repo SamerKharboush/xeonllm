@@ -1,0 +1,132 @@
+### Qwen3-0.6B-Q8_0 04:00
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Qwen3-0.6B-Q8_0.gguf ctx=32768 tensor, port 18099)
+== Qwen3-0.6B-Q8_0
+ placement: card
+ args: -m /Users/sam/models/Qwen3-0.6B-Q8_0.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 204
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-0.6B-Q8_0.applog
+== Qwen3-0.6B-Q8_0.gguf [tensor] port 52166
+== Qwen3-0.6B-Q8_0.gguf [layer] port 52259
+== Qwen3-0.6B-Q8_0.gguf [ngl0] port 52404
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-0.6B-Q8_0/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-0.6B-Q8_0
+-- Qwen3-0.6B-Q8_0-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-0.6B-Q8_0-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-0.6B-Q8_0-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 216	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 216	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 216	0
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 216	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 216	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-0.6B-Q8_0.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 216	0
+### Qwen3-4B-Q4_K_M 04:07
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Qwen3-4B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Qwen3-4B-Q4_K_M
+ placement: card
+ args: -m /Users/sam/models/Qwen3-4B-Q4_K_M.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 204
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q4_K_M.applog
+== Qwen3-4B-Q4_K_M.gguf [tensor] port 52454
+== Qwen3-4B-Q4_K_M.gguf [layer] port 52734
+== Qwen3-4B-Q4_K_M.gguf [ngl0] port 53163
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q4_K_M
+-- Qwen3-4B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-4B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-4B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 143	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 143	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 143	0
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 143	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 143	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 143	0
+### Qwen3-4B-Q6_K 04:31
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Qwen3-4B-Q6_K.gguf ctx=32768 tensor, port 18099)
+== Qwen3-4B-Q6_K
+ placement: card
+ args: -m /Users/sam/models/Qwen3-4B-Q6_K.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q6_K.applog
+== Qwen3-4B-Q6_K.gguf [tensor] port 53250
+== Qwen3-4B-Q6_K.gguf [layer] port 53545
+== Qwen3-4B-Q6_K.gguf [ngl0] port 54045
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q6_K/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-4B-Q6_K
+-- Qwen3-4B-Q6_K-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-4B-Q6_K-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-4B-Q6_K-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 163	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 163	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 51	0
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-ngl0	DIFFERS	band1100 differs at offset 163	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-ngl0	DIFFERS	band1100 differs at offset 163	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-4B-Q6_K.gguf	ngl0	identical-vs-previous	FAIL	band1100 differs at offset 51	0
+### Qwen3-8B-Q4_K_M 04:56
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/Qwen3-8B-Q4_K_M.gguf ctx=32768 tensor, port 18099)
+== Qwen3-8B-Q4_K_M
+ placement: card
+ args: -m /Users/sam/models/Qwen3-8B-Q4_K_M.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 204
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-8B-Q4_K_M.applog
+== Qwen3-8B-Q4_K_M.gguf [tensor] port 54131
+== Qwen3-8B-Q4_K_M.gguf [layer] port 54466
+== Qwen3-8B-Q4_K_M.gguf [ngl0] port 55005
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-8B-Q4_K_M/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/Qwen3-8B-Q4_K_M
+-- Qwen3-8B-Q4_K_M-layer.cells.tsv:   20 PASS    1 SKIP 
+-- Qwen3-8B-Q4_K_M-ngl0.cells.tsv:    3 PASS 
+-- Qwen3-8B-Q4_K_M-tensor.cells.tsv:   20 PASS    1 SKIP 
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band16 differs at offset 225	0
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	tensor	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+Qwen3-8B-Q4_K_M.gguf	ngl0	identical-vs-previous	FAIL	band16 differs at offset 225	0
+### LFM3-1.7B-F16 05:26
+launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/LFM3-1.7B-F16.gguf ctx=32768 tensor, port 18099)
+== LFM3-1.7B-F16
+ placement: card
+ args: -m /Users/sam/models/LFM3-1.7B-F16.gguf -ngl 99 -c 32768 -t 12 -fa auto --host 127.0.0.1 --port 18099 --ubatch-size 128 --batch-size 128 --load-mode none --jinja --no-reasoning-preserve --metrics --cache-ram 2048 
+launch flags from: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/LFM3-1.7B-F16.applog
+== LFM3-1.7B-F16.gguf [tensor] port 55123
+== LFM3-1.7B-F16.gguf [layer] port 55318
+== LFM3-1.7B-F16.gguf [ngl0] port 55526
+results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/LFM3-1.7B-F16/tables/stress.tsv
+logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/out/set/LFM3-1.7B-F16
+-- LFM3-1.7B-F16-layer.cells.tsv:   20 PASS    1 SKIP 
+-- LFM3-1.7B-F16-ngl0.cells.tsv:    3 PASS 
+-- LFM3-1.7B-F16-tensor.cells.tsv:   20 PASS    1 SKIP 
+LFM3-1.7B-F16.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	tensor	identical-vs-previous	SKIP	no tensor run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	ngl0	identical-vs-previous	SKIP	no ngl0 run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
+LFM3-1.7B-F16.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	tensor	identical-vs-previous	SKIP	no tensor run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	ngl0	identical-vs-previous	SKIP	no ngl0 run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
+cleaned
+### done

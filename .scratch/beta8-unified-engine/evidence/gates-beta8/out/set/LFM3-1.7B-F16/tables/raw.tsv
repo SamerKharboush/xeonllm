@@ -1,0 +1,51 @@
+LFM3-1.7B-F16.gguf	tensor	band16	PASS	prompt_tokens=86 completion_tokens=64 3.3s	86
+LFM3-1.7B-F16.gguf	tensor	band300	PASS	prompt_tokens=486 completion_tokens=64 4.6s	486
+LFM3-1.7B-F16.gguf	tensor	band450	PASS	prompt_tokens=711 completion_tokens=64 5.6s	711
+LFM3-1.7B-F16.gguf	tensor	band520	PASS	prompt_tokens=786 completion_tokens=64 6.1s	786
+LFM3-1.7B-F16.gguf	tensor	band1100	PASS	prompt_tokens=1611 completion_tokens=64 9.2s	1611
+LFM3-1.7B-F16.gguf	tensor	band4200	PASS	prompt_tokens=5911 completion_tokens=64 27.7s	5911
+LFM3-1.7B-F16.gguf	tensor	band8300	PASS	prompt_tokens=11611 completion_tokens=64 53.7s	11611
+LFM3-1.7B-F16.gguf	tensor	conv6-turn0	PASS	prompt_tokens=422 completion_tokens=64 4.6s	422
+LFM3-1.7B-F16.gguf	tensor	conv6-turn1	PASS	prompt_tokens=847 completion_tokens=64 6.2s	847
+LFM3-1.7B-F16.gguf	tensor	conv6-turn2	PASS	prompt_tokens=1272 completion_tokens=64 6.2s	1272
+LFM3-1.7B-F16.gguf	tensor	conv6-turn3	PASS	prompt_tokens=1697 completion_tokens=64 6.4s	1697
+LFM3-1.7B-F16.gguf	tensor	conv6-turn4	PASS	prompt_tokens=2122 completion_tokens=64 6.3s	2122
+LFM3-1.7B-F16.gguf	tensor	conv6-turn5	PASS	prompt_tokens=2547 completion_tokens=64 6.3s	2547
+LFM3-1.7B-F16.gguf	tensor	evict	PASS	prompt_tokens=22286 completion_tokens=64 112.3s	22286
+LFM3-1.7B-F16.gguf	tensor	after-evict	PASS	prompt_tokens=111 completion_tokens=64 3.4s	111
+LFM3-1.7B-F16.gguf	tensor	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+LFM3-1.7B-F16.gguf	tensor	after-over-ctx	PASS	prompt_tokens=111 completion_tokens=64 3.4s	111
+LFM3-1.7B-F16.gguf	tensor	tools	PASS	prompt_tokens=75 completion_tokens=61 3.2s	75
+LFM3-1.7B-F16.gguf	tensor	parallel2	SKIP	--parallel 1 does not allow it	0
+LFM3-1.7B-F16.gguf	tensor	cancel-stream	PASS	stream closed after 64 bytes	0
+LFM3-1.7B-F16.gguf	tensor	after-cancel	PASS	prompt_tokens=161 completion_tokens=64 4.3s	161
+LFM3-1.7B-F16.gguf	layer	band16	PASS	prompt_tokens=86 completion_tokens=64 3.3s	86
+LFM3-1.7B-F16.gguf	layer	band300	PASS	prompt_tokens=486 completion_tokens=64 4.6s	486
+LFM3-1.7B-F16.gguf	layer	band450	PASS	prompt_tokens=711 completion_tokens=64 5.6s	711
+LFM3-1.7B-F16.gguf	layer	band520	PASS	prompt_tokens=786 completion_tokens=64 6.1s	786
+LFM3-1.7B-F16.gguf	layer	band1100	PASS	prompt_tokens=1611 completion_tokens=64 9.2s	1611
+LFM3-1.7B-F16.gguf	layer	band4200	PASS	prompt_tokens=5911 completion_tokens=64 27.6s	5911
+LFM3-1.7B-F16.gguf	layer	band8300	PASS	prompt_tokens=11611 completion_tokens=64 53.9s	11611
+LFM3-1.7B-F16.gguf	layer	conv6-turn0	PASS	prompt_tokens=422 completion_tokens=64 4.6s	422
+LFM3-1.7B-F16.gguf	layer	conv6-turn1	PASS	prompt_tokens=847 completion_tokens=64 6.2s	847
+LFM3-1.7B-F16.gguf	layer	conv6-turn2	PASS	prompt_tokens=1272 completion_tokens=64 6.2s	1272
+LFM3-1.7B-F16.gguf	layer	conv6-turn3	PASS	prompt_tokens=1697 completion_tokens=64 6.4s	1697
+LFM3-1.7B-F16.gguf	layer	conv6-turn4	PASS	prompt_tokens=2122 completion_tokens=64 6.3s	2122
+LFM3-1.7B-F16.gguf	layer	conv6-turn5	PASS	prompt_tokens=2547 completion_tokens=64 6.4s	2547
+LFM3-1.7B-F16.gguf	layer	evict	PASS	prompt_tokens=22286 completion_tokens=64 112.1s	22286
+LFM3-1.7B-F16.gguf	layer	after-evict	PASS	prompt_tokens=111 completion_tokens=64 3.4s	111
+LFM3-1.7B-F16.gguf	layer	over-ctx	PASS	refused with 400 at n_ctx=32768	0
+LFM3-1.7B-F16.gguf	layer	after-over-ctx	PASS	prompt_tokens=111 completion_tokens=64 3.4s	111
+LFM3-1.7B-F16.gguf	layer	tools	PASS	prompt_tokens=75 completion_tokens=61 3.2s	75
+LFM3-1.7B-F16.gguf	layer	parallel2	SKIP	--parallel 1 does not allow it	0
+LFM3-1.7B-F16.gguf	layer	cancel-stream	PASS	stream closed after 64 bytes	0
+LFM3-1.7B-F16.gguf	layer	after-cancel	PASS	prompt_tokens=161 completion_tokens=64 4.3s	161
+LFM3-1.7B-F16.gguf	ngl0	band16	PASS	prompt_tokens=86 completion_tokens=64 6.4s	86
+LFM3-1.7B-F16.gguf	ngl0	band300	PASS	prompt_tokens=486 completion_tokens=64 10.3s	486
+LFM3-1.7B-F16.gguf	ngl0	band1100	PASS	prompt_tokens=1611 completion_tokens=64 22.7s	1611
+LFM3-1.7B-F16.gguf	tensor	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-ngl0	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-tensor	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	tensor	identical-vs-previous	SKIP	no tensor run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
+LFM3-1.7B-F16.gguf	layer	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0
+LFM3-1.7B-F16.gguf	ngl0	identical-vs-previous	SKIP	no ngl0 run in /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta7/out2/set/LFM3-1.7B-F16	0
