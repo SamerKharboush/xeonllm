@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """A stdio MCP server for the engine's tests: each tool misbehaves in one way, with no effect outside
@@ -47,7 +47,7 @@ def answer(rid, text):
     return {"jsonrpc": "2.0", "id": rid, "result": {"content": [{"type": "text", "text": text}]}}
 
 
-log(started=True, timeout_ms=os.environ.get("TOSH_MCP_TIMEOUT_MS"))
+log(started=True, timeout_ms=os.environ.get("XEON_MCP_TIMEOUT_MS"))
 held = []
 for line in sys.stdin:
     message = json.loads(line)

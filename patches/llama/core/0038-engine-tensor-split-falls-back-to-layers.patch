@@ -6,7 +6,7 @@ after the weights had loaded and the app had no chance to recover.
 
 All of them now go through one helper that reports the reason and exits 86, which
 is what Server.swift watches for, so the app retries once with --split-mode layer.
-TOSH_TENSOR_SPLIT_STRICT=1 keeps every one of them as an abort.
+XEON_TENSOR_SPLIT_STRICT=1 keeps every one of them as an abort.
 
 Converted: unsupported mul_mat split states, shape mismatch, unimplemented op,
 inconsistent split ratio, unresolved split axis, unresolvable source axis, permuted
@@ -57,7 +57,7 @@ index add02ab..e968946 100644
 +// Every way a tensor split can fail to describe a tensor means the same thing to a caller: this
 +// model cannot be split the way it was asked for. Aborting makes that read as a crash, after the
 +// weights have usually already loaded. Report the reason and exit 86, which the app recognises and
-+// retries once with --split-mode layer. TOSH_TENSOR_SPLIT_STRICT=1 keeps the abort for anyone
++// retries once with --split-mode layer. XEON_TENSOR_SPLIT_STRICT=1 keeps the abort for anyone
 +// debugging the scheduler. This function does not return.
 +GGML_NORETURN static void ggml_backend_meta_no_tensor_split(const char * fmt, ...);
 +
@@ -68,7 +68,7 @@ index add02ab..e968946 100644
 +    vsnprintf(msg, sizeof(msg), fmt, args);
 +    va_end(args);
 +
-+    const char * strict = getenv("TOSH_TENSOR_SPLIT_STRICT");
++    const char * strict = getenv("XEON_TENSOR_SPLIT_STRICT");
 +    if (strict != NULL && atoi(strict) != 0) {
 +        ggml_abort(__FILE__, __LINE__, "%s", msg);
 +    }

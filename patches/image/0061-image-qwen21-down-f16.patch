@@ -13,7 +13,7 @@ index a6a6b21..dcef1aa 100644
              }
 +            // the tile loader rounds activations to half anyway; narrowing first halves the
 +            // bytes the down projection re-reads for every row block
-+            static const bool down_f16_off = getenv("TOSH_QWEN21_DOWN_F16_DISABLE") != nullptr;
++            static const bool down_f16_off = getenv("XEON_QWEN21_DOWN_F16_DISABLE") != nullptr;
 +            if (!down_f16_off && h->type == GGML_TYPE_F32) {
 +                h = ggml_cast(ctx->ggml_ctx, h, GGML_TYPE_F16);
 +            }

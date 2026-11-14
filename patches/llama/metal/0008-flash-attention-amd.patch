@@ -9,7 +9,7 @@ index a8a8bdde3..a19dccd70 100644
              const bool fa_amd_width_ok = dev->props.simd_width == 32
                  ? has_simdgroup_reduction
                  : wave64_decode;
-             if (TOSH_ENV("TOSH_FA_AMD_DISABLE") == NULL &&
+             if (XEON_ENV("XEON_FA_AMD_DISABLE") == NULL &&
                  !has_simdgroup_mm && fa_amd_width_ok &&
 +                (op->src[0]->ne[0] % 32 == 0 || op->src[0]->ne[0] == 72 ||
 +                 op->src[0]->ne[0] == 40 || op->src[0]->ne[0] == 80 || op->src[0]->ne[0] == 160)) {
@@ -124,7 +124,7 @@ index 11da1cf21..72f5f7d76 100644
  
      // AMD discrete GPUs miscompile the templated vec kernel, so route attention (decode
      // and prefill) to the dedicated AMD kernel for the standard K/V pairs it covers.
-     // Keeps quantized KV on the GPU instead of the CPU fallback. On by default on wave64; disable with TOSH_FA_AMD_DISABLE=1.
+     // Keeps quantized KV on the GPU instead of the CPU fallback. On by default on wave64; disable with XEON_FA_AMD_DISABLE=1.
      char fa_amd_pipeline[80] = {0};
      // dk 72 is instantiated for f16 K/V only (vision towers); see the .metal side.
 +    const bool fa_amd_f16_kv =
@@ -159,7 +159,7 @@ index 11da1cf21..72f5f7d76 100644
      const bool fa_amd_width_ok = props_dev->simd_width == 32
          ? props_dev->has_simdgroup_reduction
          : props_dev->wave64_decode;
-     if (TOSH_ENV("TOSH_FA_AMD_DISABLE") == NULL && fa_amd_pipeline[0] != '\0' &&
+     if (XEON_ENV("XEON_FA_AMD_DISABLE") == NULL && fa_amd_pipeline[0] != '\0' &&
          !props_dev->has_simdgroup_mm && fa_amd_width_ok &&
 @@ -3811,31 +3855,57 @@ int ggml_metal_op_flash_attn_ext(ggml_metal_op_t ctx, int idx) {
              /*.m1            =*/ m1,
@@ -169,9 +169,9 @@ index 11da1cf21..72f5f7d76 100644
              /*.has_mask      =*/ has_mask ? 1 : 0,
  
          // queries per threadgroup, matching the instantiation for this head size
-         static const bool pf512 = TOSH_ENV("TOSH_FA_PF_DK512") != nullptr;
+         static const bool pf512 = XEON_ENV("XEON_FA_PF_DK512") != nullptr;
 +        // MLA keeps K wider than V; the tile kernel it used to fall back to measures ~26% slower
-         static const bool pfmla = TOSH_ENV("TOSH_FA_PF_MLA_DISABLE") == nullptr;
+         static const bool pfmla = XEON_ENV("XEON_FA_PF_MLA_DISABLE") == nullptr;
 +        const bool fa_pf_512 = pf512 && ne00 == 512 && ne00 == ne20;
 +        const bool fa_pf_mla = pfmla && ne00 == 576 && ne20 == 512 &&
 +                               op->src[2]->type == GGML_TYPE_F16;
@@ -182,8 +182,8 @@ index 11da1cf21..72f5f7d76 100644
          const bool fa_pf_head_ok =
 +            ne00 == 64 || ne00 == 128 || ne00 == 256 || fa_amd_dk72 || fa_amd_unet || fa_pf_512 ||
 +            fa_pf_mla || fa_pf_mla320;
-         if (TOSH_ENV("TOSH_FA_PF_DEBUG") != nullptr) {
-             ne01 >= 32 && fa_pf_head_ok && TOSH_ENV("TOSH_FA_PF_DISABLE") == NULL) {
+         if (XEON_ENV("XEON_FA_PF_DEBUG") != nullptr) {
+             ne01 >= 32 && fa_pf_head_ok && XEON_ENV("XEON_FA_PF_DISABLE") == NULL) {
              char fa_pf_pipeline[80];
 +            if (fa_pf_mla) {
 +                snprintf(fa_pf_pipeline, sizeof(fa_pf_pipeline), "kernel_flash_attn_ext_pf_amd_dk576_dv512_k%s_vf16",
@@ -194,16 +194,16 @@ index 11da1cf21..72f5f7d76 100644
 +                         ggml_metal_fa_amd_type_suffix(op->src[1]->type), ggml_metal_fa_amd_type_suffix(op->src[2]->type));
              snprintf(fa_pf_pipeline, sizeof(fa_pf_pipeline), "kernel_flash_attn_ext_pf_amd_dk%d_k%s_v%s", (int) ne00,
                       ggml_metal_fa_amd_type_suffix(op->src[1]->type), ggml_metal_fa_amd_type_suffix(op->src[2]->type));
-                     const char * s = TOSH_ENV("TOSH_FA_PF_LG");
-                     const char * s = TOSH_ENV("TOSH_FA_PF_BQ");
-                     const char * s = TOSH_ENV("TOSH_FA_PF_BK");
-                     TOSH_ENV("TOSH_FA_PF_W64_DISABLE") == nullptr) {
-                 TOSH_ENV("TOSH_FA_PF_W64_DISABLE") == nullptr) {
-                 const char * slg = TOSH_ENV("TOSH_FA_PF_LG");
+                     const char * s = XEON_ENV("XEON_FA_PF_LG");
+                     const char * s = XEON_ENV("XEON_FA_PF_BQ");
+                     const char * s = XEON_ENV("XEON_FA_PF_BK");
+                     XEON_ENV("XEON_FA_PF_W64_DISABLE") == nullptr) {
+                 XEON_ENV("XEON_FA_PF_W64_DISABLE") == nullptr) {
+                 const char * slg = XEON_ENV("XEON_FA_PF_LG");
 +                if (ggml_metal_fa_amd_pipeline(lib, w64_name).pipeline) {
 +            auto pipeline = ggml_metal_fa_amd_pipeline(lib, fa_pf_pipeline);
 +
-             if (TOSH_ENV("TOSH_FA_PF_DEBUG") != nullptr) {
+             if (XEON_ENV("XEON_FA_PF_DEBUG") != nullptr) {
              // it fits in registers with nothing to spare; a compiler bump could
 +            // push it under the 256 threads it dispatches. A driver that refused to build
 +            // the kernel leaves the pipeline null, which the tile path below covers: older
@@ -226,7 +226,7 @@ index 11da1cf21..72f5f7d76 100644
  
          // prefill goes to the tile kernel (K/V shared across 16 queries);
          // decode keeps the per-query vec kernel
-         if (ne01 >= 16 && TOSH_ENV("TOSH_FA_TILE_DISABLE") == NULL) {
+         if (ne01 >= 16 && XEON_ENV("XEON_FA_TILE_DISABLE") == NULL) {
              char fa_tile_pipeline[80];
 +            if (ne20 != ne00) {
 +                // MLA heads carry the value width in the name: 576/512 and 320/256
@@ -287,7 +287,7 @@ index 11da1cf21..72f5f7d76 100644
          // for itself, so it carries its own threshold. The depth it turns at is not the same
          // on both widths, so each keeps its own.
 +        static const int64_t wg_dk128_env = []() {
-             const char * s = TOSH_ENV("TOSH_FA_WG_DK128_MIN_KV");
+             const char * s = XEON_ENV("XEON_FA_WG_DK128_MIN_KV");
 +            return s ? (int64_t) atoll(s) : (int64_t) -1;
 +        }();
          const bool wg_wide_head =
@@ -295,7 +295,7 @@ index 11da1cf21..72f5f7d76 100644
              (ne00 == 320 && ne20 == 256);
 +        const int64_t wg_dk128_min_kv = wg_dk128_env >= 0 ? wg_dk128_env
          const bool wg_dk128_width_ok = props_dev->simd_width == 32 || props_dev->simd_width == 64;
-             const char * s = TOSH_ENV("TOSH_FA_WG_DK64");
+             const char * s = XEON_ENV("XEON_FA_WG_DK64");
 +        }();
          const bool wg_dk64 = ne00 == 64 && ne20 == 64 && wg_dk128_width_ok &&
                               wg_dk64_min_kv > 0 && ne11 >= wg_dk64_min_kv;
@@ -305,7 +305,7 @@ index 11da1cf21..72f5f7d76 100644
 +            (wg_wide_head || wg_dk128) && ne01 == 1 && !has_sinks &&
 +            (props_dev->simd_width == 32 || props_dev->simd_width == 64) &&
 +            (wg_dk128 || ne11 >= 1024) &&
-             TOSH_ENV("TOSH_FA_WG_DISABLE") == NULL ? 32 : 1;
+             XEON_ENV("XEON_FA_WG_DISABLE") == NULL ? 32 : 1;
  
          char fa_amd_wg_pipeline[96];
          if (fa_amd_nwg > 1) {
@@ -313,8 +313,8 @@ index 11da1cf21..72f5f7d76 100644
          }
 +        auto pipeline = ggml_metal_fa_amd_pipeline(lib, fa_amd_nwg > 1 ? fa_amd_wg_pipeline : fa_amd_pipeline);
 +        // 32 KB of threadgroup memory (GCN 1.0) does not hold the 64-lane kernel; its twin
-+        // with half the simdgroups does. TOSH_FA_AMD_LDS32=1 takes the twin on any wave64 card.
-+        static const bool lds32_force = TOSH_ENV("TOSH_FA_AMD_LDS32") != NULL;
++        // with half the simdgroups does. XEON_FA_AMD_LDS32=1 takes the twin on any wave64 card.
++        static const bool lds32_force = XEON_ENV("XEON_FA_AMD_LDS32") != NULL;
 +        if ((!pipeline.pipeline || lds32_force) && props_dev->simd_width == 64) {
 +            char lds_pipeline[112];
 +            snprintf(lds_pipeline, sizeof(lds_pipeline), "%s_lds32", fa_amd_nwg > 1 ? fa_amd_wg_pipeline : fa_amd_pipeline);

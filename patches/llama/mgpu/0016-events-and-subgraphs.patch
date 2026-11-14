@@ -778,11 +778,11 @@ index 861a47c0c..9c08ea72f 100644
                      }
                  }
  
-+                // TOSH_TP_ANATOMY=1 lists every cut, which is one collective each: the partial
++                // XEON_TP_ANATOMY=1 lists every cut, which is one collective each: the partial
 +                // node that forced it, where the delay moved it to, and what consumes the result.
 +                static int anatomy = -1;
 +                if (anatomy < 0) {
-+                    anatomy = getenv("TOSH_TP_ANATOMY") != nullptr;
++                    anatomy = getenv("XEON_TP_ANATOMY") != nullptr;
 +                }
 +                if (anatomy) {
 +                    ggml_tensor * part = cgraph->nodes[i];
@@ -868,7 +868,7 @@ index 861a47c0c..9c08ea72f 100644
 +    // They only meet at the AllReduce below, so encode them at once.
 +    static int serial_encode = -1;
 +    if (serial_encode < 0) {
-+        const char * s_se = getenv("TOSH_MGPU_SERIAL_ENCODE");
++        const char * s_se = getenv("XEON_MGPU_SERIAL_ENCODE");
 +        serial_encode = s_se ? atoi(s_se) : 0;
 +    }
 +
@@ -1075,8 +1075,8 @@ index 8e9c1f827..7e6cc66bc 100644
 +    ggml_metal_event_t ev_cpy; // for async copies
      ggml_metal_event_t ev_sync; // destination completion signal
  
-+    id<MTLCounterSampleBuffer> ct_buf;   // trace only, TOSH_MGPU_CTIME
-+    id<MTLSharedEvent>         ev_wait_dummy;   // benchmark only, TOSH_MGPU_WAIT_SATISFIED
++    id<MTLCounterSampleBuffer> ct_buf;   // trace only, XEON_MGPU_CTIME
++    id<MTLSharedEvent>         ev_wait_dummy;   // benchmark only, XEON_MGPU_WAIT_SATISFIED
 +    _Atomic uint64_t           ct_idx;
 +
      // Synchronization and resources shared by both cross-device copy paths.
@@ -1097,13 +1097,13 @@ index 8e9c1f827..7e6cc66bc 100644
  };
  
 -ggml_metal_t ggml_metal_init(ggml_metal_device_t dev) {
- // TOSH_MGPU_DEFER_WAITS folds a cross-device wait into the next command buffer this context
+ // XEON_MGPU_DEFER_WAITS folds a cross-device wait into the next command buffer this context
  // submits instead of spending a whole one on it. Opt-in: on a single card both contexts share
  // the device queue, so it measures slightly negative there and only 2 real GPUs can settle it.
  static bool ggml_metal_defer_waits(void) {
      static int val = -1;
      if (val < 0) {
-         const char * v = TOSH_ENV("TOSH_MGPU_DEFER_WAITS");
+         const char * v = XEON_ENV("XEON_MGPU_DEFER_WAITS");
          val = (v && v[0] == '1') ? 1 : 0;
      }
      return val;
@@ -1118,7 +1118,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +static _Atomic uint64_t g_tr_waits       = 0; // cross-device event waits encoded
 +
 +
-+// TOSH_MGPU_TRACE: where the collective's time and bytes go. The counters are only touched
++// XEON_MGPU_TRACE: where the collective's time and bytes go. The counters are only touched
 +// when it is on, so a release run pays one cached branch per crossing.
 +static _Atomic uint64_t g_tr_reduce      = 0; // exchange_reduce calls
 +static _Atomic uint64_t g_tr_copy        = 0; // plain cross-device copies
@@ -1131,16 +1131,16 @@ index 8e9c1f827..7e6cc66bc 100644
 +static _Atomic uint64_t g_tr_gpu_ns      = 0; // GPU execution of the collective's buffers
 +static _Atomic uint64_t g_tr_sched_ns    = 0; // committed to running: queueing plus event waits
 +
-+static bool tosh_mgpu_trace(void) {
++static bool xeon_mgpu_trace(void) {
 +    static int on = -1;
 +    if (on < 0) {
-         const char * v = TOSH_ENV("TOSH_MGPU_TRACE");
+         const char * v = XEON_ENV("XEON_MGPU_TRACE");
 +        on = (v && v[0] == '1') ? 1 : 0;
 +    }
 +    return on == 1;
 +}
 +
-+static uint64_t tosh_now_ns(void) {
++static uint64_t xeon_now_ns(void) {
 +    return clock_gettime_nsec_np(CLOCK_MONOTONIC);
 +}
 +
@@ -1148,32 +1148,32 @@ index 8e9c1f827..7e6cc66bc 100644
 +// side, when each GPU started the collective, and the signed order of both. The collective
 +// loop is serial on the CPU, so a GPU-start difference is not evidence of compute imbalance
 +// until the commit difference is subtracted from it.
-+#define TOSH_SKEW_SLOTS 8192
++#define XEON_SKEW_SLOTS 8192
 +static struct {
 +    _Atomic uint64_t seq[2];
 +    _Atomic uint64_t commit_ns[2];
 +    _Atomic uint64_t gpu_ns[2];
-+} g_skew[TOSH_SKEW_SLOTS];
++} g_skew[XEON_SKEW_SLOTS];
 +
 +static _Atomic uint64_t g_sk_n;
 +static _Atomic uint64_t g_sk_gpu_hist[8], g_sk_com_hist[8];
 +static _Atomic uint64_t g_sk_gpu_sum, g_sk_com_sum, g_sk_gpu_max;
 +static _Atomic uint64_t g_sk_gpu_first0, g_sk_com_first0;   // how often peerIndex 0 leads
 +
-+static int tosh_skew_bucket(double us) {
++static int xeon_skew_bucket(double us) {
 +    return us < 1 ? 0 : us < 2 ? 1 : us < 5 ? 2 : us < 10 ? 3 :
 +           us < 20 ? 4 : us < 50 ? 5 : us < 200 ? 6 : 7;
 +}
 +
-+static void tosh_skew_commit(uint64_t seq, int side, uint64_t t_ns) {
-+    const int slot = (int) (seq % TOSH_SKEW_SLOTS);
++static void xeon_skew_commit(uint64_t seq, int side, uint64_t t_ns) {
++    const int slot = (int) (seq % XEON_SKEW_SLOTS);
 +    atomic_store(&g_skew[slot].gpu_ns[side], 0);
 +    atomic_store(&g_skew[slot].commit_ns[side], t_ns);
 +    atomic_store(&g_skew[slot].seq[side], seq);
 +}
 +
-+static void tosh_skew_started(uint64_t seq, int side, double gpu_start) {
-+    const int slot = (int) (seq % TOSH_SKEW_SLOTS);
++static void xeon_skew_started(uint64_t seq, int side, double gpu_start) {
++    const int slot = (int) (seq % XEON_SKEW_SLOTS);
 +    atomic_store(&g_skew[slot].gpu_ns[side], (uint64_t) (gpu_start*1e9));
 +
 +    const int other = side ^ 1;
@@ -1191,7 +1191,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +    if (side != 1 && atomic_load(&g_skew[slot].gpu_ns[other]) == 0) {
 +        return;
 +    }
-+    static _Atomic uint64_t claimed[TOSH_SKEW_SLOTS];
++    static _Atomic uint64_t claimed[XEON_SKEW_SLOTS];
 +    uint64_t was = atomic_exchange(&claimed[slot], seq);
 +    if (was == seq) {
 +        return;                                  // already accounted
@@ -1206,11 +1206,11 @@ index 8e9c1f827..7e6cc66bc 100644
 +    if (c0 <= c1) { atomic_fetch_add(&g_sk_com_first0, 1); }
 +    uint64_t m = atomic_load(&g_sk_gpu_max);
 +    while (dg > m && !atomic_compare_exchange_weak(&g_sk_gpu_max, &m, dg)) { }
-+    atomic_fetch_add(&g_sk_gpu_hist[tosh_skew_bucket(dg/1000.0)], 1);
-+    atomic_fetch_add(&g_sk_com_hist[tosh_skew_bucket(dc/1000.0)], 1);
++    atomic_fetch_add(&g_sk_gpu_hist[xeon_skew_bucket(dg/1000.0)], 1);
++    atomic_fetch_add(&g_sk_com_hist[xeon_skew_bucket(dc/1000.0)], 1);
 +}
 +
-+static void tosh_mgpu_trace_report(void);
++static void xeon_mgpu_trace_report(void);
 +static bool ggml_metal_collective_nowait(void);
 +
 +// The subgraph command buffer is timed start and end separately, because a difference in
@@ -1222,7 +1222,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +    _Atomic uint64_t ord[2];
 +    _Atomic uint64_t start_ns[2];
 +    _Atomic uint64_t end_ns[2];
-+} g_gr[TOSH_SKEW_SLOTS];
++} g_gr[XEON_SKEW_SLOTS];
 +
 +static _Atomic uint64_t g_gr_n;
 +static _Atomic uint64_t g_gr_hs[8], g_gr_hd[8], g_gr_he[8];      // |start|, |duration|, |end| deltas
@@ -1232,30 +1232,30 @@ index 8e9c1f827..7e6cc66bc 100644
 +static _Atomic uint64_t g_gr_resid;                              // |end - (start + dur)| residual
 +static _Atomic uint64_t g_dur_n[2], g_dur_sum[2], g_dur_h[2][8]; // per-side duration
 +
-+static int tosh_dur_bucket(double us) {
++static int xeon_dur_bucket(double us) {
 +    return us <  40 ? 0 : us <  80 ? 1 : us < 120 ? 2 : us < 160 ? 3 :
 +           us < 200 ? 4 : us < 300 ? 5 : us < 500 ? 6 : 7;
 +}
 +
-+static void tosh_trace_graph_end(id<MTLCommandBuffer> cmd_buf, int side) {
-+    if (!tosh_mgpu_trace()) {
++static void xeon_trace_graph_end(id<MTLCommandBuffer> cmd_buf, int side) {
++    if (!xeon_mgpu_trace()) {
 +        return;
 +    }
 +    static _Atomic int reg = 0;                              // a single GPU runs no collective
 +    int exp = 0;
-+    if (atomic_compare_exchange_strong(&reg, &exp, 1)) { atexit(tosh_mgpu_trace_report); }
++    if (atomic_compare_exchange_strong(&reg, &exp, 1)) { atexit(xeon_mgpu_trace_report); }
 +    const uint64_t ord = atomic_fetch_add(&g_gr_ord[side], 1);
 +    [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
 +        if (cb.GPUStartTime <= 0 || cb.GPUEndTime <= 0) {
 +            return;
 +        }
-+        const int slot = (int) (ord % TOSH_SKEW_SLOTS);
++        const int slot = (int) (ord % XEON_SKEW_SLOTS);
 +        const uint64_t st = (uint64_t) (cb.GPUStartTime*1e9);
 +        const uint64_t en = (uint64_t) (cb.GPUEndTime*1e9);
 +
 +        atomic_fetch_add(&g_dur_n[side], 1);
 +        atomic_fetch_add(&g_dur_sum[side], en - st);
-+        atomic_fetch_add(&g_dur_h[side][tosh_dur_bucket((en - st)/1000.0)], 1);
++        atomic_fetch_add(&g_dur_h[side][xeon_dur_bucket((en - st)/1000.0)], 1);
 +
 +        atomic_store(&g_gr[slot].start_ns[side], st);
 +        atomic_store(&g_gr[slot].end_ns[side], en);
@@ -1270,7 +1270,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +        if (s0 == 0 || s1 == 0 || e0 == 0 || e1 == 0) {
 +            return;
 +        }
-+        static _Atomic uint64_t claimed[TOSH_SKEW_SLOTS];
++        static _Atomic uint64_t claimed[XEON_SKEW_SLOTS];
 +        uint64_t was = atomic_exchange(&claimed[slot], ord + 1);
 +        if (was == ord + 1) {
 +            return;
@@ -1291,20 +1291,20 @@ index 8e9c1f827..7e6cc66bc 100644
 +        if (dd <= 0) { atomic_fetch_add(&g_gr_dur0_less, 1); }
 +        if ((ds >= 0) == (de >= 0)) { atomic_fetch_add(&g_gr_sign_start, 1); }
 +        if ((dd >= 0) == (de >= 0)) { atomic_fetch_add(&g_gr_sign_dur, 1); }
-+        atomic_fetch_add(&g_gr_hs[tosh_skew_bucket(as/1000.0)], 1);
-+        atomic_fetch_add(&g_gr_hd[tosh_skew_bucket(ad/1000.0)], 1);
-+        atomic_fetch_add(&g_gr_he[tosh_skew_bucket(ae/1000.0)], 1);
++        atomic_fetch_add(&g_gr_hs[xeon_skew_bucket(as/1000.0)], 1);
++        atomic_fetch_add(&g_gr_hd[xeon_skew_bucket(ad/1000.0)], 1);
++        atomic_fetch_add(&g_gr_he[xeon_skew_bucket(ae/1000.0)], 1);
 +    }];
 +}
 +
-+static void tosh_trace_exchange(id<MTLCommandBuffer> cmd_buf, uint64_t seq, int side) {
-+    if (!tosh_mgpu_trace()) {
++static void xeon_trace_exchange(id<MTLCommandBuffer> cmd_buf, uint64_t seq, int side) {
++    if (!xeon_mgpu_trace()) {
 +        return;
 +    }
-+    tosh_skew_commit(seq, side, clock_gettime_nsec_np(CLOCK_MONOTONIC));
++    xeon_skew_commit(seq, side, clock_gettime_nsec_np(CLOCK_MONOTONIC));
 +    [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
 +        if (cb.GPUStartTime > 0) {
-+            tosh_skew_started(seq, side, cb.GPUStartTime);
++            xeon_skew_started(seq, side, cb.GPUStartTime);
 +        }
 +    }];
 +}
@@ -1318,7 +1318,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +static uint64_t g_snap_reduce, g_snap_cmd, g_snap_graphs, g_snap_sig, g_snap_wait,
 +                g_snap_peer_b, g_snap_host_b, g_snap_passes;
 +
-+static void tosh_decode_snapshot(int64_t batch) {
++static void xeon_decode_snapshot(int64_t batch) {
 +    if (batch != 1 || atomic_load(&g_snap_taken)) {
 +        return;
 +    }
@@ -1336,22 +1336,22 @@ index 8e9c1f827..7e6cc66bc 100644
 +    g_snap_passes = atomic_load(ggml_backend_meta_pass_counter());
 +}
 +
-+// TOSH_MGPU_CTIME=1, trace only. GPU timestamps inside the staged exchange, the path batch-1
++// XEON_MGPU_CTIME=1, trace only. GPU timestamps inside the staged exchange, the path batch-1
 +// decode actually takes. Four samples, all from one device, so no cross-GPU clock correlation
 +// is involved: S0/S1 bracket the publish blit, S2/S3 the staging read. S1 to S2 is a
 +// WAIT-WINDOW, not a pure event wait: it spans the signal, the peer wait and the encoder switch.
-+#define TOSH_CT_SLOTS 4096
-+#define TOSH_CT_PER   4
++#define XEON_CT_SLOTS 4096
++#define XEON_CT_PER   4
 +
 +static bool ggml_metal_ctime(void) {
 +    static int v = -1;
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_CTIME"); v = (s && s[0] == '1') ? 1 : 0; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_CTIME"); v = (s && s[0] == '1') ? 1 : 0; }
 +    return v == 1;
 +}
 +
 +static bool ggml_metal_ctime_barrier(void) {
 +    static int v = -1;
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
 +    return v == 1;
 +}
 +
@@ -1359,12 +1359,12 @@ index 8e9c1f827..7e6cc66bc 100644
 +static _Atomic uint64_t g_ct_hw[8], g_ct_hp[8], g_ct_hr[8];
 +static double g_ct_ns_per_tick = 0.0;
 +
-+static int tosh_ct_bucket(double us) {
++static int xeon_ct_bucket(double us) {
 +    return us < 1 ? 0 : us < 5 ? 1 : us < 10 ? 2 : us < 20 ? 3 :
 +           us < 50 ? 4 : us < 100 ? 5 : us < 200 ? 6 : 7;
 +}
 +
-+static id<MTLCounterSampleBuffer> tosh_ct_buffer(ggml_metal_t ctx) {
++static id<MTLCounterSampleBuffer> xeon_ct_buffer(ggml_metal_t ctx) {
 +    if (!ggml_metal_ctime()) { return nil; }
 +    if (ctx->ct_buf != nil)  { return ctx->ct_buf; }
 +    if (@available(macOS 10.15, *)) {
@@ -1375,7 +1375,7 @@ index 8e9c1f827..7e6cc66bc 100644
 +        }
 +        if (ts == nil) { return nil; }
 +        MTLCounterSampleBufferDescriptor * d = [MTLCounterSampleBufferDescriptor new];
-+        d.counterSet = ts; d.sampleCount = TOSH_CT_SLOTS*TOSH_CT_PER; d.storageMode = MTLStorageModeShared;
++        d.counterSet = ts; d.sampleCount = XEON_CT_SLOTS*XEON_CT_PER; d.storageMode = MTLStorageModeShared;
 +        NSError * err = nil;
 +        ctx->ct_buf = [dev newCounterSampleBufferWithDescriptor:d error:&err];
 +        if (ctx->ct_buf == nil) {
@@ -1395,14 +1395,14 @@ index 8e9c1f827..7e6cc66bc 100644
 +    return ctx->ct_buf;
 +}
 +
-+static void tosh_ct_record(id<MTLCounterSampleBuffer> cs, uint64_t base) {
++static void xeon_ct_record(id<MTLCounterSampleBuffer> cs, uint64_t base) {
 +    if (@available(macOS 10.15, *)) {
-+        NSData * d = [cs resolveCounterRange:NSMakeRange(base, TOSH_CT_PER)];
-+        if (d == nil || d.length < TOSH_CT_PER*sizeof(MTLCounterResultTimestamp)) {
++        NSData * d = [cs resolveCounterRange:NSMakeRange(base, XEON_CT_PER)];
++        if (d == nil || d.length < XEON_CT_PER*sizeof(MTLCounterResultTimestamp)) {
 +            atomic_fetch_add(&g_ct_fail, 1); return;
 +        }
 +        const MTLCounterResultTimestamp * t = (const MTLCounterResultTimestamp *) d.bytes;
-+        for (int i = 0; i < TOSH_CT_PER; i++) {
++        for (int i = 0; i < XEON_CT_PER; i++) {
 +            if (t[i].timestamp == MTLCounterErrorValue) { atomic_fetch_add(&g_ct_fail, 1); return; }
 +        }
 +        const double k = g_ct_ns_per_tick;
@@ -1414,48 +1414,48 @@ index 8e9c1f827..7e6cc66bc 100644
 +        atomic_fetch_add(&g_ct_pub,  (uint64_t) pub);
 +        atomic_fetch_add(&g_ct_wait, (uint64_t) wait);
 +        atomic_fetch_add(&g_ct_read, (uint64_t) read);
-+        atomic_fetch_add(&g_ct_hp[tosh_ct_bucket(pub /1000.0)], 1);
-+        atomic_fetch_add(&g_ct_hw[tosh_ct_bucket(wait/1000.0)], 1);
-+        atomic_fetch_add(&g_ct_hr[tosh_ct_bucket(read/1000.0)], 1);
++        atomic_fetch_add(&g_ct_hp[xeon_ct_bucket(pub /1000.0)], 1);
++        atomic_fetch_add(&g_ct_hw[xeon_ct_bucket(wait/1000.0)], 1);
++        atomic_fetch_add(&g_ct_hr[xeon_ct_bucket(read/1000.0)], 1);
 +    }
 +}
 +
-+// TOSH_MGPU_WAIT_SATISFIED=1, benchmark only. The staged collective keeps every encoder, every
++// XEON_MGPU_WAIT_SATISFIED=1, benchmark only. The staged collective keeps every encoder, every
 +// signal, the same command buffer and the same sampling points; the only change is that the
 +// peer-ready wait names a private event that is already signalled, so it can never stall. The
 +// read then observes whatever the partner left behind and the output is wrong by construction.
 +// Subtracting this run's central window from the normal one isolates the real peer stall
 +// without adding an encoder to the interval being measured.
 +// The same trick for the other wait in the path, the one guarding reuse of the shared host
-+// block. TOSH_MGPU_BP_SATISFIED=1, benchmark only, same warning applies.
++// block. XEON_MGPU_BP_SATISFIED=1, benchmark only, same warning applies.
 +static bool ggml_metal_bp_satisfied(void) {
 +    static int v = -1;
 +    if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_BP_SATISFIED");
+         const char * s = XEON_ENV("XEON_MGPU_BP_SATISFIED");
 +        v = (s && s[0] == '1') ? 1 : 0;
 +        if (v) {
-+            fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_BP_SATISFIED=1, the collective does not "
++            fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_BP_SATISFIED=1, the collective does not "
 +                            "wait before reusing the staging block. Benchmark only.\n");
 +        }
 +    }
 +    return v == 1;
 +}
 +
-         const char * s = TOSH_ENV("TOSH_MGPU_TP2_FUSED_BOUNDARY");
+         const char * s = XEON_ENV("XEON_MGPU_TP2_FUSED_BOUNDARY");
 +static bool ggml_metal_wait_satisfied(void) {
 +    static int v = -1;
 +    if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_WAIT_SATISFIED");
+         const char * s = XEON_ENV("XEON_MGPU_WAIT_SATISFIED");
 +        v = (s && s[0] == '1') ? 1 : 0;
 +        if (v) {
-+            fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_WAIT_SATISFIED=1, the collective never "
++            fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_WAIT_SATISFIED=1, the collective never "
 +                            "waits for the peer and the output is meaningless. Benchmark only.\n");
 +        }
 +    }
 +    return v == 1;
 +}
 +
-+static id<MTLSharedEvent> tosh_wait_dummy(ggml_metal_t ctx) {
++static id<MTLSharedEvent> xeon_wait_dummy(ggml_metal_t ctx) {
 +    if (ctx->ev_wait_dummy == nil) {
 +        ctx->ev_wait_dummy = [ggml_metal_device_get_obj(ctx->dev) newSharedEvent];
 +        ctx->ev_wait_dummy.signaledValue = 1;   // satisfied before anything is encoded
@@ -1463,12 +1463,12 @@ index 8e9c1f827..7e6cc66bc 100644
 +    return ctx->ev_wait_dummy;
 +}
 +
-+static void tosh_mgpu_trace_report(void) {
++static void xeon_mgpu_trace_report(void) {
 +    const uint64_t reduce = atomic_load(&g_tr_reduce);
 +    const uint64_t peer   = atomic_load(&g_tr_bytes_peer);
 +    const uint64_t host   = atomic_load(&g_tr_bytes_host);
 +
-+    fprintf(stderr, "TOSH_MGPU_TRACE\n");
++    fprintf(stderr, "XEON_MGPU_TRACE\n");
 +    fprintf(stderr, "  allreduce exchanges   %llu\n", (unsigned long long) reduce);
 +    fprintf(stderr, "  plain xdev copies     %llu\n", (unsigned long long) atomic_load(&g_tr_copy));
 +    fprintf(stderr, "  peer-direct bytes     %llu\n", (unsigned long long) peer);
@@ -1585,7 +1585,7 @@ index 8e9c1f827..7e6cc66bc 100644
      ctx->n_ev_wait_pending = 0;
  
      for (int i = 0; i < ctx->n_peer_waits; ++i) {
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
          [cmd_buf encodeWaitForEvent:ctx->peer_waits[i].ev value:ctx->peer_waits[i].val];
      }
      ctx->n_peer_waits = 0;
@@ -1603,7 +1603,7 @@ index 8e9c1f827..7e6cc66bc 100644
  }
  
  static id<MTLCommandBuffer> ggml_metal_cmd_buf_new(ggml_metal_t ctx) {
-+    if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++    if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
      id<MTLCommandBuffer> cmd_buf = [ctx->queue commandBuffer];
      ggml_metal_encode_pending_waits(ctx, cmd_buf);
  
@@ -1623,10 +1623,10 @@ index 8e9c1f827..7e6cc66bc 100644
      }
 +
 +    @autoreleasepool {
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
          id<MTLCommandBuffer> cmd_buf = [ctx->queue commandBuffer];
          ggml_metal_encode_pending_waits(ctx, cmd_buf);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
          [cmd_buf encodeWaitForEvent:ev value:val];
          ggml_metal_cmd_buf_submit(ctx, cmd_buf);
      }
@@ -1644,7 +1644,7 @@ index 8e9c1f827..7e6cc66bc 100644
      // pending waits guard memory a peer blit can still be reading, so they must run and complete before synchronize returns
      if (ctx->n_ev_wait_pending > 0 || ctx->n_peer_waits > 0) {
          @autoreleasepool {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_buf = [ctx->queue commandBuffer];
              ggml_metal_encode_pending_waits(ctx, cmd_buf);
              ggml_metal_cmd_buf_submit(ctx, cmd_buf);
@@ -1652,7 +1652,7 @@ index 8e9c1f827..7e6cc66bc 100644
      }
  
      // wait for any backend operations to finish
-     const bool cbp_on = tosh_cbp_on();
+     const bool cbp_on = xeon_cbp_on();
 @@ -780,16 +1255,17 @@ void ggml_metal_read_batch_end(ggml_metal_t ctx) {
  
                  if (buf_src != nil) {
@@ -1662,7 +1662,7 @@ index 8e9c1f827..7e6cc66bc 100644
              }
  
              if (buf_src != nil) {
-+                if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++                if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
                  id<MTLCommandBuffer> cmd_buf = [ctx->queue commandBuffer];
                  ggml_metal_encode_pending_waits(ctx, cmd_buf);
                  id<MTLBlitCommandEncoder> encoder = [cmd_buf blitCommandEncoder];
@@ -1680,7 +1680,7 @@ index 8e9c1f827..7e6cc66bc 100644
          // queue the copy operation into the queue of the Metal context
          // this will be queued at the end, after any currently ongoing GPU operations
          id<MTLCommandQueue> queue = ctx->queue;
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
 +        id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
          ggml_metal_encode_pending_waits(ctx, cmd_buf);
          id<MTLBlitCommandEncoder> encoder = [cmd_buf blitCommandEncoder];
@@ -1699,7 +1699,7 @@ index 8e9c1f827..7e6cc66bc 100644
          if (buf_dst != nil) {
              // queue the copy operation into the queue of the Metal context
              // this will be queued at the end, after any currently ongoing GPU operations
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
              ggml_metal_encode_pending_waits(ctx, cmd_buf);
              id<MTLBlitCommandEncoder> encoder = [cmd_buf blitCommandEncoder];
@@ -1717,7 +1717,7 @@ index 8e9c1f827..7e6cc66bc 100644
          for (size_t done = 0; done < size;) {
              const size_t n = MIN(stage_size, size - done);
  
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
              ggml_metal_encode_pending_waits(ctx, cmd_buf);
  
@@ -1735,30 +1735,30 @@ index 8e9c1f827..7e6cc66bc 100644
          }
      }
      return true;
-+// TOSH_MGPU_NOWAIT=1, benchmark only: the collective still publishes, still signals and still
++// XEON_MGPU_NOWAIT=1, benchmark only: the collective still publishes, still signals and still
 +// reduces, but never waits for the partner. The output is wrong by construction. Subtracting
 +// this from the normal run measures the stall at the wait inside the real collective, instead
 +// of inferring it from whole-command-buffer completion timestamps.
 +static bool ggml_metal_collective_nowait(void) {
 +    static int v = -1;
 +    if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_NOWAIT");
+         const char * s = XEON_ENV("XEON_MGPU_NOWAIT");
 +        v = (s && s[0] == '1') ? 1 : 0;
 +        if (v) {
-+            fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_NOWAIT=1, the collective does not wait "
++            fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_NOWAIT=1, the collective does not wait "
 +                            "for the peer and the output is meaningless. Benchmark only.\n");
 +        }
 +    }
 +    return v == 1;
 +}
 +
- // TOSH_MGPU_PEER_SELF runs the peer hand-off between two logical devices backed by the
+ // XEON_MGPU_PEER_SELF runs the peer hand-off between two logical devices backed by the
  // same GPU (GGML_METAL_DEVICE_LIST=0,0), which needs no bridge: the queues are still
  // separate, so the cross-device ordering is testable on a single card.
  static bool ggml_metal_peer_self(void) {
      static int val = -1;
      if (val < 0) {
-         const char * v = TOSH_ENV("TOSH_MGPU_PEER_SELF");
+         const char * v = XEON_ENV("XEON_MGPU_PEER_SELF");
          val = (v && v[0] == '1') ? 1 : 0;
 @@ -1084,29 +1580,37 @@ static bool ggml_metal_cpy_xdev_peer(ggml_metal_t ctx_src, ggml_metal_t ctx_dst,
              link->peer_view = same_dev ? [metal_src retain]
@@ -1769,26 +1769,26 @@ index 8e9c1f827..7e6cc66bc 100644
  
          const uint64_t seq = ++link->seq;
          @autoreleasepool {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_src = [ctx_src->queue commandBuffer];
              ggml_metal_encode_pending_waits(ctx_src, cmd_src);
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +        [cmd_src encodeSignalEvent:link->ev_ready value:seq];
              [cmd_src commit];
              [ctx_src->cmd_bufs_ext addObject:cmd_src];
              ctx_src->cmd_buf_last = cmd_src;
              [cmd_src retain];
  
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_dst = [ctx_dst->queue commandBuffer];
              ggml_metal_encode_pending_waits(ctx_dst, cmd_dst);
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 +        [cmd_dst encodeWaitForEvent:link->ev_ready value:seq];
              id<MTLBlitCommandEncoder> encoder = [cmd_dst blitCommandEncoder];
              [encoder copyFromBuffer:link->peer_view sourceOffset:bid_src.offs
                             toBuffer:metal_dst destinationOffset:bid_dst.offs size:size];
              [encoder endEncoding];
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +        [cmd_dst encodeSignalEvent:link->ev_done value:seq];
              [cmd_dst commit];
              [ctx_dst->cmd_bufs_ext addObject:cmd_dst];
@@ -1807,25 +1807,25 @@ index 8e9c1f827..7e6cc66bc 100644
          // reuse the host block only after the destination consumed the last hand-off
          id<MTLCommandBuffer> cmd_src = ggml_metal_cmd_buf_continue(ctx_src);
          if (seq > 1) {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 +        [cmd_src encodeWaitForEvent:link->ev_done value:seq - 1];
 +        }
          id<MTLBlitCommandEncoder> enc_src = [cmd_src blitCommandEncoder];
          [enc_src copyFromBuffer:bid_src.metal sourceOffset:bid_src.offs
                         toBuffer:link->wrap_src destinationOffset:0 size:size];
          [enc_src endEncoding];
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
          [cmd_src encodeSignalEvent:link->ev_ready value:seq];
          ggml_metal_cmd_buf_end(ctx_src, cmd_src, false);
  
          id<MTLCommandBuffer> cmd_dst = ggml_metal_cmd_buf_new(ctx_dst);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
          [cmd_dst encodeWaitForEvent:link->ev_ready value:seq];
          id<MTLBlitCommandEncoder> enc_dst = [cmd_dst blitCommandEncoder];
          [enc_dst copyFromBuffer:link->wrap_dst sourceOffset:0
                         toBuffer:bid_dst.metal destinationOffset:bid_dst.offs size:size];
          [enc_dst endEncoding];
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
          [cmd_dst encodeSignalEvent:link->ev_done value:seq];
          // the signal lands when the blit does, so holding the buffer open does not keep the
          // source waiting on whatever gets encoded into it afterwards
@@ -1843,7 +1843,7 @@ index 8e9c1f827..7e6cc66bc 100644
          // queue the copy operation into the Metal context
          // this will be queued at the end, after any currently ongoing GPU operations
          id<MTLCommandQueue> queue = ctx_src->queue;
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
 +        id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
          ggml_metal_encode_pending_waits(ctx_src, cmd_buf);
          ggml_metal_event_encode_wait(ctx_dst->ev_sync, cmd_buf);
@@ -1861,51 +1861,51 @@ index 8e9c1f827..7e6cc66bc 100644
          ggml_metal_encoder_end_encoding(enc);
          ggml_metal_encoder_free(enc);
  
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
 +// rows in the exchanged tensor: one for a generated token, the whole prompt for a prefill
-+static int64_t tosh_batch_of(const struct ggml_tensor * t) {
++static int64_t xeon_batch_of(const struct ggml_tensor * t) {
 +    if (t == NULL || t->ne[0] <= 0) { return 1; }
 +    return ggml_nelements(t)/t->ne[0];
 +}
 +
-         const char * s = TOSH_ENV("TOSH_MGPU_PEER_MIN_BATCH");
+         const char * s = XEON_ENV("XEON_MGPU_PEER_MIN_BATCH");
 +// Leaves the exchange's command buffer open so whatever the graph encodes next lands in it,
 +// one submission fewer. On its own this is neutral, which is what the first measurement said;
 +// it only pays together with the merge that makes the next subgraph continue the held buffer,
 +// and then only when the batch is small. A token of one row crosses 72 times and each crossing
 +// carries its own pair of command buffers, so halving them is worth ~3% of decode; a prompt
 +// amortises the submissions over the whole batch and loses ~2% instead, hence the batch gate.
-+// TOSH_MGPU_HOLD=1 forces it on, =0 off, unset follows the batch.
++// XEON_MGPU_HOLD=1 forces it on, =0 off, unset follows the batch.
 +static bool ggml_metal_collective_hold_batch(int64_t batch) {
 +    static int v = -2;
 +    if (v == -2) {
-         const char * s = TOSH_ENV("TOSH_MGPU_HOLD");
+         const char * s = XEON_ENV("XEON_MGPU_HOLD");
 +        v = s ? (s[0] == '1' ? 1 : 0) : -1;
 +    if (v >= 0) {
 +        return v == 1;
 +    }
 +    return batch < ggml_metal_peer_min_batch();
-         const char * v = TOSH_ENV("TOSH_MGPU_PEER");
+         const char * v = XEON_ENV("XEON_MGPU_PEER");
 +        if (seq > 2 && !ggml_metal_collective_nowait()) {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +        if (!ggml_metal_collective_nowait()) {
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 +        }
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +        [cmd_buf encodeSignalEvent:link_in->ev_x_done value:seq];
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
-+        tosh_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
-+        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(tosh_batch_of(t_self)));
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        xeon_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
++        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(xeon_batch_of(t_self)));
 +        if (seq > 2 && !ggml_metal_collective_nowait()) {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
-+        tosh_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
-+        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(tosh_batch_of(t_self)));
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        xeon_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
++        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(xeon_batch_of(t_self)));
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
  
              MTLCommandBufferStatus status = [cmd_buf status];
              if (status != MTLCommandBufferStatusCompleted) {
@@ -1919,8 +1919,8 @@ index 8e9c1f827..7e6cc66bc 100644
 -                    [ctx->cmd_bufs_ext[j] release];
 -                }
 -                [ctx->cmd_bufs_ext removeAllObjects];
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
  
                  ctx->has_error = true;
                  return;
@@ -1928,11 +1928,11 @@ index 8e9c1f827..7e6cc66bc 100644
  
              [cmd_buf release];
          }
-+        tosh_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
-+        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(tosh_batch_of(t_self)));
++        xeon_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
++        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(xeon_batch_of(t_self)));
  
          [ctx->cmd_bufs_ext removeAllObjects];
-         const char * s = TOSH_ENV("TOSH_MGPU_ONESHOT");
+         const char * s = XEON_ENV("XEON_MGPU_ONESHOT");
      }
  
      @autoreleasepool {
@@ -1947,11 +1947,11 @@ index 8e9c1f827..7e6cc66bc 100644
  
          if (bid_src.metal == nil || bid_dst.metal == nil) {
              return false;
-+    if (tosh_mgpu_trace()) {
-+        tosh_decode_snapshot(t_self->ne[0] > 0 ? ggml_nelements(t_self)/t_self->ne[0] : 1);
++    if (xeon_mgpu_trace()) {
++        xeon_decode_snapshot(t_self->ne[0] > 0 ? ggml_nelements(t_self)/t_self->ne[0] : 1);
 +    }
 +
-         const char * v = TOSH_ENV("TOSH_MGPU_PEER_FUSED");
+         const char * v = XEON_ENV("XEON_MGPU_PEER_FUSED");
          }
  
          id<MTLCommandQueue> dst_queue = ggml_metal_device_get_queue(ctx_dst->dev);
@@ -1973,28 +1973,28 @@ index 8e9c1f827..7e6cc66bc 100644
 -                       toBuffer:bid_dst.metal
 -              destinationOffset:bid_dst.offs
 -                           size:ggml_nbytes(src)];
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 +            if (ggml_metal_bp_satisfied()) {
-+                [cmd_buf encodeWaitForEvent:tosh_wait_dummy(ctx_self) value:1];
++                [cmd_buf encodeWaitForEvent:xeon_wait_dummy(ctx_self) value:1];
 +            } else {
 +            }
 +        }
  
 -        [encoder endEncoding];
-+        id<MTLCounterSampleBuffer> cts = tosh_ct_buffer(ctx_self);
++        id<MTLCounterSampleBuffer> cts = xeon_ct_buffer(ctx_self);
 +        uint64_t cbase = 0;
 +        const bool cbar = ggml_metal_ctime_barrier();
 +        if (cts != nil) {
-+            cbase = (atomic_fetch_add(&ctx_self->ct_idx, 1) % TOSH_CT_SLOTS)*TOSH_CT_PER;
++            cbase = (atomic_fetch_add(&ctx_self->ct_idx, 1) % XEON_CT_SLOTS)*XEON_CT_PER;
  
          ggml_metal_event_t ev_cpy = ggml_metal_get_ev_cpy(ctx_src);
          ggml_metal_event_encode_signal(ev_cpy, cmd_buf);
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
  
          [cmd_buf commit];
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 +        if (ggml_metal_wait_satisfied()) {
-+            [cmd_buf encodeWaitForEvent:tosh_wait_dummy(ctx_self) value:1];
++            [cmd_buf encodeWaitForEvent:xeon_wait_dummy(ctx_self) value:1];
 +        } else {
 +            [cmd_buf encodeWaitForEvent:link_in->ev_x_ready value:seq_in];
 +        }
@@ -2004,28 +2004,28 @@ index 8e9c1f827..7e6cc66bc 100644
 +        if (cts != nil) {
 +            id<MTLCounterSampleBuffer> csr = cts;
 +            const uint64_t cb2 = cbase;
-+            [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) { (void) cb; tosh_ct_record(csr, cb2); }];
++            [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) { (void) cb; xeon_ct_record(csr, cb2); }];
 +        }
  
          // instead, remember a reference to the command buffer and wait for it later if needed
          [ctx_src->cmd_bufs_ext addObject:cmd_buf];
          ctx_src->cmd_buf_last = cmd_buf;
-+        tosh_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
-+        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(tosh_batch_of(t_self)));
++        xeon_trace_exchange(cmd_buf, seq, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx_self->dev) peerIndex]) & 1));
++        ggml_metal_cmd_buf_end(ctx_self, cmd_buf, ggml_metal_collective_hold_batch(xeon_batch_of(t_self)));
  
          [cmd_buf retain];
  
          ggml_metal_event_wait(ctx_dst, ev_cpy);
  
 -        return true;
-+// TOSH_MGPU_MERGE=1: a tensor split cuts the graph at every partial node, so a token costs one
++// XEON_MGPU_MERGE=1: a tensor split cuts the graph at every partial node, so a token costs one
 +// command buffer for each collective plus one for each subgraph that follows it. With this on,
 +// the collective leaves its buffer open and the next subgraph encodes into it instead of
 +// submitting its own, which halves the command buffers a split token creates.
 +static bool ggml_metal_merge_graph(void) {
 +    static int v = -1;
 +    if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_MERGE");
+         const char * s = XEON_ENV("XEON_MGPU_MERGE");
 +        // on by default: it is inert unless a collective left a buffer held, which only the
 +        // batch gate above does, so a prompt never sees it
 +        v = s ? (s[0] == '1' ? 1 : 0) : 1;
@@ -2034,7 +2034,7 @@ index 8e9c1f827..7e6cc66bc 100644
  }
  
  enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph * gf) {
-+    if (tosh_mgpu_trace()) { atomic_fetch_add(&g_tr_graphs, 1); }
++    if (xeon_mgpu_trace()) { atomic_fetch_add(&g_tr_graphs, 1); }
      // command buffers run in commit order, so a held one has to go in before this graph
 +    if (!ggml_metal_merge_graph()) {
 +        ggml_metal_cmd_buf_hold_flush(ctx);
@@ -2066,26 +2066,26 @@ index 8e9c1f827..7e6cc66bc 100644
 +                ctx->cmd_buf_hold = nil;
 +                // the collective is already encoded in here; anything that queued a wait since
 +                // then has to land between it and this subgraph, not be dropped
-+                if (tosh_mgpu_trace()) {
++                if (xeon_mgpu_trace()) {
 +                    if (ctx->n_ev_wait_pending > 0 || ctx->n_peer_waits > 0) {
 +                        atomic_fetch_add(&g_tr_merge_waits, ctx->n_ev_wait_pending + ctx->n_peer_waits);
 +                    }
 +                    atomic_fetch_add(&g_tr_merge_reuse, 1);
 +                }
 +            } else {
-+                if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++                if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
 +                cmd_buf = [queue commandBufferWithUnretainedReferences];
 +                [cmd_buf retain];
 +            }
              ggml_metal_encode_pending_waits(ctx, cmd_buf);
-             tosh_cbp_attach(cmd_buf, cbp);
+             xeon_cbp_attach(cmd_buf, cbp);
  
              if (ctx->cmd_bufs[n_cb].obj) {
                  [ctx->cmd_bufs[n_cb].obj release];
              }
              ctx->cmd_bufs[n_cb].obj = cmd_buf;
  
-+            tosh_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
++            xeon_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
 +
              [cmd_buf enqueue];
  
@@ -2103,10 +2103,10 @@ index 8e9c1f827..7e6cc66bc 100644
          // prepare the rest of the command buffers asynchronously (optional)
          // cmd_buf[0.. n_cb)
          for (int cb_idx = 0; cb_idx < n_cb; ++cb_idx) {
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_buf = [queue commandBufferWithUnretainedReferences];
              ggml_metal_encode_pending_waits(ctx, cmd_buf);
-             tosh_cbp_attach(cmd_buf, cbp);
+             xeon_cbp_attach(cmd_buf, cbp);
              [cmd_buf retain];
  
              if (ctx->cmd_bufs[cb_idx].obj) {
@@ -2121,7 +2121,7 @@ index 8e9c1f827..7e6cc66bc 100644
  void ggml_metal_event_record(ggml_metal_t ctx, ggml_metal_event_t ev) {
      @autoreleasepool {
          id<MTLCommandQueue> queue = ctx->queue;
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
          id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
          ggml_metal_encode_pending_waits(ctx, cmd_buf);
  
@@ -2139,7 +2139,7 @@ index 8e9c1f827..7e6cc66bc 100644
  
      @autoreleasepool {
          id<MTLCommandQueue> queue = ctx->queue;
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
          id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
          ggml_metal_encode_pending_waits(ctx, cmd_buf);
  
@@ -2162,16 +2162,16 @@ index fd508bab5..5cca6596b 100644
      delete comm_ctx;
  }
 +
-+// TOSH_MGPU_ALLREDUCE_NOOP=1 keeps the split graph and every subgraph submission but performs
++// XEON_MGPU_ALLREDUCE_NOOP=1 keeps the split graph and every subgraph submission but performs
 +// no reduction and no cross-device synchronisation at all. The output is wrong by construction.
 +// It exists for one measurement: what tensor-split decode would cost if communication were free.
 +static bool ggml_backend_metal_comm_allreduce_noop(void) {
 +    static int v = -1;
 +    if (v < 0) {
-+        const char * s = getenv("TOSH_MGPU_ALLREDUCE_NOOP");
++        const char * s = getenv("XEON_MGPU_ALLREDUCE_NOOP");
 +        v = (s && s[0] == '1') ? 1 : 0;
 +        if (v) {
-+            fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_ALLREDUCE_NOOP=1, the reduction is "
++            fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_ALLREDUCE_NOOP=1, the reduction is "
 +                            "skipped and the output is meaningless. Benchmark only.\n");
 +        }
 +    }
@@ -2200,10 +2200,10 @@ index fd508bab5..5cca6596b 100644
      // Every exchange of a step must read the partner's tensor before its own add rewrites it,
      // so the copies all go out before any of the adds.
      for (size_t offset = offset_max; offset >= 1; offset /= 2) {
-+            // TOSH_MGPU_SUBMIT_ORDER, benchmark only: 0 normal, 1 reversed, 2 alternating.
++            // XEON_MGPU_SUBMIT_ORDER, benchmark only: 0 normal, 1 reversed, 2 alternating.
 +            static int order = -1;
 +            if (order < 0) {
-+                const char * v = getenv("TOSH_MGPU_SUBMIT_ORDER");
++                const char * v = getenv("XEON_MGPU_SUBMIT_ORDER");
 +                order = v ? atoi(v) : 0;
 +            }
 +            const bool flip = order == 1 || (order == 2 && (seq_round & 1));
@@ -2287,7 +2287,7 @@ index 4ed373def..432136163 100644
 +    // metadata and no device memory. Only a session that alternates between two shapes gains
 +    // from it, so it is asked for: without alternation the swap below never hits.
 +    {
-+        const char * env = getenv("TOSH_MGPU_SHAPE_CACHE");
++        const char * env = getenv("XEON_MGPU_SHAPE_CACHE");
 +        if (env != nullptr && atoi(env) != 0) {
 +            gf_res_alt[0].reset(new llm_graph_result(max_nodes));
 +            gf_res_alt[1].reset(new llm_graph_result(max_nodes));
@@ -2299,7 +2299,7 @@ index 4ed373def..432136163 100644
 +            shape_slot  = 0;
 +            ggml_backend_sched_set_shape_slot(sched.get(), shape_slot);
 +            LLAMA_LOG_INFO("%s: shape cache on, two prepared shapes share the compute buffers\n", __func__);
-+            if (getenv("TOSH_MGPU_SHAPE_TRACE") != nullptr) {
++            if (getenv("XEON_MGPU_SHAPE_TRACE") != nullptr) {
 +                fprintf(stderr, "SHAPE cache on\n");
 +            }
 +        }
@@ -2418,7 +2418,7 @@ index 4ed373def..432136163 100644
 +            shape_reuse = hit;
 +        }
 +
-+        static const bool shape_trace = getenv("TOSH_MGPU_SHAPE_TRACE") != nullptr;
++        static const bool shape_trace = getenv("XEON_MGPU_SHAPE_TRACE") != nullptr;
 +        if (shape_trace) {
 +            fprintf(stderr, "SHAPE %s slot=%d n_tokens=%u\n", hit ? "hit" : "miss", shape_slot, ubatch.n_tokens);
 +        }

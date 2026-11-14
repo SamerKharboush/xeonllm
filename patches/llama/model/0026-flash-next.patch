@@ -497,11 +497,11 @@ index 250eb74da..a4881eb55 100644
          ggml_tensor * ple = model.per_layer_tok_embd;
  
 -        const bool prefetch = model.can_prefetch.count(ple);
-+        static const bool tosh_prefetch = [] {
-+            const char * v = getenv("TOSH_PLE_PREFETCH");
++        static const bool xeon_prefetch = [] {
++            const char * v = getenv("XEON_PLE_PREFETCH");
 +            return v == nullptr || atoi(v) != 0;
 +        }();
-+        const bool prefetch = tosh_prefetch && model.can_prefetch.count(ple);
++        const bool prefetch = xeon_prefetch && model.can_prefetch.count(ple);
          if (prefetch) {
 +#if defined(__APPLE__)
 +            // llama_prefetch only acts on Linux and Windows

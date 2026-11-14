@@ -60,13 +60,13 @@ index b455161e7..c0595b00b 100644
  
 @@ -824,16 +827,19 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv_ext(ggml_
      const bool is_khdr = tsrc0 == GGML_TYPE_Q5_K || tsrc0 == GGML_TYPE_Q2_K || tsrc0 == GGML_TYPE_Q3_K;
-         (simd_width_lds == 64 || TOSH_ENV("TOSH_EXT_LDS") != nullptr) &&
-         TOSH_ENV("TOSH_EXT_LDS_DISABLE") == nullptr &&
+         (simd_width_lds == 64 || XEON_ENV("XEON_EXT_LDS") != nullptr) &&
+         XEON_ENV("XEON_EXT_LDS_DISABLE") == nullptr &&
      if (!no_raw && tsrc0 == GGML_TYPE_Q4_K) {
      } else if (!no_raw && is_khdr) {
          snprintf(tname, sizeof(tname), "%s_hdr", ggml_type_name(tsrc0));
      } else {
-     static const bool w64_disable = TOSH_ENV("TOSH_EXT_W64_DISABLE") != nullptr;
+     static const bool w64_disable = XEON_ENV("XEON_EXT_W64_DISABLE") != nullptr;
 +    // q8_0 reads its quads as halves on 64 lanes only: the same read is slower on 32
 +    const bool is_w64_q8  = !w64_disable && tsrc0 == GGML_TYPE_Q8_0 && simd_width_lds == 64 && nr0 == 1;
 +    if (is_w64_q6k || is_w64_q8) {
@@ -91,19 +91,19 @@ index b455161e7..c0595b00b 100644
 +            case GGML_TYPE_IQ2_XXS:
 +            case GGML_TYPE_IQ2_XS:
 +            case GGML_TYPE_IQ3_XXS:
-                 wide = op->ne[0] >= wide_ext_floor && TOSH_ENV("TOSH_MM_WIDE_EXT_DISABLE") == nullptr; break;
-             default: wide = TOSH_ENV("TOSH_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
+                 wide = op->ne[0] >= wide_ext_floor && XEON_ENV("XEON_MM_WIDE_EXT_DISABLE") == nullptr; break;
+             default: wide = XEON_ENV("XEON_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
          }
      }
  
      // attention matmuls read a permuted KV cache view and can exceed half range in the packed
      // accumulator; bfloat has no native arithmetic here, so float is faster for it too
 +    const bool acc_f32 = use_mm_manual && (!ggml_is_contiguous(op->src[0]) || tsrc0 == GGML_TYPE_BF16) &&
-                          TOSH_ENV("TOSH_MM_ACC_F32_DISABLE") == nullptr;
+                          XEON_ENV("XEON_MM_ACC_F32_DISABLE") == nullptr;
  
-         const char * s = TOSH_ENV("TOSH_MM_W64_FLOOR");
-                      TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
-                                TOSH_ENV("TOSH_MM_UNIFORM_SCALE_DISABLE") == nullptr;
+         const char * s = XEON_ENV("XEON_MM_W64_FLOOR");
+                      XEON_ENV("XEON_MM_W64_DISABLE") == nullptr;
+                                XEON_ENV("XEON_MM_UNIFORM_SCALE_DISABLE") == nullptr;
  
      ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
      if (!res.pipeline) {
@@ -117,7 +117,7 @@ index b455161e7..c0595b00b 100644
                      nr0 = N_R0_IQ2_S_SPLIT;
                      split = true;
 +                smem = 1024*8;
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                  }
              } break;
          case GGML_TYPE_IQ1_S:
@@ -130,7 +130,7 @@ index b455161e7..c0595b00b 100644
                      nr0 = N_R0_IQ1_S_SPLIT;
                      split = true;
 +                smem = 2048*4;
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                  }
              } break;
          case GGML_TYPE_IQ1_M:
@@ -143,14 +143,14 @@ index b455161e7..c0595b00b 100644
                      nr0 = N_R0_IQ1_M_SPLIT;
                      split = true;
 +                smem = 2048*4;
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                  }
              } break;
          case GGML_TYPE_IQ4_NL:
              {
                  nsg = N_SG_IQ4_NL;
                  nr0 = N_R0_IQ4_NL;
-                 if (TOSH_ENV("TOSH_MV_IQ4_NL_R8") != nullptr) {
+                 if (XEON_ENV("XEON_MV_IQ4_NL_R8") != nullptr) {
 @@ -1351,51 +1365,63 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv(ggml_meta
      int16_t nw = 32;
      if (props->wave64_decode) {
@@ -181,20 +181,20 @@ index b455161e7..c0595b00b 100644
 +    // q6_K's 210-byte block leaves the compiler assuming byte alignment, so it reads its quant
 +    // arrays a byte at a time; an even stride lets the kernel read them two bytes at a time
 +    const bool row4 = (op->src[0]->nb[1] % 2 == 0) && (op->src[0]->nb[2] % 2 == 0) &&
-                       TOSH_ENV("TOSH_MV_ROW4_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW4_DISABLE") == nullptr;
  
 +    // A stride that is a multiple of four lets the quant arrays be read a word at a time.
 +    // The two widths are decided apart: 64 lanes have no last-level cache to hide the extra
 +    // loads and every type gains, while 32 lanes only measured a gain on q8_0.
 +    const bool row8_aligned = row4 && (op->src[0]->nb[1] % 4 == 0) && (op->src[0]->nb[2] % 4 == 0);
 +    const bool row8_width   = nw == 64 || (nw == 32 && tsrc0 == GGML_TYPE_Q8_0);
-     const bool row8 = row8_aligned && row8_width && TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
+     const bool row8 = row8_aligned && row8_width && XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
 +
-         const char * st = TOSH_ENV("TOSH_SWEEP_TYPE");
-             const char * snr = TOSH_ENV("TOSH_SWEEP_NR0");
-             const char * sns = TOSH_ENV("TOSH_SWEEP_NSG");
-             const char * sln = TOSH_ENV("TOSH_SWEEP_LANES");
-     if (TOSH_ENV("TOSH_SWEEP_DEBUG") != nullptr) {
+         const char * st = XEON_ENV("XEON_SWEEP_TYPE");
+             const char * snr = XEON_ENV("XEON_SWEEP_NR0");
+             const char * sns = XEON_ENV("XEON_SWEEP_NSG");
+             const char * sln = XEON_ENV("XEON_SWEEP_LANES");
+     if (XEON_ENV("XEON_SWEEP_DEBUG") != nullptr) {
  
      ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
      if (!res.pipeline) {
@@ -219,18 +219,18 @@ index b455161e7..c0595b00b 100644
 @@ -1474,16 +1500,21 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id(ggml_m
      snprintf(base, 256, "kernel_mul_mm_id_%s_%s", ggml_type_name(tsrc0), ggml_type_name(tsrc1));
      snprintf(name, 256, "%s_bci=%d_amax=%d", base, bc_inp, amax);
-                          TOSH_ENV("TOSH_MM_ACC_F32_DISABLE") == nullptr;
+                          XEON_ENV("XEON_MM_ACC_F32_DISABLE") == nullptr;
  
-         const char * s = TOSH_ENV("TOSH_MMID_WIDE_FLOOR");
-     const bool wide_width_ok = simd_width != 64 || TOSH_ENV("TOSH_MMID_WIDE_W64_ENABLE") != nullptr;
+         const char * s = XEON_ENV("XEON_MMID_WIDE_FLOOR");
+     const bool wide_width_ok = simd_width != 64 || XEON_ENV("XEON_MMID_WIDE_W64_ENABLE") != nullptr;
  
-                 tpe >= wide_floor && TOSH_ENV("TOSH_MMID_WIDE_DISABLE") == nullptr;
+                 tpe >= wide_floor && XEON_ENV("XEON_MMID_WIDE_DISABLE") == nullptr;
 +            case GGML_TYPE_IQ4_XS:
 +            case GGML_TYPE_IQ1_M:
 +            case GGML_TYPE_IQ2_XXS:
 +            case GGML_TYPE_IQ2_XS:
 +            case GGML_TYPE_IQ3_XXS: break;
-                      TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
+                      XEON_ENV("XEON_MMID_W64_DISABLE") == nullptr;
  
      ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
      if (!res.pipeline) {
@@ -307,9 +307,9 @@ index b455161e7..c0595b00b 100644
      }
 +
 +    const bool row4 = (op->src[0]->nb[1] % 2 == 0) && (op->src[0]->nb[2] % 2 == 0) &&
-                       TOSH_ENV("TOSH_MV_ROW4_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW4_DISABLE") == nullptr;
  
-                       TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
  
      ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
      if (!res.pipeline) {
@@ -343,11 +343,11 @@ index b455161e7..c0595b00b 100644
      return res;
  }
  
- ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_tosh_topk_moe(ggml_metal_library_t lib) {
+ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_xeon_topk_moe(ggml_metal_library_t lib) {
      char base[256];
      char name[256];
  
-     snprintf(base, 256, "kernel_tosh_topk_moe_f32");
+     snprintf(base, 256, "kernel_xeon_topk_moe_f32");
 @@ -2942,18 +2964,23 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_count_equal(ggml
      GGML_ASSERT(op->type == GGML_TYPE_I64);
  
@@ -571,7 +571,7 @@ index 25b27f003..a8e4c7357 100644
      return 1;
  }
  
-     static const bool disabled = TOSH_ENV("TOSH_NORM_FWHT_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_NORM_FWHT_FUSION_DISABLE") != nullptr;
  int ggml_metal_op_pool_2d(ggml_metal_op_t ctx, int idx) {
      ggml_tensor * op = ctx->node(idx);
  
@@ -600,15 +600,15 @@ index 25b27f003..a8e4c7357 100644
      return 1;
  }
  
-     static const bool disabled = TOSH_ENV("TOSH_QKV_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_QKV_FUSION_DISABLE") != nullptr;
  
-     const bool qvk_w64 = props_dev->simd_width == 64 && TOSH_ENV("TOSH_QVK_W64_DISABLE") == nullptr;
+     const bool qvk_w64 = props_dev->simd_width == 64 && XEON_ENV("XEON_QVK_W64_DISABLE") == nullptr;
 +    } else if (tq == GGML_TYPE_Q2_K && tv == GGML_TYPE_Q4_K && tk == GGML_TYPE_Q2_K) {
-         const char * s = TOSH_ENV("TOSH_EXT_KQ_FLOOR");
-         const char * s = TOSH_ENV("TOSH_EXT_MAX");
+         const char * s = XEON_ENV("XEON_EXT_KQ_FLOOR");
+         const char * s = XEON_ENV("XEON_EXT_MAX");
          return s ? atoi(s) : 0;
      }();
-     static const bool disabled = TOSH_ENV("TOSH_SWIGLU_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_SWIGLU_FUSION_DISABLE") != nullptr;
      if (disabled || !ctx->use_fusion() || idx + 2 >= ctx->n_nodes()) {
  int ggml_metal_op_mul_mat(ggml_metal_op_t ctx, int idx) {
      ggml_tensor * op = ctx->node(idx);
@@ -621,10 +621,10 @@ index 25b27f003..a8e4c7357 100644
          const int nsg    = 1;                 // num simdgroups per threadgroup
  
          // num threads along row per simdgroup
-+        // the thresholds below split a 32-lane simdgroup; TOSH_EXT_NXPSG overrides them so the
++        // the thresholds below split a 32-lane simdgroup; XEON_EXT_NXPSG overrides them so the
 +        // split can be swept on a 64-lane one, where the row/column balance is not the same
 +        static const int nxpsg_env = []() {
-             const char * s = TOSH_ENV("TOSH_EXT_NXPSG");
+             const char * s = XEON_ENV("XEON_EXT_NXPSG");
              return s ? atoi(s) : 0;
          }();
 +
@@ -645,12 +645,12 @@ index 25b27f003..a8e4c7357 100644
 +                nxpsg = 4;
 +            }
 +            // a 64-lane simdgroup wants twice the reduction width: +9.0% with four requests.
-+            // TOSH_EXT_NXPSG_X2 tries it on 32 lanes, so that width can be A/B'd before the gate goes
++            // XEON_EXT_NXPSG_X2 tries it on 32 lanes, so that width can be A/B'd before the gate goes
 +            // only where the contracted dimension is wide enough to keep four-wide loads per thread:
 +            // at ne00 128 the doubled split leaves too few elements and the result goes wrong
 +            if (ne00 % 256 == 0 &&
-                 (props_dev->simd_width == 64 || TOSH_ENV("TOSH_EXT_NXPSG_X2") != nullptr) &&
-                 TOSH_ENV("TOSH_EXT_NXPSG_X2_DISABLE") == nullptr) {
+                 (props_dev->simd_width == 64 || XEON_ENV("XEON_EXT_NXPSG_X2") != nullptr) &&
+                 XEON_ENV("XEON_EXT_NXPSG_X2_DISABLE") == nullptr) {
 +                nxpsg = std::min<int16_t>(16, nxpsg*2);
 +            }
          }
@@ -667,7 +667,7 @@ index 25b27f003..a8e4c7357 100644
                             op->src[0]->type == GGML_TYPE_Q3_K;
  
          static const int nr0_env = []() {
-             const char * s = TOSH_ENV("TOSH_EXT_NR0");
+             const char * s = XEON_ENV("XEON_EXT_NR0");
              return s ? atoi(s) : 0;
          }();
 +
@@ -676,7 +676,7 @@ index 25b27f003..a8e4c7357 100644
          // Four rows per thread doubles what a threadgroup covers, so a weight with few
          // rows stops filling the grid. The threshold is per row count, not per quant type.
          static const int64_t nr0_min_rows = []() {
-             const char * s = TOSH_ENV("TOSH_EXT_NR0_MINROWS");
+             const char * s = XEON_ENV("XEON_EXT_NR0_MINROWS");
              // off by default: the win depends on the weight's shape and one measured model
              // still regresses at four columns, so it stays opt-in until that is understood
              return s ? (int64_t) atoll(s) : (int64_t) 0;
@@ -2756,7 +2756,7 @@ index f32fe2937..c1c9ddfb3 100644
  template [[host_name("kernel_soft_max_f16_4")]] kernel kernel_soft_max_4_t kernel_soft_max_4<half4>;
  template [[host_name("kernel_soft_max_f32_4")]] kernel kernel_soft_max_4_t kernel_soft_max_4<float4>;
 +
-+kernel void kernel_tosh_topk_moe_f32(
++kernel void kernel_xeon_topk_moe_f32(
 diff --git a/ggml/src/ggml-metal/kernels/solve_tri.metal b/ggml/src/ggml-metal/kernels/solve_tri.metal
 index 50f16facb..10526fb21 100644
 --- a/ggml/src/ggml-metal/kernels/solve_tri.metal

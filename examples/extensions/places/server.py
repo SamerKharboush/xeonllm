@@ -120,8 +120,8 @@ def coordinate(value, limit):
 
 
 def extra_places(problems):
-    """TOSH_PLACES_EXTRA: a JSON object of names to [latitude, longitude] or {"latitude", "longitude", ...}."""
-    text = os.environ.get("TOSH_PLACES_EXTRA", "").strip()
+    """XEON_PLACES_EXTRA: a JSON object of names to [latitude, longitude] or {"latitude", "longitude", ...}."""
+    text = os.environ.get("XEON_PLACES_EXTRA", "").strip()
     if not text:
         return []
     try:
@@ -177,8 +177,8 @@ def csv_places(path, label):
 
 
 def file_places(problems):
-    """TOSH_PLACES_FILES: the app's paths setting, a JSON object of short names to files or folders."""
-    text = os.environ.get("TOSH_PLACES_FILES", "").strip()
+    """XEON_PLACES_FILES: the app's paths setting, a JSON object of short names to files or folders."""
+    text = os.environ.get("XEON_PLACES_FILES", "").strip()
     if not text:
         return []
     try:
@@ -208,11 +208,11 @@ def file_places(problems):
 
 
 def settings():
-    unit = "mi" if os.environ.get("TOSH_PLACES_UNITS") == "mi" else "km"
+    unit = "mi" if os.environ.get("XEON_PLACES_UNITS") == "mi" else "km"
     # the app always sends a choices setting, empty when none is ticked; outside the app, all of them
-    chosen = os.environ.get("TOSH_PLACES_CATEGORIES")
+    chosen = os.environ.get("XEON_PLACES_CATEGORIES")
     categories = set(CATEGORIES) if chosen is None else {c.strip() for c in chosen.split(",") if c.strip()}
-    return unit, categories, os.environ.get("TOSH_PLACES_HOME", "").strip()
+    return unit, categories, os.environ.get("XEON_PLACES_HOME", "").strip()
 
 
 def catalogue():
@@ -324,7 +324,7 @@ def about(_):
         counts[p["source"]] = counts.get(p["source"], 0) + 1
     return text_reply({"places": counts, "unit": unit, "categories": sorted(categories), "home": home or None,
                        # a secret setting: a real extension would send it to its service, never show it
-                       "service_key": "set" if os.environ.get("TOSH_PLACES_SERVICE_KEY") else "not set",
+                       "service_key": "set" if os.environ.get("XEON_PLACES_SERVICE_KEY") else "not set",
                        "problems": problems})
 
 

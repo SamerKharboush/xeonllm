@@ -1487,7 +1487,7 @@ index dac55caff..5fa2dc082 100644
 +++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ChatMessageAssistant.svelte
 @@ -1,9 +1,10 @@
  <script lang="ts">
-+	import ToshPanel from './ToshPanel.svelte';
++	import XeonPanel from './XeonPanel.svelte';
  	import {
  		ChatMessageActionIcons,
  		ChatMessageAgenticContent,
@@ -1506,7 +1506,7 @@ index dac55caff..5fa2dc082 100644
  			/>
  		{/if}
 +
-+		<ToshPanel {message} />
++		<XeonPanel {message} />
  	{/if}
  
  	{#if showProcessingInfoBottom}
@@ -1515,24 +1515,24 @@ index dac55caff..5fa2dc082 100644
  
  	{#if displayedModel}
  		<div class="info my-6 grid gap-4 tabular-nums">
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshMap.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshMap.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonMap.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonMap.svelte
 new file mode 100644
 index 000000000..3cbf45a3a
 --- /dev/null
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshMap.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonMap.svelte
 @@ -0,0 +1,221 @@
 +<script lang="ts">
 +	import 'maplibre-gl/dist/maplibre-gl.css';
-+	import ToshResize from './ToshResize.svelte';
-+	import { download } from '$lib/tosh/download';
-+	import { baseStyle, bounds, bundle, geojsonFiles, ground } from '$lib/tosh/map';
++	import XeonResize from './XeonResize.svelte';
++	import { download } from '$lib/xeon/download';
++	import { baseStyle, bounds, bundle, geojsonFiles, ground } from '$lib/xeon/map';
 +	import { serverStore } from '$lib/stores/server.svelte';
-+	import type { ToshMapLayer } from '$lib/types';
++	import type { XeonMapLayer } from '$lib/types';
 +	import type { Map as MapLibreMap } from 'maplibre-gl';
 +	import { onDestroy, onMount, tick } from 'svelte';
 +
 +	interface Props {
-+		layers: ToshMapLayer[];
++		layers: XeonMapLayer[];
 +	}
 +
 +	let { layers }: Props = $props();
@@ -1558,7 +1558,7 @@ index 000000000..3cbf45a3a
 +	}
 +
 +	/** The attributes of a feature in the layer's own order, with the names a GIS shows for them. */
-+	function popup(properties: Record<string, unknown>, layer: ToshMapLayer): string {
++	function popup(properties: Record<string, unknown>, layer: XeonMapLayer): string {
 +		const names = layer.fields?.length
 +			? layer.fields
 +			: Object.keys(properties).map((name) => ({ alias: name, name }));
@@ -1611,7 +1611,7 @@ index 000000000..3cbf45a3a
 +
 +		created.on('style.load', () => {
 +			layers.forEach((layer, index) => {
-+				const id = `tosh-${index}`;
++				const id = `xeon-${index}`;
 +				const color = COLORS[index % COLORS.length];
 +				const polygons = ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]];
 +				const lines = [
@@ -1731,7 +1731,7 @@ index 000000000..3cbf45a3a
 +		</span>
 +
 +		<span class="flex items-center gap-3">
-+			<ToshResize {enlarged} onclick={resize} />
++			<XeonResize {enlarged} onclick={resize} />
 +
 +			<button
 +				class="hover:text-foreground"
@@ -1742,21 +1742,21 @@ index 000000000..3cbf45a3a
 +		</span>
 +	</div>
 +</div>
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte
 new file mode 100644
 index 000000000..7977dfe56
 --- /dev/null
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte
 @@ -0,0 +1,110 @@
 +<script lang="ts">
-+	import ToshMap from './ToshMap.svelte';
-+	import ToshSketches from './ToshSketches.svelte';
++	import XeonMap from './XeonMap.svelte';
++	import XeonSketches from './XeonSketches.svelte';
 +	import Waypoints from '@lucide/svelte/icons/waypoints';
 +	import { CollapsibleContentBlock } from '$lib/components/app';
 +	import { DatabaseService } from '$lib/services';
 +	import { conversationsStore } from '$lib/stores';
-+	import { fetchMap } from '$lib/tosh/map';
-+	import type { DatabaseMessage, ToshCall, ToshMapLayer } from '$lib/types';
++	import { fetchMap } from '$lib/xeon/map';
++	import type { DatabaseMessage, XeonCall, XeonMapLayer } from '$lib/types';
 +
 +	interface Props {
 +		message: DatabaseMessage;
@@ -1768,11 +1768,11 @@ index 000000000..7977dfe56
 +	let loading = $state(false);
 +	let failed = $state(false);
 +
-+	let tosh = $derived(message.tosh);
-+	let steps = $derived(tosh?.steps ?? []);
++	let xeon = $derived(message.xeon);
++	let steps = $derived(xeon?.steps ?? []);
 +
 +	// an agent reports a call's state, or only its status
-+	function stepFailed(step: ToshCall): boolean {
++	function stepFailed(step: XeonCall): boolean {
 +		return step.state ? step.state !== 'completed' : !!step.status && step.status !== 'ok';
 +	}
 +
@@ -1783,12 +1783,12 @@ index 000000000..7977dfe56
 +	}
 +
 +	async function loadMap() {
-+		if (!tosh?.mapRequest || loading) return;
++		if (!xeon?.mapRequest || loading) return;
 +
 +		loading = true;
 +		failed = false;
-+		const layers: ToshMapLayer[] | null = await fetchMap(
-+			$state.snapshot(tosh.mapRequest),
++		const layers: XeonMapLayer[] | null = await fetchMap(
++			$state.snapshot(xeon.mapRequest),
 +			question()
 +		);
 +
@@ -1800,20 +1800,20 @@ index 000000000..7977dfe56
 +			return;
 +		}
 +
-+		const updated = { ...$state.snapshot(tosh), map: { layers } };
++		const updated = { ...$state.snapshot(xeon), map: { layers } };
 +
 +		conversationsStore.updateMessageAtIndex(conversationsStore.findMessageIndex(message.id), {
-+			tosh: updated
++			xeon: updated
 +		});
-+		await DatabaseService.updateMessage(message.id, { tosh: updated });
++		await DatabaseService.updateMessage(message.id, { xeon: updated });
 +	}
 +
 +	$effect(() => {
-+		if (tosh?.mapRequest?.show && !tosh.map && !loading && !failed) loadMap();
++		if (xeon?.mapRequest?.show && !xeon.map && !loading && !failed) loadMap();
 +	});
 +</script>
 +
-+{#if tosh}
++{#if xeon}
 +	<div class="mt-3 grid gap-3">
 +		{#if steps.length}
 +			<CollapsibleContentBlock
@@ -1837,13 +1837,13 @@ index 000000000..7977dfe56
 +			</CollapsibleContentBlock>
 +		{/if}
 +
-+		{#if tosh.sketches?.length}
-+			<ToshSketches sketches={tosh.sketches} />
++		{#if xeon.sketches?.length}
++			<XeonSketches sketches={xeon.sketches} />
 +		{/if}
 +
-+		{#if tosh.map}
-+			<ToshMap layers={tosh.map.layers} />
-+		{:else if tosh.mapRequest}
++		{#if xeon.map}
++			<XeonMap layers={xeon.map.layers} />
++		{:else if xeon.mapRequest}
 +			<button
 +				class="w-fit text-xs text-primary underline-offset-2 hover:underline disabled:opacity-50"
 +				disabled={loading}
@@ -1858,11 +1858,11 @@ index 000000000..7977dfe56
 +		{/if}
 +	</div>
 +{/if}
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshResize.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshResize.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonResize.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonResize.svelte
 new file mode 100644
 index 000000000..f58a6b59d
 --- /dev/null
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshResize.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonResize.svelte
 @@ -0,0 +1,23 @@
 +<script lang="ts">
 +	import Maximize2 from '@lucide/svelte/icons/maximize-2';
@@ -1887,21 +1887,21 @@ index 000000000..f58a6b59d
 +		<Maximize2 class="h-3.5 w-3.5" />
 +	{/if}
 +</button>
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketch.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketch.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketch.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketch.svelte
 new file mode 100644
 index 000000000..891c7270c
 --- /dev/null
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketch.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketch.svelte
 @@ -0,0 +1,80 @@
 +<script lang="ts">
-+	import ToshResize from './ToshResize.svelte';
-+	import { download, fileStem } from '$lib/tosh/download';
-+	import { csv, dxf, figure, gap, isOpen, notice, png, svg } from '$lib/tosh/sketch';
-+	import { shapefile } from '$lib/tosh/shapefile';
-+	import type { ToshSketch } from '$lib/types';
++	import XeonResize from './XeonResize.svelte';
++	import { download, fileStem } from '$lib/xeon/download';
++	import { csv, dxf, figure, gap, isOpen, notice, png, svg } from '$lib/xeon/sketch';
++	import { shapefile } from '$lib/xeon/shapefile';
++	import type { XeonSketch } from '$lib/types';
 +
 +	interface Props {
-+		sketch: ToshSketch;
++		sketch: XeonSketch;
 +		enlarged: boolean;
 +		onResize: () => void;
 +	}
@@ -1928,7 +1928,7 @@ index 000000000..891c7270c
 +	<div class="flex items-center justify-between gap-2">
 +		<div class="text-xs font-medium {enlarged ? '' : 'truncate'}">{sketch.title ?? ''}</div>
 +
-+		<ToshResize {enlarged} onclick={onResize} />
++		<XeonResize {enlarged} onclick={onResize} />
 +	</div>
 +
 +	<div
@@ -1973,15 +1973,15 @@ index 000000000..891c7270c
 +		</span>
 +	</div>
 +</div>
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketches.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketches.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketches.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketches.svelte
 new file mode 100644
 index 000000000..7690999bd
 --- /dev/null
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshSketches.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonSketches.svelte
 @@ -0,0 +1,31 @@
 +<script lang="ts">
-+	import ToshSketch from './ToshSketch.svelte';
-+	import type { ToshSketch as Sketch } from '$lib/types';
++	import XeonSketch from './XeonSketch.svelte';
++	import type { XeonSketch as Sketch } from '$lib/types';
 +
 +	interface Props {
 +		sketches: Sketch[];
@@ -1995,7 +1995,7 @@ index 000000000..7690999bd
 +
 +<div class="grid gap-3">
 +	{#if enlarged !== null && sketches[enlarged]}
-+		<ToshSketch enlarged onResize={() => (enlarged = null)} sketch={sketches[enlarged]} />
++		<XeonSketch enlarged onResize={() => (enlarged = null)} sketch={sketches[enlarged]} />
 +	{/if}
 +
 +	<div
@@ -2005,7 +2005,7 @@ index 000000000..7690999bd
 +	>
 +		{#each sketches as sketch, index (index)}
 +			{#if index !== enlarged}
-+				<ToshSketch enlarged={false} onResize={() => (enlarged = index)} {sketch} />
++				<XeonSketch enlarged={false} onResize={() => (enlarged = index)} {sketch} />
 +			{/if}
 +		{/each}
 +	</div>
@@ -2027,7 +2027,7 @@ index b008b16db..569a3e910 100644
 +import type {
 +	DatabaseMessageExtraMcpPrompt,
 +	DatabaseMessageExtraMcpResource,
-+	ToshChunk
++	XeonChunk
 +} from '$lib/types';
  import type {
  	ApiChatCompletionToolCall,
@@ -2048,7 +2048,7 @@ index b008b16db..569a3e910 100644
  					},
 -					stream: true
 +					stream: true,
-+					toshAgent: 'off'
++					xeonAgent: 'off'
  				},
  				undefined,
  				signal
@@ -2068,7 +2068,7 @@ index b008b16db..569a3e910 100644
  		onConnectionState?: (state: StreamConnectionState) => void,
 -		streamModel?: string | null
 +		streamModel?: string | null,
-+		onTosh?: (tosh: ToshChunk) => void
++		onXeon?: (xeon: XeonChunk) => void
  	): Promise<void> {
  		let reader = response.body?.getReader();
  
@@ -2087,11 +2087,11 @@ index b008b16db..569a3e910 100644
  							try {
  								const parsed: ApiChatCompletionStreamChunk = JSON.parse(data);
 +
-+								// the Tosh agent's progress and metadata; a retract drops the text streamed so far
-+								if (parsed.tosh && typeof parsed.tosh === 'object') {
-+									if (parsed.tosh.event?.type === 'retract') aggregatedContent = '';
++								// the Xeon agent's progress and metadata; a retract drops the text streamed so far
++								if (parsed.xeon && typeof parsed.xeon === 'object') {
++									if (parsed.xeon.event?.type === 'retract') aggregatedContent = '';
 +
-+									if (!abortSignal?.aborted) onTosh?.(parsed.tosh);
++									if (!abortSignal?.aborted) onXeon?.(parsed.xeon);
 +								}
 +
  								const choice = parsed.choices?.[0];
@@ -2111,7 +2111,7 @@ index b008b16db..569a3e910 100644
  			onReasoningChunk,
  			onTimings,
  			onToolCallChunk,
-+			onTosh,
++			onXeon,
  			presence_penalty,
  			reasoningEffort,
  			// Penalty parameters
@@ -2127,7 +2127,7 @@ index b008b16db..569a3e910 100644
  			tools,
  			top_k,
  			top_p,
-+			toshAgent,
++			xeonAgent,
  			typ_p,
  			xtc_probability,
  			xtc_threshold
@@ -2145,7 +2145,7 @@ index b008b16db..569a3e910 100644
  		try {
  			const headers: Record<string, string> = { ...getJsonHeaders() };
  
-+			if (toshAgent) headers['X-Tosh-Agent'] = toshAgent;
++			if (xeonAgent) headers['X-Xeon-Agent'] = xeonAgent;
 +
  			// tag streaming requests with the conversation id, this single header is the opt in for the
  			// server side replay buffer and powers discoverActiveStream on tab reopen. with an explicit
@@ -2166,7 +2166,7 @@ index b008b16db..569a3e910 100644
  					onConnectionState,
 -					options.model
 +					options.model,
-+					onTosh
++					onXeon
  				);
  
  				return;
@@ -2208,8 +2208,8 @@ index 121ee7739..9defecd6d 100644
  		const maxTurns = Number(settings.agenticMaxTurns) || DEFAULT_AGENTIC_CONFIG.maxTurns;
 +		const ownTools = mcpStore.hasEnabledServers() || toolsStore.customTools.length > 0;
 +
-+		// a server with a Tosh agent runs its tools itself for requests that bring none, unless the user added theirs
-+		if (serverStore.props?.tosh_agent && !ownTools) return { enabled: false, maxTurns };
++		// a server with a Xeon agent runs its tools itself for requests that bring none, unless the user added theirs
++		if (serverStore.props?.xeon_agent && !ownTools) return { enabled: false, maxTurns };
 +
  		const hasTools =
 -			mcpStore.hasEnabledServers() ||
@@ -2240,8 +2240,8 @@ index 4bdcc6845..c0f8c8353 100644
  	DatabaseMessageExtra,
 -	ErrorDialogState
 +	ErrorDialogState,
-+	ToshChunk,
-+	ToshMessageData
++	XeonChunk,
++	XeonMessageData
  } from '$lib/types';
  import {
  	findMessageById,
@@ -2260,10 +2260,10 @@ index 4bdcc6845..c0f8c8353 100644
  			conversationsStore.updateMessageAtIndex(idx, { content: streamedContent });
  		};
 +
-+		// what the server's Tosh agent reports: its steps while it works, its figures or a map request at the end
-+		let tosh: ToshMessageData = {};
++		// what the server's Xeon agent reports: its steps while it works, its figures or a map request at the end
++		let xeon: XeonMessageData = {};
 +
-+		const recordTosh = (chunk: ToshChunk): void => {
++		const recordXeon = (chunk: XeonChunk): void => {
 +			const event = chunk.event;
 +
 +			if (event?.type === 'retract') {
@@ -2274,10 +2274,10 @@ index 4bdcc6845..c0f8c8353 100644
 +			}
 +
 +			if (event?.type === 'tool_call' && event.call) {
-+				tosh = { ...tosh, steps: [...(tosh.steps ?? []), event.call] };
++				xeon = { ...xeon, steps: [...(xeon.steps ?? []), event.call] };
 +			} else if (!event) {
-+				tosh = {
-+					...tosh,
++				xeon = {
++					...xeon,
 +					...(chunk.sketches?.length ? { sketches: chunk.sketches } : {}),
 +					...(chunk.map_request ? { mapRequest: chunk.map_request } : {})
 +				};
@@ -2287,7 +2287,7 @@ index 4bdcc6845..c0f8c8353 100644
 +
 +			conversationsStore.updateMessageAtIndex(
 +				conversationsStore.findMessageIndex(currentMessageId),
-+				{ tosh }
++				{ xeon }
 +			);
 +		};
  		const cleanupStreamingState = () => {
@@ -2307,7 +2307,7 @@ index 4bdcc6845..c0f8c8353 100644
  						toolCalls: toolCalls || ''
  					};
  
-+					if (Object.keys(tosh).length) updateData.tosh = tosh;
++					if (Object.keys(xeon).length) updateData.xeon = xeon;
 +
  					if (resolvedModel && !modelPersisted) updateData.model = resolvedModel;
  
@@ -2326,7 +2326,7 @@ index 4bdcc6845..c0f8c8353 100644
  				onModel: streamCallbacks.onModel,
  				onReasoningChunk: streamCallbacks.onReasoningChunk,
  				onTimings: streamCallbacks.onTimings,
-+				onTosh: recordTosh,
++				onXeon: recordXeon,
  				stream: true
  			},
  			convId,
@@ -2335,11 +2335,11 @@ index 4bdcc6845..c0f8c8353 100644
  	}
  
  	syncLoadingStateForChat(convId: string): void {
-diff --git a/tools/ui/src/lib/tosh/download.ts b/tools/ui/src/lib/tosh/download.ts
+diff --git a/tools/ui/src/lib/xeon/download.ts b/tools/ui/src/lib/xeon/download.ts
 new file mode 100644
 index 000000000..213864fec
 --- /dev/null
-+++ b/tools/ui/src/lib/tosh/download.ts
++++ b/tools/ui/src/lib/xeon/download.ts
 @@ -0,0 +1,18 @@
 +export function download(name: string, data: BlobPart, type: string): void {
 +	const url = URL.createObjectURL(new Blob([data], { type }));
@@ -2359,38 +2359,38 @@ index 000000000..213864fec
 +
 +	return (cleaned || fallback).slice(0, 80);
 +}
-diff --git a/tools/ui/src/lib/tosh/map.ts b/tools/ui/src/lib/tosh/map.ts
+diff --git a/tools/ui/src/lib/xeon/map.ts b/tools/ui/src/lib/xeon/map.ts
 new file mode 100644
 index 000000000..b654ecffa
 --- /dev/null
-+++ b/tools/ui/src/lib/tosh/map.ts
++++ b/tools/ui/src/lib/xeon/map.ts
 @@ -0,0 +1,232 @@
 +import { fileStem } from './download';
 +import { API_CHAT } from '$lib/constants';
-+import type { ToshMapLayer, ToshMapRequest } from '$lib/types';
++import type { XeonMapLayer, XeonMapRequest } from '$lib/types';
 +import type { LngLatBoundsLike, StyleSpecification } from 'maplibre-gl';
 +import { getJsonHeaders } from '$lib/utils/api-headers';
 +import { strToU8, zipSync } from 'fflate';
 +
 +/** The features of an answer's map, fetched from the agent with the calls it kept; the model is not involved. */
 +export async function fetchMap(
-+	request: ToshMapRequest,
++	request: XeonMapRequest,
 +	question: string
-+): Promise<ToshMapLayer[] | null> {
++): Promise<XeonMapLayer[] | null> {
 +	try {
 +		const response = await fetch(API_CHAT.COMPLETIONS, {
 +			body: JSON.stringify({
 +				messages: [{ content: question, role: 'user' }],
 +				stream: false,
-+				tosh: { map_request: request }
++				xeon: { map_request: request }
 +			}),
-+			headers: { ...getJsonHeaders(), 'X-Tosh-Agent': 'on' },
++			headers: { ...getJsonHeaders(), 'X-Xeon-Agent': 'on' },
 +			method: 'POST'
 +		});
 +
 +		if (!response.ok) return null;
 +
-+		const layers = (await response.json())?.tosh?.map?.layers;
++		const layers = (await response.json())?.xeon?.map?.layers;
 +
 +		return Array.isArray(layers) && layers.length ? layers : null;
 +	} catch {
@@ -2406,7 +2406,7 @@ index 000000000..b654ecffa
 +];
 +
 +/** One GeoJSON file per layer and kind of geometry, as GIS import tools take one kind per run. */
-+export function geojsonFiles(layers: ToshMapLayer[]): [string, string][] {
++export function geojsonFiles(layers: XeonMapLayer[]): [string, string][] {
 +	const files: [string, string][] = [];
 +	const taken = new Set<string>();
 +
@@ -2567,7 +2567,7 @@ index 000000000..b654ecffa
 +}
 +
 +/** The box around every feature of the layers, or null when they hold none. */
-+export function bounds(layers: ToshMapLayer[]): LngLatBoundsLike | null {
++export function bounds(layers: XeonMapLayer[]): LngLatBoundsLike | null {
 +	let west = Infinity,
 +		south = Infinity,
 +		east = -Infinity,
@@ -2597,14 +2597,14 @@ index 000000000..b654ecffa
 +				[east, north]
 +			];
 +}
-diff --git a/tools/ui/src/lib/tosh/shapefile.ts b/tools/ui/src/lib/tosh/shapefile.ts
+diff --git a/tools/ui/src/lib/xeon/shapefile.ts b/tools/ui/src/lib/xeon/shapefile.ts
 new file mode 100644
 index 000000000..a1f6515be
 --- /dev/null
-+++ b/tools/ui/src/lib/tosh/shapefile.ts
++++ b/tools/ui/src/lib/xeon/shapefile.ts
 @@ -0,0 +1,226 @@
-+import type { ToshSketch } from '$lib/types';
-+import { notice, placed } from '$lib/tosh/sketch';
++import type { XeonSketch } from '$lib/types';
++import { notice, placed } from '$lib/xeon/sketch';
 +
 +const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
 +	let c = n;
@@ -2762,7 +2762,7 @@ index 000000000..a1f6515be
 + * The figure as a shapefile in a ZIP: a polygon when it should close, else a line, at its coordinates and with its
 + * coordinate system as the .prj when it has them, and its title and notice as attributes.
 + */
-+export function shapefile(sketch: ToshSketch, stem: string): Uint8Array<ArrayBuffer> {
++export function shapefile(sketch: XeonSketch, stem: string): Uint8Array<ArrayBuffer> {
 +	const path = sketch.points.map((p) => placed(sketch, p));
 +
 +	if (sketch.closed) {
@@ -2829,53 +2829,53 @@ index 000000000..a1f6515be
 +
 +	return storedZip(files);
 +}
-diff --git a/tools/ui/src/lib/tosh/sketch.ts b/tools/ui/src/lib/tosh/sketch.ts
+diff --git a/tools/ui/src/lib/xeon/sketch.ts b/tools/ui/src/lib/xeon/sketch.ts
 new file mode 100644
 index 000000000..71f833bfa
 --- /dev/null
-+++ b/tools/ui/src/lib/tosh/sketch.ts
++++ b/tools/ui/src/lib/xeon/sketch.ts
 @@ -0,0 +1,326 @@
-+import type { ToshSketch } from '$lib/types';
++import type { XeonSketch } from '$lib/types';
 +
 +/** How far the last point ends from the first, in the sketch's unit. */
-+export function gap(sketch: ToshSketch): number {
++export function gap(sketch: XeonSketch): number {
 +	const first = sketch.points[0];
 +	const last = sketch.points[sketch.points.length - 1];
 +
 +	return Math.hypot(last[0] - first[0], last[1] - first[1]);
 +}
 +
-+export function span(sketch: ToshSketch): number {
++export function span(sketch: XeonSketch): number {
 +	const xs = sketch.points.map((p) => p[0]);
 +	const ys = sketch.points.map((p) => p[1]);
 +
 +	return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
 +}
 +
-+export function notice(sketch: ToshSketch): string | null {
++export function notice(sketch: XeonSketch): string | null {
 +	return sketch.notice?.trim() || null;
 +}
 +
-+export function isOpen(sketch: ToshSketch): boolean {
++export function isOpen(sketch: XeonSketch): boolean {
 +	return sketch.closed && gap(sketch) > span(sketch) * 1e-4;
 +}
 +
 +/** The points to number: the corners, without the last one of a closed figure, which is its first again. */
 +/** A point where an export writes it: at the figure's coordinates when it has an origin, else from its first point. */
-+export function placed(sketch: ToshSketch, point: number[]): number[] {
++export function placed(sketch: XeonSketch, point: number[]): number[] {
 +	const origin = sketch.origin?.length === 2 ? sketch.origin : null;
 +
 +	return origin ? [point[0] + origin[0], point[1] + origin[1]] : point;
 +}
 +
-+export function corners(sketch: ToshSketch): number[][] {
++export function corners(sketch: XeonSketch): number[][] {
 +	const all = sketch.corners ?? sketch.points;
 +
 +	return sketch.closed ? all.slice(0, -1) : all;
 +}
 +
 +/** A round length near a quarter of the figure, for the scale bar. */
-+export function scaleLength(sketch: ToshSketch): number {
++export function scaleLength(sketch: XeonSketch): number {
 +	const target = Math.max(span(sketch) / 4, 1e-9);
 +	const power = 10 ** Math.floor(Math.log10(target));
 +
@@ -2893,7 +2893,7 @@ index 000000000..71f833bfa
 +
 +/** The figure as an SVG drawing of the given size: north up, numbered corners, the gap left open in red. */
 +export function svg(
-+	sketch: ToshSketch,
++	sketch: XeonSketch,
 +	width: number,
 +	height: number,
 +	colors: { line: string; text: string }
@@ -2983,8 +2983,8 @@ index 000000000..71f833bfa
 +	return value.toFixed(3);
 +}
 +
-+/** The figure as an R12 DXF in its own unit, the first point at the origin, as ToshLLM exports it. */
-+export function dxf(sketch: ToshSketch): string {
++/** The figure as an R12 DXF in its own unit, the first point at the origin, as XeonLLM exports it. */
++export function dxf(sketch: XeonSketch): string {
 +	const out = [
 +		'0',
 +		'SECTION',
@@ -3114,7 +3114,7 @@ index 000000000..71f833bfa
 +}
 +
 +/** The numbered corners, east and north of the first one. */
-+export function csv(sketch: ToshSketch): string {
++export function csv(sketch: XeonSketch): string {
 +	const suffix = sketch.unit ? `_${sketch.unit}` : '';
 +	// a column rather than a comment line, which some table imports reject
 +	const note = notice(sketch);
@@ -3132,7 +3132,7 @@ index 000000000..71f833bfa
 +}
 +
 +/** A PNG of the drawing on white, twice its size, as a report wants it. */
-+export async function png(sketch: ToshSketch): Promise<Blob | null> {
++export async function png(sketch: XeonSketch): Promise<Blob | null> {
 +	const drawing = svg(sketch, 1200, 800, { line: '#2563eb', text: '#111' });
 +	const image = new Image();
 +
@@ -3167,7 +3167,7 @@ index b52485ade..999f3cf61 100644
 +++ b/tools/ui/src/lib/types/api.d.ts
 @@ -1,9 +1,10 @@
  import type { ChatMessagePromptProgress, ChatRole } from './chat';
-+import type { ToshChunk } from './tosh';
++import type { XeonChunk } from './xeon';
  import type {
  	ContentPartType,
  	FileTypeAudio,
@@ -3185,8 +3185,8 @@ index b52485ade..999f3cf61 100644
  }
  
  export interface ApiLlamaCppServerProps {
-+	/** The server answers chat requests that bring no tools with its own Tosh agent. */
-+	tosh_agent?: boolean;
++	/** The server answers chat requests that bring no tools with its own Xeon agent. */
++	xeon_agent?: boolean;
  	default_generation_settings: {
  		id: number;
  		id_task: number;
@@ -3204,7 +3204,7 @@ index b52485ade..999f3cf61 100644
  }
  
  export interface ApiChatCompletionStreamChunk {
-+	tosh?: ToshChunk;
++	xeon?: XeonChunk;
  	id?: string;
  	object?: string;
  	model?: string;
@@ -3218,7 +3218,7 @@ index 57b77f06c..ce53e99f8 100644
 --- a/tools/ui/src/lib/types/database.d.ts
 +++ b/tools/ui/src/lib/types/database.d.ts
 @@ -1,8 +1,9 @@
-+import type { ToshMessageData } from './tosh';
++import type { XeonMessageData } from './xeon';
  import { AttachmentType, ReasoningEffort, ToolSource } from '$lib/enums';
  import type { ChatMessageTimings, ChatMessageType, ChatRole } from '$lib/types/chat';
  
@@ -3236,8 +3236,8 @@ index 57b77f06c..ce53e99f8 100644
  	thinking?: string;
  	/** Reasoning content produced by the model (separate from visible content) */
  	reasoningContent?: string;
-+	/** What the server's Tosh agent reported for this answer: its steps, a sketch, a map */
-+	tosh?: ToshMessageData;
++	/** What the server's Xeon agent reported for this answer: its steps, a sketch, a map */
++	xeon?: XeonMessageData;
  	/** Serialized JSON array of tool calls made by assistant messages */
  	toolCalls?: string;
  	/** Chat completion id streamed by the server, used to target realtime control (e.g. end reasoning) */
@@ -3260,13 +3260,13 @@ index 453af9bb8..21273ad03 100644
  // Splash
  export type { SplashDimensions } from './splash';
 +export type {
-+	ToshCall,
-+	ToshChunk,
-+	ToshMapLayer,
-+	ToshMapRequest,
-+	ToshMessageData,
-+	ToshSketch
-+} from './tosh';
++	XeonCall,
++	XeonChunk,
++	XeonMapLayer,
++	XeonMapRequest,
++	XeonMessageData,
++	XeonSketch
++} from './xeon';
 diff --git a/tools/ui/src/lib/types/settings.d.ts b/tools/ui/src/lib/types/settings.d.ts
 index 377a57040..20260b4c3 100644
 --- a/tools/ui/src/lib/types/settings.d.ts
@@ -3275,7 +3275,7 @@ index 377a57040..20260b4c3 100644
  import type { ChatMessagePromptProgress, ChatMessageTimings } from './chat';
  import type { DatabaseMessageExtra } from './database';
  import type { OpenAIToolDefinition } from './mcp';
-+import type { ToshChunk } from './tosh';
++import type { XeonChunk } from './xeon';
  import type { Icon } from '@lucide/svelte';
  import type { SETTING_CONFIG_DEFAULT, SETTINGS_SECTION_TITLES } from '$lib/constants';
  import type {
@@ -3293,9 +3293,9 @@ index 377a57040..20260b4c3 100644
  	onModel?: (model: string) => void;
  	onCompletionId?: (id: string) => void;
  	onTimings?: (timings?: ChatMessageTimings, promptProgress?: ChatMessagePromptProgress) => void;
-+	onTosh?: (tosh: ToshChunk) => void;
-+	/** "off" asks a server with a Tosh agent for raw inference, as an internal request such as a title wants */
-+	toshAgent?: 'off';
++	onXeon?: (xeon: XeonChunk) => void;
++	/** "off" asks a server with a Xeon agent for raw inference, as an internal request such as a title wants */
++	xeonAgent?: 'off';
  	onComplete?: (
  		response: string,
  		reasoningContent?: string,
@@ -3304,14 +3304,14 @@ index 377a57040..20260b4c3 100644
  	) => void;
  	onError?: (error: Error) => void;
  	onConnectionState?: (state: StreamConnectionState) => void;
-diff --git a/tools/ui/src/lib/types/tosh.d.ts b/tools/ui/src/lib/types/tosh.d.ts
+diff --git a/tools/ui/src/lib/types/xeon.d.ts b/tools/ui/src/lib/types/xeon.d.ts
 new file mode 100644
 index 000000000..30f3ddc58
 --- /dev/null
-+++ b/tools/ui/src/lib/types/tosh.d.ts
++++ b/tools/ui/src/lib/types/xeon.d.ts
 @@ -0,0 +1,60 @@
-+/** A call the server's Tosh agent made while it answered, as its progress events report it. */
-+export interface ToshCall {
++/** A call the server's Xeon agent made while it answered, as its progress events report it. */
++export interface XeonCall {
 +	id?: string;
 +	tool?: string;
 +	arguments?: unknown;
@@ -3322,7 +3322,7 @@ index 000000000..30f3ddc58
 +}
 +
 +/** A figure the agent attached to an answer in a plane of its own, such as a tract from a deed's calls. */
-+export interface ToshSketch {
++export interface XeonSketch {
 +	title?: string;
 +	unit: string;
 +	points: number[][];
@@ -3337,12 +3337,12 @@ index 000000000..30f3ddc58
 +	prj?: string;
 +}
 +
-+export interface ToshMapRequest {
++export interface XeonMapRequest {
 +	calls: unknown[];
 +	show?: boolean;
 +}
 +
-+export interface ToshMapLayer {
++export interface XeonMapLayer {
 +	title?: string;
 +	type?: string;
 +	features: unknown[];
@@ -3353,22 +3353,22 @@ index 000000000..30f3ddc58
 +	drawn?: boolean;
 +}
 +
-+/** The `tosh` object of a chunk: a progress event while the agent works, or the answer's metadata at the end. */
-+export interface ToshChunk {
++/** The `xeon` object of a chunk: a progress event while the agent works, or the answer's metadata at the end. */
++export interface XeonChunk {
 +	version?: number;
-+	event?: { type: string; call?: ToshCall; [key: string]: unknown };
-+	sketches?: ToshSketch[];
-+	map_request?: ToshMapRequest;
-+	map?: { layers: ToshMapLayer[] };
++	event?: { type: string; call?: XeonCall; [key: string]: unknown };
++	sketches?: XeonSketch[];
++	map_request?: XeonMapRequest;
++	map?: { layers: XeonMapLayer[] };
 +	[key: string]: unknown;
 +}
 +
 +/** What an assistant message keeps of the agent's work. */
-+export interface ToshMessageData {
-+	steps?: ToshCall[];
-+	sketches?: ToshSketch[];
-+	mapRequest?: ToshMapRequest;
-+	map?: { layers: ToshMapLayer[] };
++export interface XeonMessageData {
++	steps?: XeonCall[];
++	sketches?: XeonSketch[];
++	mapRequest?: XeonMapRequest;
++	map?: { layers: XeonMapLayer[] };
 +}
 diff --git a/tools/ui/src/lib/utils/convert-files-to-extra.ts b/tools/ui/src/lib/utils/convert-files-to-extra.ts
 index 735e91c44..507e2bb28 100644

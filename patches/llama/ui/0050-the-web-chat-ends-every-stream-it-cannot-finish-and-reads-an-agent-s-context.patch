@@ -6,17 +6,17 @@ index 4da104717..92fe5b9c3 100644
  		abortSignal?: AbortSignal,
  		onConnectionState?: (state: StreamConnectionState) => void,
  		streamModel?: string | null,
--		onTosh?: (tosh: ToshChunk) => void
-+		onTosh?: (tosh: ToshChunk) => void,
+-		onXeon?: (xeon: XeonChunk) => void
++		onXeon?: (xeon: XeonChunk) => void,
 +		maxTokens?: number
  	): Promise<void> {
  		let reader = response.body?.getReader();
  
 @@ -670,6 +671,12 @@ export class ChatService {
- 								// the Tosh agent's progress and metadata; a retract drops the text streamed so far
- 								if (parsed.tosh && typeof parsed.tosh === 'object') {
- 									const event = parsed.tosh.event;
-+									const used = parsed.tosh.context?.used;
+ 								// the Xeon agent's progress and metadata; a retract drops the text streamed so far
+ 								if (parsed.xeon && typeof parsed.xeon === 'object') {
+ 									const event = parsed.xeon.event;
++									const used = parsed.xeon.context?.used;
 +
 +									// an agent's answer has no timings: the context meter reads its count instead
 +									if (!event && typeof used === 'number' && !lastTimings) {
@@ -75,20 +75,20 @@ index 4da104717..92fe5b9c3 100644
  					signal,
  					onConnectionState,
  					options.model,
--					onTosh
-+					onTosh,
+-					onXeon
++					onXeon,
 +					options.max_tokens ?? undefined
  				);
  
  				return;
-diff --git a/tools/ui/src/lib/types/tosh.d.ts b/tools/ui/src/lib/types/tosh.d.ts
+diff --git a/tools/ui/src/lib/types/xeon.d.ts b/tools/ui/src/lib/types/xeon.d.ts
 index a9936ef8d..aed7989e3 100644
---- a/tools/ui/src/lib/types/tosh.d.ts
-+++ b/tools/ui/src/lib/types/tosh.d.ts
-@@ -48,6 +48,8 @@ export interface ToshChunk {
- 	sketches?: ToshSketch[];
- 	map_request?: ToshMapRequest;
- 	map?: { layers: ToshMapLayer[] };
+--- a/tools/ui/src/lib/types/xeon.d.ts
++++ b/tools/ui/src/lib/types/xeon.d.ts
+@@ -48,6 +48,8 @@ export interface XeonChunk {
+ 	sketches?: XeonSketch[];
+ 	map_request?: XeonMapRequest;
+ 	map?: { layers: XeonMapLayer[] };
 +	/** How full the context is after the turn, as the engine counted it. */
 +	context?: { used?: number | null; n_ctx?: number | null; left_out?: number };
  	[key: string]: unknown;
@@ -176,7 +176,7 @@ index 000000000..f8bf880a8
 +			chunk({
 +				choices: [{ delta: {}, finish_reason: 'stop' }],
 +				usage: { prompt_tokens: 9000, completion_tokens: 40 },
-+				tosh: { version: 1, outcome: 'answered', context: { used: 3120, n_ctx: 8192, left_out: 0 } }
++				xeon: { version: 1, outcome: 'answered', context: { used: 3120, n_ctx: 8192, left_out: 0 } }
 +			}),
 +			'data: [DONE]'
 +		]);

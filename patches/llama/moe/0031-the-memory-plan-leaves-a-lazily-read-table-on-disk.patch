@@ -1,7 +1,7 @@
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 index a93bedbe7..d76ca9a23 100644
---- a/common/tosh-plan.cpp
-+++ b/common/tosh-plan.cpp
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
 @@ -51,16 +51,17 @@ struct moe_info {
      int    n_layer   = 0;
      int    n_moe     = 0;       // layers with an expert bank
@@ -61,7 +61,7 @@ index a93bedbe7..d76ca9a23 100644
              mi.max_tensor_mib = std::max(mi.max_tensor_mib, mib);
              const int il = std::stoi(m[1]);
              if (il >= 0 && il < (int) layer_mib.size()) layer_mib[il] += mib;
-@@ -412,18 +418,18 @@ static std::string plan_product_json(const tosh_plan & p) {
+@@ -412,18 +418,18 @@ static std::string plan_product_json(const xeon_plan & p) {
                         bytes(p.effective_mib), bytes(p.lockable_mib), bytes(p.swap_used_mib), bytes(p.compressed_mib));
      o += string_format(", \"projected_rss_bytes\": %lld, \"projected_vram_bytes\": %lld, \"vram_total_bytes\": %lld, \"vram_free_bytes\": %lld, \"prompt_cache_bytes\": %lld, \"context_checkpoints\": %d, \"checkpoint_bytes\": %lld}",
                         bytes(p.projected_rss_mib), bytes(p.private_mib), bytes(p.vram_total_mib), bytes(p.vram_free_mib), bytes(p.prompt_cache_mib),
@@ -74,7 +74,7 @@ index a93bedbe7..d76ca9a23 100644
 -                       bytes(p.model_mib), p.n_split, bytes(p.host_weights_mib));
 +    o += string_format(", \"model\": {\"model_bytes\": %lld, \"split_count\": %d, \"host_weights_bytes\": %lld, \"host_lazy_bytes\": %lld}",
 +                       bytes(p.model_mib), p.n_split, bytes(p.host_weights_mib), bytes(p.host_lazy_mib));
-     if (p.plan_mode == TOSH_PLAN_MODE_UNSUPPORTED) {
+     if (p.plan_mode == XEON_PLAN_MODE_UNSUPPORTED) {
          o += string_format(", \"unsupported\": {\"required_host_bytes\": %lld, \"available_host_bytes\": %lld, \"required_vram_bytes\": %lld, \"available_vram_bytes\": %lld}",
                             bytes(p.required_host_mib), bytes(p.available_host_mib), bytes(p.required_vram_mib), bytes(p.available_vram_mib));
      }
@@ -82,7 +82,7 @@ index a93bedbe7..d76ca9a23 100644
      return o;
  }
  
-@@ -484,18 +490,18 @@ static void plan_log(const tosh_plan & p) {
+@@ -484,18 +490,18 @@ static void plan_log(const xeon_plan & p) {
          LOG_DBG("  host budget to add: static %.1f GiB (reserve %.1f), current %.1f GiB (headroom %.1f), lockable %.1f GiB -> %.1f GiB\n",
                  p.static_cap_mib/1024, p.static_reserve_mib/1024, p.dynamic_cap_mib/1024, p.headroom_mib/1024, p.lockable_mib/1024, p.effective_mib/1024);
          LOG_DBG("  full host bank %.1f GiB: %s | RAM cache %.1f GiB, coverage %.2f: %s | projected RSS %.1f GiB, reclaimable left %.1f GiB\n",
@@ -96,14 +96,14 @@ index a93bedbe7..d76ca9a23 100644
 +    LOG_DBG("  model %.1f GiB in %d file%s, expert bank %.1f GiB, other weights in host memory %.1f GiB, read on demand %.1f GiB\n",
 +            p.model_mib/1024, p.n_split, p.n_split > 1 ? "s" : "", p.bank_mib/1024, p.host_weights_mib/1024, p.host_lazy_mib/1024);
      LOG_DBG("  selected %s (%s, %s): %s, KV %s, ubatch %d, arena %.0f MiB, projected free %.0f MiB, host %.1f GiB%s%s%s%s\n",
-             p.mode.c_str(), p.code.c_str(), tosh_plan_state_name(p.state), p.reason.c_str(), kv_name(p.kv), p.ubatch, p.arena_mib,
+             p.mode.c_str(), p.code.c_str(), xeon_plan_state_name(p.state), p.reason.c_str(), kv_name(p.kv), p.ubatch, p.arena_mib,
              p.free_mib, p.host_required_mib/1024, p.fallback.empty() ? "" : "; ", p.fallback.c_str(),
              limits.empty() ? "" : "; limits: ", limits.c_str());
      std::string warn;
      for (const auto & w : p.warnings) warn += (warn.empty() ? "" : ",") + w;
-     if (p.plan_mode == TOSH_PLAN_MODE_UNSUPPORTED) {
-         LOG_INF("Tosh Dynamic MoE: mode=%s reason=%s limits=%s required_host=%.1fGiB available_host=%.1fGiB required_vram=%.1fGiB available_vram=%.1fGiB\n",
-@@ -561,17 +567,17 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+     if (p.plan_mode == XEON_PLAN_MODE_UNSUPPORTED) {
+         LOG_INF("Xeon Dynamic MoE: mode=%s reason=%s limits=%s required_host=%.1fGiB available_host=%.1fGiB required_vram=%.1fGiB available_vram=%.1fGiB\n",
+@@ -561,17 +567,17 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
          return false;
      }
      std::string force = (strcmp(mode_env, "1") == 0 || strcmp(mode_env, "auto") == 0) ? "" : mode_env;
@@ -111,18 +111,18 @@ index a93bedbe7..d76ca9a23 100644
      const bool no_dmoe = force == "nodmoe";
      if (no_dmoe) force.clear();
  
-     tosh_plan p;
+     xeon_plan p;
 -    const moe_info mi = read_moe_info(params.model.path.c_str());
 +    const moe_info mi = read_moe_info(params.model.path.c_str(), params.lazy_mode);
      p.n_split = mi.n_split; p.model_mib = mi.total_mib; p.warm_floor_mib = mi.warm_floor_mib;
      if (!mi.error.empty()) {
-         p.state = TOSH_PLAN_UNSUPPORTED; p.mode = "none";
-         p.plan_mode = TOSH_PLAN_MODE_UNSUPPORTED; p.code = tosh_plan_mode_name(p.plan_mode);
+         p.state = XEON_PLAN_UNSUPPORTED; p.mode = "none";
+         p.plan_mode = XEON_PLAN_MODE_UNSUPPORTED; p.code = xeon_plan_mode_name(p.plan_mode);
          p.primary_reason = "SPLIT_GGUF_METADATA_ERROR"; p.limiting_resource = "METADATA";
          p.limits = { "SPLIT_GGUF_METADATA_ERROR", "NO_SAFE_FALLBACK" };
          p.reason = mi.error;
          plan_emit(p);
-@@ -633,26 +639,28 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+@@ -633,26 +639,28 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
          f.model += mi.bank_mib;
          f.host_model = std::max(0.0, f.host_model - mi.bank_mib);
          full.push_back({ kvs[k], f });
@@ -137,10 +137,10 @@ index a93bedbe7..d76ca9a23 100644
 +    p.host_weights_mib = dm[0][0].ok ? std::max(mi.embd_mib, dm[0][0].host_model - mi.bank_mib - mi.lazy_mib) : mi.embd_mib;
 +    p.host_lazy_mib = mi.lazy_mib;
      const bool runtime = host_policy_runtime() && dmoe_built;
-     const tosh_plan base = p;
+     const xeon_plan base = p;
  
      // the decision from one host memory snapshot; run again when memory changed before committing
-     auto decide = [&](const host_mem & hi) -> const tosh_plan_candidate * {
+     auto decide = [&](const host_mem & hi) -> const xeon_plan_candidate * {
      p = base;
      p.host_available_mib = hi.available_mib;
 -    const double host_engine = p.host_weights_mib + dm[0][0].host_other + 1024.0;
@@ -154,11 +154,11 @@ index a93bedbe7..d76ca9a23 100644
          dmoe_block = string_format("host RAM: %.1f GiB needed + %.1f GiB reserve > %.1f GiB",
                                     host_dmoe/1024, p.host_reserve_mib/1024, hi.ram_mib/1024);
      } else if (hi.available_mib > 0 && host_dmoe + HOST_MARGIN_MIB > hi.available_mib) {
-diff --git a/common/tosh-plan.h b/common/tosh-plan.h
+diff --git a/common/xeon-plan.h b/common/xeon-plan.h
 index 430f53fa4..186a81684 100644
---- a/common/tosh-plan.h
-+++ b/common/tosh-plan.h
-@@ -84,16 +84,17 @@ struct tosh_plan {
+--- a/common/xeon-plan.h
++++ b/common/xeon-plan.h
+@@ -84,16 +84,17 @@ struct xeon_plan {
      double      vram_free_mib      = 0;
      double      host_required_mib  = 0;
      double      host_ram_mib       = 0;
@@ -172,7 +172,7 @@ index 430f53fa4..186a81684 100644
      int         n_split            = 1;
      std::string mlock;              // required, not_required, not_lockable
      std::string dispersion;         // normal, high
-     // TOSH_AUTO_HOST_POLICY=runtime (experimental): host memory budget from the machine's state now
+     // XEON_AUTO_HOST_POLICY=runtime (experimental): host memory budget from the machine's state now
      std::string host_policy;        // static, runtime
      std::string host_pressure;      // NORMAL, ELEVATED, CRITICAL
      std::string full_host_code;     // FULL_HOST_SAFE or why the whole bank is not taken

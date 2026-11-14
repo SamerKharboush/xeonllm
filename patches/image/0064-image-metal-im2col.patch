@@ -46,7 +46,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-device.cpp b/ggml/src/ggml-metal/ggm
      char base[256];
      char name[256];
  
-+    static const bool px_off = getenv("TOSH_IM2COL_PX_DISABLE") != nullptr;
++    static const bool px_off = getenv("XEON_IM2COL_PX_DISABLE") != nullptr;
      if (KH*KW <= 1024) {
 -        snprintf(base, 256, "kernel_im2col_%s", ggml_type_name(op->type));
 +        snprintf(base, 256, px_off ? "kernel_im2col_%s" : "kernel_im2col_px_%s", ggml_type_name(op->type));
@@ -93,7 +93,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-m
      };
  
 +    // the tile kernel keeps its staged input under 16 KB of threadgroup memory
-+    static const bool tile_off = getenv("TOSH_IM2COL_TILE_DISABLE") != nullptr;
++    static const bool tile_off = getenv("XEON_IM2COL_TILE_DISABLE") != nullptr;
 +    const int esz = op->type == GGML_TYPE_F16 ? 2 : 4;
 +    int TW = 64;
 +    if (3*((TW - 1)*s0 + 2*d0 + 1)*(32 + 8)*esz > 16384) {
@@ -129,7 +129,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-m
      auto pipeline = ggml_metal_library_get_pipeline_im2col(lib, op);
  
 -    if (KH*KW <= ggml_metal_pipeline_max_theads_per_threadgroup(pipeline)) {
-+    static const bool px_off = getenv("TOSH_IM2COL_PX_DISABLE") != nullptr;
++    static const bool px_off = getenv("XEON_IM2COL_PX_DISABLE") != nullptr;
 +    if (!px_off && KH*KW <= 1024) {
 +        const int nth = std::min<int>(ggml_metal_pipeline_max_theads_per_threadgroup(pipeline), std::min(256, (CHW + 31)/32*32));
 +

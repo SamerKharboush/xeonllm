@@ -5,9 +5,9 @@ index f1e9ed21b..bd956b03f 100644
 @@ -425,7 +425,7 @@ void common_params_print_info(const common_params & params, bool print_devices)
      // releases that only touch the patch. No env var means a direct CLI run.
      {
-         const char * app_version = std::getenv("TOSH_APP_VERSION");
--        COM_INF("%s: ToshLLM engine %s (app %s)\n", __func__, common_tosh_version(),
-+        COM_INF("%s: XeonLLM engine %s (app %s)\n", __func__, common_tosh_version(),
+         const char * app_version = std::getenv("XEON_APP_VERSION");
+-        COM_INF("%s: XeonLLM engine %s (app %s)\n", __func__, common_xeon_version(),
++        COM_INF("%s: XeonLLM engine %s (app %s)\n", __func__, common_xeon_version(),
                  app_version ? app_version : "standalone");
      }
  
@@ -26,7 +26,7 @@ index e7bf010a7..54b418b6e 100644
  #include <unordered_map>
 +#include <vector>
 +
-+// TOSH_METAL_CHECK_KERNELS=1: walk the MUL_MAT and MUL_MAT_ID selectors without compiling and
++// XEON_METAL_CHECK_KERNELS=1: walk the MUL_MAT and MUL_MAT_ID selectors without compiling and
 +// fail on a composed name the library lacks. scripts/check-kernel-coverage.sh runs this.
 +static bool g_metal_check_kernels = false;
 +static std::vector<std::string> g_metal_check_missing;
@@ -39,10 +39,10 @@ index e7bf010a7..54b418b6e 100644
  
 -    const bool w64 = simd_width == 64 && use_mm_manual && !has_tensor &&
 -                     op->ne[1] >= w64_floor &&
--                     TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
+-                     XEON_ENV("XEON_MM_W64_DISABLE") == nullptr;
 +    bool w64 = simd_width == 64 && use_mm_manual && !has_tensor &&
 +               op->ne[1] >= w64_floor &&
-+               TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
++               XEON_ENV("XEON_MM_W64_DISABLE") == nullptr;
  
 -    snprintf(base, 256, "kernel_mul_mm_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "");
 +    auto compose_base = [&]() {
@@ -106,15 +106,15 @@ index e7bf010a7..54b418b6e 100644
      // the 64-lane twin lives in mul_mm_w64.metal, beside the dense one; it has no src1 rescale
      const int simd_width_id = ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width;
 -    const bool w64 = simd_width_id == 64 && use_mm_manual && !amax &&
--                     TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
+-                     XEON_ENV("XEON_MMID_W64_DISABLE") == nullptr;
 +    bool w64 = simd_width_id == 64 && use_mm_manual && !amax &&
-+               TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
++               XEON_ENV("XEON_MMID_W64_DISABLE") == nullptr;
  
      // the narrow mxfp4 kernel is bfloat when the device has the type, and the manual path keeps
      // its packed sums in that type; the wide and 64-lane variants are already half, and so is the
 @@ -2246,9 +2291,41 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id(ggml_m
                           ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->has_bfloat &&
-                          TOSH_ENV("TOSH_MMID_HALF_DISABLE") == nullptr;
+                          XEON_ENV("XEON_MMID_HALF_DISABLE") == nullptr;
  
 -    snprintf(base, 256, "kernel_mul_mm_id_%s_%s%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "", half_id ? "_h" : "");
 +    auto compose_base = [&]() {
@@ -189,7 +189,7 @@ index e7bf010a7..54b418b6e 100644
 +}
 +
 +void ggml_metal_library_check_kernels(ggml_metal_library_t lib) {
-+    if (TOSH_ENV("TOSH_METAL_CHECK_KERNELS") == nullptr) {
++    if (XEON_ENV("XEON_METAL_CHECK_KERNELS") == nullptr) {
 +        return;
 +    }
 +
@@ -279,7 +279,7 @@ index d3ec40553..6776d393b 100644
 +// true if a kernel function with this name is in one of the compiled libraries
 +bool ggml_metal_library_has_function(ggml_metal_library_t lib, const char * name);
 +
-+// TOSH_METAL_CHECK_KERNELS=1: check every pipeline name the MUL_MAT and MUL_MAT_ID selectors
++// XEON_METAL_CHECK_KERNELS=1: check every pipeline name the MUL_MAT and MUL_MAT_ID selectors
 +// can compose; print each missing name and exit non-zero. No-op otherwise.
 +void ggml_metal_library_check_kernels(ggml_metal_library_t lib);
 +
@@ -394,8 +394,8 @@ index 35d101eda..5a7a3ae14 100644
  
      void print_footer() override {
          // the build number only tracks upstream, so name the engine version too
--        fprintf(fout, "\nbuild: %s (%d), ToshLLM engine %s\n", test::build_commit.c_str(), test::build_number,
+-        fprintf(fout, "\nbuild: %s (%d), XeonLLM engine %s\n", test::build_commit.c_str(), test::build_number,
 +        fprintf(fout, "\nbuild: %s (%d), XeonLLM engine %s\n", test::build_commit.c_str(), test::build_number,
-                 common_tosh_version());
+                 common_xeon_version());
      }
  };

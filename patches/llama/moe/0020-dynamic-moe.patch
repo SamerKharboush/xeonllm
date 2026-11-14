@@ -11,7 +11,7 @@ index 3086e81b1..1fa5ffa4d 100644
  option(LLAMA_BUILD_COMMON "llama: build common utils library" ${LLAMA_STANDALONE})
  
  # extra artifacts
-+option(TOSH_ENABLE_DYNAMIC_MOE "tosh: dynamic MoE expert execution" OFF)
++option(XEON_ENABLE_DYNAMIC_MOE "xeon: dynamic MoE expert execution" OFF)
 +
  option(LLAMA_BUILD_TESTS     "llama: build tests"                                                                ${LLAMA_STANDALONE})
  option(LLAMA_BUILD_TOOLS     "llama: build tools"                                                                ${LLAMA_STANDALONE})
@@ -34,8 +34,8 @@ index 2b307c59d..2940c2329 100644
      download.h
      fit.cpp
      fit.h
-+    tosh-plan.cpp
-+    tosh-plan.h
++    xeon-plan.cpp
++    xeon-plan.h
      hf-cache.cpp
      hf-cache.h
      http.h
@@ -94,7 +94,7 @@ index c301c22ca..0d91ce3d9 100644
  #include "../src/llama-ext.h"
  
  #include "fit.h"
-+#include "tosh-plan.h"
++#include "xeon-plan.h"
  #include "log.h"
  #include "llama.h"
  #include "sampling.h"
@@ -121,13 +121,13 @@ index c301c22ca..0d91ce3d9 100644
          COM_TRC("%s", "(for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)\n");
  
          // the draft context is created from the same base params and follows the main context, fit both together
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 new file mode 100644
 index 000000000..e6befba34
 --- /dev/null
-+++ b/common/tosh-plan.cpp
++++ b/common/xeon-plan.cpp
 @@ -0,0 +1,522 @@
-+#include "tosh-plan.h"
++#include "xeon-plan.h"
 +
 +#include "common.h"
 +#include "fit.h"
@@ -136,8 +136,8 @@ index 000000000..e6befba34
 +#include "gguf.h"
 +#include "llama.h"
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#endif
 +
 +#include <algorithm>
@@ -233,7 +233,7 @@ index 000000000..e6befba34
 +        h.available_mib = (double) (vs.free_count + vs.inactive_count + vs.speculative_count + vs.purgeable_count)*vm_page_size/MiB;
 +    }
 +#endif
-+    const double sim = env_mib("TOSH_AUTO_SIM_RAM_MIB", 0);
++    const double sim = env_mib("XEON_AUTO_SIM_RAM_MIB", 0);
 +    if (sim > 0) {
 +        h.wire_limit_mib = h.wire_limit_mib > 0 ? h.wire_limit_mib*sim/h.ram_mib : 0;
 +        h.available_mib = std::min(h.available_mib, sim);
@@ -297,10 +297,10 @@ index 000000000..e6befba34
 +
 +bool read_vram(double & free_mib, double & total_mib) {
 +    free_mib = total_mib = 0;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    size_t f = 0, t = 0;
 +    // free before this process allocated anything; the probes allocate nothing
-+    if (tosh_dmoe_vram(&f, &t) || tosh_vram_read(&f, &t)) {
++    if (xeon_dmoe_vram(&f, &t) || xeon_vram_read(&f, &t)) {
 +        free_mib = f/MiB; total_mib = t/MiB;
 +    }
 +#endif
@@ -311,7 +311,7 @@ index 000000000..e6befba34
 +        ggml_backend_dev_memory(dev, &f, &t);
 +        free_mib = f/MiB; total_mib = t/MiB;
 +    }
-+    const double sim = env_mib("TOSH_AUTO_SIM_VRAM_MIB", 0);
++    const double sim = env_mib("XEON_AUTO_SIM_VRAM_MIB", 0);
 +    if (sim > 0) {
 +        // what other processes hold on the real card is kept as the simulated card's baseline
 +        free_mib = std::max(0.0, sim - (total_mib - free_mib));
@@ -324,14 +324,14 @@ index 000000000..e6befba34
 +
 +} // namespace
 +
-+const char * tosh_plan_state_name(tosh_plan_state s) {
++const char * xeon_plan_state_name(xeon_plan_state s) {
 +    switch (s) {
-+        case TOSH_PLAN_NOT_PLANNED:            return "NOT_PLANNED";
-+        case TOSH_PLAN_FULL_GPU_OPTIMAL:       return "FULL_GPU_OPTIMAL";
-+        case TOSH_PLAN_DMOE_CONTEXT_OPTIMAL:   return "DMOE_CONTEXT_OPTIMAL";
-+        case TOSH_PLAN_DMOE_CAPACITY_REQUIRED: return "DMOE_CAPACITY_REQUIRED";
-+        case TOSH_PLAN_LEGACY_OFFLOAD_BETTER:  return "LEGACY_OFFLOAD_BETTER";
-+        case TOSH_PLAN_UNSUPPORTED:            return "UNSUPPORTED";
++        case XEON_PLAN_NOT_PLANNED:            return "NOT_PLANNED";
++        case XEON_PLAN_FULL_GPU_OPTIMAL:       return "FULL_GPU_OPTIMAL";
++        case XEON_PLAN_DMOE_CONTEXT_OPTIMAL:   return "DMOE_CONTEXT_OPTIMAL";
++        case XEON_PLAN_DMOE_CAPACITY_REQUIRED: return "DMOE_CAPACITY_REQUIRED";
++        case XEON_PLAN_LEGACY_OFFLOAD_BETTER:  return "LEGACY_OFFLOAD_BETTER";
++        case XEON_PLAN_UNSUPPORTED:            return "UNSUPPORTED";
 +    }
 +    return "?";
 +}
@@ -342,9 +342,9 @@ index 000000000..e6befba34
 +    return o + "\"";
 +}
 +
-+std::string tosh_plan_json(const tosh_plan & p) {
++std::string xeon_plan_json(const xeon_plan & p) {
 +    std::string o = "{";
-+    o += "\"state\": " + jstr(tosh_plan_state_name(p.state));
++    o += "\"state\": " + jstr(xeon_plan_state_name(p.state));
 +    o += ", \"mode\": " + jstr(p.mode);
 +    o += ", \"reason\": " + jstr(p.reason);
 +    o += ", \"fallback\": " + jstr(p.fallback);
@@ -367,7 +367,7 @@ index 000000000..e6befba34
 +    return o + "]}";
 +}
 +
-+static void plan_log(const tosh_plan & p) {
++static void plan_log(const xeon_plan & p) {
 +            p.n_ctx, p.vram_total_mib/1024, p.vram_free_mib/1024, p.reserve_mib/1024);
 +    for (const auto & c : p.candidates) {
 +                c.private_mib, c.free_mib, c.arena_mib, c.valid ? "valid" : "rejected", c.reason.c_str());
@@ -387,13 +387,13 @@ index 000000000..e6befba34
 +    }
 +}
 +
-+bool tosh_plan_apply(common_params & params, tosh_plan * out) {
-+    const char * mode_env = getenv("TOSH_AUTO");
++bool xeon_plan_apply(common_params & params, xeon_plan * out) {
++    const char * mode_env = getenv("XEON_AUTO");
 +    if (mode_env == nullptr || strcmp(mode_env, "0") == 0 || strcmp(mode_env, "off") == 0) {
 +        return false;
 +    }
-+    if (getenv("TOSH_DMOE_CACHE_MIB") != nullptr || getenv("TOSH_DMOE_RESIDENCY") != nullptr) {
-+        LOG_WRN("%s: TOSH_DMOE_* set by hand, the auto plan steps aside\n", __func__);
++    if (getenv("XEON_DMOE_CACHE_MIB") != nullptr || getenv("XEON_DMOE_RESIDENCY") != nullptr) {
++        LOG_WRN("%s: XEON_DMOE_* set by hand, the auto plan steps aside\n", __func__);
 +        return false;
 +    }
 +    std::string force = (strcmp(mode_env, "1") == 0 || strcmp(mode_env, "auto") == 0) ? "" : mode_env;
@@ -401,7 +401,7 @@ index 000000000..e6befba34
 +    const bool no_dmoe = force == "nodmoe";
 +    if (no_dmoe) force.clear();
 +
-+    tosh_plan p;
++    xeon_plan p;
 +    const moe_info mi = read_moe_info(params.model.path.c_str());
 +    if (!mi.moe) {
 +        if (out) *out = p;
@@ -412,7 +412,7 @@ index 000000000..e6befba34
 +    p.bank_mib = mi.bank_mib;
 +    const double per_expert = mi.bank_mib/std::max(1, mi.n_moe*mi.n_expert);
 +    // below one token's worth of experts the arena mostly misses and the host does the work
-+    p.min_arena_mib = std::max(256.0, env_mib("TOSH_AUTO_MIN_ARENA_MIB", mi.n_moe*mi.n_used*per_expert));
++    p.min_arena_mib = std::max(256.0, env_mib("XEON_AUTO_MIN_ARENA_MIB", mi.n_moe*mi.n_used*per_expert));
 +    // each chunk touches most experts when every token picks a large share of them
 +    const bool high = mi.n_expert > 0 && (double) mi.n_used/mi.n_expert > 1.0/16;
 +    p.dispersion = high ? "high" : "normal";
@@ -420,14 +420,14 @@ index 000000000..e6befba34
 +
 +    // cache types to consider
 +    std::vector<ggml_type> kvs;
-+    const std::string kv_env = getenv("TOSH_AUTO_KV") ? getenv("TOSH_AUTO_KV") : "auto";
++    const std::string kv_env = getenv("XEON_AUTO_KV") ? getenv("XEON_AUTO_KV") : "auto";
 +    if (kv_env == "auto") {
 +        kvs = { GGML_TYPE_F16, GGML_TYPE_Q8_0 };
 +    } else {
 +        const ggml_type t = kv_env == "f16" ? GGML_TYPE_F16 : kv_env == "q8_0" ? GGML_TYPE_Q8_0 :
 +                            kv_env == "turbo4" ? GGML_TYPE_TURBO4_0 : GGML_TYPE_COUNT;
 +        if (t == GGML_TYPE_COUNT) {
-+            LOG_WRN("%s: unknown TOSH_AUTO_KV=%s, using auto\n", __func__, kv_env.c_str());
++            LOG_WRN("%s: unknown XEON_AUTO_KV=%s, using auto\n", __func__, kv_env.c_str());
 +            kvs = { GGML_TYPE_F16, GGML_TYPE_Q8_0 };
 +        } else {
 +            kvs = { t };
@@ -441,7 +441,7 @@ index 000000000..e6befba34
 +    const int ub_full = params.n_ubatch;
 +    probe dm[4][4];
 +    bool dmoe_built = false;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    dmoe_built = true;
 +#endif
 +    std::vector<std::pair<ggml_type, probe>> full;
@@ -474,7 +474,7 @@ index 000000000..e6befba34
 +            // the weights kept in RAM and the staging are locked too
 +            bounded_warm = std::min({ mi.bank_mib, budget, p.lockable_mib - host_engine - staging_mib });
 +    const double slots    = 3.0*mi.max_tensor_mib;   // prefill uploads
-+    const double overhead = env_mib("TOSH_DMOE_OVERHEAD_MIB", 64);
++    const double overhead = env_mib("XEON_DMOE_OVERHEAD_MIB", 64);
 +    const double weights_full = full[0].second.ok ? full[0].second.model : mi.bank_mib;
 +    const bool weights_fit = weights_full + 512.0 <= p.vram_free_mib;
 +
@@ -482,7 +482,7 @@ index 000000000..e6befba34
 +        p.candidates.clear();
 +        p.reserve_mib = R;
 +        for (auto & [kv, pr] : full) {
-+            tosh_plan_candidate c;
++            xeon_plan_candidate c;
 +            c.name = std::string("full_gpu+") + kv_name(kv); c.mode = "full_gpu"; c.kv = kv; c.ubatch = ub_full;
 +            c.private_mib = pr.model + pr.context + pr.compute;
 +            c.free_mib    = p.vram_free_mib - c.private_mib;
@@ -494,7 +494,7 @@ index 000000000..e6befba34
 +        for (size_t k = 0; k < kvs.size() && dmoe_built; ++k) {
 +            for (int u = 0; u < 3; ++u) {
 +                const probe & pr = dm[k][u];
-+                tosh_plan_candidate c;
++                xeon_plan_candidate c;
 +                c.name = std::string("dmoe+") + kv_name(kvs[k]); c.mode = "dmoe"; c.kv = kvs[k]; c.ubatch = ubs[u];
 +                const double base = pr.model + pr.context + pr.compute;
 +                c.arena_mib   = std::max(0.0, p.vram_free_mib - base - slots - overhead - R);
@@ -506,7 +506,7 @@ index 000000000..e6befba34
 +        }
 +        // legacy: the fewest layers of experts on the host that leave the reserve
 +        for (auto & [kv, pr] : full) {
-+            tosh_plan_candidate c;
++            xeon_plan_candidate c;
 +            c.name = std::string("legacy+") + kv_name(kv); c.mode = "legacy_offload"; c.kv = kv; c.ubatch = ub_full;
 +            const double per_layer = mi.bank_mib/std::max(1, mi.n_moe);
 +            const double full_priv = pr.model + pr.context + pr.compute;
@@ -524,18 +524,18 @@ index 000000000..e6befba34
 +        }
 +    };
 +
-+    auto find = [&](const std::string & mode, ggml_type kv, int ub) -> tosh_plan_candidate * {
++    auto find = [&](const std::string & mode, ggml_type kv, int ub) -> xeon_plan_candidate * {
 +        for (auto & c : p.candidates) if (c.mode == mode && c.kv == kv && (ub == 0 || c.ubatch == ub)) return &c;
 +        return nullptr;
 +    };
 +
 +    // the ubatch for a DMoE candidate: larger ones speed prefill but take compute memory from the arena
-+    auto pick_ub = [&](ggml_type kv) -> tosh_plan_candidate * {
-+        tosh_plan_candidate * c512 = find("dmoe", kv, 512);
++    auto pick_ub = [&](ggml_type kv) -> xeon_plan_candidate * {
++        xeon_plan_candidate * c512 = find("dmoe", kv, 512);
 +        if (c512 == nullptr || !c512->valid) return nullptr;
 +        const double a = c512->arena_mib;
-+        tosh_plan_candidate * c1k = find("dmoe", kv, 1024);
-+        tosh_plan_candidate * c2k = find("dmoe", kv, 2048);
++        xeon_plan_candidate * c1k = find("dmoe", kv, 1024);
++        xeon_plan_candidate * c2k = find("dmoe", kv, 2048);
 +        // what a larger ubatch takes from the arena is paid in decode misses, as a share of the bank
 +        const double cost = 0.10*mi.bank_mib;
 +        if (high && c2k && c2k->valid && a - c2k->arena_mib <= cost) return c2k;
@@ -543,7 +543,7 @@ index 000000000..e6befba34
 +        return c512;
 +    };
 +
-+    const tosh_plan_candidate * sel = nullptr;
++    const xeon_plan_candidate * sel = nullptr;
 +    // VRAM kept free after every known allocation, for the desktop and other apps; the plan
 +    // already counts weights, KV, compute, prefill slots and the driver margin
 +    // an MTP head adds its own context and buffers after the plan; past the reserve the driver pages
@@ -551,15 +551,15 @@ index 000000000..e6befba34
 +    const auto & spec_types = params.speculative.types;
 +    const bool mtp = std::find(spec_types.begin(), spec_types.end(), COMMON_SPECULATIVE_TYPE_DRAFT_MTP) != spec_types.end();
 +        evaluate(R);
-+        const tosh_plan_candidate * f16 = find("full_gpu", kvs[0], 0);
-+        const tosh_plan_candidate * q8  = kvs.size() > 1 ? find("full_gpu", kvs[1], 0) : nullptr;
++        const xeon_plan_candidate * f16 = find("full_gpu", kvs[0], 0);
++        const xeon_plan_candidate * q8  = kvs.size() > 1 ? find("full_gpu", kvs[1], 0) : nullptr;
 +        if (force.empty() || force == "full") {
 +            if (f16 && f16->valid) { sel = f16; p.reason = "the model and the requested context fit with the reserve"; }
 +            else if (q8 && q8->valid) { sel = q8; p.reason = "q8_0 cache makes the full model fit with the reserve"; }
 +        }
 +        if (sel == nullptr && !no_dmoe && (force.empty() || force == "dmoe")) {
-+            tosh_plan_candidate * a = pick_ub(kvs[0]);
-+            tosh_plan_candidate * b = kvs.size() > 1 ? pick_ub(kvs[1]) : nullptr;
++            xeon_plan_candidate * a = pick_ub(kvs[0]);
++            xeon_plan_candidate * b = kvs.size() > 1 ? pick_ub(kvs[1]) : nullptr;
 +            // the q8_0 cache is worth it when its savings buy a material share of the bank
 +            if (a && b && a->arena_mib < 0.9*mi.bank_mib && b->arena_mib - a->arena_mib >= 0.10*mi.bank_mib) {
 +                sel = b; p.reason = "q8_0 cache gives the expert arena a material share of the bank";
@@ -570,8 +570,8 @@ index 000000000..e6befba34
 +            }
 +        }
 +        if (sel == nullptr && (force.empty() || force == "legacy")) {
-+            const tosh_plan_candidate * l16 = find("legacy_offload", kvs[0], 0);
-+            const tosh_plan_candidate * l8  = kvs.size() > 1 ? find("legacy_offload", kvs[1], 0) : nullptr;
++            const xeon_plan_candidate * l16 = find("legacy_offload", kvs[0], 0);
++            const xeon_plan_candidate * l8  = kvs.size() > 1 ? find("legacy_offload", kvs[1], 0) : nullptr;
 +            if (l16 && l16->valid) sel = l16; else if (l8 && l8->valid) sel = l8;
 +            if (sel) p.reason = "mixed execution is not available here; expert layers go to the host";
 +        }
@@ -581,21 +581,21 @@ index 000000000..e6befba34
 +    }
 +
 +    if (sel == nullptr) {
-+        p.state  = TOSH_PLAN_UNSUPPORTED;
++        p.state  = XEON_PLAN_UNSUPPORTED;
 +        p.mode   = "none";
 +        p.reason = "no configuration fits the requested context with the minimum reserve";
 +    } else {
 +        p.mode = sel->mode; p.kv = sel->kv; p.ubatch = sel->ubatch; p.ncmoe = sel->ncmoe;
 +        p.arena_mib = sel->arena_mib; p.private_mib = sel->private_mib; p.free_mib = sel->free_mib;
 +        if (sel->mode == "full_gpu") {
-+            p.state = TOSH_PLAN_FULL_GPU_OPTIMAL;
++            p.state = XEON_PLAN_FULL_GPU_OPTIMAL;
 +            p.host_required_mib = host_engine;
 +            p.mlock = "not_required";
 +        } else if (sel->mode == "dmoe") {
-+            p.state = weights_fit ? TOSH_PLAN_DMOE_CONTEXT_OPTIMAL : TOSH_PLAN_DMOE_CAPACITY_REQUIRED;
++            p.state = weights_fit ? XEON_PLAN_DMOE_CONTEXT_OPTIMAL : XEON_PLAN_DMOE_CAPACITY_REQUIRED;
 +            p.host_required_mib = host_dmoe;
 +        } else {
-+            p.state = TOSH_PLAN_LEGACY_OFFLOAD_BETTER;
++            p.state = XEON_PLAN_LEGACY_OFFLOAD_BETTER;
 +            p.host_required_mib = mi.bank_mib*sel->ncmoe/std::max(1, mi.n_moe) + host_engine;
 +            p.mlock = "not_required";
 +            if (!dmoe_block.empty()) p.fallback = dmoe_block;
@@ -619,16 +619,16 @@ index 000000000..e6befba34
 +    }
 +        add_override(params, experts_pattern());
 +        params.load_mode = LLAMA_LOAD_MODE_MLOCK;
-+        setenv("TOSH_DMOE_CACHE_MIB", "auto", 1);
-+        setenv("TOSH_DMOE_RESERVE_MIB", string_format("%.0f", p.reserve_mib).c_str(), 1);
-+        setenv("TOSH_DMOE_MIN_ARENA_MIB", string_format("%.0f", p.min_arena_mib).c_str(), 1);
-+        setenv("TOSH_DMOE_RARE_ROWS", "auto", 0);
-+        setenv("TOSH_DMOE_RARE_TAIL", "0", 0);
++        setenv("XEON_DMOE_CACHE_MIB", "auto", 1);
++        setenv("XEON_DMOE_RESERVE_MIB", string_format("%.0f", p.reserve_mib).c_str(), 1);
++        setenv("XEON_DMOE_MIN_ARENA_MIB", string_format("%.0f", p.min_arena_mib).c_str(), 1);
++        setenv("XEON_DMOE_RARE_ROWS", "auto", 0);
++        setenv("XEON_DMOE_RARE_TAIL", "0", 0);
 +        setenv("GGML_SCHED_PREFETCH_EXPERTS", "1", 0);
 +        setenv("GGML_CPU_NO_REPACK", "1", 0);
 +        // the host executor computes the missed experts on every core; the backend's own threads find little
 +        // CPU work here (verify windows and prompts included) and only compete with it for the cores
-+        const int cpu_threads = (int) env_mib("TOSH_DMOE_LLAMA_THREADS", 2);
++        const int cpu_threads = (int) env_mib("XEON_DMOE_LLAMA_THREADS", 2);
 +        if (cpu_threads > 0) {
 +            for (auto * cp : { &params.cpuparams, &params.cpuparams_batch }) {
 +                if (cp->n_threads <= 0 || cp->n_threads > cpu_threads) {
@@ -636,8 +636,8 @@ index 000000000..e6befba34
 +                }
 +            }
 +        }
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+        tosh_dmoe_enable();
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++        xeon_dmoe_enable();
 +#endif
 +    } else if (p.mode == "legacy_offload") {
 +        for (int i = 0; i < p.ncmoe; ++i) {
@@ -649,11 +649,11 @@ index 000000000..e6befba34
 +    }
 +    return true;
 +}
-diff --git a/common/tosh-plan.h b/common/tosh-plan.h
+diff --git a/common/xeon-plan.h b/common/xeon-plan.h
 new file mode 100644
 index 000000000..5b7c55fe7
 --- /dev/null
-+++ b/common/tosh-plan.h
++++ b/common/xeon-plan.h
 @@ -0,0 +1,67 @@
 +#pragma once
 +
@@ -665,19 +665,19 @@ index 000000000..5b7c55fe7
 +struct common_params;
 +
 +// Context-first memory plan for MoE models: the requested context and a VRAM reserve come first,
-+// expert residency takes what is left. Enabled by TOSH_AUTO (auto, or full / dmoe / legacy to
-+// force an execution mode); TOSH_AUTO_KV picks the cache type (auto, f16, q8_0, turbo4).
++// expert residency takes what is left. Enabled by XEON_AUTO (auto, or full / dmoe / legacy to
++// force an execution mode); XEON_AUTO_KV picks the cache type (auto, f16, q8_0, turbo4).
 +
-+enum tosh_plan_state {
-+    TOSH_PLAN_NOT_PLANNED,          // dense model, or planning off
-+    TOSH_PLAN_FULL_GPU_OPTIMAL,     // weights and the requested workload fit with the reserve
-+    TOSH_PLAN_DMOE_CONTEXT_OPTIMAL, // the weights fit, the requested context does not
-+    TOSH_PLAN_DMOE_CAPACITY_REQUIRED,
-+    TOSH_PLAN_LEGACY_OFFLOAD_BETTER,
-+    TOSH_PLAN_UNSUPPORTED,
++enum xeon_plan_state {
++    XEON_PLAN_NOT_PLANNED,          // dense model, or planning off
++    XEON_PLAN_FULL_GPU_OPTIMAL,     // weights and the requested workload fit with the reserve
++    XEON_PLAN_DMOE_CONTEXT_OPTIMAL, // the weights fit, the requested context does not
++    XEON_PLAN_DMOE_CAPACITY_REQUIRED,
++    XEON_PLAN_LEGACY_OFFLOAD_BETTER,
++    XEON_PLAN_UNSUPPORTED,
 +};
 +
-+struct tosh_plan_candidate {
++struct xeon_plan_candidate {
 +    std::string name;
 +    std::string mode;               // full_gpu, dmoe, legacy_offload
 +    ggml_type   kv      = GGML_TYPE_F16;
@@ -692,8 +692,8 @@ index 000000000..5b7c55fe7
 +    double      compute_mib = 0;
 +};
 +
-+struct tosh_plan {
-+    tosh_plan_state state = TOSH_PLAN_NOT_PLANNED;
++struct xeon_plan {
++    xeon_plan_state state = XEON_PLAN_NOT_PLANNED;
 +    std::string mode;               // selected execution mode
 +    std::string reason;
 +    std::string fallback;           // why a preferred mode was not used
@@ -715,13 +715,13 @@ index 000000000..5b7c55fe7
 +    double      bank_mib           = 0;
 +    std::string mlock;              // required, not_required, not_lockable
 +    std::string dispersion;         // normal, high
-+    std::vector<tosh_plan_candidate> candidates;
++    std::vector<xeon_plan_candidate> candidates;
 +};
 +
-+const char * tosh_plan_state_name(tosh_plan_state s);
-+std::string  tosh_plan_json(const tosh_plan & plan);
++const char * xeon_plan_state_name(xeon_plan_state s);
++std::string  xeon_plan_json(const xeon_plan & plan);
 +
-+bool tosh_plan_apply(common_params & params, tosh_plan * out = nullptr);
++bool xeon_plan_apply(common_params & params, xeon_plan * out = nullptr);
 diff --git a/ggml/include/ggml.h b/ggml/include/ggml.h
 index 17562a498..c4b6a5e0c 100644
 --- a/ggml/include/ggml.h
@@ -735,9 +735,9 @@ index 17562a498..c4b6a5e0c 100644
  
          GGML_OP_GLU,
  
-+        GGML_OP_TOSH_DMOE_PUBLISH,
-+        GGML_OP_TOSH_DMOE_JOIN,
-+        GGML_OP_TOSH_DMOE_OBSERVE,
++        GGML_OP_XEON_DMOE_PUBLISH,
++        GGML_OP_XEON_DMOE_JOIN,
++        GGML_OP_XEON_DMOE_OBSERVE,
 +
          GGML_OP_COUNT,
      };
@@ -759,14 +759,14 @@ index 17562a498..c4b6a5e0c 100644
 +    // Mixed expert execution: publish hands the layer's routing to a host executor and returns,
 +    // per routed expert, its resident slot or -1; join takes the resident rows from `gpu` and the
 +    // rest from the host. Both run on one backend, so the layer never splits the graph.
-+    GGML_API struct ggml_tensor * ggml_tosh_dmoe_publish(
++    GGML_API struct ggml_tensor * ggml_xeon_dmoe_publish(
 +            struct ggml_context * ctx,
 +            struct ggml_tensor  * cur,        // [n_embd, n_tokens] f32
 +            struct ggml_tensor  * ids,        // [n_expert_used, n_tokens] i32
 +            struct ggml_tensor  * residency,  // [n_expert] i32, slot or -1
 +            int                   il);
 +
-+    GGML_API struct ggml_tensor * ggml_tosh_dmoe_join(
++    GGML_API struct ggml_tensor * ggml_xeon_dmoe_join(
 +            struct ggml_context * ctx,
 +            struct ggml_tensor  * gpu,        // [n_embd, n_expert_used, n_tokens] f32
 +            struct ggml_tensor  * slots,      // publish's result
@@ -774,7 +774,7 @@ index 17562a498..c4b6a5e0c 100644
 +
 +    // wide batches: ids of experts routed to at most `rows` rows of the chunk and not resident
 +    // become -1, and the host computes them; join_wide writes the host rows in place
-+    GGML_API struct ggml_tensor * ggml_tosh_dmoe_publish_wide(
++    GGML_API struct ggml_tensor * ggml_xeon_dmoe_publish_wide(
 +            struct ggml_context * ctx,
 +            struct ggml_tensor  * cur,
 +            struct ggml_tensor  * ids,
@@ -783,14 +783,14 @@ index 17562a498..c4b6a5e0c 100644
 +            int                   rows,
 +            int                   tail);      // the chunk's last `tail` tokens stay on the GPU
 +
-+    GGML_API struct ggml_tensor * ggml_tosh_dmoe_join_wide(
++    GGML_API struct ggml_tensor * ggml_xeon_dmoe_join_wide(
 +            struct ggml_context * ctx,
 +            struct ggml_tensor  * gpu,
 +            struct ggml_tensor  * wide_ids,
 +            int                   il);
 +
 +    // copies a layer's routing to the host for the residency policy, nothing else
-+    GGML_API struct ggml_tensor * ggml_tosh_dmoe_observe(
++    GGML_API struct ggml_tensor * ggml_xeon_dmoe_observe(
 +            struct ggml_context * ctx,
 +            struct ggml_tensor  * ids,        // [n_expert_used, n_tokens] i32
 +            int                   il);
@@ -816,8 +816,8 @@ index 56466ce7b..3da878c0e 100644
      message(FATAL_ERROR "GGML_BACKEND_DL requires BUILD_SHARED_LIBS")
  endif()
  
-+if (TOSH_ENABLE_DYNAMIC_MOE)
-+    set(TOSH_MOE_SOURCES ${CMAKE_SOURCE_DIR}/tosh-moe/tosh-dmoe.cpp ${CMAKE_SOURCE_DIR}/tosh-moe/tosh-hostcache.cpp)
++if (XEON_ENABLE_DYNAMIC_MOE)
++    set(XEON_MOE_SOURCES ${CMAKE_SOURCE_DIR}/xeon-moe/xeon-dmoe.cpp ${CMAKE_SOURCE_DIR}/xeon-moe/xeon-hostcache.cpp)
 +endif()
 +
  add_library(ggml-base
@@ -837,12 +837,12 @@ index 56466ce7b..3da878c0e 100644
              ggml-quants.c
              ggml-quants.h
              ggml-turbo-quant.c
-+            ${TOSH_MOE_SOURCES}
++            ${XEON_MOE_SOURCES}
              gguf.cpp)
  
-+if (TOSH_ENABLE_DYNAMIC_MOE)
-+    target_include_directories(ggml-base PUBLIC ${CMAKE_SOURCE_DIR}/tosh-moe)
-+    target_compile_definitions(ggml-base PUBLIC TOSH_ENABLE_DYNAMIC_MOE)
++if (XEON_ENABLE_DYNAMIC_MOE)
++    target_include_directories(ggml-base PUBLIC ${CMAKE_SOURCE_DIR}/xeon-moe)
++    target_compile_definitions(ggml-base PUBLIC XEON_ENABLE_DYNAMIC_MOE)
 +endif()
 +
  set_target_properties(ggml-base PROPERTIES
@@ -866,15 +866,15 @@ index 2cc32ec89..3ef9afa8c 100644
  #include "ggml-backend-impl.h"
  #include "ggml-alloc.h"
  #include "ggml-impl.h"
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#else
-+static inline bool   tosh_dmoe_compact(void) { return false; }
-+static inline float  tosh_dmoe_token_decay(void) { return 0.0f; }
-+static inline void   tosh_dmoe_set_chunk_rows(const int32_t *, const float *, int) {}
-+static inline void   tosh_dmoe_note_time(int, int64_t) {}
-+static inline void   tosh_dmoe_timeline(int, int, double, double) {}
-+static inline double tosh_dmoe_host_seconds(void) { return 0.0; }
++static inline bool   xeon_dmoe_compact(void) { return false; }
++static inline float  xeon_dmoe_token_decay(void) { return 0.0f; }
++static inline void   xeon_dmoe_set_chunk_rows(const int32_t *, const float *, int) {}
++static inline void   xeon_dmoe_note_time(int, int64_t) {}
++static inline void   xeon_dmoe_timeline(int, int, double, double) {}
++static inline double xeon_dmoe_host_seconds(void) { return 0.0; }
 +#endif
  
  #include <assert.h>
@@ -914,7 +914,7 @@ index 2cc32ec89..3ef9afa8c 100644
                          node->op == GGML_OP_MUL_MAT_ID && node->src[0] == input_cpy) {
                          const ggml_tensor * ids = node->src[2];
                          const int64_t n_expert = input->ne[2];
-+                        const bool compact = tosh_dmoe_compact();
++                        const bool compact = xeon_dmoe_compact();
 +                        if ((compact || ids->ne[0]*ids->ne[1] >= 2*n_expert) &&
                              ggml_backend_sched_prefetch_init(sched, split_backend, ggml_nbytes(input))) {
 +                            if (compact) {
@@ -930,16 +930,16 @@ index 2cc32ec89..3ef9afa8c 100644
 +                                }
 +                                if (ids_tensor != chunk_rows_ids) {
 +                                    const int64_t t_wait = ggml_time_us();
-+                                    const double tl_wait = tosh_dmoe_host_seconds();
++                                    const double tl_wait = xeon_dmoe_host_seconds();
 +                                    chunk_ids.resize(ggml_nbytes(ids_tensor) / sizeof(int32_t));
 +                                    ggml_backend_tensor_get_async(ids_backend, ids_tensor, chunk_ids.data(), 0, ggml_nbytes(ids_tensor));
 +                                    ggml_backend_synchronize(ids_backend);
 +                                    const int64_t t_count = ggml_time_us();
-+                                    tosh_dmoe_note_time(0, t_count - t_wait);
-+                                    tosh_dmoe_timeline(0, -1, tl_wait, tosh_dmoe_host_seconds());
++                                    xeon_dmoe_note_time(0, t_count - t_wait);
++                                    xeon_dmoe_timeline(0, -1, tl_wait, xeon_dmoe_host_seconds());
 +                                    chunk_rows.assign(n_expert, 0);
 +                                    chunk_tail.assign(n_expert, 0.0f);
-+                                    const float decay = tosh_dmoe_token_decay();
++                                    const float decay = xeon_dmoe_token_decay();
 +                                    float w = 1.0f;
 +                                    for (int64_t i1 = ids_tensor->ne[1] - 1; i1 >= 0; i1--, w *= decay) {
 +                                        for (int64_t i0 = 0; i0 < ids_tensor->ne[0]; i0++) {
@@ -953,9 +953,9 @@ index 2cc32ec89..3ef9afa8c 100644
 +                                        }
 +                                    }
 +                                    chunk_rows_ids = ids_tensor;
-+                                    tosh_dmoe_note_time(3, ggml_time_us() - t_count);
++                                    xeon_dmoe_note_time(3, ggml_time_us() - t_count);
 +                                }
-+                                tosh_dmoe_set_chunk_rows(chunk_rows.data(), chunk_tail.data(), (int) n_expert);
++                                xeon_dmoe_set_chunk_rows(chunk_rows.data(), chunk_tail.data(), (int) n_expert);
 +                            }
                              const int slot = sched->prefetch_cur;
                              sched->prefetch_cur = (sched->prefetch_cur + 1) % sched->prefetch_n_slots;
@@ -972,12 +972,12 @@ index 2cc32ec89..3ef9afa8c 100644
                              input_cpy->buffer = sched->prefetch_slots[slot];
                              input_cpy->data   = ggml_backend_buffer_get_base(sched->prefetch_slots[slot]);
 +                            const int64_t t_up = compact ? ggml_time_us() : 0;
-+                            const double tl_up = compact ? tosh_dmoe_host_seconds() : 0.0;
++                            const double tl_up = compact ? xeon_dmoe_host_seconds() : 0.0;
                              ggml_backend_tensor_set_async(sched->prefetch_backend, input_cpy, input->data, 0, ggml_nbytes(input));
 +                            if (compact) {
-+                                tosh_dmoe_set_chunk_rows(nullptr, nullptr, 0);
-+                                tosh_dmoe_note_time(1, ggml_time_us() - t_up);
-+                                tosh_dmoe_timeline(3, -1, tl_up, tosh_dmoe_host_seconds());
++                                xeon_dmoe_set_chunk_rows(nullptr, nullptr, 0);
++                                xeon_dmoe_note_time(1, ggml_time_us() - t_up);
++                                xeon_dmoe_timeline(3, -1, tl_up, xeon_dmoe_host_seconds());
 +                            }
                              ggml_backend_event_record(sched->prefetch_ready[slot], sched->prefetch_backend);
                              ggml_backend_event_wait(split_backend, sched->prefetch_ready[slot]);
@@ -1004,7 +1004,7 @@ index 2cc32ec89..3ef9afa8c 100644
                          for (int64_t i1 = 0; i1 < ids_tensor->ne[1]; i1++) {
                              for (int64_t i0 = 0; i0 < ids_tensor->ne[0]; i0++) {
                                  int32_t id = ids[i1 * ids_tensor->nb[1]/sizeof(int32_t) + i0 * ids_tensor->nb[0]/sizeof(int32_t)];
-+                                if (id < 0 && tosh_dmoe_compact()) {
++                                if (id < 0 && xeon_dmoe_compact()) {
 +                                    continue;   // a row the host computes
 +                                }
                                  GGML_ASSERT(id >= 0 && id < n_expert);
@@ -1052,9 +1052,9 @@ index d98ffc9b4..227a17c79 100644
      }
  
      switch (op->op) {
-+        case GGML_OP_TOSH_DMOE_PUBLISH:
-+        case GGML_OP_TOSH_DMOE_JOIN:
-+        case GGML_OP_TOSH_DMOE_OBSERVE:
++        case GGML_OP_XEON_DMOE_PUBLISH:
++        case GGML_OP_XEON_DMOE_JOIN:
++        case GGML_OP_XEON_DMOE_OBSERVE:
 +            return false;
          case GGML_OP_CPY:
          case GGML_OP_SET_ROWS:
@@ -1127,9 +1127,9 @@ index 89057c41e..16c727829 100644
      )
  endif()
 +
-+if (TOSH_ENABLE_DYNAMIC_MOE)
-+    target_include_directories(ggml-metal PRIVATE ${CMAKE_SOURCE_DIR}/tosh-moe)
-+    target_compile_definitions(ggml-metal PRIVATE TOSH_ENABLE_DYNAMIC_MOE)
++if (XEON_ENABLE_DYNAMIC_MOE)
++    target_include_directories(ggml-metal PRIVATE ${CMAKE_SOURCE_DIR}/xeon-moe)
++    target_compile_definitions(ggml-metal PRIVATE XEON_ENABLE_DYNAMIC_MOE)
 +endif()
 diff --git a/ggml/src/ggml-metal/ggml-metal-common.cpp b/ggml/src/ggml-metal/ggml-metal-common.cpp
 index 8b065f54a..fcea023ae 100644
@@ -1198,8 +1198,8 @@ index 9d6fba29a..3eb9feaba 100644
  #import "ggml-metal-ops.h"
  #import "ggml-metal-fusion.h"
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
  
  #import <Foundation/Foundation.h>
  
@@ -1217,7 +1217,7 @@ index 9d6fba29a..3eb9feaba 100644
      int prefetch_stage_count;
      int prefetch_stage_cur;
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    // compact prefill uploads: bounded host ring, one command buffer per chunk
 +    id<MTLBuffer>        dmoe_ring;
 +    id<MTLBuffer>        dmoe_mark;
@@ -1228,8 +1228,8 @@ index 9d6fba29a..3eb9feaba 100644
      ggml_metal_event_t ev_cpy; // for async copies
      ggml_metal_event_t ev_sync; // destination completion signal
  
-     id<MTLCounterSampleBuffer> ct_buf;   // trace only, TOSH_MGPU_CTIME
-     id<MTLSharedEvent>         ev_wait_dummy;   // benchmark only, TOSH_MGPU_WAIT_SATISFIED
+     id<MTLCounterSampleBuffer> ct_buf;   // trace only, XEON_MGPU_CTIME
+     id<MTLSharedEvent>         ev_wait_dummy;   // benchmark only, XEON_MGPU_WAIT_SATISFIED
      _Atomic uint64_t           ct_idx;
  
      // Synchronization and resources shared by both cross-device copy paths.
@@ -1242,7 +1242,7 @@ index 9d6fba29a..3eb9feaba 100644
          [ctx->prefetch_stages[i] release];
      }
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    for (int i = 0; i < 8; ++i) {
 +        if (ctx->dmoe_ring_cmds[i]) {
 +            [ctx->dmoe_ring_cmds[i] waitUntilCompleted];
@@ -1264,22 +1264,22 @@ index 9d6fba29a..3eb9feaba 100644
 @@ -1179,16 +1200,29 @@ void ggml_metal_synchronize(ggml_metal_t ctx) {
  
      // wait for any backend operations to finish
-     const bool cbp_on = tosh_cbp_on();
+     const bool cbp_on = xeon_cbp_on();
      uint64_t cbp_t = cbp_on ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
      if (ctx->cmd_buf_last) {
          [ctx->cmd_buf_last waitUntilCompleted];
          ctx->cmd_buf_last = nil;
      }
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+    if (tosh_dmoe_enabled()) {
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++    if (xeon_dmoe_enabled()) {
 +        // a wide batch synchronizes mid-graph to read its routing; its join still needs the host
-+        if (tosh_dmoe_event_get() >= tosh_dmoe_last_value() + 1) {
-+            tosh_dmoe_set_active(false);
++        if (xeon_dmoe_event_get() >= xeon_dmoe_last_value() + 1) {
++            xeon_dmoe_set_active(false);
 +        }
-+        tosh_dmoe_mark_completed();
++        xeon_dmoe_mark_completed();
 +    }
-+    if (tosh_dmoe_failed() != NULL && !ctx->has_error) {
-+        GGML_LOG_ERROR("%s: mixed expert execution failed: %s\n", __func__, tosh_dmoe_failed());
++    if (xeon_dmoe_failed() != NULL && !ctx->has_error) {
++        GGML_LOG_ERROR("%s: mixed expert execution failed: %s\n", __func__, xeon_dmoe_failed());
 +        ctx->has_error = true;
 +    }
 +#endif
@@ -1301,7 +1301,7 @@ index 9d6fba29a..3eb9feaba 100644
      ggml_metal_device_read_batch_end(ctx->dev);
  }
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +static _Atomic uint64_t g_dmoe_pf_host_bytes;
 +static _Atomic uint64_t g_dmoe_pf_vram_bytes;
 +static _Atomic uint64_t g_dmoe_pf_skip_bytes;
@@ -1312,13 +1312,13 @@ index 9d6fba29a..3eb9feaba 100644
 +
 +static void ggml_metal_dmoe_pf_report(void) {
 +    const uint64_t h = atomic_load(&g_dmoe_pf_host_bytes), v = atomic_load(&g_dmoe_pf_vram_bytes);
-+    if (h + v > 0 && getenv("TOSH_DMOE_STATS")) {
++    if (h + v > 0 && getenv("XEON_DMOE_STATS")) {
 +        const double G = 1073741824.0;
-+        fprintf(stderr, "tosh_dmoe: prefill bank uploads %.2f GiB from host, %.2f GiB from the VRAM arena, %.2f GiB not routed and skipped\n",
++        fprintf(stderr, "xeon_dmoe: prefill bank uploads %.2f GiB from host, %.2f GiB from the VRAM arena, %.2f GiB not routed and skipped\n",
 +                h/G, v/G, atomic_load(&g_dmoe_pf_skip_bytes)/G);
 +        const uint64_t n = atomic_load(&g_dmoe_pf_uploads);
 +        if (n > 0) {
-+            fprintf(stderr, "tosh_dmoe: compact uploads %llu, routed experts per upload %.1f (%.1f resident) | host bytes of experts with 1 / <=2 / <=4 rows %.2f / %.2f / %.2f GiB\n",
++            fprintf(stderr, "xeon_dmoe: compact uploads %llu, routed experts per upload %.1f (%.1f resident) | host bytes of experts with 1 / <=2 / <=4 rows %.2f / %.2f / %.2f GiB\n",
 +                    (unsigned long long) n, (double) atomic_load(&g_dmoe_pf_used)/n, (double) atomic_load(&g_dmoe_pf_used_res)/n,
 +                    atomic_load(&g_dmoe_pf_rare_bytes[0])/G, atomic_load(&g_dmoe_pf_rare_bytes[1])/G, atomic_load(&g_dmoe_pf_rare_bytes[2])/G);
 +        }
@@ -1331,8 +1331,8 @@ index 9d6fba29a..3eb9feaba 100644
 +
 +static void ggml_metal_dmoe_submit(ggml_metal_t ctx, id<MTLCommandBuffer> cmd_buf, int il) {
 +    [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-+        tosh_dmoe_note_time(2, (int64_t) ((cb.GPUEndTime - cb.GPUStartTime)*1e6));
-+        tosh_dmoe_timeline(2, il, cb.GPUStartTime, cb.GPUEndTime);
++        xeon_dmoe_note_time(2, (int64_t) ((cb.GPUEndTime - cb.GPUStartTime)*1e6));
++        xeon_dmoe_timeline(2, il, cb.GPUStartTime, cb.GPUEndTime);
 +    }];
 +    [cmd_buf commit];
 +    [ctx->cmd_bufs_ext addObject:cmd_buf];
@@ -1385,7 +1385,7 @@ index 9d6fba29a..3eb9feaba 100644
 +
 +// Only the experts the chunk routes to: residents device to device, the rest from host memory
 +// through the ring. Promotions copy from the filled slot once its blits are done.
-+static bool ggml_metal_dmoe_compact_upload(ggml_metal_t ctx, const struct tosh_dmoe_bank_plan * plan,
++static bool ggml_metal_dmoe_compact_upload(ggml_metal_t ctx, const struct xeon_dmoe_bank_plan * plan,
 +        struct ggml_metal_buffer_id bid_dst, struct ggml_metal_buffer_id bid_arena, const void * data) {
 +    if (ctx->dmoe_ring == nil) {
 +        ctx->dmoe_ring = [ggml_metal_device_get_obj(ctx->dev) newBufferWithLength:DMOE_RING_CHUNKS*DMOE_RING_CHUNK
@@ -1466,7 +1466,7 @@ index 9d6fba29a..3eb9feaba 100644
 +
 +    // when the host runs rare experts, report when this layer's down bank is on the GPU: a read of
 +    // the slot waits for every blit that wrote it
-+    if (plan->which == 2 && tosh_dmoe_rare_rows_live() > 0) {
++    if (plan->which == 2 && xeon_dmoe_rare_rows_live() > 0) {
 +        if (ctx->dmoe_mark == nil) {
 +            ctx->dmoe_mark = [ggml_metal_device_get_obj(ctx->dev) newBufferWithLength:256 options:MTLResourceStorageModeShared];
 +        }
@@ -1476,7 +1476,7 @@ index 9d6fba29a..3eb9feaba 100644
 +        [encoder endEncoding];
 +        const int il = plan->il;
 +        [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-+            tosh_dmoe_rare_dma_done(il, cb.GPUEndTime);
++            xeon_dmoe_rare_dma_done(il, cb.GPUEndTime);
 +        }];
 +        [cmd_buf commit];
 +        [ctx->cmd_bufs_ext addObject:cmd_buf];
@@ -1497,8 +1497,8 @@ index 9d6fba29a..3eb9feaba 100644
 +// A bank upload for prefill: experts already in the VRAM arena are copied device to device,
 +// the rest come from host memory. Same bytes land in the slot as a full upload.
 +static bool ggml_metal_dmoe_bank_upload(ggml_metal_t ctx, struct ggml_tensor * tensor, const void * data, size_t size) {
-+    struct tosh_dmoe_bank_plan plan;
-+    if (!tosh_dmoe_enabled() || !tosh_dmoe_bank_planner(data, size, &plan)) {
++    struct xeon_dmoe_bank_plan plan;
++    if (!xeon_dmoe_enabled() || !xeon_dmoe_bank_planner(data, size, &plan)) {
 +        return false;
 +    }
 +    if (plan.expert_bytes*plan.n_expert != size) {
@@ -1594,7 +1594,7 @@ index 9d6fba29a..3eb9feaba 100644
 +    [encoder endEncoding];
 +    if (rows) {
 +        [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-+            tosh_dmoe_note_time(2, (int64_t) ((cb.GPUEndTime - cb.GPUStartTime)*1e6));
++            xeon_dmoe_note_time(2, (int64_t) ((cb.GPUEndTime - cb.GPUStartTime)*1e6));
 +        }];
 +    }
 +    [cmd_buf commit];
@@ -1633,7 +1633,7 @@ index 9d6fba29a..3eb9feaba 100644
  
          // Expert prefetch keeps the zero-copy source path while it fits the
          // device budget, then falls back to a bounded shared staging ring.
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +        if (ctx->is_prefetch && offset == 0 && ggml_metal_dmoe_bank_upload(ctx, tensor, data, size)) {
 +            return;
 +        }
@@ -1655,48 +1655,48 @@ index 9d6fba29a..3eb9feaba 100644
      if (gf->n_nodes == 0) {
          return GGML_STATUS_SUCCESS;
      }
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    // mixed layers get their event values in submission order, before any parallel encoding;
 +    // a dynamic cache also pins the residency table this graph reads
-+    const bool dmoe_on = tosh_dmoe_enabled();
-+    const int dmoe_version = dmoe_on ? tosh_dmoe_published_version() : 0;
++    const bool dmoe_on = xeon_dmoe_enabled();
++    const int dmoe_version = dmoe_on ? xeon_dmoe_published_version() : 0;
 +    bool dmoe_ticked = false;
 +    for (int i = 0; dmoe_on && i < gf->n_nodes; ++i) {
 +        struct ggml_tensor * node = gf->nodes[i];
-+        if (node->op == GGML_OP_TOSH_DMOE_OBSERVE) {
-+            tosh_dmoe_note_wide(true);
++        if (node->op == GGML_OP_XEON_DMOE_OBSERVE) {
++            xeon_dmoe_note_wide(true);
 +            continue;
 +        }
-+        if (node->op != GGML_OP_TOSH_DMOE_PUBLISH) {
++        if (node->op != GGML_OP_XEON_DMOE_PUBLISH) {
 +            continue;
 +        }
-+        tosh_dmoe_note_wide(ggml_get_op_params_i32(node, 1) > 0);
-+        const uint64_t value = tosh_dmoe_next_value();
++        xeon_dmoe_note_wide(ggml_get_op_params_i32(node, 1) > 0);
++        const uint64_t value = xeon_dmoe_next_value();
 +        memcpy(&node->op_params[2], &value, sizeof(value));
 +
 +        ggml_set_op_params_i32(node, 4, dmoe_version);
 +        if (!dmoe_ticked) {
-+            tosh_dmoe_tick_next();
++            xeon_dmoe_tick_next();
 +            dmoe_ticked = true;
 +        }
 +
-+        struct tosh_dmoe_job * job = tosh_dmoe_job_of(value);
++        struct xeon_dmoe_job * job = xeon_dmoe_job_of(value);
 +        job->version  = dmoe_version;
-+        job->tick     = (uint32_t) tosh_dmoe_tick();
++        job->tick     = (uint32_t) xeon_dmoe_tick();
 +        job->il       = ggml_get_op_params_i32(node, 0);
 +        job->n_tokens = (int32_t) node->src[1]->ne[1];
 +        job->n_used   = (int32_t) node->src[1]->ne[0];
 +        job->n_embd   = (int32_t) node->src[0]->ne[0];
 +        __atomic_store_n(&job->value, value, __ATOMIC_RELEASE);
-+        tosh_dmoe_set_active(true);
++        xeon_dmoe_set_active(true);
 +    }
 +#endif
  
      // number of nodes encoded by the main thread (empirically determined)
-     // the split was tuned on unified memory; TOSH_N_MAIN overrides it to A/B the share here
+     // the split was tuned on unified memory; XEON_N_MAIN overrides it to A/B the share here
      static int n_main_env = -2;
      if (n_main_env == -2) {
-         const char * v = TOSH_ENV("TOSH_N_MAIN");
+         const char * v = XEON_ENV("XEON_N_MAIN");
          n_main_env = v ? atoi(v) : -1;
      }
 @@ -3835,22 +4230,31 @@ static bool ggml_metal_graph_is_moe_decode(const struct ggml_cgraph * gf, int ma
@@ -1711,16 +1711,16 @@ index 9d6fba29a..3eb9feaba 100644
 -        ggml_graph_optimize(gf);
          static int max_tokens = -1;
          if (max_tokens < 0) {
-             const char * s = TOSH_ENV("GGML_METAL_GRAPH_OPTIMIZE_MIN_BATCH");
+             const char * s = XEON_ENV("GGML_METAL_GRAPH_OPTIMIZE_MIN_BATCH");
              max_tokens = s ? atoi(s) - 1 : 7;
          }
 +
 +        // a wide batch whose rare experts run on the host is not reordered: moving nodes around its
 +        // publish produced non-finite activations on small batches (32-63 tokens)
 +        bool host_rows = false;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +        for (int i = 0; i < gf->n_nodes && !host_rows; ++i) {
-+            host_rows = gf->nodes[i]->op == GGML_OP_TOSH_DMOE_PUBLISH && ggml_get_op_params_i32(gf->nodes[i], 1) > 0;
++            host_rows = gf->nodes[i]->op == GGML_OP_XEON_DMOE_PUBLISH && ggml_get_op_params_i32(gf->nodes[i], 1) > 0;
 +        }
 +#endif
 +        if (!host_rows && (max_tokens < 0 || !ggml_metal_graph_is_moe_decode(gf, max_tokens))) {
@@ -1741,12 +1741,12 @@ index 045a0711e..2c3d89f47 100644
      // quant arrays a word at a time under the same conditions.
      const bool row8 = row4 && (op->src[0]->nb[1] % 4 == 0) && (op->src[0]->nb[2] % 4 == 0) &&
                        (nw == 64 || (nw == 32 && tsrc0 == GGML_TYPE_Q8_0)) &&
-                       TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
  
      const bool align = props_id->needs_aligned_loads;
  
 +    // only the ids a mixed expert layer publishes can be -1
-+    const bool id_skip = op->src[2] != nullptr && op->src[2]->op == GGML_OP_TOSH_DMOE_PUBLISH;
++    const bool id_skip = op->src[2] != nullptr && op->src[2]->op == GGML_OP_XEON_DMOE_PUBLISH;
 +
      snprintf(base, 256, "kernel_mul_mv_id_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), suffix, id_w64 ? "_w64" : "");
 +    snprintf(name, 256, "%s_nsg=%d_nw=%d_a4=%d_a8=%d_al=%d_sk=%d", base, nsg, nw, row4, row8, align, id_skip);
@@ -1805,7 +1805,7 @@ index 722c8670a..1806555c9 100644
  
  const struct ggml_metal_device_props * ggml_metal_device_get_props(ggml_metal_device_t dev);
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +void *                      ggml_metal_device_dmoe_event(ggml_metal_device_t dev);
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_stage(ggml_metal_device_t dev, size_t layer_stride);
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_tables(ggml_metal_device_t dev);
@@ -1836,8 +1836,8 @@ index beb661b22..3fe87e824 100644
  #import "ggml-backend-impl.h"
  #import "ggml-metal-impl.h"
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#import "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#import "xeon-dmoe.h"
 +#endif
  #import "ggml-metal-common.h"
  
@@ -1872,7 +1872,7 @@ index beb661b22..3fe87e824 100644
 +    return ok;
 +}
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +static id<MTLDevice> g_vram_dev = nil;
 +static bool ggml_metal_vram_query(int64_t * vfree, int64_t * vused) {
 +    return g_vram_dev != nil && ggml_metal_vram_stats(g_vram_dev, vfree, vused);
@@ -2125,7 +2125,7 @@ index beb661b22..3fe87e824 100644
 +    id<MTLBuffer>      dmoe_wide;
 +};
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +static uint64_t ggml_metal_dmoe_ev_get(void * ev) { return [(id<MTLSharedEvent>) ev signaledValue]; }
 +static void ggml_metal_dmoe_ev_set(void * ev, uint64_t v) { [(id<MTLSharedEvent>) ev setSignaledValue:v]; }
 +
@@ -2133,7 +2133,7 @@ index beb661b22..3fe87e824 100644
 +    [dev->dmoe_lock lock];
 +    if (dev->dmoe_ev == nil) {
 +        dev->dmoe_ev = [dev->mtl_device newSharedEvent];
-+        tosh_dmoe_set_event(dev->dmoe_ev, ggml_metal_dmoe_ev_get, ggml_metal_dmoe_ev_set);
++        xeon_dmoe_set_event(dev->dmoe_ev, ggml_metal_dmoe_ev_get, ggml_metal_dmoe_ev_set);
 +    }
 +    [dev->dmoe_lock unlock];
 +    return dev->dmoe_ev;
@@ -2144,7 +2144,7 @@ index beb661b22..3fe87e824 100644
 +    [dev->dmoe_lock lock];
 +    if (dev->dmoe_reach == nil) {
 +        dev->dmoe_reach = [dev->mtl_device newSharedEvent];
-+        tosh_dmoe_set_reach_event(dev->dmoe_reach, ggml_metal_dmoe_ev_get);
++        xeon_dmoe_set_reach_event(dev->dmoe_reach, ggml_metal_dmoe_ev_get);
 +    }
 +    [dev->dmoe_lock unlock];
 +    return dev->dmoe_reach;
@@ -2153,9 +2153,9 @@ index beb661b22..3fe87e824 100644
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_obs_ring(ggml_metal_device_t dev) {
 +    [dev->dmoe_lock lock];
 +    if (dev->dmoe_obs == nil) {
-+        dev->dmoe_obs = [dev->mtl_device newBufferWithLength:TOSH_DMOE_OBS_RING_BYTES options:MTLResourceStorageModeShared];
++        dev->dmoe_obs = [dev->mtl_device newBufferWithLength:XEON_DMOE_OBS_RING_BYTES options:MTLResourceStorageModeShared];
 +        if (dev->dmoe_obs != nil) {
-+            tosh_dmoe_set_obs_ring([dev->dmoe_obs contents]);
++            xeon_dmoe_set_obs_ring([dev->dmoe_obs contents]);
 +        }
 +    }
 +    [dev->dmoe_lock unlock];
@@ -2166,7 +2166,7 @@ index beb661b22..3fe87e824 100644
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_tables(ggml_metal_device_t dev) {
 +    struct ggml_metal_buffer_id res = { nil, 0 };
 +    size_t bytes = 0;
-+    int32_t * host = tosh_dmoe_tables(&bytes, NULL, NULL);
++    int32_t * host = xeon_dmoe_tables(&bytes, NULL, NULL);
 +    if (host == NULL) {
 +        return res;
 +    }
@@ -2198,15 +2198,15 @@ index beb661b22..3fe87e824 100644
 +    NSLock *             lock;
  };
  
-+static uint64_t ggml_metal_dmoe_upload_impl(void * ctx_raw, const struct tosh_dmoe_copy * copies, int n);
++static uint64_t ggml_metal_dmoe_upload_impl(void * ctx_raw, const struct xeon_dmoe_copy * copies, int n);
 +
-+static uint64_t ggml_metal_dmoe_upload(void * ctx_raw, const struct tosh_dmoe_copy * copies, int n) {
++static uint64_t ggml_metal_dmoe_upload(void * ctx_raw, const struct xeon_dmoe_copy * copies, int n) {
 +    @autoreleasepool {
 +        return ggml_metal_dmoe_upload_impl(ctx_raw, copies, n);
 +    }
 +}
 +
-+static uint64_t ggml_metal_dmoe_upload_impl(void * ctx_raw, const struct tosh_dmoe_copy * copies, int n) {
++static uint64_t ggml_metal_dmoe_upload_impl(void * ctx_raw, const struct xeon_dmoe_copy * copies, int n) {
 +    struct ggml_metal_dmoe_up * up = ctx_raw;
 +    [up->lock lock];
 +    const uint64_t ticket = ++up->n_tickets;
@@ -2284,7 +2284,7 @@ index beb661b22..3fe87e824 100644
 +
 +#define DMOE_DOWN_BYTES (32u << 20)
 +
-+static bool ggml_metal_dmoe_download(void * ctx_raw, const struct tosh_dmoe_copy * copies, int n) {
++static bool ggml_metal_dmoe_download(void * ctx_raw, const struct xeon_dmoe_copy * copies, int n) {
 +    struct ggml_metal_dmoe_up * up = ctx_raw;
 +    @autoreleasepool {
 +        [up->lock lock];
@@ -2337,11 +2337,11 @@ index beb661b22..3fe87e824 100644
 +        up->stage[i] = [dev->mtl_device newBufferWithLength:DMOE_UP_BYTES options:MTLResourceStorageModeShared];
 +    }
 +    up->lock = [[NSLock alloc] init];
-+    const char * f = getenv("TOSH_DMOE_TEST_UPLOAD_FAIL");
++    const char * f = getenv("XEON_DMOE_TEST_UPLOAD_FAIL");
 +    up->fail_at = f ? atol(f) : -1;
-+    struct tosh_dmoe_uploader u = { up, ggml_metal_dmoe_upload, ggml_metal_dmoe_upload_status, ggml_metal_dmoe_upload_gpu_us,
++    struct xeon_dmoe_uploader u = { up, ggml_metal_dmoe_upload, ggml_metal_dmoe_upload_status, ggml_metal_dmoe_upload_gpu_us,
 +                                    ggml_metal_dmoe_download };
-+    tosh_dmoe_set_uploader(&u);
++    xeon_dmoe_set_uploader(&u);
 +}
 +
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_wide_stage(ggml_metal_device_t dev, size_t bytes) {
@@ -2349,7 +2349,7 @@ index beb661b22..3fe87e824 100644
 +    if (dev->dmoe_wide == nil) {
 +        dev->dmoe_wide = [dev->mtl_device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
 +        GGML_ASSERT(dev->dmoe_wide != nil);
-+        tosh_dmoe_set_wide_stage([dev->dmoe_wide contents], bytes);
++        xeon_dmoe_set_wide_stage([dev->dmoe_wide contents], bytes);
 +    }
 +    GGML_ASSERT([dev->dmoe_wide length] >= bytes && "the wide stage size cannot change once allocated");
 +    [dev->dmoe_lock unlock];
@@ -2359,13 +2359,13 @@ index beb661b22..3fe87e824 100644
 +
 +struct ggml_metal_buffer_id ggml_metal_device_dmoe_stage(ggml_metal_device_t dev, size_t layer_stride) {
 +    [dev->dmoe_lock lock];
-+    const size_t size = layer_stride*TOSH_DMOE_MAX_LAYERS;
++    const size_t size = layer_stride*XEON_DMOE_MAX_LAYERS;
 +    if (dev->dmoe_stage == nil || [dev->dmoe_stage length] < size) {
 +        GGML_ASSERT(dev->dmoe_stage == nil && "the stage stride cannot change once allocated");
 +        dev->dmoe_stage = [dev->mtl_device newBufferWithLength:size options:MTLResourceStorageModeShared];
 +        GGML_ASSERT(dev->dmoe_stage != nil);
 +        memset([dev->dmoe_stage contents], 0, size);
-+        tosh_dmoe_set_stage([dev->dmoe_stage contents], layer_stride);
++        xeon_dmoe_set_stage([dev->dmoe_stage contents], layer_stride);
 +    }
 +    [dev->dmoe_lock unlock];
 +    struct ggml_metal_buffer_id res = { dev->dmoe_stage, 0 };
@@ -2391,11 +2391,11 @@ index beb661b22..3fe87e824 100644
                  dev->stage_lock = [[NSRecursiveLock alloc] init];
                  dev->wrap_lock  = [[NSLock alloc] init];
 +                dev->dmoe_lock  = [[NSLock alloc] init];
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +                if (g_uploader_dev == NULL) {
 +                    // created on first use: mixed execution can be chosen after the device starts
 +                    g_uploader_dev = dev;
-+                    tosh_dmoe_set_uploader_factory(ggml_metal_dmoe_uploader_make);
++                    xeon_dmoe_set_uploader_factory(ggml_metal_dmoe_uploader_make);
 +                }
 +#endif
 +
@@ -2410,11 +2410,11 @@ index beb661b22..3fe87e824 100644
 @@ -1659,22 +2075,40 @@ ggml_metal_device_t ggml_metal_device_init(int device, int n_devices) {
                  // The 4 GiB failure that motivated this was reported by Slice on an RX 570:
                  // https://www.insanelymac.com/forum/profile/112217-slice/
-                 if (TOSH_ENV("TOSH_METAL_MAX_BUFFER_MB")) {
-                     const size_t cap = (size_t) atoll(TOSH_ENV("TOSH_METAL_MAX_BUFFER_MB")) * 1024 * 1024;
+                 if (XEON_ENV("XEON_METAL_MAX_BUFFER_MB")) {
+                     const size_t cap = (size_t) atoll(XEON_ENV("XEON_METAL_MAX_BUFFER_MB")) * 1024 * 1024;
                      if (cap > 0 && cap < dev->props.max_buffer_size) {
                          dev->props.max_buffer_size = cap;
-                         fprintf(stderr, "ggml_metal: max single buffer capped to %zu MiB by TOSH_METAL_MAX_BUFFER_MB\n", cap / 1024 / 1024);
+                         fprintf(stderr, "ggml_metal: max single buffer capped to %zu MiB by XEON_METAL_MAX_BUFFER_MB\n", cap / 1024 / 1024);
                      }
 +                }
                  dev->props.max_theadgroup_memory_size = dev->mtl_device.maxThreadgroupMemoryLength;
@@ -2423,20 +2423,20 @@ index beb661b22..3fe87e824 100644
                  } else {
                      dev->props.max_working_set_size   = dev->mtl_device.maxBufferLength;
                  }
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +                // the expert arena is sized from what the card has free before anything is allocated;
 +                // taken for every process, since mixed execution can be chosen after the device starts
 +                {
-+                    tosh_dmoe_set_private_query(ggml_metal_private_bytes);
++                    xeon_dmoe_set_private_query(ggml_metal_private_bytes);
 +                    if (g_vram_dev == nil) {
 +                        g_vram_dev = dev->mtl_device;
-+                        tosh_dmoe_set_vram_query(ggml_metal_vram_query);
++                        xeon_dmoe_set_vram_query(ggml_metal_vram_query);
 +                    }
 +                    size_t vfree = 0, vtotal = 0;
-+                    if (tosh_vram_read(&vfree, &vtotal)) {
-+                        tosh_dmoe_set_vram(vfree, vtotal);
++                    if (xeon_vram_read(&vfree, &vtotal)) {
++                        xeon_dmoe_set_vram(vfree, vtotal);
 +                    } else {
-+                        tosh_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
++                        xeon_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
 +                    }
 +                }
 +#endif
@@ -2475,14 +2475,14 @@ index beb661b22..3fe87e824 100644
      // identical at 8 and 16 GiB) and sends the overflow to the bounded staging ring instead.
      // GGML_METAL_HOST_WRAP_LIMIT_MB overrides it; 0 restores the uncapped behaviour.
      size_t limit = (size_t) dev->props.max_working_set_size;
-     const char * limit_mb = TOSH_ENV("GGML_METAL_HOST_WRAP_LIMIT_MB");
+     const char * limit_mb = XEON_ENV("GGML_METAL_HOST_WRAP_LIMIT_MB");
      if (limit_mb != NULL) {
          limit = (size_t) strtoull(limit_mb, NULL, 10)*1024*1024;
      }
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    // with every bank in host memory a full working set of wraps collapses the uploads;
 +    // two thirds of it keeps the fast path
-+    else if (tosh_dmoe_enabled()) {
++    else if (xeon_dmoe_enabled()) {
 +        limit = limit/3*2;
 +    }
 +#endif
@@ -2522,10 +2522,10 @@ index beb661b22..3fe87e824 100644
      }
  
      switch (op->op) {
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+        case GGML_OP_TOSH_DMOE_PUBLISH:
-+        case GGML_OP_TOSH_DMOE_JOIN:
-+        case GGML_OP_TOSH_DMOE_OBSERVE:
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++        case GGML_OP_XEON_DMOE_PUBLISH:
++        case GGML_OP_XEON_DMOE_JOIN:
++        case GGML_OP_XEON_DMOE_OBSERVE:
 +            return true;
 +#endif
          case GGML_OP_SCALE:
@@ -2670,8 +2670,8 @@ index 7ce270237..5a3daa3e4 100644
 @@ -1,24 +1,32 @@
  #include "ggml-metal-ops.h"
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#endif
 +
  #include "ggml.h"
@@ -2812,18 +2812,18 @@ index 7ce270237..5a3daa3e4 100644
              {
                  n_fuse = ggml_metal_op_mul_mat_id(ctx, idx);
              } break;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+        case GGML_OP_TOSH_DMOE_PUBLISH:
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++        case GGML_OP_XEON_DMOE_PUBLISH:
 +            {
-+                n_fuse = ggml_metal_op_tosh_dmoe_publish(ctx, idx);
++                n_fuse = ggml_metal_op_xeon_dmoe_publish(ctx, idx);
 +            } break;
-+        case GGML_OP_TOSH_DMOE_JOIN:
++        case GGML_OP_XEON_DMOE_JOIN:
 +            {
-+                n_fuse = ggml_metal_op_tosh_dmoe_join(ctx, idx);
++                n_fuse = ggml_metal_op_xeon_dmoe_join(ctx, idx);
 +            } break;
-+        case GGML_OP_TOSH_DMOE_OBSERVE:
++        case GGML_OP_XEON_DMOE_OBSERVE:
 +            {
-+                n_fuse = ggml_metal_op_tosh_dmoe_observe(ctx, idx);
++                n_fuse = ggml_metal_op_xeon_dmoe_observe(ctx, idx);
 +            } break;
 +#endif
          case GGML_OP_GET_ROWS:
@@ -2847,13 +2847,13 @@ index 7ce270237..5a3daa3e4 100644
 +
      // escape hatch: revert wave64 MoE prefill to the mat-vec route
      const bool mm_id_manual_ok = props_dev->simd_width == 32 ||
-         TOSH_ENV("TOSH_W64_MMID_PREFILL_DISABLE") == NULL;
+         XEON_ENV("XEON_W64_MMID_PREFILL_DISABLE") == NULL;
  
 +    const bool use_mm_id = ggml_metal_op_mul_mat_id_use_mm(op, props_dev->has_simdgroup_mm || (props_dev->use_mm_manual && mm_id_manual_ok));
 +
 +    // the tile path maps ids without the -1 a mixed expert layer publishes
 +    // (map0 matches ids as 16-bit expert numbers, so the -1 of a wide publish selects nothing)
-+    GGML_ASSERT(!(use_mm_id && op->src[2]->op == GGML_OP_TOSH_DMOE_PUBLISH && ggml_get_op_params_i32(op->src[2], 1) == 0));
++    GGML_ASSERT(!(use_mm_id && op->src[2]->op == GGML_OP_XEON_DMOE_PUBLISH && ggml_get_op_params_i32(op->src[2], 1) == 0));
  
 -    if (ggml_metal_op_mul_mat_id_use_mm(op, props_dev->has_simdgroup_mm)) {
 +    if (use_mm_id) {
@@ -2982,12 +2982,12 @@ index 7ce270237..5a3daa3e4 100644
 +}
  
 -        ggml_metal_encoder_set_threadgroup_memory_size(enc, smem, 0);
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+// TOSH_DMOE_MASK forces router positions to the host for the correctness matrix:
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++// XEON_DMOE_MASK forces router positions to the host for the correctness matrix:
 +// all | alt | half | random
-+static int32_t tosh_dmoe_test_mask() {
++static int32_t xeon_dmoe_test_mask() {
 +    static const int32_t mask = []() {
-+        const char * s = getenv("TOSH_DMOE_MASK");
++        const char * s = getenv("XEON_DMOE_MASK");
 +        if (s == nullptr) return 0;
 +        if (strcmp(s, "all")    == 0) return 1;
 +        if (strcmp(s, "alt")    == 0) return 2;
@@ -3006,7 +3006,7 @@ index 7ce270237..5a3daa3e4 100644
 -        } else {
 -            ggml_metal_encoder_dispatch_threadgroups(enc, (ne01 + nr0*nsg - 1)/(nr0*nsg), (_ne1 + nr1 - 1)/nr1, ne123, 32, nsg, 1);
 -        }
-+struct tosh_dmoe_wide_args {
++struct xeon_dmoe_wide_args {
 +    int32_t  n_embd;
 +    int32_t  n_used;
 +    int32_t  n_tokens;
@@ -3023,19 +3023,19 @@ index 7ce270237..5a3daa3e4 100644
 +    uint64_t nb_ids1;
 +};
 +
-+static tosh_dmoe_wide_args tosh_dmoe_wide_args_of(const ggml_tensor * ids, int n_embd, int n_expert, int rows, uint64_t nb_cur1) {
++static xeon_dmoe_wide_args xeon_dmoe_wide_args_of(const ggml_tensor * ids, int n_embd, int n_expert, int rows, uint64_t nb_cur1) {
 +    const int n_used = ids->ne[0], n_tok = ids->ne[1];
 +    return {
-+        n_embd, n_used, n_tok, n_expert, rows, TOSH_DMOE_WIDE_MAX_ROWS, 0, 0,
-+        (uint32_t) tosh_dmoe_wide_off_ids(n_tok, n_embd, n_used),
-+        (uint32_t) tosh_dmoe_wide_off_rmp(n_tok, n_embd, n_used),
-+        (uint32_t) tosh_dmoe_wide_off_map(n_tok, n_embd, n_used),
-+        (uint32_t) tosh_dmoe_wide_off_out(n_tok, n_embd, n_used),
++        n_embd, n_used, n_tok, n_expert, rows, XEON_DMOE_WIDE_MAX_ROWS, 0, 0,
++        (uint32_t) xeon_dmoe_wide_off_ids(n_tok, n_embd, n_used),
++        (uint32_t) xeon_dmoe_wide_off_rmp(n_tok, n_embd, n_used),
++        (uint32_t) xeon_dmoe_wide_off_map(n_tok, n_embd, n_used),
++        (uint32_t) xeon_dmoe_wide_off_out(n_tok, n_embd, n_used),
 +        nb_cur1, ids->nb[1],
 +    };
 +}
 +
-+static int ggml_metal_op_tosh_dmoe_publish_wide(ggml_metal_op_t ctx, int idx) {
++static int ggml_metal_op_xeon_dmoe_publish_wide(ggml_metal_op_t ctx, int idx) {
 +    ggml_tensor * op = ctx->node(idx);
 +
 +    const ggml_tensor * cur = op->src[0];
@@ -3048,39 +3048,39 @@ index 7ce270237..5a3daa3e4 100644
 +    const int n_tokens = ids->ne[1];
 +    const int n_expert = res->ne[0];
 +
-+    GGML_ASSERT(il >= 0 && il < TOSH_DMOE_MAX_LAYERS);
-+    GGML_ASSERT(n_tokens <= TOSH_DMOE_WIDE_MAX_TOKENS && n_embd % 4 == 0 && n_expert <= 1024);
++    GGML_ASSERT(il >= 0 && il < XEON_DMOE_MAX_LAYERS);
++    GGML_ASSERT(n_tokens <= XEON_DMOE_WIDE_MAX_TOKENS && n_embd % 4 == 0 && n_expert <= 1024);
 +    GGML_ASSERT(ggml_is_contiguous(op));
 +
 +    void * ev = ggml_metal_device_dmoe_event(ctx->dev);
-+    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_wide_stage(ctx->dev, tosh_dmoe_wide_bytes(n_embd, n_used));
++    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_wide_stage(ctx->dev, xeon_dmoe_wide_bytes(n_embd, n_used));
 +
 +    uint64_t value;
 +    memcpy(&value, &op->op_params[2], sizeof(value));
 +
-+    tosh_dmoe_wide_args args = tosh_dmoe_wide_args_of(ids, n_embd, n_expert, ggml_get_op_params_i32(op, 1), cur->nb[1]);
++    xeon_dmoe_wide_args args = xeon_dmoe_wide_args_of(ids, n_embd, n_expert, ggml_get_op_params_i32(op, 1), cur->nb[1]);
 +    args.tail = ggml_get_op_params_i32(op, 5);
-+    if (const int live = tosh_dmoe_rare_rows_live(); live > 0) {
++    if (const int live = xeon_dmoe_rare_rows_live(); live > 0) {
 +        args.rows = live;
      }
  
 +    ggml_metal_buffer_id bid_res = ggml_metal_device_dmoe_tables(ctx->dev);
 +    if (bid_res.metal != nullptr) {
-+        bid_res.offs = ((size_t) ggml_get_op_params_i32(op, 4)*TOSH_DMOE_MAX_LAYERS + il)*res->ne[0]*sizeof(int32_t);
++        bid_res.offs = ((size_t) ggml_get_op_params_i32(op, 4)*XEON_DMOE_MAX_LAYERS + il)*res->ne[0]*sizeof(int32_t);
 +    } else {
 +        bid_res = ggml_metal_get_buffer_id(res);
 +    }
 +
 +    ggml_metal_encoder_t enc = ctx->enc;
 +
-+    auto p_act = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_publish_wide_act", "tosh_dmoe_publish_wide_act", nullptr);
++    auto p_act = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_publish_wide_act", "xeon_dmoe_publish_wide_act", nullptr);
 +    ggml_metal_encoder_set_pipeline(enc, p_act);
 +    ggml_metal_encoder_set_bytes   (enc, &args, sizeof(args), 0);
 +    ggml_metal_encoder_set_buffer  (enc, ggml_metal_get_buffer_id(cur), 1);
 +    ggml_metal_encoder_set_buffer  (enc, bid_stage, 2);
 +    ggml_metal_encoder_dispatch_threadgroups(enc, n_tokens, 1, 1, 256, 1, 1);
 +
-+    auto p_ids = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_publish_wide_ids", "tosh_dmoe_publish_wide_ids", nullptr);
++    auto p_ids = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_publish_wide_ids", "xeon_dmoe_publish_wide_ids", nullptr);
 +    ggml_metal_encoder_set_pipeline(enc, p_ids);
 +    ggml_metal_encoder_set_bytes   (enc, &args, sizeof(args), 0);
 +    ggml_metal_encoder_set_buffer  (enc, ggml_metal_get_buffer_id(ids), 1);
@@ -3096,7 +3096,7 @@ index 7ce270237..5a3daa3e4 100644
 +    return 1;
 +}
 +
-+static int ggml_metal_op_tosh_dmoe_join_wide(ggml_metal_op_t ctx, int idx) {
++static int ggml_metal_op_xeon_dmoe_join_wide(ggml_metal_op_t ctx, int idx) {
 +    ggml_tensor * op = ctx->node(idx);
 +
 +    const ggml_tensor * gpu = op->src[0];
@@ -3107,7 +3107,7 @@ index 7ce270237..5a3daa3e4 100644
 +    const int n_tokens = gpu->ne[2];
 +
 +    void * ev = ggml_metal_device_dmoe_event(ctx->dev);
-+    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_wide_stage(ctx->dev, tosh_dmoe_wide_bytes(n_embd, n_used));
++    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_wide_stage(ctx->dev, xeon_dmoe_wide_bytes(n_embd, n_used));
 +
 +    uint64_t value;
 +    memcpy(&value, &ids->op_params[2], sizeof(value));
@@ -3116,9 +3116,9 @@ index 7ce270237..5a3daa3e4 100644
 +    ggml_metal_encoder_event(ctx->enc, ctx->cmd_buf, ev, value + 1, false);
 +    ggml_metal_op_concurrency_reset(ctx);
 +
-+    tosh_dmoe_wide_args args = tosh_dmoe_wide_args_of(ids, n_embd, ids->src[2]->ne[0], 0, 0);
++    xeon_dmoe_wide_args args = xeon_dmoe_wide_args_of(ids, n_embd, ids->src[2]->ne[0], 0, 0);
 +
-+    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_join_wide", "tosh_dmoe_join_wide", nullptr);
++    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_join_wide", "xeon_dmoe_join_wide", nullptr);
 +
 +    ggml_metal_encoder_t enc = ctx->enc;
 +    ggml_metal_encoder_set_pipeline(enc, pipeline);
@@ -3132,11 +3132,11 @@ index 7ce270237..5a3daa3e4 100644
 +    return 1;
 +}
 +
-+int ggml_metal_op_tosh_dmoe_publish(ggml_metal_op_t ctx, int idx) {
++int ggml_metal_op_xeon_dmoe_publish(ggml_metal_op_t ctx, int idx) {
 +    ggml_tensor * op = ctx->node(idx);
 +
 +    if (ggml_get_op_params_i32(op, 1) > 0) {
-+        return ggml_metal_op_tosh_dmoe_publish_wide(ctx, idx);
++        return ggml_metal_op_xeon_dmoe_publish_wide(ctx, idx);
 +    }
 +
 +    const ggml_tensor * cur = op->src[0];
@@ -3148,11 +3148,11 @@ index 7ce270237..5a3daa3e4 100644
 +    const int n_used   = ids->ne[0];
 +    const int n_tokens = ids->ne[1];
 +
-+    GGML_ASSERT(il >= 0 && il < TOSH_DMOE_MAX_LAYERS);
-+    GGML_ASSERT(n_tokens <= TOSH_DMOE_MAX_TOKENS && n_embd % 4 == 0 && n_used <= 256);
++    GGML_ASSERT(il >= 0 && il < XEON_DMOE_MAX_LAYERS);
++    GGML_ASSERT(n_tokens <= XEON_DMOE_MAX_TOKENS && n_embd % 4 == 0 && n_used <= 256);
 +    GGML_ASSERT(ggml_is_contiguous(op));
 +
-+    const size_t stride = tosh_dmoe_layer_stride(n_embd, n_used);
++    const size_t stride = xeon_dmoe_layer_stride(n_embd, n_used);
 +
 +    void * ev = ggml_metal_device_dmoe_event(ctx->dev);
 +    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_stage(ctx->dev, stride);
@@ -3173,15 +3173,15 @@ index 7ce270237..5a3daa3e4 100644
 +    } args = {
 +        n_embd,
 +        n_used,
-+        (uint32_t) tosh_dmoe_off_ids(n_embd, n_used),
-+        (uint32_t) tosh_dmoe_off_slots(n_embd, n_used),
++        (uint32_t) xeon_dmoe_off_ids(n_embd, n_used),
++        (uint32_t) xeon_dmoe_off_slots(n_embd, n_used),
 +        cur->nb[1],
 +        ids->nb[1],
 +        il,
-+        tosh_dmoe_test_mask(),
++        xeon_dmoe_test_mask(),
 +    };
 +
-+    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_publish", "tosh_dmoe_publish", nullptr);
++    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_publish", "xeon_dmoe_publish", nullptr);
 +
 +    ggml_metal_encoder_t enc = ctx->enc;
 +    ggml_metal_encoder_set_pipeline(enc, pipeline);
@@ -3191,7 +3191,7 @@ index 7ce270237..5a3daa3e4 100644
 +    // a dynamic cache reads the table version this graph was submitted with
 +    ggml_metal_buffer_id bid_res = ggml_metal_device_dmoe_tables(ctx->dev);
 +    if (bid_res.metal != nullptr) {
-+        bid_res.offs = ((size_t) ggml_get_op_params_i32(op, 4)*TOSH_DMOE_MAX_LAYERS + il)*res->ne[0]*sizeof(int32_t);
++        bid_res.offs = ((size_t) ggml_get_op_params_i32(op, 4)*XEON_DMOE_MAX_LAYERS + il)*res->ne[0]*sizeof(int32_t);
 +    } else {
 +        bid_res = ggml_metal_get_buffer_id(res);
 +    }
@@ -3206,11 +3206,11 @@ index 7ce270237..5a3daa3e4 100644
 +    return 1;
 +}
 +
-+int ggml_metal_op_tosh_dmoe_join(ggml_metal_op_t ctx, int idx) {
++int ggml_metal_op_xeon_dmoe_join(ggml_metal_op_t ctx, int idx) {
 +    ggml_tensor * op = ctx->node(idx);
 +
 +    if (ggml_get_op_params_i32(op, 1) == 1) {
-+        return ggml_metal_op_tosh_dmoe_join_wide(ctx, idx);
++        return ggml_metal_op_xeon_dmoe_join_wide(ctx, idx);
 +    }
 +
 +    const ggml_tensor * gpu   = op->src[0];
@@ -3221,7 +3221,7 @@ index 7ce270237..5a3daa3e4 100644
 +    const int n_used   = gpu->ne[1];
 +    const int n_tokens = gpu->ne[2];
 +
-+    const size_t stride = tosh_dmoe_layer_stride(n_embd, n_used);
++    const size_t stride = xeon_dmoe_layer_stride(n_embd, n_used);
 +
 +    void * ev = ggml_metal_device_dmoe_event(ctx->dev);
 +    ggml_metal_buffer_id bid_stage = ggml_metal_device_dmoe_stage(ctx->dev, stride);
@@ -3240,10 +3240,10 @@ index 7ce270237..5a3daa3e4 100644
 +    } args = {
 +        n_embd,
 +        n_used,
-+        (uint32_t) tosh_dmoe_off_out(n_embd, n_used),
++        (uint32_t) xeon_dmoe_off_out(n_embd, n_used),
 +    };
 +
-+    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_join", "tosh_dmoe_join", nullptr);
++    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_join", "xeon_dmoe_join", nullptr);
 +
 +    ggml_metal_encoder_t enc = ctx->enc;
 +    ggml_metal_encoder_set_pipeline(enc, pipeline);
@@ -3257,12 +3257,12 @@ index 7ce270237..5a3daa3e4 100644
 +    return 1;
 +}
 +
-+int ggml_metal_op_tosh_dmoe_observe(ggml_metal_op_t ctx, int idx) {
++int ggml_metal_op_xeon_dmoe_observe(ggml_metal_op_t ctx, int idx) {
 +    ggml_tensor * op = ctx->node(idx);
 +    const ggml_tensor * ids = op->src[0];
 +
 +    ggml_metal_buffer_id bid_ring = ggml_metal_device_dmoe_obs_ring(ctx->dev);
-+    tosh_dmoe_obs_record * rec = tosh_dmoe_obs_reserve(ggml_get_op_params_i32(op, 0), (int) ids->ne[0], (int) ids->ne[1]);
++    xeon_dmoe_obs_record * rec = xeon_dmoe_obs_reserve(ggml_get_op_params_i32(op, 0), (int) ids->ne[0], (int) ids->ne[1]);
 +    if (bid_ring.metal == nullptr || rec == nullptr) {
 +        return 1;
 +    }
@@ -3274,7 +3274,7 @@ index 7ce270237..5a3daa3e4 100644
 +        uint64_t nb1;
 +    } args = { (int32_t) ids->ne[0], (int32_t) ids->ne[1], ids->nb[1] };
 +
-+    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_dmoe_observe", "tosh_dmoe_observe", nullptr);
++    auto pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_dmoe_observe", "xeon_dmoe_observe", nullptr);
 +
 +    ggml_metal_encoder_t enc = ctx->enc;
 +    ggml_metal_encoder_set_pipeline(enc, pipeline);
@@ -3307,10 +3307,10 @@ index 62d339cb8..01e4e92d4 100644
  int ggml_metal_op_fwht_fused        (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_mul_mat           (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_mul_mat_id        (ggml_metal_op_t ctx, int idx);
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+int ggml_metal_op_tosh_dmoe_publish (ggml_metal_op_t ctx, int idx);
-+int ggml_metal_op_tosh_dmoe_join    (ggml_metal_op_t ctx, int idx);
-+int ggml_metal_op_tosh_dmoe_observe (ggml_metal_op_t ctx, int idx);
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++int ggml_metal_op_xeon_dmoe_publish (ggml_metal_op_t ctx, int idx);
++int ggml_metal_op_xeon_dmoe_join    (ggml_metal_op_t ctx, int idx);
++int ggml_metal_op_xeon_dmoe_observe (ggml_metal_op_t ctx, int idx);
 +#endif
  int ggml_metal_op_add_id            (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_flash_attn_ext    (ggml_metal_op_t ctx, int idx);
@@ -3329,7 +3329,7 @@ index 62d339cb8..01e4e92d4 100644
  int ggml_metal_op_arange            (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_timestep_embedding(ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_argmax            (ggml_metal_op_t ctx, int idx);
-+int ggml_metal_op_tosh_topk_moe     (ggml_metal_op_t ctx, int idx);
++int ggml_metal_op_xeon_topk_moe     (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_argsort           (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_top_k             (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_topk_moe          (ggml_metal_op_t ctx, int idx);
@@ -3351,7 +3351,7 @@ index 34c0184d7..497a337a5 100644
  #include "ggml-metal-device.h"
  #include "ggml-metal-fusion.h"
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
  #include "ggml-metal-context.h"
  #include "ggml-metal-ops.h"
  #include "ggml-metal-tuning.h"
@@ -3372,7 +3372,7 @@ index 34c0184d7..497a337a5 100644
 +    // mixed execution takes every batch above its host path: the CPU backend would compute the
 +    // resident experts too, and a bounded host cache leaves it no bytes. The device read the
 +    // threshold before a plan could lower it
-+    if (tosh_dmoe_enabled() || tosh_hostcache_on()) min_batch = std::min(min_batch, TOSH_DMOE_MAX_TOKENS + 1);
++    if (xeon_dmoe_enabled() || xeon_hostcache_on()) min_batch = std::min(min_batch, XEON_DMOE_MAX_TOKENS + 1);
      return (op->op == GGML_OP_MUL_MAT ||
              op->op == GGML_OP_MUL_MAT_ID) &&
              get_op_batch_size(op) >= ggml_metal_device_get_props(ctx_dev)->op_offload_min_batch_size;
@@ -3615,18 +3615,18 @@ index fbc51861c..61825ed89 100644
  
      device const char * src0_cur = src0s + i02*args.nb02;
      device const char * src1_cur = src1  + i11*args.nb11 + i12*args.nb12;
-diff --git a/ggml/src/ggml-metal/kernels/tosh_moe.metal b/ggml/src/ggml-metal/kernels/tosh_moe.metal
+diff --git a/ggml/src/ggml-metal/kernels/xeon_moe.metal b/ggml/src/ggml-metal/kernels/xeon_moe.metal
 new file mode 100644
 index 000000000..89467c892
 --- /dev/null
-+++ b/ggml/src/ggml-metal/kernels/tosh_moe.metal
++++ b/ggml/src/ggml-metal/kernels/xeon_moe.metal
 @@ -0,0 +1,185 @@
 +#include <metal_stdlib>
 +using namespace metal;
 +
 +// Mixed expert execution. publish copies a layer's activation and routing into a host-visible
 +// stage and writes each routed expert's resident slot, -1 for the ones the host runs.
-+struct tosh_dmoe_publish_args {
++struct xeon_dmoe_publish_args {
 +    int32_t  n_embd;
 +    int32_t  n_used;
 +    uint32_t off_ids;
@@ -3637,8 +3637,8 @@ index 000000000..89467c892
 +    int32_t  mask;   // test only: send router positions to the host whatever their residency
 +};
 +
-+kernel void tosh_dmoe_publish(
-+        constant tosh_dmoe_publish_args & args [[buffer(0)]],
++kernel void xeon_dmoe_publish(
++        constant xeon_dmoe_publish_args & args [[buffer(0)]],
 +        device const char    * cur       [[buffer(1)]],
 +        device const char    * ids       [[buffer(2)]],
 +        device const int32_t * residency [[buffer(3)]],
@@ -3672,14 +3672,14 @@ index 000000000..89467c892
 +
 +// join takes each routed expert's output from the device when it is resident and from the
 +// host stage otherwise, keeping the router's order.
-+struct tosh_dmoe_join_args {
++struct xeon_dmoe_join_args {
 +    int32_t  n_embd;
 +    int32_t  n_used;
 +    uint32_t off_out;
 +};
 +
-+kernel void tosh_dmoe_join(
-+        constant tosh_dmoe_join_args & args [[buffer(0)]],
++kernel void xeon_dmoe_join(
++        constant xeon_dmoe_join_args & args [[buffer(0)]],
 +        device const float4  * gpu   [[buffer(1)]],
 +        device const int32_t * slots [[buffer(2)]],
 +        device const char    * stage [[buffer(3)]],
@@ -3698,7 +3698,7 @@ index 000000000..89467c892
 +// Wide batches. publish_wide_act copies the chunk's activation into the stage; publish_wide_ids
 +// counts each expert's rows in the chunk and sends the rows of rarely routed, non-resident
 +// experts to the host (-1) so the upload skips them. One threadgroup sees the whole chunk.
-+struct tosh_dmoe_wide_args {
++struct xeon_dmoe_wide_args {
 +    int32_t  n_embd;
 +    int32_t  n_used;
 +    int32_t  n_tokens;
@@ -3715,8 +3715,8 @@ index 000000000..89467c892
 +    uint64_t nb_ids1;
 +};
 +
-+kernel void tosh_dmoe_publish_wide_act(
-+        constant tosh_dmoe_wide_args & args [[buffer(0)]],
++kernel void xeon_dmoe_publish_wide_act(
++        constant xeon_dmoe_wide_args & args [[buffer(0)]],
 +        device const char * cur   [[buffer(1)]],
 +        device       char * stage [[buffer(2)]],
 +        uint  t    [[threadgroup_position_in_grid]],
@@ -3729,8 +3729,8 @@ index 000000000..89467c892
 +    }
 +}
 +
-+kernel void tosh_dmoe_publish_wide_ids(
-+        constant tosh_dmoe_wide_args & args [[buffer(0)]],
++kernel void xeon_dmoe_publish_wide_ids(
++        constant xeon_dmoe_wide_args & args [[buffer(0)]],
 +        device const char    * ids       [[buffer(1)]],
 +        device const int32_t * residency [[buffer(2)]],
 +        device       int32_t * dst       [[buffer(3)]],
@@ -3771,8 +3771,8 @@ index 000000000..89467c892
 +}
 +
 +// Writes the host's rows over the positions the GPU skipped; the rest stays as computed.
-+kernel void tosh_dmoe_join_wide(
-+        constant tosh_dmoe_wide_args & args [[buffer(0)]],
++kernel void xeon_dmoe_join_wide(
++        constant xeon_dmoe_wide_args & args [[buffer(0)]],
 +        device const char   * stage [[buffer(1)]],
 +        device       float4 * dst   [[buffer(2)]],
 +        uint  k    [[threadgroup_position_in_grid]],
@@ -3790,14 +3790,14 @@ index 000000000..89467c892
 +}
 +
 +// Prefill routing for the residency policy: the ids of every token, packed, into a host ring.
-+struct tosh_dmoe_observe_args {
++struct xeon_dmoe_observe_args {
 +    int32_t  n_used;
 +    int32_t  n_tokens;
 +    uint64_t nb1;
 +};
 +
-+kernel void tosh_dmoe_observe(
-+        constant tosh_dmoe_observe_args & args [[buffer(0)]],
++kernel void xeon_dmoe_observe(
++        constant xeon_dmoe_observe_args & args [[buffer(0)]],
 +        device const char    * ids  [[buffer(1)]],
 +        device       int32_t * ring [[buffer(2)]],
 +        uint  t    [[threadgroup_position_in_grid]],
@@ -3820,9 +3820,9 @@ index 1e38b7c01..71a651c77 100644
  
      "GLU",
 +
-+    "TOSH_DMOE_PUBLISH",
-+    "TOSH_DMOE_JOIN",
-+    "TOSH_DMOE_OBSERVE",
++    "XEON_DMOE_PUBLISH",
++    "XEON_DMOE_JOIN",
++    "XEON_DMOE_OBSERVE",
  };
  
 -static_assert(GGML_OP_COUNT == 101, "GGML_OP_COUNT != 101");
@@ -3869,7 +3869,7 @@ index 1e38b7c01..71a651c77 100644
  
      c ~= as[:,:,i] @ b[:,i%r,t], i = ids[e,t] for all e,t in ids
  */
-+struct ggml_tensor * ggml_tosh_dmoe_publish(
++struct ggml_tensor * ggml_xeon_dmoe_publish(
 +        struct ggml_context * ctx,
 +        struct ggml_tensor  * cur,
 +        struct ggml_tensor  * ids,
@@ -3883,7 +3883,7 @@ index 1e38b7c01..71a651c77 100644
 +
 +    ggml_set_op_params_i32(result, 0, il);
 +
-+    result->op     = GGML_OP_TOSH_DMOE_PUBLISH;
++    result->op     = GGML_OP_XEON_DMOE_PUBLISH;
 +    result->src[0] = cur;
 +    result->src[1] = ids;
 +    result->src[2] = residency;
@@ -3891,27 +3891,27 @@ index 1e38b7c01..71a651c77 100644
 +    return result;
 +}
 +
-+struct ggml_tensor * ggml_tosh_dmoe_join(
++struct ggml_tensor * ggml_xeon_dmoe_join(
 +        struct ggml_context * ctx,
 +        struct ggml_tensor  * gpu,
 +        struct ggml_tensor  * slots,
 +        int                   il) {
 +    GGML_ASSERT(gpu->type == GGML_TYPE_F32 && ggml_is_contiguous(gpu));
-+    GGML_ASSERT(slots->op == GGML_OP_TOSH_DMOE_PUBLISH);
++    GGML_ASSERT(slots->op == GGML_OP_XEON_DMOE_PUBLISH);
 +    GGML_ASSERT(gpu->ne[1] == slots->ne[0] && gpu->ne[2] == slots->ne[1]);
 +
 +    struct ggml_tensor * result = ggml_new_tensor(ctx, GGML_TYPE_F32, 3, gpu->ne);
 +
 +    ggml_set_op_params_i32(result, 0, il);
 +
-+    result->op     = GGML_OP_TOSH_DMOE_JOIN;
++    result->op     = GGML_OP_XEON_DMOE_JOIN;
 +    result->src[0] = gpu;
 +    result->src[1] = slots;
 +
 +    return result;
 +}
 +
-+struct ggml_tensor * ggml_tosh_dmoe_publish_wide(
++struct ggml_tensor * ggml_xeon_dmoe_publish_wide(
 +        struct ggml_context * ctx,
 +        struct ggml_tensor  * cur,
 +        struct ggml_tensor  * ids,
@@ -3920,19 +3920,19 @@ index 1e38b7c01..71a651c77 100644
 +        int                   rows,
 +        int                   tail) {
 +    GGML_ASSERT(rows > 0 && tail >= 0);
-+    struct ggml_tensor * result = ggml_tosh_dmoe_publish(ctx, cur, ids, residency, il);
++    struct ggml_tensor * result = ggml_xeon_dmoe_publish(ctx, cur, ids, residency, il);
 +    ggml_set_op_params_i32(result, 1, rows);
 +    ggml_set_op_params_i32(result, 5, tail);
 +    return result;
 +}
 +
-+struct ggml_tensor * ggml_tosh_dmoe_join_wide(
++struct ggml_tensor * ggml_xeon_dmoe_join_wide(
 +        struct ggml_context * ctx,
 +        struct ggml_tensor  * gpu,
 +        struct ggml_tensor  * wide_ids,
 +        int                   il) {
 +    GGML_ASSERT(gpu->type == GGML_TYPE_F32 && ggml_is_contiguous(gpu));
-+    GGML_ASSERT(wide_ids->op == GGML_OP_TOSH_DMOE_PUBLISH && ggml_get_op_params_i32(wide_ids, 1) > 0);
++    GGML_ASSERT(wide_ids->op == GGML_OP_XEON_DMOE_PUBLISH && ggml_get_op_params_i32(wide_ids, 1) > 0);
 +    GGML_ASSERT(gpu->ne[1] == wide_ids->ne[0] && gpu->ne[2] == wide_ids->ne[1]);
 +
 +    // in place: the host rows overwrite the positions the GPU skipped
@@ -3941,14 +3941,14 @@ index 1e38b7c01..71a651c77 100644
 +    ggml_set_op_params_i32(result, 0, il);
 +    ggml_set_op_params_i32(result, 1, 1);
 +
-+    result->op     = GGML_OP_TOSH_DMOE_JOIN;
++    result->op     = GGML_OP_XEON_DMOE_JOIN;
 +    result->src[0] = gpu;
 +    result->src[1] = wide_ids;
 +
 +    return result;
 +}
 +
-+struct ggml_tensor * ggml_tosh_dmoe_observe(
++struct ggml_tensor * ggml_xeon_dmoe_observe(
 +        struct ggml_context * ctx,
 +        struct ggml_tensor  * ids,
 +        int                   il) {
@@ -3958,7 +3958,7 @@ index 1e38b7c01..71a651c77 100644
 +
 +    ggml_set_op_params_i32(result, 0, il);
 +
-+    result->op     = GGML_OP_TOSH_DMOE_OBSERVE;
++    result->op     = GGML_OP_XEON_DMOE_OBSERVE;
 +    result->src[0] = ids;
 +
 +    return result;
@@ -3985,7 +3985,7 @@ index afdaddc79..3d2a2cb6b 100644
      llama-model-loader.cpp
      llama-model-saver.cpp
      llama-model.cpp
-+    llama-tosh-dmoe.cpp
++    llama-xeon-dmoe.cpp
      llama-quant.cpp
      llama-sampler.cpp
      llama-vocab.cpp
@@ -4000,11 +4000,11 @@ index 432136163..fe8f0a562 100644
 +++ b/src/llama-context.cpp
 @@ -1,9 +1,15 @@
  #include "llama-context.h"
-+#include "llama-tosh-dmoe.h"
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#include "llama-xeon-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#else
-+static inline size_t tosh_dmoe_private_bytes(void) { return 0; }
++static inline size_t xeon_dmoe_private_bytes(void) { return 0; }
 +#endif
  
  #include "ggml.h"
@@ -4024,7 +4024,7 @@ index 432136163..fe8f0a562 100644
          sched_reserve();
  
 +        // an automatic expert arena takes what the card has left once this context is sized
-+        if (llama_tosh_dmoe_budget_pending() || llama_tosh_dmoe_rebudget_possible()) {
++        if (llama_xeon_dmoe_budget_pending() || llama_xeon_dmoe_rebudget_possible()) {
 +            size_t gpu_bytes = 0;
 +            for (const auto & [buft, d] : memory_breakdown()) {
 +                ggml_backend_dev_t dev = ggml_backend_buft_get_device(buft);
@@ -4033,13 +4033,13 @@ index 432136163..fe8f0a562 100644
 +                }
 +            }
 +            // the breakdown files buffers by the type a tensor asked for; the backend knows what it holds
-+            if (const size_t held = tosh_dmoe_private_bytes()) {
++            if (const size_t held = xeon_dmoe_private_bytes()) {
 +                gpu_bytes = held;
 +            }
-+            llama_tosh_dmoe_budget(gpu_bytes);
++            llama_xeon_dmoe_budget(gpu_bytes);
 +            sched_reserve();
 +        }
-+        llama_tosh_dmoe_context_opened();
++        llama_xeon_dmoe_context_opened();
 +
          if (!cparams.flash_attn) {
              if (ggml_is_quantized(params.type_v)) {
@@ -4058,7 +4058,7 @@ index 432136163..fe8f0a562 100644
  }
  
  llama_context::~llama_context() {
-+    llama_tosh_dmoe_context_closed();
++    llama_xeon_dmoe_context_closed();
      // wait for any pending asynchronous copies into the output buffers before they are freed
      synchronize();
  
@@ -4073,13 +4073,13 @@ index 80cb40906..b60ff6660 100644
 +++ b/src/llama-graph.cpp
 @@ -1,12 +1,16 @@
  #include "llama-graph.h"
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#endif
  
  #include "llama-impl.h"
  #include "llama-model.h"
-+#include "llama-tosh-dmoe.h"
++#include "llama-xeon-dmoe.h"
  #include "llama-batch.h"
  #include "llama-cparams.h"
  #include "llama-sampler.h"
@@ -4100,9 +4100,9 @@ index 80cb40906..b60ff6660 100644
 +    ggml_tensor * expert_ids = selected_experts;
 +
 +    // mixed execution: resident experts run from the VRAM arena, the rest on the host
-+    const llama_tosh_dmoe_layer * dmoe = llama_tosh_dmoe_layer_of(gate_exps ? gate_exps : gate_up_exps);
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+    const llama_tosh_dmoe_layer * dmoe_bank = dmoe;
++    const llama_xeon_dmoe_layer * dmoe = llama_xeon_dmoe_layer_of(gate_exps ? gate_exps : gate_up_exps);
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++    const llama_xeon_dmoe_layer * dmoe_bank = dmoe;
 +    bool dmoe_shape_ok = false;
 +    if (dmoe != nullptr) {
 +        const bool plain_swiglu = type_op == LLM_FFN_SILU && (il < 0 || hparams.swiglu_clamp_exp[il] <= 1e-6f);
@@ -4111,30 +4111,30 @@ index 80cb40906..b60ff6660 100644
 +        const bool banks_ok = gate_up_exps ? (!up_exps && !gate_up_exps_b) : (up_exps && gate_exps);
 +        dmoe_shape_ok = banks_ok && down_exps && !up_exps_s && !gate_exps_s && !weight_before_ffn &&
 +            (plain_swiglu || oai || gelu) &&
-+            llama_tosh_dmoe_accept(dmoe, oai ? 1 : gelu ? 2 : 0, oai ? 1.702f : 0.0f, oai ? 7.0f : 0.0f,
++            llama_xeon_dmoe_accept(dmoe, oai ? 1 : gelu ? 2 : 0, oai ? 1.702f : 0.0f, oai ? 7.0f : 0.0f,
 +                                   gate_exps_b != nullptr, up_exps_b != nullptr);
-+        if (!dmoe_shape_ok || n_tokens > TOSH_DMOE_MAX_TOKENS) {
++        if (!dmoe_shape_ok || n_tokens > XEON_DMOE_MAX_TOKENS) {
 +            dmoe = nullptr;
 +        }
 +    }
 +    // a batch too wide for mixed execution still tells the residency policy what it routed
-+    if (dmoe_bank != nullptr && dmoe == nullptr && n_tokens > TOSH_DMOE_MAX_TOKENS && llama_tosh_dmoe_observe_prefill()) {
-+        ggml_build_forward_expand(gf, ggml_tosh_dmoe_observe(ctx0, selected_experts, il));
++    if (dmoe_bank != nullptr && dmoe == nullptr && n_tokens > XEON_DMOE_MAX_TOKENS && llama_xeon_dmoe_observe_prefill()) {
++        ggml_build_forward_expand(gf, ggml_xeon_dmoe_observe(ctx0, selected_experts, il));
 +    }
 +    // and on a GPU-sized batch its rarely routed, non-resident experts run on the host
 +    ggml_tensor * dmoe_wide = nullptr;
-+    if (dmoe_bank != nullptr && dmoe == nullptr && dmoe_shape_ok && llama_tosh_dmoe_rare_rows() > 0 &&
-+        n_tokens >= llama_tosh_dmoe_wide_min_tokens() && n_tokens <= TOSH_DMOE_WIDE_MAX_TOKENS) {
++    if (dmoe_bank != nullptr && dmoe == nullptr && dmoe_shape_ok && llama_xeon_dmoe_rare_rows() > 0 &&
++        n_tokens >= llama_xeon_dmoe_wide_min_tokens() && n_tokens <= XEON_DMOE_WIDE_MAX_TOKENS) {
 +        ggml_tensor * cur_2d = ggml_is_contiguous(cur) ? cur : ggml_cont(ctx0, cur);
-+        dmoe_wide = ggml_tosh_dmoe_publish_wide(ctx0, cur_2d, selected_experts, dmoe_bank->residency, il,
-+                llama_tosh_dmoe_rare_rows(), llama_tosh_dmoe_rare_tail());
++        dmoe_wide = ggml_xeon_dmoe_publish_wide(ctx0, cur_2d, selected_experts, dmoe_bank->residency, il,
++                llama_xeon_dmoe_rare_rows(), llama_xeon_dmoe_rare_tail());
 +        cb(dmoe_wide, "ffn_moe_dmoe_wide", il);
 +        expert_ids = dmoe_wide;
 +    }
 +    ggml_tensor * dmoe_slots = nullptr;
 +    if (dmoe != nullptr) {
 +        ggml_tensor * cur_2d = ggml_is_contiguous(cur) ? cur : ggml_cont(ctx0, cur);
-+        dmoe_slots = ggml_tosh_dmoe_publish(ctx0, cur_2d, selected_experts, dmoe->residency, il);
++        dmoe_slots = ggml_xeon_dmoe_publish(ctx0, cur_2d, selected_experts, dmoe->residency, il);
 +        cb(dmoe_slots, "ffn_moe_dmoe_slots", il);
 +        expert_ids = dmoe_slots;
 +        if (gate_up_exps) {
@@ -4221,7 +4221,7 @@ index 80cb40906..b60ff6660 100644
 -    experts = build_lora_mm_id(down_exps, cur, selected_experts, down_exps_s); // [n_embd, n_expert_used, n_tokens]
 +    // with mixed execution the ids are slots, and host rows join after the matmul: scale by expert later
 +    ggml_tensor * down_s_late = nullptr;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    if (down_exps_s && (dmoe_slots || dmoe_wide)) {
 +        down_s_late = down_exps_s;
 +        down_exps_s = nullptr;
@@ -4234,13 +4234,13 @@ index 80cb40906..b60ff6660 100644
      }
      cb(experts, "ffn_moe_down", il);
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    if (dmoe_slots != nullptr) {
-+        experts = ggml_tosh_dmoe_join(ctx0, experts, dmoe_slots, il);
++        experts = ggml_xeon_dmoe_join(ctx0, experts, dmoe_slots, il);
 +        cb(experts, "ffn_moe_dmoe_join", il);
 +    }
 +    if (dmoe_wide != nullptr) {
-+        experts = ggml_tosh_dmoe_join_wide(ctx0, experts, dmoe_wide, il);
++        experts = ggml_xeon_dmoe_join_wide(ctx0, experts, dmoe_wide, il);
 +        cb(experts, "ffn_moe_dmoe_join_wide", il);
 +    }
 +#endif
@@ -4319,7 +4319,7 @@ index ffc8b277d..d496bdb01 100644
  #include "llama-ext.h"
  #include "llama-hparams.h"
  #include "llama-impl.h"
-+#include "llama-tosh-dmoe.h"
++#include "llama-xeon-dmoe.h"
  #include "llama-mmap.h"
  #include "llama-cparams.h"
  #include "llama-model-loader.h"
@@ -4355,7 +4355,7 @@ index ffc8b277d..d496bdb01 100644
          }
      }
  
-+    llama_tosh_dmoe_init(layers, hparams);
++    llama_xeon_dmoe_init(layers, hparams);
 +
      if (use_mmap_buffer) {
          for (auto & mapping : ml.mappings) {
@@ -4374,7 +4374,7 @@ index ffc8b277d..d496bdb01 100644
  }
  
  void llama_model_free(llama_model * model) {
-+    llama_tosh_dmoe_shutdown();
++    llama_xeon_dmoe_shutdown();
      delete model;
  }
  
@@ -4383,13 +4383,13 @@ index ffc8b277d..d496bdb01 100644
  }
  
  int32_t llama_model_n_embd(const llama_model * model) {
-diff --git a/src/llama-tosh-dmoe.cpp b/src/llama-tosh-dmoe.cpp
+diff --git a/src/llama-xeon-dmoe.cpp b/src/llama-xeon-dmoe.cpp
 new file mode 100644
 index 000000000..dea450cac
 --- /dev/null
-+++ b/src/llama-tosh-dmoe.cpp
++++ b/src/llama-xeon-dmoe.cpp
 @@ -0,0 +1,1891 @@
-+#include "llama-tosh-dmoe.h"
++#include "llama-xeon-dmoe.h"
 +
 +#include "llama-impl.h"
 +#include "llama-model.h"
@@ -4398,8 +4398,8 @@ index 000000000..dea450cac
 +#include "ggml-backend.h"
 +#include "ggml-cpu.h"
 +
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+#include "tosh-dmoe.h"
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++#include "xeon-dmoe.h"
 +#endif
 +
 +#include <algorithm>
@@ -4428,9 +4428,9 @@ index 000000000..dea450cac
 +#define DMOE_PAUSE() do {} while (0)
 +#endif
 +
-+static std::unordered_map<const ggml_tensor *, llama_tosh_dmoe_layer> g_layers;
++static std::unordered_map<const ggml_tensor *, llama_xeon_dmoe_layer> g_layers;
 +
-+const llama_tosh_dmoe_layer * llama_tosh_dmoe_layer_of(const ggml_tensor * gate_exps) {
++const llama_xeon_dmoe_layer * llama_xeon_dmoe_layer_of(const ggml_tensor * gate_exps) {
 +    if (g_layers.empty() || gate_exps == nullptr) {
 +        return nullptr;
 +    }
@@ -4438,20 +4438,20 @@ index 000000000..dea450cac
 +    return it == g_layers.end() ? nullptr : &it->second;
 +}
 +
-+#ifndef TOSH_ENABLE_DYNAMIC_MOE
++#ifndef XEON_ENABLE_DYNAMIC_MOE
 +
-+void llama_tosh_dmoe_init(std::vector<llama_layer> &, const llama_hparams &) {}
-+bool llama_tosh_dmoe_budget_pending() { return false; }
-+void llama_tosh_dmoe_budget(size_t) {}
-+bool llama_tosh_dmoe_rebudget_possible() { return false; }
-+void llama_tosh_dmoe_context_opened() {}
-+void llama_tosh_dmoe_context_closed() {}
-+void llama_tosh_dmoe_shutdown() {}
-+bool llama_tosh_dmoe_observe_prefill() { return false; }
-+bool llama_tosh_dmoe_accept(const llama_tosh_dmoe_layer *, int, float, float, bool, bool) { return false; }
-+int  llama_tosh_dmoe_rare_rows() { return 0; }
-+int  llama_tosh_dmoe_rare_tail() { return 0; }
-+int  llama_tosh_dmoe_wide_min_tokens() { return 1 << 30; }
++void llama_xeon_dmoe_init(std::vector<llama_layer> &, const llama_hparams &) {}
++bool llama_xeon_dmoe_budget_pending() { return false; }
++void llama_xeon_dmoe_budget(size_t) {}
++bool llama_xeon_dmoe_rebudget_possible() { return false; }
++void llama_xeon_dmoe_context_opened() {}
++void llama_xeon_dmoe_context_closed() {}
++void llama_xeon_dmoe_shutdown() {}
++bool llama_xeon_dmoe_observe_prefill() { return false; }
++bool llama_xeon_dmoe_accept(const llama_xeon_dmoe_layer *, int, float, float, bool, bool) { return false; }
++int  llama_xeon_dmoe_rare_rows() { return 0; }
++int  llama_xeon_dmoe_rare_tail() { return 0; }
++int  llama_xeon_dmoe_wide_min_tokens() { return 1 << 30; }
 +
 +#else
 +
@@ -4545,8 +4545,8 @@ index 000000000..dea450cac
 +    // dynamic residency: what the last job routed, handed to the policy once the GPU is released
 +    void (*observe)(void * ctx, int il, const int32_t * ids, const int32_t * slots, int n, bool multi, uint32_t tick) = nullptr;
 +    void * observe_ctx = nullptr;
-+    int32_t obs_ids[TOSH_DMOE_MAX_TOKENS*256];
-+    int32_t obs_slots[TOSH_DMOE_MAX_TOKENS*256];
++    int32_t obs_ids[XEON_DMOE_MAX_TOKENS*256];
++    int32_t obs_slots[XEON_DMOE_MAX_TOKENS*256];
 +    int     obs_n = 0;
 +    std::vector<std::atomic<uint32_t>> hits_by_tick, routed_by_tick;
 +
@@ -4700,17 +4700,17 @@ index 000000000..dea450cac
 +        raise_priority();
 +        uint64_t seen = 0;
 +        while (!stop.load()) {
-+            if (!tosh_dmoe_wait_active(1000000)) {
++            if (!xeon_dmoe_wait_active(1000000)) {
 +                continue;
 +            }
 +            uint64_t g;
 +            const clk::time_point t0 = clk::now();
-+            for (int n = 1; (g = gen.load()) == seen && tosh_dmoe_is_active() && !stop.load(); ++n) {
++            for (int n = 1; (g = gen.load()) == seen && xeon_dmoe_is_active() && !stop.load(); ++n) {
 +                if ((n & 255) == 0 && us_since(t0) > spin_us) {
 +                    std::unique_lock<std::mutex> lock(work_mutex);
 +                    sleepers++;
 +                    work_cv.wait_for(lock, std::chrono::milliseconds(50),
-+                        [&] { return gen.load() != seen || !tosh_dmoe_is_active() || stop.load(); });
++                        [&] { return gen.load() != seen || !xeon_dmoe_is_active() || stop.load(); });
 +                    sleepers--;
 +                    continue;
 +                }
@@ -4725,36 +4725,36 @@ index 000000000..dea450cac
 +    }
 +
 +    // a wide batch: the positions the GPU skipped, grouped by expert so its weights stay in cache
-+    bool job_wide(int il, const tosh_dmoe_job & jb) {
-+        const double t0 = tosh_dmoe_host_seconds();
++    bool job_wide(int il, const xeon_dmoe_job & jb) {
++        const double t0 = xeon_dmoe_host_seconds();
 +        if (il <= wide_first_il) {
 +            wide_first_il = il;
-+            tosh_dmoe_rare_chunk(t0, jb.n_tokens);
++            xeon_dmoe_rare_chunk(t0, jb.n_tokens);
 +        }
 +        size_t bytes = 0;
-+        char * stage = (char *) tosh_dmoe_wide_stage(&bytes);
++        char * stage = (char *) xeon_dmoe_wide_stage(&bytes);
 +        const int T = jb.n_tokens, nu = jb.n_used;
 +        if (stage == nullptr || il >= (int) banks.size() || banks[il].gate == nullptr ||
-+            jb.n_embd != n_embd || T > TOSH_DMOE_WIDE_MAX_TOKENS || nu <= 0 ||
-+            tosh_dmoe_wide_off_out(T, n_embd, nu) + (size_t) TOSH_DMOE_WIDE_MAX_ROWS*n_embd*4 > bytes) {
-+            tosh_dmoe_fail("a wide layer has no host bank or stage, or an unexpected shape");
++            jb.n_embd != n_embd || T > XEON_DMOE_WIDE_MAX_TOKENS || nu <= 0 ||
++            xeon_dmoe_wide_off_out(T, n_embd, nu) + (size_t) XEON_DMOE_WIDE_MAX_ROWS*n_embd*4 > bytes) {
++            xeon_dmoe_fail("a wide layer has no host bank or stage, or an unexpected shape");
 +            return false;
 +        }
 +        bank   = &banks[il];
 +        n_used = nu;
 +        act    = (const float *) stage;
-+        out    = (float *) (stage + tosh_dmoe_wide_off_out(T, n_embd, nu));
-+        const int32_t * ids = (const int32_t *) (stage + tosh_dmoe_wide_off_ids(T, n_embd, nu));
-+        const int32_t * rmp = (const int32_t *) (stage + tosh_dmoe_wide_off_rmp(T, n_embd, nu));
-+        int32_t       * map = (int32_t *)       (stage + tosh_dmoe_wide_off_map(T, n_embd, nu));
++        out    = (float *) (stage + xeon_dmoe_wide_off_out(T, n_embd, nu));
++        const int32_t * ids = (const int32_t *) (stage + xeon_dmoe_wide_off_ids(T, n_embd, nu));
++        const int32_t * rmp = (const int32_t *) (stage + xeon_dmoe_wide_off_rmp(T, n_embd, nu));
++        int32_t       * map = (int32_t *)       (stage + xeon_dmoe_wide_off_map(T, n_embd, nu));
 +
 +        misses.clear();
 +        for (int k = 0; k < T*nu; ++k) {
 +            map[k] = -1;
 +            if (rmp[k] < 0) misses.push_back({ k/nu, k % nu, ids[k] });
 +        }
-+        if ((int) misses.size() > TOSH_DMOE_WIDE_MAX_ROWS) {
-+            tosh_dmoe_fail("a wide layer sent more host rows than the stage holds");
++        if ((int) misses.size() > XEON_DMOE_WIDE_MAX_ROWS) {
++            xeon_dmoe_fail("a wide layer sent more host rows than the stage holds");
 +            return false;
 +        }
 +        std::stable_sort(misses.begin(), misses.end(), [](const miss & a, const miss & b) { return a.e < b.e; });
@@ -4789,51 +4789,51 @@ index 000000000..dea450cac
 +        n_wide++;
 +        n_wide_miss    += misses.size();
 +        n_wide_experts += n_exp;
-+        const double t1 = tosh_dmoe_host_seconds();
++        const double t1 = xeon_dmoe_host_seconds();
 +        us_wide += (uint64_t) ((t1 - t0)*1e6);
-+        tosh_dmoe_timeline(1, il, t0, t1);
-+        tosh_dmoe_rare_host_done(il, t0, t1, tosh_dmoe_reach_get() >= jb.value);
++        xeon_dmoe_timeline(1, il, t0, t1);
++        xeon_dmoe_rare_host_done(il, t0, t1, xeon_dmoe_reach_get() >= jb.value);
 +        return true;
 +    }
 +    std::vector<uint8_t> wide_seen;
 +    int wide_first_il = 1 << 30;
 +
 +    // one layer: find the non-resident experts, compute them, answer the GPU
-+    bool job(int il, const tosh_dmoe_job & jb) {
++    bool job(int il, const xeon_dmoe_job & jb) {
 +        const clk::time_point t0 = clk::now();
 +
-+        char * stage = (char *) tosh_dmoe_stage_layer(il);
++        char * stage = (char *) xeon_dmoe_stage_layer(il);
 +        if (stage == nullptr || il >= (int) banks.size() || banks[il].gate == nullptr) {
-+            tosh_dmoe_fail("a mixed layer has no host bank or stage");
++            xeon_dmoe_fail("a mixed layer has no host bank or stage");
 +            return false;
 +        }
-+        if (jb.n_embd != n_embd || jb.n_tokens > TOSH_DMOE_MAX_TOKENS || jb.n_used <= 0) {
-+            tosh_dmoe_fail("a mixed layer published an unexpected shape");
++        if (jb.n_embd != n_embd || jb.n_tokens > XEON_DMOE_MAX_TOKENS || jb.n_used <= 0) {
++            xeon_dmoe_fail("a mixed layer published an unexpected shape");
 +            return false;
 +        }
 +
-+        // test only: TOSH_DMOE_TEST_FAIL=<job> fails that job, TOSH_DMOE_TEST_STALL=<job> hangs it
-+        static const long fail_at  = getenv("TOSH_DMOE_TEST_FAIL")  ? atol(getenv("TOSH_DMOE_TEST_FAIL"))  : -1;
-+        static const long stall_at = getenv("TOSH_DMOE_TEST_STALL") ? atol(getenv("TOSH_DMOE_TEST_STALL")) : -1;
++        // test only: XEON_DMOE_TEST_FAIL=<job> fails that job, XEON_DMOE_TEST_STALL=<job> hangs it
++        static const long fail_at  = getenv("XEON_DMOE_TEST_FAIL")  ? atol(getenv("XEON_DMOE_TEST_FAIL"))  : -1;
++        static const long stall_at = getenv("XEON_DMOE_TEST_STALL") ? atol(getenv("XEON_DMOE_TEST_STALL")) : -1;
 +        if ((long) n_jobs.load() == fail_at) {
-+            tosh_dmoe_fail("injected failure");
++            xeon_dmoe_fail("injected failure");
 +            return false;
 +        }
 +        if ((long) n_jobs.load() == stall_at) {
-+            static const long stall_ms = getenv("TOSH_DMOE_TEST_STALL_MS") ? atol(getenv("TOSH_DMOE_TEST_STALL_MS")) : 3000;
++            static const long stall_ms = getenv("XEON_DMOE_TEST_STALL_MS") ? atol(getenv("XEON_DMOE_TEST_STALL_MS")) : 3000;
 +            std::this_thread::sleep_for(std::chrono::milliseconds(stall_ms));
 +        }
 +
 +        bank   = &banks[il];
 +        n_used = jb.n_used;
-+        act    = (const float *) (stage + tosh_dmoe_off_act(n_embd, n_used));
-+        out    = (float *) (stage + tosh_dmoe_off_out(n_embd, n_used));
++        act    = (const float *) (stage + xeon_dmoe_off_act(n_embd, n_used));
++        out    = (float *) (stage + xeon_dmoe_off_out(n_embd, n_used));
 +
-+        const int32_t * ids   = (const int32_t *) (stage + tosh_dmoe_off_ids(n_embd, n_used));
-+        const int32_t * slots = (const int32_t *) (stage + tosh_dmoe_off_slots(n_embd, n_used));
++        const int32_t * ids   = (const int32_t *) (stage + xeon_dmoe_off_ids(n_embd, n_used));
++        const int32_t * slots = (const int32_t *) (stage + xeon_dmoe_off_slots(n_embd, n_used));
 +
 +        misses.clear();
-+        bool tok_used[TOSH_DMOE_MAX_TOKENS] = {};
++        bool tok_used[XEON_DMOE_MAX_TOKENS] = {};
 +        for (int t = 0; t < jb.n_tokens; ++t) {
 +            for (int j = 0; j < n_used; ++j) {
 +                const int k = t*n_used + j;
@@ -4891,7 +4891,7 @@ index 000000000..dea450cac
 +        clk::time_point last = clk::now();
 +        bool was_active = false;
 +        while (!stop.load()) {
-+            if (!tosh_dmoe_wait_active(1000000)) {
++            if (!xeon_dmoe_wait_active(1000000)) {
 +                was_active = false;
 +                continue;
 +            }
@@ -4899,7 +4899,7 @@ index 000000000..dea450cac
 +                was_active = true;
 +                last = clk::now();
 +            }
-+            const uint64_t v = tosh_dmoe_event_get();
++            const uint64_t v = xeon_dmoe_event_get();
 +            if (v == answered || v % 2 == 0) {
 +                // a wide layer takes tens of milliseconds: past the decode cadence, poll gently
 +                if (us_since(last) > spin_us) {
@@ -4910,28 +4910,28 @@ index 000000000..dea450cac
 +                continue;
 +            }
 +            last = clk::now();
-+            const tosh_dmoe_job * jb = tosh_dmoe_job_of(v);
++            const xeon_dmoe_job * jb = xeon_dmoe_job_of(v);
 +            obs_n = 0;
-+            if (tosh_dmoe_failed() == nullptr) {
++            if (xeon_dmoe_failed() == nullptr) {
 +                if (__atomic_load_n(&jb->value, __ATOMIC_ACQUIRE) != v) {
-+                    tosh_dmoe_fail("the published value does not match its job");
++                    xeon_dmoe_fail("the published value does not match its job");
 +                } else {
 +                    try {
-+                        if (jb->n_tokens > TOSH_DMOE_MAX_TOKENS) {
++                        if (jb->n_tokens > XEON_DMOE_MAX_TOKENS) {
 +                            job_wide(jb->il, *jb);
 +                        } else {
-+                            tosh_dmoe_rare_interrupt();
++                            xeon_dmoe_rare_interrupt();
 +                            job(jb->il, *jb);
 +                        }
 +                    } catch (...) {
-+                        tosh_dmoe_fail("the host executor threw");
++                        xeon_dmoe_fail("the host executor threw");
 +                    }
 +                }
 +            }
 +            answered = v;
-+            tosh_dmoe_event_set(v + 1);
++            xeon_dmoe_event_set(v + 1);
 +            last = clk::now();
-+            if (obs_n > 0 && jb->n_tokens <= TOSH_DMOE_MAX_TOKENS) {
++            if (obs_n > 0 && jb->n_tokens <= XEON_DMOE_MAX_TOKENS) {
 +                observe(observe_ctx, jb->il, obs_ids, obs_slots, obs_n, jb->n_tokens > 1, jb->tick);
 +            }
 +        }
@@ -4943,8 +4943,8 @@ index 000000000..dea450cac
 +        clk::time_point since = clk::now();
 +        while (!stop.load()) {
 +            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-+            const uint64_t v = tosh_dmoe_event_get();
-+            const bool pending = tosh_dmoe_is_active() && (v % 2 == 1);
++            const uint64_t v = xeon_dmoe_event_get();
++            const bool pending = xeon_dmoe_is_active() && (v % 2 == 1);
 +            if (!pending || v != last) {
 +                last  = v;
 +                since = clk::now();
@@ -4954,8 +4954,8 @@ index 000000000..dea450cac
 +            if (us_since(since) > watchdog_us) {
 +                // the failure keeps the pointer, so the message must outlive this scope
 +                static const std::string why = format("the host executor did not answer within %.1f s", watchdog_us/1e6);
-+                tosh_dmoe_fail(why.c_str());
-+                tosh_dmoe_event_set(v + 1);
++                xeon_dmoe_fail(why.c_str());
++                xeon_dmoe_event_set(v + 1);
 +                since = clk::now();
 +            }
 +        }
@@ -4982,7 +4982,7 @@ index 000000000..dea450cac
 +
 +    void report() {
 +        if (n_wide.load() > 0) {
-+            fprintf(stderr, "tosh_dmoe: wide layers %llu, host rows %llu (%.1f per layer) over %.1f experts per layer, host time %.1f ms (%.1f us per layer)\n",
++            fprintf(stderr, "xeon_dmoe: wide layers %llu, host rows %llu (%.1f per layer) over %.1f experts per layer, host time %.1f ms (%.1f us per layer)\n",
 +                    (unsigned long long) n_wide.load(), (unsigned long long) n_wide_miss.load(),
 +                    (double) n_wide_miss.load()/n_wide.load(), (double) n_wide_experts.load()/n_wide.load(),
 +                    us_wide.load()/1e3, (double) us_wide.load()/n_wide.load());
@@ -4992,16 +4992,16 @@ index 000000000..dea450cac
 +            return;
 +        }
 +        const uint64_t m = n_miss.load();
-+        fprintf(stderr, "tosh_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%\n",
++        fprintf(stderr, "xeon_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%\n",
 +                (unsigned long long) n_jobs.load(), (unsigned long long) routed, (unsigned long long) m,
 +                100.0*(double) (routed - m)/(double) routed);
-+        fprintf(stderr, "tosh_dmoe: host time per job %.1f us (quantize %.1f, gate/up %.1f, down %.1f)\n",
++        fprintf(stderr, "xeon_dmoe: host time per job %.1f us (quantize %.1f, gate/up %.1f, down %.1f)\n",
 +                (double) us_job.load()/n_jobs.load(), (double) us_quant.load()/n_jobs.load(),
 +                (double) us_p1.load()/n_jobs.load(), (double) us_p2.load()/n_jobs.load());
-+        fprintf(stderr, "tosh_dmoe: host expert time %.3f ms total over %llu host experts (%.1f us each)\n",
++        fprintf(stderr, "xeon_dmoe: host expert time %.3f ms total over %llu host experts (%.1f us each)\n",
 +                us_job.load()/1e3, (unsigned long long) m, m ? (double) us_job.load()/m : 0.0);
 +        static const int edges[] = { 1, 9, 17, 33, 65, 129, 257, 513, 1 << 16 };
-+        std::string line = "tosh_dmoe: hit rate by graph";
++        std::string line = "xeon_dmoe: hit rate by graph";
 +        for (int b = 0; b + 1 < (int) (sizeof(edges)/sizeof(edges[0])); ++b) {
 +            uint64_t h = 0, r = 0;
 +            for (int t = edges[b]; t < edges[b + 1] && t < (int) hits_by_tick.size(); ++t) {
@@ -5010,7 +5010,7 @@ index 000000000..dea450cac
 +            if (r) line += format(" | %d-%d %.1f%%", edges[b], edges[b + 1] - 1, 100.0*h/r);
 +        }
 +        fprintf(stderr, "%s\n", line.c_str());
-+        if (const char * p = getenv("TOSH_DMOE_TRACE_HITS")) {
++        if (const char * p = getenv("XEON_DMOE_TRACE_HITS")) {
 +            if (FILE * f = fopen(p, "w")) {
 +                for (size_t t = 1; t < hits_by_tick.size(); ++t) {
 +                    if (routed_by_tick[t]) fprintf(f, "%zu %u %u\n", t, hits_by_tick[t].load(), routed_by_tick[t].load());
@@ -5018,11 +5018,11 @@ index 000000000..dea450cac
 +                fclose(f);
 +            }
 +        }
-+        if (getenv("TOSH_DMOE_STATS_LAYERS")) {
++        if (getenv("XEON_DMOE_STATS_LAYERS")) {
 +            for (size_t il = 0; il < banks.size(); ++il) {
 +                const uint64_t r = routed_by_layer[il].load();
 +                if (r) {
-+                    fprintf(stderr, "tosh_dmoe: layer %2zu hit %.1f%%\n", il, 100.0*(double) (r - miss_by_layer[il].load())/r);
++                    fprintf(stderr, "xeon_dmoe: layer %2zu hit %.1f%%\n", il, 100.0*(double) (r - miss_by_layer[il].load())/r);
 +                }
 +            }
 +        }
@@ -5091,9 +5091,9 @@ index 000000000..dea450cac
 +    bool   defer_wide = true;
 +    bool   vram_promote = true;
 +
-+    std::vector<const llama_tosh_dmoe_layer *> layers;
++    std::vector<const llama_xeon_dmoe_layer *> layers;
 +    const std::vector<host_bank> * banks = nullptr;
-+    const tosh_dmoe_uploader * up = nullptr;
++    const xeon_dmoe_uploader * up = nullptr;
 +
 +    std::vector<float>    score;
 +    std::vector<uint32_t> last_tick;
@@ -5117,7 +5117,7 @@ index 000000000..dea450cac
 +
 +    int32_t * tables = nullptr;
 +    int cur_version = 0;
-+    uint64_t version_retired[TOSH_DMOE_VERSIONS] = {};
++    uint64_t version_retired[XEON_DMOE_VERSIONS] = {};
 +    bool dirty = false;
 +
 +    std::thread th;
@@ -5174,12 +5174,12 @@ index 000000000..dea450cac
 +    uint64_t exchanged = 0;
 +    double   us_exchange = 0;
 +
-+        if (!tosh_hostcache_on() || e < 0) {
++        if (!xeon_hostcache_on() || e < 0) {
 +            return;
 +        }
-+        static const bool copy_back = getenv("TOSH_DMOE_HOST_EXCHANGE") == nullptr || atoi(getenv("TOSH_DMOE_HOST_EXCHANGE")) != 0;
++        static const bool copy_back = getenv("XEON_DMOE_HOST_EXCHANGE") == nullptr || atoi(getenv("XEON_DMOE_HOST_EXCHANGE")) != 0;
 +        if (copy_back && up->download != nullptr) {
-+            if (tosh_hostcache_store(il, e)) exchanges.push_back({ il, s, e });
++            if (xeon_hostcache_store(il, e)) exchanges.push_back({ il, s, e });
 +        } else {
 +    // the slots are not reused before a later cycle, so one copy per cycle takes them all
 +    void flush_exchanges() {
@@ -5187,26 +5187,26 @@ index 000000000..dea450cac
 +            return;
 +        }
 +        const clk::time_point t0 = clk::now();
-+        std::vector<tosh_dmoe_copy> copies;
++        std::vector<xeon_dmoe_copy> copies;
 +        for (const exchange & x : exchanges) {
-+            const llama_tosh_dmoe_layer * dl = layers[x.il];
++            const llama_xeon_dmoe_layer * dl = layers[x.il];
 +            const host_bank & b = (*banks)[x.il];
 +            int part = -1;
 +            for (auto [bank, arena] : { std::pair{ b.gate, dl->arena_gate }, { b.up, dl->arena_up }, { b.down, dl->arena_down } }) {
 +                part++;
 +                if (bank == nullptr) continue;
-+                copies.push_back({ tosh_hostcache_part(x.il, x.e, part), (size_t) x.s*arena->nb[2], arena, arena->nb[2] });
++                copies.push_back({ xeon_hostcache_part(x.il, x.e, part), (size_t) x.s*arena->nb[2], arena, arena->nb[2] });
 +            }
 +        }
 +        const bool ok = up->download(up->ctx, copies.data(), (int) copies.size());
-+        for (const exchange & x : exchanges) tosh_hostcache_store_done(x.il, x.e, ok);
++        for (const exchange & x : exchanges) xeon_hostcache_store_done(x.il, x.e, ok);
 +        if (ok) exchanged += exchanges.size();
 +        us_exchange += std::chrono::duration<double, std::micro>(clk::now() - t0).count();
 +        exchanges.clear();
 +    }
 +
 +    bool verify_slot(int il, int s) {
-+        const llama_tosh_dmoe_layer * dl = layers[il];
++        const llama_xeon_dmoe_layer * dl = layers[il];
 +        const host_bank & b = (*banks)[il];
 +        const int e = slots[(size_t) il*Q + s].e;
 +        bool ok = true;
@@ -5220,12 +5220,12 @@ index 000000000..dea450cac
 +
 +    void cycle() {
 +        const clk::time_point t0 = clk::now();
-+        const uint64_t sync = tosh_dmoe_completed_value();
-+        const uint32_t now  = (uint32_t) tosh_dmoe_tick();
++        const uint64_t sync = xeon_dmoe_completed_value();
++        const uint32_t now  = (uint32_t) xeon_dmoe_tick();
 +        n_cycles++;
 +
-+        // TOSH_DMOE_STATS_EVERY=<graphs>: a running line for long sessions
-+        static const uint32_t every = getenv("TOSH_DMOE_STATS_EVERY") ? (uint32_t) atoi(getenv("TOSH_DMOE_STATS_EVERY")) : 0;
++        // XEON_DMOE_STATS_EVERY=<graphs>: a running line for long sessions
++        static const uint32_t every = getenv("XEON_DMOE_STATS_EVERY") ? (uint32_t) atoi(getenv("XEON_DMOE_STATS_EVERY")) : 0;
 +        if (every > 0 && now >= last_stats + every) {
 +            last_stats = now;
 +            int res = 0, pend = 0, ret = 0, pre = 0;
@@ -5235,7 +5235,7 @@ index 000000000..dea450cac
 +                ret  += sl.state == RETIRING;
 +                pre  += sl.state == PREFILL;
 +            }
-+            fprintf(stderr, "tosh_dmoe: graph %u | slots resident %d pending %d retiring %d prefill %d | promotions %llu evictions %llu re-promotions %llu | changed-slot hits %llu, failed %llu\n",
++            fprintf(stderr, "xeon_dmoe: graph %u | slots resident %d pending %d retiring %d prefill %d | promotions %llu evictions %llu re-promotions %llu | changed-slot hits %llu, failed %llu\n",
 +                    now, res, pend, ret, pre, (unsigned long long) promotions, (unsigned long long) evictions,
 +                    (unsigned long long) repromotions, (unsigned long long) stale_hits, (unsigned long long) failed);
 +        }
@@ -5266,12 +5266,12 @@ index 000000000..dea450cac
 +        }
 +
 +        // routing of wide batches, once the graph that wrote it has completed
-+        const int32_t * obs_ring = (const int32_t *) tosh_dmoe_obs_ring();
-+        const uint64_t obs_head = tosh_dmoe_obs_head();
++        const int32_t * obs_ring = (const int32_t *) xeon_dmoe_obs_ring();
++        const uint64_t obs_head = xeon_dmoe_obs_head();
 +        while (obs_ring != nullptr && obs_next <= obs_head) {
-+            const tosh_dmoe_obs_record * rec = tosh_dmoe_obs_record_at(obs_next);
-+            if (rec == nullptr || !tosh_dmoe_obs_intact(rec)) { obs_lost++; obs_next++; continue; }
-+            if (tosh_dmoe_completed_value() <= rec->sync) break;
++            const xeon_dmoe_obs_record * rec = xeon_dmoe_obs_record_at(obs_next);
++            if (rec == nullptr || !xeon_dmoe_obs_intact(rec)) { obs_lost++; obs_next++; continue; }
++            if (xeon_dmoe_completed_value() <= rec->sync) break;
 +            if (rec->il < 0 || rec->il >= n_layer || layers[rec->il] == nullptr) { obs_next++; continue; }
 +            // one graph of T tokens stands in for T decode steps: weight each use by the mean decay
 +            const int T = rec->n_tokens;
@@ -5357,7 +5357,7 @@ index 000000000..dea450cac
 +            claims.clear();
 +            // a batch can end with a layer's plan half carried, and decode brings no upload to finish
 +            // it: once nothing can still be copying, the mark goes and its slots expire below
-+            if (!tosh_dmoe_wide()) {
++            if (!xeon_dmoe_wide()) {
 +                for (int il = 0; il < n_layer; ++il) {
 +                    if (vmask[il] != 0 && sync > vmask_sync[il] + 16) vmask[il] = 0;
 +                }
@@ -5420,7 +5420,7 @@ index 000000000..dea450cac
 +        // 4. admission and eviction
 +        admit_used = admit_threshold();
 +        // promotions wait for decode: during a wide batch they would compete with its uploads
-+        const bool wide   = tosh_dmoe_wide();
++        const bool wide   = xeon_dmoe_wide();
 +        const bool frozen = (stop_after >= 0 && (long) now > stop_after) || (defer_wide && wide);
 +        if (!frozen && !cands.empty()) {
 +            std::sort(cands.begin(), cands.end(), [](auto & a, auto & b) { return a.second < b.second; });
@@ -5485,9 +5485,9 @@ index 000000000..dea450cac
 +                    free_list[il].pop_back();
 +                }
 +                slot & sl = slots[(size_t) il*Q + s];
-+                const llama_tosh_dmoe_layer * dl = layers[il];
++                const llama_xeon_dmoe_layer * dl = layers[il];
 +                const host_bank & b = (*banks)[il];
-+                tosh_dmoe_copy copies[3];
++                xeon_dmoe_copy copies[3];
 +                int n_copies = 0;
 +                for (auto [bank, arena] : { std::pair{ b.gate, dl->arena_gate }, { b.up, dl->arena_up }, { b.down, dl->arena_down } }) {
 +                    if (bank == nullptr) continue;
@@ -5552,14 +5552,14 @@ index 000000000..dea450cac
 +        // 5. publish a table with what is resident now, into a version no graph can be reading
 +        if (dirty) {
 +            int next = -1;
-+            for (int k = 1; k < TOSH_DMOE_VERSIONS; ++k) {
-+                const int v = (cur_version + k) % TOSH_DMOE_VERSIONS;
++            for (int k = 1; k < XEON_DMOE_VERSIONS; ++k) {
++                const int v = (cur_version + k) % XEON_DMOE_VERSIONS;
 +                if (sync >= version_retired[v] + 2) { next = v; break; }
 +            }
 +            if (next >= 0) {
 +                for (int il = 0; il < n_layer; ++il) {
 +                    if (layers[il] == nullptr) continue;
-+                    int32_t * tb = tables + ((size_t) next*TOSH_DMOE_MAX_LAYERS + il)*n_expert;
++                    int32_t * tb = tables + ((size_t) next*XEON_DMOE_MAX_LAYERS + il)*n_expert;
 +                    for (int e = 0; e < n_expert; ++e) tb[e] = -1;
 +                    for (int s = 0; s < Q; ++s) {
 +                        const slot & sl = slots[(size_t) il*Q + s];
@@ -5567,10 +5567,10 @@ index 000000000..dea450cac
 +                    }
 +                }
 +                std::atomic_thread_fence(std::memory_order_release);
-+                tosh_dmoe_publish_version(next);
++                xeon_dmoe_publish_version(next);
 +                // counted after the switch: a graph submitted before it is done two syncs later,
 +                // however many syncs passed while this cycle ran
-+                const uint64_t sync_pub = tosh_dmoe_completed_value();
++                const uint64_t sync_pub = xeon_dmoe_completed_value();
 +                version_retired[cur_version] = sync_pub;
 +                cur_version = next;
 +                for (int gs : retiring_slots) {
@@ -5588,16 +5588,16 @@ index 000000000..dea450cac
 +    }
 +
 +    void main() {
-+        uint64_t seen = tosh_dmoe_completed_value();
++        uint64_t seen = xeon_dmoe_completed_value();
 +        while (!stop.load()) {
 +            // uploads in flight are polled; with nothing moving only a finished graph brings work
 +            const bool moving = !pending_slots.empty() || !prefill_slots.empty() || !retiring_slots.empty();
-+            tosh_dmoe_wait_completed(seen, moving ? 2000 : 500000);
-+            seen = tosh_dmoe_completed_value();
++            xeon_dmoe_wait_completed(seen, moving ? 2000 : 500000);
++            seen = xeon_dmoe_completed_value();
 +            try {
 +                cycle();
 +            } catch (...) {
-+                tosh_dmoe_fail("the residency policy threw");
++                xeon_dmoe_fail("the residency policy threw");
 +            }
 +        }
 +    }
@@ -5607,42 +5607,42 @@ index 000000000..dea450cac
 +        int used = 0;
 +        for (const slot & s : slots) used += s.state == RESIDENT;
 +        std::sort(lifetimes.begin(), lifetimes.end());
-+        fprintf(stderr, "tosh_dmoe: policy decay %.3f, admit %.2f (measured upload %.1f us wall, %.1f us gpu; cpu expert %.1f us), budget %d/graph, margin %.2f\n",
++        fprintf(stderr, "xeon_dmoe: policy decay %.3f, admit %.2f (measured upload %.1f us wall, %.1f us gpu; cpu expert %.1f us), budget %d/graph, margin %.2f\n",
 +                decay, admit_used, upload_done ? us_upload_wall/upload_done : 0.0, upload_done ? us_upload_gpu/upload_done : 0.0,
 +                t_cpu_expert_us, budget, margin);
-+        fprintf(stderr, "tosh_dmoe: per graph: promotions %.2f, evictions %.2f, MiB promoted %.2f | re-promotions %.1f%% | failed %llu, dropped obs %llu, hits on a changed slot %llu\n",
++        fprintf(stderr, "xeon_dmoe: per graph: promotions %.2f, evictions %.2f, MiB promoted %.2f | re-promotions %.1f%% | failed %llu, dropped obs %llu, hits on a changed slot %llu\n",
 +                promotions/g, evictions/g, bytes_promoted/1048576.0/g, promotions ? 100.0*repromotions/promotions : 0.0,
 +                (unsigned long long) failed, (unsigned long long) dropped.load(), (unsigned long long) stale_hits);
-+        fprintf(stderr, "tosh_dmoe: slots %d of %d resident | evicted lifetime mean %.1f median %u graphs, uses per evicted residency %.1f\n",
++        fprintf(stderr, "xeon_dmoe: slots %d of %d resident | evicted lifetime mean %.1f median %u graphs, uses per evicted residency %.1f\n",
 +                used, (int) slots.size(), lifetime_n ? (double) lifetime_sum/lifetime_n : 0.0,
 +                lifetimes.empty() ? 0u : lifetimes[lifetimes.size()/2], lifetime_n ? (double) uses_sum/lifetime_n : 0.0);
 +        uint64_t live_uses = 0;
 +        for (const slot & s : slots) if (s.state == RESIDENT) live_uses += s.uses;
-+        fprintf(stderr, "tosh_dmoe: uses per promotion (evicted + live) %.1f\n",
++        fprintf(stderr, "xeon_dmoe: uses per promotion (evicted + live) %.1f\n",
 +                promotions ? (double) (uses_sum + live_uses)/promotions : 0.0);
-+        fprintf(stderr, "tosh_dmoe: policy thread per graph %.1f us (drain %.1f, decide %.1f incl. upload calls %.1f, publish %.1f), %llu publishes, %llu cycles\n",
++        fprintf(stderr, "xeon_dmoe: policy thread per graph %.1f us (drain %.1f, decide %.1f incl. upload calls %.1f, publish %.1f), %llu publishes, %llu cycles\n",
 +                us_cycle/g, us_drain/g, us_decide/g, us_upload_call/g, us_publish/g, (unsigned long long) publishes, (unsigned long long) n_cycles);
-+        if (const char * p = getenv("TOSH_DMOE_TRACE_PROMO")) {
++        if (const char * p = getenv("XEON_DMOE_TRACE_PROMO")) {
 +            if (FILE * f = fopen(p, "w")) {
 +                for (size_t t = 1; t < promo_by_tick.size() && t <= graphs; ++t) fprintf(f, "%zu %u\n", t, promo_by_tick[t]);
 +                fclose(f);
 +            }
 +        }
 +        if (exchanged > 0) {
-+            fprintf(stderr, "tosh_dmoe: experts copied from VRAM back to RAM %llu, %.1f us each\n",
++            fprintf(stderr, "xeon_dmoe: experts copied from VRAM back to RAM %llu, %.1f us each\n",
 +                    (unsigned long long) exchanged, us_exchange/exchanged);
 +        }
 +        if (vpromotions + lent > 0) {
-+            fprintf(stderr, "tosh_dmoe: promotions carried by prefill uploads %llu, expired %llu | free slots lent to prefill uploads %llu, duplicates dropped %llu\n",
++            fprintf(stderr, "xeon_dmoe: promotions carried by prefill uploads %llu, expired %llu | free slots lent to prefill uploads %llu, duplicates dropped %llu\n",
 +                    (unsigned long long) vpromotions, (unsigned long long) vexpired, (unsigned long long) lent, (unsigned long long) lent_dropped);
-+            fprintf(stderr, "tosh_dmoe: evictions to keep %d free slots per layer during prefill %llu\n", reserve, (unsigned long long) reserve_evictions);
++            fprintf(stderr, "xeon_dmoe: evictions to keep %d free slots per layer during prefill %llu\n", reserve, (unsigned long long) reserve_evictions);
 +        }
 +        if (obs_prefill + obs_lost > 0) {
-+            fprintf(stderr, "tosh_dmoe: prefill routing observed %llu selections, %llu records lost\n",
++            fprintf(stderr, "xeon_dmoe: prefill routing observed %llu selections, %llu records lost\n",
 +                    (unsigned long long) obs_prefill, (unsigned long long) obs_lost);
 +        }
 +        if (verify_every > 0) {
-+            fprintf(stderr, "tosh_dmoe: verified %llu promoted slots against the host bank, %llu mismatched\n",
++            fprintf(stderr, "xeon_dmoe: verified %llu promoted slots against the host bank, %llu mismatched\n",
 +                    (unsigned long long) verified, (unsigned long long) verify_bad);
 +        }
 +    }
@@ -5657,17 +5657,17 @@ index 000000000..dea450cac
 +// bank data pointer -> (layer, tensor), for prefill uploads that read residents from the arena
 +struct bank_ref { int il; int which; const ggml_tensor * bank; };
 +static std::unordered_map<const void *, bank_ref> g_bank_refs;
-+static std::vector<const llama_tosh_dmoe_layer *> g_layer_by_il;
++static std::vector<const llama_xeon_dmoe_layer *> g_layer_by_il;
 +static std::vector<std::vector<int32_t>> g_fixed_slots;
 +static int g_n_expert = 0;
 +
-+static bool dmoe_bank_plan(const void * host, size_t size, tosh_dmoe_bank_plan * plan) {
++static bool dmoe_bank_plan(const void * host, size_t size, xeon_dmoe_bank_plan * plan) {
 +    const auto it = g_bank_refs.find(host);
 +    if (it == g_bank_refs.end() || ggml_nbytes(it->second.bank) != size) {
 +        return false;
 +    }
 +    const bank_ref & r = it->second;
-+    const llama_tosh_dmoe_layer * dl = r.il < (int) g_layer_by_il.size() ? g_layer_by_il[r.il] : nullptr;
++    const llama_xeon_dmoe_layer * dl = r.il < (int) g_layer_by_il.size() ? g_layer_by_il[r.il] : nullptr;
 +    if (dl == nullptr) {
 +        return false;
 +    }
@@ -5680,16 +5680,16 @@ index 000000000..dea450cac
 +    plan->promo_slot   = nullptr;
 +    plan->n_promo      = 0;
 +    int n_rows = 0;
-+    plan->rows = tosh_dmoe_chunk_rows(&n_rows);
++    plan->rows = xeon_dmoe_chunk_rows(&n_rows);
 +    if (n_rows != g_n_expert) {
 +        plan->rows = nullptr;
 +    }
 +    const int32_t * rows = plan->rows;
 +    if (g_policy != nullptr) {
-+        plan->slot_of = g_policy->tables + ((size_t) tosh_dmoe_published_version()*TOSH_DMOE_MAX_LAYERS + r.il)*g_n_expert;
++        plan->slot_of = g_policy->tables + ((size_t) xeon_dmoe_published_version()*XEON_DMOE_MAX_LAYERS + r.il)*g_n_expert;
 +        static std::vector<int32_t> pe, ps;
 +        static std::vector<std::pair<int32_t, int32_t>> want;
-+        static const bool lend = getenv("TOSH_DMOE_LEND") == nullptr || atoi(getenv("TOSH_DMOE_LEND")) != 0;
++        static const bool lend = getenv("XEON_DMOE_LEND") == nullptr || atoi(getenv("XEON_DMOE_LEND")) != 0;
 +        policy & p = *g_policy;
 +        std::lock_guard<std::mutex> lock(p.vp_mutex);
 +        auto & lst = p.vplan[r.il];
@@ -5697,7 +5697,7 @@ index 000000000..dea450cac
 +        if (lend && rows && p.vmask[r.il] == 0 && !fl.empty()) {
 +            // free slots take the chunk's busiest host experts: the upload brings them into VRAM anyway
 +            // the chunk's last tokens first, since decode continues from them; then its busiest experts
-+            const float * tail = tosh_dmoe_chunk_tail();
++            const float * tail = xeon_dmoe_chunk_tail();
 +            want.clear();
 +            for (int e = 0; e < g_n_expert; ++e) {
 +                if (rows[e] > 0 && plan->slot_of[e] < 0) want.push_back({ rows[e], e });
@@ -5713,7 +5713,7 @@ index 000000000..dea450cac
 +                const size_t k = std::min<size_t>(p.reserve_tail, want.size());
 +                std::sort(want.begin() + k, want.end(), [](auto & a, auto & b) { return a.first > b.first; });
 +            }
-+            const uint64_t sync = tosh_dmoe_completed_value();
++            const uint64_t sync = xeon_dmoe_completed_value();
 +            for (auto [n, e] : want) {
 +                if (fl.empty()) break;
 +                if (n == 0) continue;
@@ -5737,13 +5737,13 @@ index 000000000..dea450cac
 +                pe.push_back(e); ps.push_back(s);
 +                auto & sl = p.slots[(size_t) r.il*p.Q + s];
 +                sl.parts |= (uint8_t) (1u << r.which);
-+                if (sl.parts == p.full[r.il]) sl.encoded_sync = tosh_dmoe_completed_value();
++                if (sl.parts == p.full[r.il]) sl.encoded_sync = xeon_dmoe_completed_value();
 +            }
 +            plan->promo_expert = pe.data();
 +            plan->promo_slot   = ps.data();
 +            plan->n_promo      = (int) pe.size();
 +            p.vmask[r.il] |= (uint8_t) (1u << r.which);
-+            p.vmask_sync[r.il] = tosh_dmoe_completed_value();
++            p.vmask_sync[r.il] = xeon_dmoe_completed_value();
 +            if (p.vmask[r.il] == p.full[r.il]) {
 +                if (rows) {
 +                    lst.erase(std::remove_if(lst.begin(), lst.end(), [rows](auto & q) { return rows[q.first] > 0; }), lst.end());
@@ -5760,17 +5760,17 @@ index 000000000..dea450cac
 +}
 +
 +static void dmoe_report_at_exit() {
-+    if (g_exec && getenv("TOSH_DMOE_STATS")) {
++    if (g_exec && getenv("XEON_DMOE_STATS")) {
 +        g_exec->report();
 +        if (g_policy) {
-+            g_policy->report(tosh_dmoe_tick());
++            g_policy->report(xeon_dmoe_tick());
 +        }
 +    }
 +}
 +
 +}
 +
-+bool llama_tosh_dmoe_accept(const llama_tosh_dmoe_layer * dl, int act, float alpha, float limit, bool gate_b, bool up_b) {
++bool llama_xeon_dmoe_accept(const llama_xeon_dmoe_layer * dl, int act, float alpha, float limit, bool gate_b, bool up_b) {
 +    if (g_exec == nullptr || dl == nullptr || dl->il < 0 || dl->il >= (int) g_exec->banks.size()) {
 +        return false;
 +    }
@@ -5790,36 +5790,36 @@ index 000000000..dea450cac
 +    return b.act.load() == act && (act == 0 || (b.alpha == alpha && b.limit == limit));
 +}
 +
-+int llama_tosh_dmoe_rare_rows() {
++int llama_xeon_dmoe_rare_rows() {
 +    // a number fixes the threshold; auto starts low and lets the controller move it
 +    static const int rows = [] {
-+        const char * v = getenv("TOSH_DMOE_RARE_ROWS");
++        const char * v = getenv("XEON_DMOE_RARE_ROWS");
 +        if (v == nullptr) return 0;
 +        const bool adapt = strcmp(v, "auto") == 0;
 +        const int r = adapt ? 4 : atoi(v);
-+        tosh_dmoe_rare_rows_init(r, 24, adapt);
++        xeon_dmoe_rare_rows_init(r, 24, adapt);
 +        return r;
 +    }();
-+    return g_exec != nullptr && tosh_dmoe_compact() ? rows : 0;
++    return g_exec != nullptr && xeon_dmoe_compact() ? rows : 0;
 +}
 +
-+int llama_tosh_dmoe_rare_tail() {
-+    static const int n = getenv("TOSH_DMOE_RARE_TAIL") ? atoi(getenv("TOSH_DMOE_RARE_TAIL")) : 32;
++int llama_xeon_dmoe_rare_tail() {
++    static const int n = getenv("XEON_DMOE_RARE_TAIL") ? atoi(getenv("XEON_DMOE_RARE_TAIL")) : 32;
 +    return std::max(n, 0);
 +}
 +
-+int llama_tosh_dmoe_wide_min_tokens() {
++int llama_xeon_dmoe_wide_min_tokens() {
 +    // every batch above the host path goes to the GPU, which offloads from the same size
-+    return TOSH_DMOE_MAX_TOKENS + 1;
++    return XEON_DMOE_MAX_TOKENS + 1;
 +}
 +
-+bool llama_tosh_dmoe_observe_prefill() {
-+    static const bool on = getenv("TOSH_DMOE_OBSERVE_PREFILL") == nullptr || atoi(getenv("TOSH_DMOE_OBSERVE_PREFILL")) != 0;
++bool llama_xeon_dmoe_observe_prefill() {
++    static const bool on = getenv("XEON_DMOE_OBSERVE_PREFILL") == nullptr || atoi(getenv("XEON_DMOE_OBSERVE_PREFILL")) != 0;
 +    return on && g_policy != nullptr;
 +}
 +
-+void llama_tosh_dmoe_shutdown() {
-+    tosh_dmoe_set_bank_planner(nullptr);
++void llama_xeon_dmoe_shutdown() {
++    xeon_dmoe_set_bank_planner(nullptr);
 +    g_bank_refs.clear();
 +    g_layer_by_il.clear();
 +    if (g_policy != nullptr && g_policy->th.joinable()) {
@@ -5829,7 +5829,7 @@ index 000000000..dea450cac
 +    if (g_exec != nullptr) {
 +        g_exec->stop = true;
 +        // idle workers sleep until the executor turns active: wake them to see the stop
-+        tosh_dmoe_set_active(true);
++        xeon_dmoe_set_active(true);
 +        {
 +            std::lock_guard<std::mutex> lock(g_exec->work_mutex);
 +            g_exec->work_cv.notify_all();
@@ -5837,7 +5837,7 @@ index 000000000..dea450cac
 +        for (auto & t : g_exec->helpers) if (t.joinable()) t.join();
 +        if (g_exec->leader.joinable())   g_exec->leader.join();
 +        if (g_exec->watchdog.joinable()) g_exec->watchdog.join();
-+        tosh_dmoe_set_active(false);
++        xeon_dmoe_set_active(false);
 +    }
 +    // the stats stay for the exit report; the arena and the layer map go with the model
 +    g_layers.clear();
@@ -5851,9 +5851,9 @@ index 000000000..dea450cac
 +
 +// A cache size is a request, not a requirement: a model or budget it cannot serve keeps running
 +// without mixed execution. A residency file is a test setup and still fails the load.
-+// TOSH_DMOE_STATUS_FILE: what mixed execution ended up doing, for whoever planned it
++// XEON_DMOE_STATUS_FILE: what mixed execution ended up doing, for whoever planned it
 +static void dmoe_status(bool on, const char * code, const std::string & detail, double arena_mib) {
-+    const char * path = getenv("TOSH_DMOE_STATUS_FILE");
++    const char * path = getenv("XEON_DMOE_STATUS_FILE");
 +    if (path == nullptr) {
 +        return;
 +    }
@@ -5874,7 +5874,7 @@ index 000000000..dea450cac
 +        return;
 +    }
 +    const size_t page = (size_t) sysconf(_SC_PAGESIZE);
-+    const bool test_fail = getenv("TOSH_DMOE_TEST_MLOCK_FAIL") != nullptr;
++    const bool test_fail = getenv("XEON_DMOE_TEST_MLOCK_FAIL") != nullptr;
 +    size_t bytes = 0;
 +    for (const llama_layer & L : layers) {
 +        for (const ggml_tensor * t : { (const ggml_tensor *) dmoe_gate(L), (const ggml_tensor *) L.ffn_up_exps, (const ggml_tensor *) L.ffn_down_exps }) {
@@ -5882,7 +5882,7 @@ index 000000000..dea450cac
 +            const uintptr_t a = (uintptr_t) t->data & ~(uintptr_t) (page - 1);
 +            const uintptr_t b = ((uintptr_t) t->data + ggml_nbytes(t) + page - 1) & ~(uintptr_t) (page - 1);
 +            char err[256];
-+            if (test_fail || !tosh_mlock_paced((void *) a, b - a, err, sizeof(err))) {
++            if (test_fail || !xeon_mlock_paced((void *) a, b - a, err, sizeof(err))) {
 +                throw std::runtime_error(test_fail ? format("DMOE_HOST_BANK_NOT_LOCKABLE: mlock of %.0f MiB of the expert bank failed after %.0f MiB (%s)",
 +                                                           (b - a)/1048576.0, bytes/1048576.0, strerror(EAGAIN))
 +                                                   : format("%s, expert bank at %.0f MiB", err, bytes/1048576.0));
@@ -5904,7 +5904,7 @@ index 000000000..dea450cac
 +        dmoe_status(true, "DMOE_ON", "", g_arena_buf ? ggml_backend_buffer_get_size(g_arena_buf)/1048576.0 : 0.0);
 +    } catch (const std::exception & err) {
 +        LLAMA_LOG_WARN("%s: mixed expert execution stays off: %s\n", __func__, err.what());
-+        llama_tosh_dmoe_shutdown();
++        llama_xeon_dmoe_shutdown();
 +        delete g_policy;
 +        g_policy = nullptr;
 +        const std::string what = err.what();
@@ -5913,13 +5913,13 @@ index 000000000..dea450cac
 +    }
 +}
 +
-+// TOSH_DMOE_CACHE_MIB=auto: the arena waits for the context, so it is what the card has left
++// XEON_DMOE_CACHE_MIB=auto: the arena waits for the context, so it is what the card has left
 +static std::vector<llama_layer> * g_defer_layers = nullptr;
 +static const llama_hparams *      g_defer_hparams = nullptr;
 +
-+void llama_tosh_dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & hparams) {
-+    const char * path      = getenv("TOSH_DMOE_RESIDENCY");
-+    const char * cache_mib = getenv("TOSH_DMOE_CACHE_MIB");
++void llama_xeon_dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & hparams) {
++    const char * path      = getenv("XEON_DMOE_RESIDENCY");
++    const char * cache_mib = getenv("XEON_DMOE_CACHE_MIB");
 +    if ((path == nullptr && cache_mib == nullptr) || g_exec != nullptr) {
 +        return;
 +    }
@@ -5931,7 +5931,7 @@ index 000000000..dea450cac
 +    dmoe_init_or_off(layers, hparams, path, cache_mib ? atof(cache_mib) : 0.0);
 +}
 +
-+bool llama_tosh_dmoe_budget_pending() {
++bool llama_xeon_dmoe_budget_pending() {
 +    return g_defer_layers != nullptr && g_exec == nullptr;
 +}
 +
@@ -5940,10 +5940,10 @@ index 000000000..dea450cac
 +static const llama_hparams *      g_auto_hparams = nullptr;
 +static int                        g_contexts     = 0;
 +
-+void llama_tosh_dmoe_context_opened() { g_contexts++; }
-+void llama_tosh_dmoe_context_closed() { g_contexts--; }
++void llama_xeon_dmoe_context_opened() { g_contexts++; }
++void llama_xeon_dmoe_context_closed() { g_contexts--; }
 +
-+bool llama_tosh_dmoe_rebudget_possible() {
++bool llama_xeon_dmoe_rebudget_possible() {
 +    return g_auto_layers != nullptr && g_contexts == 0;
 +}
 +
@@ -5960,14 +5960,14 @@ index 000000000..dea450cac
 +            }
 +        }
 +    }
-+    llama_tosh_dmoe_shutdown();
++    llama_xeon_dmoe_shutdown();
 +    delete g_policy;
 +    g_policy = nullptr;
 +    delete g_exec;
 +    g_exec = nullptr;
 +}
 +
-+void llama_tosh_dmoe_budget(size_t gpu_bytes) {
++void llama_xeon_dmoe_budget(size_t gpu_bytes) {
 +    const bool first = g_defer_layers != nullptr;
 +    std::vector<llama_layer> & layers = first ? *g_defer_layers : *g_auto_layers;
 +    const llama_hparams & hparams = first ? *g_defer_hparams : *g_auto_hparams;
@@ -5980,7 +5980,7 @@ index 000000000..dea450cac
 +
 +    auto envmib = [](const char * k, double d) { const char * v = getenv(k); return (v ? atof(v) : d)*1048576.0; };
 +    size_t free0 = 0, total = 0;
-+    tosh_dmoe_vram(&free0, &total);
++    xeon_dmoe_vram(&free0, &total);
 +    // the bank uploads of prefill take three slots the size of the largest host bank
 +    size_t bank_max = 0;
 +    for (const llama_layer & L : layers) {
@@ -5988,8 +5988,8 @@ index 000000000..dea450cac
 +            if (t) bank_max = std::max(bank_max, ggml_nbytes(t));
 +        }
 +    }
-+    const double reserve  = envmib("TOSH_DMOE_RESERVE_MIB", 2560);
-+    const double overhead = envmib("TOSH_DMOE_OVERHEAD_MIB", 64);
++    const double reserve  = envmib("XEON_DMOE_RESERVE_MIB", 2560);
++    const double overhead = envmib("XEON_DMOE_OVERHEAD_MIB", 64);
 +    const double prefetch = 3.0*(double) bank_max;
 +    const double arena    = (double) free0 - reserve - overhead - prefetch - (double) gpu_bytes;
 +    const double M = 1048576.0;
@@ -6011,7 +6011,7 @@ index 000000000..dea450cac
 +        return;
 +    }
 +    // a planner passes the smallest arena it judged useful for this model
-+    const double min_arena = std::max(256.0*M, envmib("TOSH_DMOE_MIN_ARENA_MIB", 0));
++    const double min_arena = std::max(256.0*M, envmib("XEON_DMOE_MIN_ARENA_MIB", 0));
 +    if (arena < min_arena) {
 +        LLAMA_LOG_WARN("%s: under %.0f MiB left for experts, mixed execution stays off\n", __func__, min_arena/M);
 +        dmoe_status(false, "DMOE_ARENA_BELOW_MINIMUM", format("%.0f MiB left, %.0f needed", std::max(0.0, arena)/M, min_arena/M), 0.0);
@@ -6038,17 +6038,17 @@ index 000000000..dea450cac
 +            }
 +        }
 +        if (per_expert_all_layers == 0) {
-+            throw std::runtime_error("TOSH_DMOE_CACHE_MIB: the model has no layer with separate gate, up and down expert banks");
++            throw std::runtime_error("XEON_DMOE_CACHE_MIB: the model has no layer with separate gate, up and down expert banks");
 +        }
 +        quota = (int) std::min<size_t>((size_t) n_expert, (size_t) (cache_mib*1048576.0)/per_expert_all_layers);
 +        if (quota < 1) {
-+            throw std::runtime_error("TOSH_DMOE_CACHE_MIB: the cache is smaller than one expert per layer");
++            throw std::runtime_error("XEON_DMOE_CACHE_MIB: the cache is smaller than one expert per layer");
 +        }
 +    }
 +
 +    std::ifstream f(dynamic ? "" : path);
 +    if (!dynamic && !f) {
-+        throw std::runtime_error(format("TOSH_DMOE_RESIDENCY: cannot open %s", path));
++        throw std::runtime_error(format("XEON_DMOE_RESIDENCY: cannot open %s", path));
 +    }
 +    for (std::string line; !dynamic && std::getline(f, line);) {
 +        std::istringstream ls(line);
@@ -6057,7 +6057,7 @@ index 000000000..dea450cac
 +            continue;
 +        }
 +        if (il < 0 || il >= n_layer || e < 0 || e >= n_expert) {
-+            throw std::runtime_error(format("TOSH_DMOE_RESIDENCY: (%d, %d) is out of range", il, e));
++            throw std::runtime_error(format("XEON_DMOE_RESIDENCY: (%d, %d) is out of range", il, e));
 +        }
 +        if (slot_of[il][e] < 0) {
 +            slot_of[il][e] = (int) resident[il].size();
@@ -6067,16 +6067,16 @@ index 000000000..dea450cac
 +
 +    ggml_backend_dev_t gpu = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_GPU);
 +    if (gpu == nullptr) {
-+        throw std::runtime_error("TOSH_DMOE_RESIDENCY: no GPU device");
++        throw std::runtime_error("XEON_DMOE_RESIDENCY: no GPU device");
 +    }
 +    ggml_backend_buffer_type_t buft = ggml_backend_dev_buffer_type(gpu);
 +
 +    std::unique_ptr<executor> ex_owner(new executor());
 +    auto * ex = ex_owner.get();
-+    if (const char * v = getenv("TOSH_DMOE_SPIN_US")) {
++    if (const char * v = getenv("XEON_DMOE_SPIN_US")) {
 +        ex->spin_us = atoi(v);
 +    }
-+    if (const char * v = getenv("TOSH_DMOE_WATCHDOG_MS")) {
++    if (const char * v = getenv("XEON_DMOE_WATCHDOG_MS")) {
 +        ex->watchdog_us = atof(v)*1e3;
 +    }
 +    ex->banks.resize(n_layer);
@@ -6084,7 +6084,7 @@ index 000000000..dea450cac
 +    ggml_init_params ip = { ggml_tensor_overhead()*(size_t) n_layer*4 + 1024, nullptr, true };
 +    ggml_context * ctx = ggml_init(ip);
 +
-+    std::vector<std::pair<int, llama_tosh_dmoe_layer>> made;
++    std::vector<std::pair<int, llama_xeon_dmoe_layer>> made;
 +    for (int il = 0; il < n_layer; ++il) {
 +        llama_layer & L = layers[il];
 +        if (!dmoe_has_bank(L)) {
@@ -6093,7 +6093,7 @@ index 000000000..dea450cac
 +        for (const ggml_tensor * t : { (const ggml_tensor *) dmoe_gate(L), (const ggml_tensor *) L.ffn_up_exps, (const ggml_tensor *) L.ffn_down_exps }) {
 +            if (t == nullptr) continue;
 +            if (t->buffer == nullptr || !ggml_backend_buffer_is_host(t->buffer)) {
-+                throw std::runtime_error("TOSH_DMOE_RESIDENCY needs every expert bank in host memory (-ncmoe covering all layers)");
++                throw std::runtime_error("XEON_DMOE_RESIDENCY needs every expert bank in host memory (-ncmoe covering all layers)");
 +            }
 +        }
 +        host_bank & hb = ex->banks[il];
@@ -6104,20 +6104,20 @@ index 000000000..dea450cac
 +        ex->n_embd = (int) hb.gate->ne[0];
 +        ex->n_ff   = (int) (hb.fused ? hb.gate->ne[1]/2 : hb.gate->ne[1]);
 +        if (hb.fused && L.ffn_gate_up_exps_b != nullptr) {
-+            throw std::runtime_error("TOSH_DMOE_CACHE_MIB: biases on a fused gate/up bank are not supported");
++            throw std::runtime_error("XEON_DMOE_CACHE_MIB: biases on a fused gate/up bank are not supported");
 +        }
 +        for (auto [b, dst] : { std::pair{ L.ffn_gate_exps_b, &hb.gate_b }, { L.ffn_up_exps_b, &hb.up_b } }) {
 +            if (b == nullptr) {
 +                continue;
 +            }
 +            if (b->type != GGML_TYPE_F32 || b->ne[0] != ex->n_ff || b->ne[1] != n_expert) {
-+                throw std::runtime_error("TOSH_DMOE_CACHE_MIB: expert biases of an unexpected type or shape");
++                throw std::runtime_error("XEON_DMOE_CACHE_MIB: expert biases of an unexpected type or shape");
 +            }
 +            dst->resize(ggml_nelements(b));
 +            ggml_backend_tensor_get(b, dst->data(), 0, ggml_nbytes(b));
 +        }
 +
-+        llama_tosh_dmoe_layer dl;
++        llama_xeon_dmoe_layer dl;
 +        dl.il      = il;
 +        dl.n_slots = dynamic ? quota : (int) resident[il].size();
 +        const int64_t ns = std::max(1, dl.n_slots);
@@ -6133,12 +6133,12 @@ index 000000000..dea450cac
 +    }
 +
 +    if (made.empty()) {
-+        throw std::runtime_error("TOSH_DMOE_RESIDENCY: the model has no layer with separate gate, up and down expert banks");
++        throw std::runtime_error("XEON_DMOE_RESIDENCY: the model has no layer with separate gate, up and down expert banks");
 +    }
 +
 +    ggml_backend_buffer_t buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx, buft);
 +    if (buf == nullptr) {
-+        throw std::runtime_error("TOSH_DMOE_RESIDENCY: the VRAM arena does not fit");
++        throw std::runtime_error("XEON_DMOE_RESIDENCY: the VRAM arena does not fit");
 +    }
 +    ggml_backend_buffer_set_usage(buf, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
 +    g_arena_buf = buf;
@@ -6158,39 +6158,39 @@ index 000000000..dea450cac
 +        g_layers[dmoe_gate(L)] = dl;
 +    }
 +
-+    const char * nt = getenv("TOSH_DMOE_THREADS");
++    const char * nt = getenv("XEON_DMOE_THREADS");
 +    ex->n_threads = std::max(1, nt ? atoi(nt) : (int) std::thread::hardware_concurrency()/2);
 +
 +    const ggml_type at = ggml_get_type_traits_cpu(ex->banks[made.front().first].gate->type)->vec_dot_type;
 +    ex->act_q_row = ggml_row_size(at, ex->n_embd);
 +    ex->h_q_row   = ggml_row_size(GGML_TYPE_F32, ex->n_ff);   // wide enough for any down vec_dot_type
-+    const size_t max_miss = (size_t) TOSH_DMOE_MAX_TOKENS*hparams.n_expert;
-+    ex->act_q.resize(ex->act_q_row*TOSH_DMOE_MAX_TOKENS);
++    const size_t max_miss = (size_t) XEON_DMOE_MAX_TOKENS*hparams.n_expert;
++    ex->act_q.resize(ex->act_q_row*XEON_DMOE_MAX_TOKENS);
 +    ex->h.resize(max_miss*ex->n_ff);
 +    ex->h_q.resize(max_miss*ex->h_q_row);
 +    ex->misses.reserve(max_miss);
 +
 +    if (ex->n_embd % executor::rows2 != 0 || ex->n_ff % executor::rows1 != 0) {
-+        throw std::runtime_error("TOSH_DMOE_RESIDENCY: expert shape not divisible by the executor's row chunks");
++        throw std::runtime_error("XEON_DMOE_RESIDENCY: expert shape not divisible by the executor's row chunks");
 +    }
 +
 +    if (dynamic) {
 +        const size_t page = 16384;
-+        const size_t bytes = ((size_t) TOSH_DMOE_VERSIONS*TOSH_DMOE_MAX_LAYERS*n_expert*sizeof(int32_t) + page - 1)/page*page;
++        const size_t bytes = ((size_t) XEON_DMOE_VERSIONS*XEON_DMOE_MAX_LAYERS*n_expert*sizeof(int32_t) + page - 1)/page*page;
 +        // kept across arena rebuilds: the GPU backend wraps these pages once
 +        static void * tb_kept = nullptr;
 +        static size_t tb_bytes = 0;
 +        void * tb = bytes <= tb_bytes ? tb_kept : nullptr;
 +        if (tb == nullptr && posix_memalign(&tb, page, bytes) != 0) {
-+            throw std::runtime_error("TOSH_DMOE_CACHE_MIB: cannot allocate the residency tables");
++            throw std::runtime_error("XEON_DMOE_CACHE_MIB: cannot allocate the residency tables");
 +        }
 +        if (tb != tb_kept) {
 +            tb_kept = tb;
 +            tb_bytes = bytes;
 +        }
 +        memset(tb, 0xff, bytes);
-+        tosh_dmoe_set_tables((int32_t *) tb, bytes, TOSH_DMOE_MAX_LAYERS, n_expert);
-+        tosh_dmoe_publish_version(0);
++        xeon_dmoe_set_tables((int32_t *) tb, bytes, XEON_DMOE_MAX_LAYERS, n_expert);
++        xeon_dmoe_publish_version(0);
 +
 +        auto * pol = new policy();
 +        pol->n_layer  = n_layer;
@@ -6199,27 +6199,27 @@ index 000000000..dea450cac
 +        pol->tables   = (int32_t *) tb;
 +        pol->banks    = &ex->banks;
 +        pol->ex       = ex;
-+        pol->up       = tosh_dmoe_get_uploader();
++        pol->up       = xeon_dmoe_get_uploader();
 +        if (pol->up == nullptr) {
-+            throw std::runtime_error("TOSH_DMOE_CACHE_MIB: the GPU backend offers no uploader");
++            throw std::runtime_error("XEON_DMOE_CACHE_MIB: the GPU backend offers no uploader");
 +        }
 +        auto envf = [](const char * k, double d) { const char * v = getenv(k); return v ? atof(v) : d; };
-+        pol->decay        = (float) envf("TOSH_DMOE_DECAY", 0.98);
++        pol->decay        = (float) envf("XEON_DMOE_DECAY", 0.98);
 +        // a promotion costs about one reuse of token time, so 1.8 keeps a margin against churn
-+        pol->admit_fixed  = envf("TOSH_DMOE_ADMIT", 1.8);
-+        pol->margin       = (float) envf("TOSH_DMOE_MARGIN", 0.0);
++        pol->admit_fixed  = envf("XEON_DMOE_ADMIT", 1.8);
++        pol->margin       = (float) envf("XEON_DMOE_MARGIN", 0.0);
 +        // 0: no per-graph cap; the stage ring still bounds the uploads in flight
-+        pol->budget       = (int) envf("TOSH_DMOE_BUDGET", 0);
++        pol->budget       = (int) envf("XEON_DMOE_BUDGET", 0);
 +        if (pol->budget <= 0) pol->budget = n_layer*n_expert;
-+        pol->stop_after   = (long) envf("TOSH_DMOE_PROMO_STOP", -1);
-+        pol->warm_prefill = envf("TOSH_DMOE_WARM_PREFILL", 1) != 0;
-+        pol->tok_decay    = tosh_dmoe_token_decay();
++        pol->stop_after   = (long) envf("XEON_DMOE_PROMO_STOP", -1);
++        pol->warm_prefill = envf("XEON_DMOE_WARM_PREFILL", 1) != 0;
++        pol->tok_decay    = xeon_dmoe_token_decay();
 +        // a layer with few slots cannot empty eight of them every chunk and still keep a working set
-+        pol->reserve      = (int) envf("TOSH_DMOE_LEND_RESERVE", std::min(8, quota/8));
-+        pol->reserve_tail = (int) envf("TOSH_DMOE_LEND_TAIL", 8);
-+        pol->verify_every = (long) envf("TOSH_DMOE_VERIFY", 0);
-+        pol->defer_wide   = envf("TOSH_DMOE_DEFER_WIDE", 0) != 0;
-+        pol->vram_promote = envf("TOSH_DMOE_PREFILL_PROMOTE", 1) != 0;
++        pol->reserve      = (int) envf("XEON_DMOE_LEND_RESERVE", std::min(8, quota/8));
++        pol->reserve_tail = (int) envf("XEON_DMOE_LEND_TAIL", 8);
++        pol->verify_every = (long) envf("XEON_DMOE_VERIFY", 0);
++        pol->defer_wide   = envf("XEON_DMOE_DEFER_WIDE", 0) != 0;
++        pol->vram_promote = envf("XEON_DMOE_PREFILL_PROMOTE", 1) != 0;
 +        pol->vplan.resize(n_layer);
 +        pol->vmask.assign(n_layer, 0);
 +        pol->vmask_sync.assign(n_layer, 0);
@@ -6263,8 +6263,8 @@ index 000000000..dea450cac
 +        if (L.ffn_up_exps) g_bank_refs[L.ffn_up_exps->data] = { il, 1, L.ffn_up_exps };
 +        g_bank_refs[L.ffn_down_exps->data] = { il, 2, L.ffn_down_exps };
 +    }
-+    if (getenv("TOSH_DMOE_PREFILL_ARENA") == nullptr || atoi(getenv("TOSH_DMOE_PREFILL_ARENA")) != 0) {
-+        tosh_dmoe_set_bank_planner(dmoe_bank_plan);
++    if (getenv("XEON_DMOE_PREFILL_ARENA") == nullptr || atoi(getenv("XEON_DMOE_PREFILL_ARENA")) != 0) {
++        xeon_dmoe_set_bank_planner(dmoe_bank_plan);
 +    }
 +
 +    g_exec = ex_owner.release();
@@ -6280,11 +6280,11 @@ index 000000000..dea450cac
 +}
 +
 +#endif
-diff --git a/src/llama-tosh-dmoe.h b/src/llama-tosh-dmoe.h
+diff --git a/src/llama-xeon-dmoe.h b/src/llama-xeon-dmoe.h
 new file mode 100644
 index 000000000..2ae3adf06
 --- /dev/null
-+++ b/src/llama-tosh-dmoe.h
++++ b/src/llama-xeon-dmoe.h
 @@ -0,0 +1,53 @@
 +#pragma once
 +
@@ -6297,7 +6297,7 @@ index 000000000..2ae3adf06
 +
 +// One MoE layer under mixed execution: the canonical bank stays in host memory and a VRAM arena
 +// holds only the resident experts, in slot order.
-+struct llama_tosh_dmoe_layer {
++struct llama_xeon_dmoe_layer {
 +    int il = -1;
 +
 +    ggml_tensor * arena_gate = nullptr;
@@ -6308,44 +6308,44 @@ index 000000000..2ae3adf06
 +    int n_slots = 0;
 +};
 +
-+// Enabled by TOSH_DMOE_RESIDENCY=<file of "layer expert" lines>. No-op otherwise.
-+void llama_tosh_dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & hparams);
++// Enabled by XEON_DMOE_RESIDENCY=<file of "layer expert" lines>. No-op otherwise.
++void llama_xeon_dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & hparams);
 +
 +// Whether the host executor can run this layer's experts: act 0 is silu, 1 swiglu_oai(alpha, limit), 2 gelu,
 +// and the gate/up biases the graph adds must be the ones copied at load.
-+bool llama_tosh_dmoe_accept(const llama_tosh_dmoe_layer * dl, int act, float alpha, float limit, bool gate_b, bool up_b);
++bool llama_xeon_dmoe_accept(const llama_xeon_dmoe_layer * dl, int act, float alpha, float limit, bool gate_b, bool up_b);
 +
 +// Whether wide batches report their routing to the residency policy.
-+bool llama_tosh_dmoe_observe_prefill();
++bool llama_xeon_dmoe_observe_prefill();
 +
 +// Wide batches: experts routed to at most this many rows of the chunk and not resident run on
-+// the host (TOSH_DMOE_RARE_ROWS); 0 when off. Only batches the GPU takes, from the offload size.
-+int llama_tosh_dmoe_rare_rows();
++// the host (XEON_DMOE_RARE_ROWS); 0 when off. Only batches the GPU takes, from the offload size.
++int llama_xeon_dmoe_rare_rows();
 +// the last tokens of a chunk keep their experts on the GPU, where prefill can make them resident
-+int llama_tosh_dmoe_rare_tail();
-+int llama_tosh_dmoe_wide_min_tokens();
++int llama_xeon_dmoe_rare_tail();
++int llama_xeon_dmoe_wide_min_tokens();
 +
-+// TOSH_DMOE_CACHE_MIB=auto defers the arena until a context knows its own VRAM: the arena is
-+// what remains of the card after it, the prefill slots and a reserve (TOSH_DMOE_RESERVE_MIB).
-+bool llama_tosh_dmoe_budget_pending();
-+void llama_tosh_dmoe_budget(size_t gpu_bytes);
++// XEON_DMOE_CACHE_MIB=auto defers the arena until a context knows its own VRAM: the arena is
++// what remains of the card after it, the prefill slots and a reserve (XEON_DMOE_RESERVE_MIB).
++bool llama_xeon_dmoe_budget_pending();
++void llama_xeon_dmoe_budget(size_t gpu_bytes);
 +// A context created while no other is alive may resize an automatic arena; contexts are counted.
-+bool llama_tosh_dmoe_rebudget_possible();
-+void llama_tosh_dmoe_context_opened();
-+void llama_tosh_dmoe_context_closed();
++bool llama_xeon_dmoe_rebudget_possible();
++void llama_xeon_dmoe_context_opened();
++void llama_xeon_dmoe_context_closed();
 +
 +// Stops the host executor and the residency policy before the model's buffers go away.
-+void llama_tosh_dmoe_shutdown();
++void llama_xeon_dmoe_shutdown();
 +
 +// The mixed-execution state for the layer whose gate bank is `gate_exps`, or null.
-+const llama_tosh_dmoe_layer * llama_tosh_dmoe_layer_of(const ggml_tensor * gate_exps);
-diff --git a/tosh-moe/tosh-dmoe.cpp b/tosh-moe/tosh-dmoe.cpp
++const llama_xeon_dmoe_layer * llama_xeon_dmoe_layer_of(const ggml_tensor * gate_exps);
+diff --git a/xeon-moe/xeon-dmoe.cpp b/xeon-moe/xeon-dmoe.cpp
 new file mode 100644
 index 000000000..f1b201aeb
 --- /dev/null
-+++ b/tosh-moe/tosh-dmoe.cpp
++++ b/xeon-moe/xeon-dmoe.cpp
 @@ -0,0 +1,446 @@
-+#include "tosh-dmoe.h"
++#include "xeon-dmoe.h"
 +
 +#include <atomic>
 +#include <vector>
@@ -6368,7 +6368,7 @@ index 000000000..f1b201aeb
 +
 +std::atomic<uint64_t> g_value{1};
 +
-+tosh_dmoe_job         g_jobs[TOSH_DMOE_RING];
++xeon_dmoe_job         g_jobs[XEON_DMOE_RING];
 +
 +std::mutex              g_active_mutex;
 +std::condition_variable g_active_cv;
@@ -6387,13 +6387,13 @@ index 000000000..f1b201aeb
 +std::mutex              g_done_mutex;
 +std::condition_variable g_done_cv;
 +
-+tosh_dmoe_uploader    g_uploader = {};
++xeon_dmoe_uploader    g_uploader = {};
 +std::atomic<bool>     g_has_uploader{false};
 +
-+std::atomic<tosh_dmoe_bank_plan_fn> g_planner{nullptr};
++std::atomic<xeon_dmoe_bank_plan_fn> g_planner{nullptr};
 +
 +void *                g_obs_ring = nullptr;
-+tosh_dmoe_obs_record  g_obs[TOSH_DMOE_OBS_RECORDS];
++xeon_dmoe_obs_record  g_obs[XEON_DMOE_OBS_RECORDS];
 +std::atomic<uint64_t> g_obs_seq{0};
 +uint32_t              g_obs_off = 0;
 +std::atomic<uint64_t> g_obs_pos{0};
@@ -6402,69 +6402,69 @@ index 000000000..f1b201aeb
 +}
 +
 +static std::atomic<bool> g_forced{false};
-+void tosh_dmoe_enable(void) { g_forced.store(true); }
++void xeon_dmoe_enable(void) { g_forced.store(true); }
 +
-+bool tosh_dmoe_enabled(void) {
-+    static const bool on = getenv("TOSH_DMOE_RESIDENCY") != nullptr || getenv("TOSH_DMOE_CACHE_MIB") != nullptr;
++bool xeon_dmoe_enabled(void) {
++    static const bool on = getenv("XEON_DMOE_RESIDENCY") != nullptr || getenv("XEON_DMOE_CACHE_MIB") != nullptr;
 +    return on || g_forced.load(std::memory_order_relaxed);
 +}
 +
-+void tosh_dmoe_set_stage(void * host, size_t layer_stride) {
++void xeon_dmoe_set_stage(void * host, size_t layer_stride) {
 +    g_stride.store(layer_stride);
 +    g_stage.store((char *) host);
 +}
 +
-+void * tosh_dmoe_stage_layer(int il) {
++void * xeon_dmoe_stage_layer(int il) {
 +    char * s = g_stage.load();
 +    return s ? s + (size_t) il*g_stride.load() : nullptr;
 +}
 +
-+void tosh_dmoe_set_event(void * ev, uint64_t (*get)(void *), void (*set)(void *, uint64_t)) {
++void xeon_dmoe_set_event(void * ev, uint64_t (*get)(void *), void (*set)(void *, uint64_t)) {
 +    g_ev_get = get;
 +    g_ev_set = set;
 +    g_ev     = ev;
 +}
 +
-+uint64_t tosh_dmoe_event_get(void) {
++uint64_t xeon_dmoe_event_get(void) {
 +    return g_ev ? g_ev_get(g_ev) : 0;
 +}
 +
-+void tosh_dmoe_event_set(uint64_t value) {
++void xeon_dmoe_event_set(uint64_t value) {
 +    if (g_ev) {
 +        g_ev_set(g_ev, value);
 +    }
 +}
 +
-+uint64_t tosh_dmoe_next_value(void) { return g_value.fetch_add(2); }
-+uint64_t tosh_dmoe_last_value(void) { return g_value.load() - 2; }
++uint64_t xeon_dmoe_next_value(void) { return g_value.fetch_add(2); }
++uint64_t xeon_dmoe_last_value(void) { return g_value.load() - 2; }
 +
-+void tosh_dmoe_set_tables(int32_t * host, size_t bytes, int n_layers, int n_expert) {
++void xeon_dmoe_set_tables(int32_t * host, size_t bytes, int n_layers, int n_expert) {
 +    g_tables_bytes   = bytes;
 +    g_tables_layers  = n_layers;
 +    g_tables_experts = n_expert;
 +    g_tables         = host;
 +}
 +
-+int32_t * tosh_dmoe_tables(size_t * bytes, int * n_layers, int * n_expert) {
++int32_t * xeon_dmoe_tables(size_t * bytes, int * n_layers, int * n_expert) {
 +    if (bytes)    *bytes    = g_tables_bytes;
 +    if (n_layers) *n_layers = g_tables_layers;
 +    if (n_expert) *n_expert = g_tables_experts;
 +    return g_tables;
 +}
 +
-+void tosh_dmoe_publish_version(int version) { g_version.store(version, std::memory_order_release); }
-+int  tosh_dmoe_published_version(void)      { return g_version.load(std::memory_order_acquire); }
++void xeon_dmoe_publish_version(int version) { g_version.store(version, std::memory_order_release); }
++int  xeon_dmoe_published_version(void)      { return g_version.load(std::memory_order_acquire); }
 +
-+uint64_t tosh_dmoe_tick_next(void) { return g_tick.fetch_add(1) + 1; }
++uint64_t xeon_dmoe_tick_next(void) { return g_tick.fetch_add(1) + 1; }
 +static std::atomic<bool> g_wide{false};
-+void tosh_dmoe_note_wide(bool wide) { g_wide.store(wide); }
-+bool tosh_dmoe_wide(void)           { return g_wide.load(); }
-+uint64_t tosh_dmoe_tick(void)      { return g_tick.load(); }
++void xeon_dmoe_note_wide(bool wide) { g_wide.store(wide); }
++bool xeon_dmoe_wide(void)           { return g_wide.load(); }
++uint64_t xeon_dmoe_tick(void)      { return g_tick.load(); }
 +
 +static void * g_wide_stage = nullptr;
 +static size_t g_wide_bytes = 0;
-+void tosh_dmoe_set_wide_stage(void * host, size_t bytes) { g_wide_stage = host; g_wide_bytes = bytes; }
-+void * tosh_dmoe_wide_stage(size_t * bytes) {
++void xeon_dmoe_set_wide_stage(void * host, size_t bytes) { g_wide_stage = host; g_wide_bytes = bytes; }
++void * xeon_dmoe_wide_stage(size_t * bytes) {
 +    if (bytes) *bytes = g_wide_bytes;
 +    return g_wide_stage;
 +}
@@ -6474,7 +6474,7 @@ index 000000000..f1b201aeb
 +std::mutex g_tl_mutex;
 +std::vector<tl_event> g_tl;
 +void tl_dump() {
-+    const char * p = getenv("TOSH_DMOE_TIMELINE");
++    const char * p = getenv("XEON_DMOE_TIMELINE");
 +    if (!p) return;
 +    std::lock_guard<std::mutex> lock(g_tl_mutex);
 +    if (FILE * f = fopen(p, "w")) {
@@ -6484,11 +6484,11 @@ index 000000000..f1b201aeb
 +}
 +}
 +// steady_clock runs on the same uptime clock Metal stamps command buffers with
-+double tosh_dmoe_host_seconds(void) {
++double xeon_dmoe_host_seconds(void) {
 +    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
 +}
-+void tosh_dmoe_timeline(int kind, int il, double t0, double t1) {
-+    static const bool on = getenv("TOSH_DMOE_TIMELINE") != nullptr;
++void xeon_dmoe_timeline(int kind, int il, double t0, double t1) {
++    static const bool on = getenv("XEON_DMOE_TIMELINE") != nullptr;
 +    if (!on) return;
 +    std::lock_guard<std::mutex> lock(g_tl_mutex);
 +    if (g_tl.empty()) { g_tl.reserve(1 << 20); atexit(tl_dump); }
@@ -6496,22 +6496,22 @@ index 000000000..f1b201aeb
 +}
 +
 +static size_t g_vram_free = 0, g_vram_total = 0;
-+void tosh_dmoe_set_vram(size_t free_at_start, size_t total) {
++void xeon_dmoe_set_vram(size_t free_at_start, size_t total) {
 +    if (g_vram_total == 0) { g_vram_free = free_at_start; g_vram_total = total; }
 +}
 +static size_t (*g_private_query)(void) = nullptr;
-+void   tosh_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
-+size_t tosh_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
++void   xeon_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
++size_t xeon_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
 +
-+bool tosh_dmoe_vram(size_t * free_at_start, size_t * total) {
++bool xeon_dmoe_vram(size_t * free_at_start, size_t * total) {
 +    *free_at_start = g_vram_free; *total = g_vram_total;
 +    return g_vram_total > 0;
 +}
 +
 +static bool (*g_vram_query)(int64_t *, int64_t *) = nullptr;
-+void tosh_dmoe_set_vram_query(bool (*fn)(int64_t *, int64_t *)) { g_vram_query = fn; }
++void xeon_dmoe_set_vram_query(bool (*fn)(int64_t *, int64_t *)) { g_vram_query = fn; }
 +
-+bool tosh_vram_read(size_t * vfree, size_t * total) {
++bool xeon_vram_read(size_t * vfree, size_t * total) {
 +    if (g_vram_query == nullptr) {
 +        return false;
 +    }
@@ -6534,7 +6534,7 @@ index 000000000..f1b201aeb
 +    if (size == 0) size = mf + mu;
 +    const int64_t free_now = std::max<int64_t>(0, size - mu);
 +    if (llabs(mf - free_now) > (256ll << 20)) {
-+        fprintf(stderr, "tosh_vram: driver reports %lld MiB free, %lld MiB are not in use; using the latter\n",
++        fprintf(stderr, "xeon_vram: driver reports %lld MiB free, %lld MiB are not in use; using the latter\n",
 +                (long long) (mf >> 20), (long long) (free_now >> 20));
 +    }
 +    *vfree = (size_t) free_now;
@@ -6549,7 +6549,7 @@ index 000000000..f1b201aeb
 +    int  max_rows = 8;
 +    bool adapt = false;
 +    struct layer { uint64_t host_seq = 0, dma_seq = 0; double dma_end[8] = {}; };
-+    std::vector<layer> layers = std::vector<layer>(TOSH_DMOE_MAX_LAYERS);
++    std::vector<layer> layers = std::vector<layer>(XEON_DMOE_MAX_LAYERS);
 +    int n = 0, n_late = 0;
 +    double late_s = 0;
 +    double prev_start = -1;
@@ -6564,15 +6564,15 @@ index 000000000..f1b201aeb
 +rare_ctl g_rare;
 +}
 +
-+void tosh_dmoe_rare_rows_init(int rows, int max_rows, bool adapt) {
++void xeon_dmoe_rare_rows_init(int rows, int max_rows, bool adapt) {
 +    std::lock_guard<std::mutex> lock(g_rare.m);
 +    g_rare.rows = rows; g_rare.max_rows = max_rows; g_rare.adapt = adapt;
-+    if (const char * t = getenv("TOSH_DMOE_RARE_TARGET")) g_rare.target = atof(t);
++    if (const char * t = getenv("XEON_DMOE_RARE_TARGET")) g_rare.target = atof(t);
 +}
-+int tosh_dmoe_rare_rows_live(void) { return g_rare.rows.load(std::memory_order_relaxed); }
++int xeon_dmoe_rare_rows_live(void) { return g_rare.rows.load(std::memory_order_relaxed); }
 +
-+void tosh_dmoe_rare_dma_done(int il, double t_end) {
-+    if (il < 0 || il >= TOSH_DMOE_MAX_LAYERS) return;
++void xeon_dmoe_rare_dma_done(int il, double t_end) {
++    if (il < 0 || il >= XEON_DMOE_MAX_LAYERS) return;
 +    std::lock_guard<std::mutex> lock(g_rare.m);
 +    auto & L = g_rare.layers[il];
 +    L.dma_end[L.dma_seq % 8] = t_end;
@@ -6581,11 +6581,11 @@ index 000000000..f1b201aeb
 +
 +static void * g_reach_ev = nullptr;
 +static uint64_t (*g_reach_get)(void *) = nullptr;
-+void tosh_dmoe_set_reach_event(void * ev, uint64_t (*get)(void *)) { g_reach_ev = ev; g_reach_get = get; }
-+uint64_t tosh_dmoe_reach_get(void) { return g_reach_get ? g_reach_get(g_reach_ev) : 0; }
++void xeon_dmoe_set_reach_event(void * ev, uint64_t (*get)(void *)) { g_reach_ev = ev; g_reach_get = get; }
++uint64_t xeon_dmoe_reach_get(void) { return g_reach_get ? g_reach_get(g_reach_ev) : 0; }
 +
-+void tosh_dmoe_rare_host_done(int il, double t_start, double t_end, bool gpu_waiting) {
-+    if (il < 0 || il >= TOSH_DMOE_MAX_LAYERS) return;
++void xeon_dmoe_rare_host_done(int il, double t_start, double t_end, bool gpu_waiting) {
++    if (il < 0 || il >= XEON_DMOE_MAX_LAYERS) return;
 +    std::lock_guard<std::mutex> lock(g_rare.m);
 +    g_rare.host_s += t_end - t_start;
 +    g_rare.n_wait += gpu_waiting;
@@ -6599,12 +6599,12 @@ index 000000000..f1b201aeb
 +    g_rare.n++;
 +}
 +
-+void tosh_dmoe_rare_interrupt(void) {
++void xeon_dmoe_rare_interrupt(void) {
 +    std::lock_guard<std::mutex> lock(g_rare.m);
 +    g_rare.n_decode++;
 +}
 +
-+void tosh_dmoe_rare_chunk(double t_start, int n_tokens) {
++void xeon_dmoe_rare_chunk(double t_start, int n_tokens) {
 +    std::lock_guard<std::mutex> lock(g_rare.m);
 +    // a model that narrows its last layer to the output rows runs one decode job per chunk; more
 +    // than a few means decode ran in between and the period is not a measurement
@@ -6637,8 +6637,8 @@ index 000000000..f1b201aeb
 +        if (g_rare.waited < g_rare.target - 0.15) r = std::min(r + step, g_rare.max_rows);
 +        else if (g_rare.waited > g_rare.target + 0.15) r = std::max(r - step, 1);
 +    }
-+    if (getenv("TOSH_DMOE_STATS")) {
-+        fprintf(stderr, "tosh_dmoe: rare-row threshold %d -> %d (host share %.2f, %.3f ms per token; join waited in %d of %d layers, %d finished after their down bank)\n",
++    if (getenv("XEON_DMOE_STATS")) {
++        fprintf(stderr, "xeon_dmoe: rare-row threshold %d -> %d (host share %.2f, %.3f ms per token; join waited in %d of %d layers, %d finished after their down bank)\n",
 +                was, r, g_rare.share, (t_start - prev)/prev_tokens*1e3, g_rare.n_wait, g_rare.n, g_rare.n_late);
 +    }
 +    g_rare.n_wait = 0;
@@ -6646,42 +6646,42 @@ index 000000000..f1b201aeb
 +    g_rare.n = 0; g_rare.n_late = 0; g_rare.late_s = 0;
 +}
 +
-+bool tosh_dmoe_compact(void) {
-+    static const bool on = getenv("TOSH_DMOE_COMPACT") == nullptr || atoi(getenv("TOSH_DMOE_COMPACT")) != 0;
-+    return on && tosh_dmoe_enabled();
++bool xeon_dmoe_compact(void) {
++    static const bool on = getenv("XEON_DMOE_COMPACT") == nullptr || atoi(getenv("XEON_DMOE_COMPACT")) != 0;
++    return on && xeon_dmoe_enabled();
 +}
 +static const int32_t * g_chunk_rows = nullptr;
 +static const float *   g_chunk_tail = nullptr;
 +static int g_chunk_experts = 0;
-+void tosh_dmoe_set_chunk_rows(const int32_t * rows, const float * tail, int n_expert) {
++void xeon_dmoe_set_chunk_rows(const int32_t * rows, const float * tail, int n_expert) {
 +    g_chunk_rows = rows; g_chunk_tail = tail; g_chunk_experts = n_expert;
 +}
-+const float * tosh_dmoe_chunk_tail(void) { return g_chunk_tail; }
-+float tosh_dmoe_token_decay(void) {
-+    static const float d = getenv("TOSH_DMOE_PREFILL_TOKEN_DECAY") ? (float) atof(getenv("TOSH_DMOE_PREFILL_TOKEN_DECAY")) : 0.95f;
++const float * xeon_dmoe_chunk_tail(void) { return g_chunk_tail; }
++float xeon_dmoe_token_decay(void) {
++    static const float d = getenv("XEON_DMOE_PREFILL_TOKEN_DECAY") ? (float) atof(getenv("XEON_DMOE_PREFILL_TOKEN_DECAY")) : 0.95f;
 +    return d;
 +}
 +static std::atomic<int64_t> g_pf_us[4];
 +static std::atomic<int64_t> g_pf_n[4];
 +static void pf_time_report() {
-+    if (getenv("TOSH_DMOE_STATS") && g_pf_n[1].load() > 0) {
-+        fprintf(stderr, "tosh_dmoe: prefill time waiting for ids %.1f ms (%lld), counting rows %.1f ms, issuing uploads %.1f ms (%lld), upload gpu %.1f ms (%lld)\n",
++    if (getenv("XEON_DMOE_STATS") && g_pf_n[1].load() > 0) {
++        fprintf(stderr, "xeon_dmoe: prefill time waiting for ids %.1f ms (%lld), counting rows %.1f ms, issuing uploads %.1f ms (%lld), upload gpu %.1f ms (%lld)\n",
 +                g_pf_us[0].load()/1e3, (long long) g_pf_n[0].load(), g_pf_us[3].load()/1e3, g_pf_us[1].load()/1e3, (long long) g_pf_n[1].load(),
 +                g_pf_us[2].load()/1e3, (long long) g_pf_n[2].load());
 +    }
 +}
-+void tosh_dmoe_note_time(int what, int64_t us) {
++void xeon_dmoe_note_time(int what, int64_t us) {
 +    static std::once_flag once;
 +    std::call_once(once, [] { atexit(pf_time_report); });
 +    g_pf_us[what] += us;
 +    g_pf_n[what]++;
 +}
-+const int32_t * tosh_dmoe_chunk_rows(int * n_expert) {
++const int32_t * xeon_dmoe_chunk_rows(int * n_expert) {
 +    if (n_expert) *n_expert = g_chunk_experts;
 +    return g_chunk_rows;
 +}
 +
-+void tosh_dmoe_mark_completed(void) {
++void xeon_dmoe_mark_completed(void) {
 +    {
 +        std::lock_guard<std::mutex> lock(g_done_mutex);
 +        g_completed.fetch_add(1);
@@ -6689,43 +6689,43 @@ index 000000000..f1b201aeb
 +    g_done_cv.notify_all();
 +}
 +
-+uint64_t tosh_dmoe_completed_value(void) { return g_completed.load(); }
++uint64_t xeon_dmoe_completed_value(void) { return g_completed.load(); }
 +
-+bool tosh_dmoe_wait_completed(uint64_t seen, int timeout_us) {
++bool xeon_dmoe_wait_completed(uint64_t seen, int timeout_us) {
 +    std::unique_lock<std::mutex> lock(g_done_mutex);
 +    return g_done_cv.wait_for(lock, std::chrono::microseconds(timeout_us), [seen] { return g_completed.load() != seen; });
 +}
 +
-+void tosh_dmoe_set_bank_planner(tosh_dmoe_bank_plan_fn fn) { g_planner.store(fn); }
++void xeon_dmoe_set_bank_planner(xeon_dmoe_bank_plan_fn fn) { g_planner.store(fn); }
 +
-+bool tosh_dmoe_bank_planner(const void * host, size_t size, tosh_dmoe_bank_plan * plan) {
-+    const tosh_dmoe_bank_plan_fn fn = g_planner.load();
++bool xeon_dmoe_bank_planner(const void * host, size_t size, xeon_dmoe_bank_plan * plan) {
++    const xeon_dmoe_bank_plan_fn fn = g_planner.load();
 +    return fn != nullptr && fn(host, size, plan);
 +}
 +
-+void   tosh_dmoe_set_obs_ring(void * host) { g_obs_ring = host; }
-+void * tosh_dmoe_obs_ring(void)            { return g_obs_ring; }
-+uint64_t tosh_dmoe_obs_head(void)          { return g_obs_seq.load(); }
++void   xeon_dmoe_set_obs_ring(void * host) { g_obs_ring = host; }
++void * xeon_dmoe_obs_ring(void)            { return g_obs_ring; }
++uint64_t xeon_dmoe_obs_head(void)          { return g_obs_seq.load(); }
 +
-+tosh_dmoe_obs_record * tosh_dmoe_obs_reserve(int il, int n_used, int n_tokens) {
++xeon_dmoe_obs_record * xeon_dmoe_obs_reserve(int il, int n_used, int n_tokens) {
 +    const uint32_t bytes = (uint32_t) n_used*n_tokens*sizeof(int32_t);
-+    if (bytes == 0 || bytes > TOSH_DMOE_OBS_RING_BYTES/4) {
++    if (bytes == 0 || bytes > XEON_DMOE_OBS_RING_BYTES/4) {
 +        return nullptr;
 +    }
 +    std::lock_guard<std::mutex> lock(g_obs_mutex);
-+    if (g_obs_off + bytes > TOSH_DMOE_OBS_RING_BYTES) {
-+        g_obs_pos.fetch_add(TOSH_DMOE_OBS_RING_BYTES - g_obs_off);
++    if (g_obs_off + bytes > XEON_DMOE_OBS_RING_BYTES) {
++        g_obs_pos.fetch_add(XEON_DMOE_OBS_RING_BYTES - g_obs_off);
 +        g_obs_off = 0;
 +    }
 +    const uint64_t seq = g_obs_seq.load() + 1;
-+    tosh_dmoe_obs_record * r = &g_obs[seq % TOSH_DMOE_OBS_RECORDS];
-+    r->sync     = tosh_dmoe_completed_value();
++    xeon_dmoe_obs_record * r = &g_obs[seq % XEON_DMOE_OBS_RECORDS];
++    r->sync     = xeon_dmoe_completed_value();
 +    r->offset   = g_obs_off;
 +    r->pos      = g_obs_pos.load();
 +    r->il       = il;
 +    r->n_used   = n_used;
 +    r->n_tokens = n_tokens;
-+    r->tick     = (uint32_t) tosh_dmoe_tick();
++    r->tick     = (uint32_t) xeon_dmoe_tick();
 +    __atomic_store_n(&r->seq, seq, __ATOMIC_RELEASE);
 +    g_obs_seq.store(seq);
 +    g_obs_off += (bytes + 255) & ~255u;
@@ -6733,25 +6733,25 @@ index 000000000..f1b201aeb
 +    return r;
 +}
 +
-+bool tosh_dmoe_obs_intact(const tosh_dmoe_obs_record * r) {
++bool xeon_dmoe_obs_intact(const xeon_dmoe_obs_record * r) {
 +    const uint64_t bytes = (uint64_t) r->n_used*r->n_tokens*sizeof(int32_t);
-+    return g_obs_pos.load() - r->pos + bytes <= TOSH_DMOE_OBS_RING_BYTES;
++    return g_obs_pos.load() - r->pos + bytes <= XEON_DMOE_OBS_RING_BYTES;
 +}
 +
-+tosh_dmoe_obs_record * tosh_dmoe_obs_record_at(uint64_t seq) {
-+    tosh_dmoe_obs_record * r = &g_obs[seq % TOSH_DMOE_OBS_RECORDS];
++xeon_dmoe_obs_record * xeon_dmoe_obs_record_at(uint64_t seq) {
++    xeon_dmoe_obs_record * r = &g_obs[seq % XEON_DMOE_OBS_RECORDS];
 +    return __atomic_load_n(&r->seq, __ATOMIC_ACQUIRE) == seq ? r : nullptr;
 +}
 +
-+void tosh_dmoe_set_uploader(const tosh_dmoe_uploader * u) {
++void xeon_dmoe_set_uploader(const xeon_dmoe_uploader * u) {
 +    g_uploader = *u;
 +    g_has_uploader.store(true);
 +}
 +
 +static void (*g_uploader_factory)(void) = nullptr;
-+void tosh_dmoe_set_uploader_factory(void (*make)(void)) { g_uploader_factory = make; }
++void xeon_dmoe_set_uploader_factory(void (*make)(void)) { g_uploader_factory = make; }
 +
-+const tosh_dmoe_uploader * tosh_dmoe_get_uploader(void) {
++const xeon_dmoe_uploader * xeon_dmoe_get_uploader(void) {
 +    static std::mutex m;
 +    if (!g_has_uploader.load() && g_uploader_factory != nullptr) {
 +        std::lock_guard<std::mutex> lock(m);
@@ -6760,11 +6760,11 @@ index 000000000..f1b201aeb
 +    return g_has_uploader.load() ? &g_uploader : nullptr;
 +}
 +
-+tosh_dmoe_job * tosh_dmoe_job_of(uint64_t value) {
-+    return &g_jobs[(value >> 1) % TOSH_DMOE_RING];
++xeon_dmoe_job * xeon_dmoe_job_of(uint64_t value) {
++    return &g_jobs[(value >> 1) % XEON_DMOE_RING];
 +}
 +
-+void tosh_dmoe_set_active(bool active) {
++void xeon_dmoe_set_active(bool active) {
 +    if (g_active.exchange(active) == active) {
 +        return;
 +    }
@@ -6774,9 +6774,9 @@ index 000000000..f1b201aeb
 +    }
 +}
 +
-+bool tosh_dmoe_is_active(void) { return g_active.load(std::memory_order_acquire); }
++bool xeon_dmoe_is_active(void) { return g_active.load(std::memory_order_acquire); }
 +
-+bool tosh_dmoe_wait_active(int timeout_us) {
++bool xeon_dmoe_wait_active(int timeout_us) {
 +    if (g_active.load()) {
 +        return true;
 +    }
@@ -6784,18 +6784,18 @@ index 000000000..f1b201aeb
 +    return g_active_cv.wait_for(lock, std::chrono::microseconds(timeout_us), [] { return g_active.load(); });
 +}
 +
-+void tosh_dmoe_fail(const char * why) {
++void xeon_dmoe_fail(const char * why) {
 +    const char * none = nullptr;
 +    g_failed.compare_exchange_strong(none, why);
 +}
 +
-+const char * tosh_dmoe_failed(void)  { return g_failed.load(); }
-+void tosh_dmoe_clear_failure(void)   { g_failed.store(nullptr); }
-diff --git a/tosh-moe/tosh-dmoe.h b/tosh-moe/tosh-dmoe.h
++const char * xeon_dmoe_failed(void)  { return g_failed.load(); }
++void xeon_dmoe_clear_failure(void)   { g_failed.store(nullptr); }
+diff --git a/xeon-moe/xeon-dmoe.h b/xeon-moe/xeon-dmoe.h
 new file mode 100644
 index 000000000..cc40c42f8
 --- /dev/null
-+++ b/tosh-moe/tosh-dmoe.h
++++ b/xeon-moe/xeon-dmoe.h
 @@ -0,0 +1,215 @@
 +// Rendezvous between the GPU side of mixed expert execution and the host executor.
 +// The GPU publishes a layer's routing into a shared stage and signals an odd value; the host
@@ -6812,12 +6812,12 @@ index 000000000..cc40c42f8
 +extern "C" {
 +#endif
 +
-+#define TOSH_DMOE_MAX_LAYERS 128
-+#define TOSH_DMOE_MAX_TOKENS 8
-+#define TOSH_DMOE_RING       1024
-+#define TOSH_DMOE_VERSIONS   4
++#define XEON_DMOE_MAX_LAYERS 128
++#define XEON_DMOE_MAX_TOKENS 8
++#define XEON_DMOE_RING       1024
++#define XEON_DMOE_VERSIONS   4
 +
-+struct tosh_dmoe_job {
++struct xeon_dmoe_job {
 +    uint64_t value;     // the publish value this job answers
 +    int32_t  il;
 +    int32_t  n_tokens;
@@ -6828,131 +6828,131 @@ index 000000000..cc40c42f8
 +};
 +
 +// Stage layout of one layer, in bytes from the layer base.
-+static inline size_t tosh_dmoe_off_act  (int n_embd, int n_used) { (void) n_embd; (void) n_used; return 0; }
-+static inline size_t tosh_dmoe_off_ids  (int n_embd, int n_used) { (void) n_used; return (size_t) n_embd*TOSH_DMOE_MAX_TOKENS*4; }
-+static inline size_t tosh_dmoe_off_slots(int n_embd, int n_used) { return tosh_dmoe_off_ids(n_embd, n_used) + (size_t) n_used*TOSH_DMOE_MAX_TOKENS*4; }
-+static inline size_t tosh_dmoe_off_out  (int n_embd, int n_used) {
-+    const size_t o = tosh_dmoe_off_slots(n_embd, n_used) + (size_t) n_used*TOSH_DMOE_MAX_TOKENS*4;
++static inline size_t xeon_dmoe_off_act  (int n_embd, int n_used) { (void) n_embd; (void) n_used; return 0; }
++static inline size_t xeon_dmoe_off_ids  (int n_embd, int n_used) { (void) n_used; return (size_t) n_embd*XEON_DMOE_MAX_TOKENS*4; }
++static inline size_t xeon_dmoe_off_slots(int n_embd, int n_used) { return xeon_dmoe_off_ids(n_embd, n_used) + (size_t) n_used*XEON_DMOE_MAX_TOKENS*4; }
++static inline size_t xeon_dmoe_off_out  (int n_embd, int n_used) {
++    const size_t o = xeon_dmoe_off_slots(n_embd, n_used) + (size_t) n_used*XEON_DMOE_MAX_TOKENS*4;
 +    return (o + 255) & ~(size_t) 255;
 +}
-+static inline size_t tosh_dmoe_layer_stride(int n_embd, int n_used) {
-+    const size_t o = tosh_dmoe_off_out(n_embd, n_used) + (size_t) n_embd*n_used*TOSH_DMOE_MAX_TOKENS*4;
++static inline size_t xeon_dmoe_layer_stride(int n_embd, int n_used) {
++    const size_t o = xeon_dmoe_off_out(n_embd, n_used) + (size_t) n_embd*n_used*XEON_DMOE_MAX_TOKENS*4;
 +    return (o + 4095) & ~(size_t) 4095;
 +}
 +
 +// Wide batches (prefill): experts routed to few rows of the chunk run on the host while the rest
 +// is uploaded. One stage serves every layer, since a layer's join precedes the next publish.
-+#define TOSH_DMOE_WIDE_MAX_TOKENS 2048
-+#define TOSH_DMOE_WIDE_MAX_ROWS   1024
-+static inline size_t tosh_dmoe_wide_off_ids(int n_tok, int n_embd, int n_used) { (void) n_used; return (size_t) n_tok*n_embd*4; }
-+static inline size_t tosh_dmoe_wide_off_rmp(int n_tok, int n_embd, int n_used) { return tosh_dmoe_wide_off_ids(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4; }
-+static inline size_t tosh_dmoe_wide_off_map(int n_tok, int n_embd, int n_used) { return tosh_dmoe_wide_off_rmp(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4; }
-+static inline size_t tosh_dmoe_wide_off_out(int n_tok, int n_embd, int n_used) {
-+    return (tosh_dmoe_wide_off_map(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4 + 255) & ~(size_t) 255;
++#define XEON_DMOE_WIDE_MAX_TOKENS 2048
++#define XEON_DMOE_WIDE_MAX_ROWS   1024
++static inline size_t xeon_dmoe_wide_off_ids(int n_tok, int n_embd, int n_used) { (void) n_used; return (size_t) n_tok*n_embd*4; }
++static inline size_t xeon_dmoe_wide_off_rmp(int n_tok, int n_embd, int n_used) { return xeon_dmoe_wide_off_ids(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4; }
++static inline size_t xeon_dmoe_wide_off_map(int n_tok, int n_embd, int n_used) { return xeon_dmoe_wide_off_rmp(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4; }
++static inline size_t xeon_dmoe_wide_off_out(int n_tok, int n_embd, int n_used) {
++    return (xeon_dmoe_wide_off_map(n_tok, n_embd, n_used) + (size_t) n_tok*n_used*4 + 255) & ~(size_t) 255;
 +}
-+static inline size_t tosh_dmoe_wide_bytes(int n_embd, int n_used) {
-+    return tosh_dmoe_wide_off_out(TOSH_DMOE_WIDE_MAX_TOKENS, n_embd, n_used) + (size_t) TOSH_DMOE_WIDE_MAX_ROWS*n_embd*4;
++static inline size_t xeon_dmoe_wide_bytes(int n_embd, int n_used) {
++    return xeon_dmoe_wide_off_out(XEON_DMOE_WIDE_MAX_TOKENS, n_embd, n_used) + (size_t) XEON_DMOE_WIDE_MAX_ROWS*n_embd*4;
 +}
-+void   tosh_dmoe_set_wide_stage(void * host, size_t bytes);
-+void * tosh_dmoe_wide_stage(size_t * bytes);
++void   xeon_dmoe_set_wide_stage(void * host, size_t bytes);
++void * xeon_dmoe_wide_stage(size_t * bytes);
 +
 +// Rare-row threshold the next wide publish uses. With adapt, it moves one row at a time to keep
 +// the share of layers whose join is already waiting when the host finishes near a target
-+// (TOSH_DMOE_RARE_TARGET): a short wait means the host took rows the uploads no longer carry.
-+void tosh_dmoe_rare_rows_init(int rows, int max_rows, bool adapt);
-+int  tosh_dmoe_rare_rows_live(void);
-+void tosh_dmoe_rare_host_done(int il, double t_start, double t_end, bool gpu_waiting);
++// (XEON_DMOE_RARE_TARGET): a short wait means the host took rows the uploads no longer carry.
++void xeon_dmoe_rare_rows_init(int rows, int max_rows, bool adapt);
++int  xeon_dmoe_rare_rows_live(void);
++void xeon_dmoe_rare_host_done(int il, double t_start, double t_end, bool gpu_waiting);
 +// the GPU signals this event with a wide layer's publish value when it reaches that layer's join
-+void     tosh_dmoe_set_reach_event(void * ev, uint64_t (*get)(void *));
-+uint64_t tosh_dmoe_reach_get(void);
-+void tosh_dmoe_rare_dma_done(int il, double t_end);
-+void tosh_dmoe_rare_chunk(double t_start, int n_tokens);
++void     xeon_dmoe_set_reach_event(void * ev, uint64_t (*get)(void *));
++uint64_t xeon_dmoe_reach_get(void);
++void xeon_dmoe_rare_dma_done(int il, double t_end);
++void xeon_dmoe_rare_chunk(double t_start, int n_tokens);
 +// a decode step ran: the next chunk's period would include it, so it is not a measurement
-+void tosh_dmoe_rare_interrupt(void);
++void xeon_dmoe_rare_interrupt(void);
 +
-+// Prefill timeline for overlap studies (TOSH_DMOE_TIMELINE=<file>): kind, layer, host seconds.
-+void tosh_dmoe_timeline(int kind, int il, double t0, double t1);
-+double tosh_dmoe_host_seconds(void);
++// Prefill timeline for overlap studies (XEON_DMOE_TIMELINE=<file>): kind, layer, host seconds.
++void xeon_dmoe_timeline(int kind, int il, double t0, double t1);
++double xeon_dmoe_host_seconds(void);
 +
 +// Free VRAM before this process allocated anything, and the card's total, as the driver sees them.
-+void tosh_dmoe_set_vram(size_t free_at_start, size_t total);
-+bool tosh_dmoe_vram(size_t * free_at_start, size_t * total);
++void xeon_dmoe_set_vram(size_t free_at_start, size_t total);
++bool xeon_dmoe_vram(size_t * free_at_start, size_t * total);
 +// The driver's live counters (free, and in use by every process), set by the GPU backend.
-+void tosh_dmoe_set_vram_query(bool (*fn)(int64_t * vfree, int64_t * vused));
++void xeon_dmoe_set_vram_query(bool (*fn)(int64_t * vfree, int64_t * vused));
 +// Free VRAM as the card's size less what every process holds, median of three samples. The
 +// driver's free counter lags behind released memory; a disagreement is logged, not used.
-+bool tosh_vram_read(size_t * vfree, size_t * total);
++bool xeon_vram_read(size_t * vfree, size_t * total);
 +// Mixed execution chosen at run time, after the environment was first read.
-+void tosh_dmoe_enable(void);
++void xeon_dmoe_enable(void);
 +// VRAM this process holds in the GPU backend's own buffers, 0 when the backend does not say
-+void   tosh_dmoe_set_private_query(size_t (*fn)(void));
-+size_t tosh_dmoe_private_bytes(void);
++void   xeon_dmoe_set_private_query(size_t (*fn)(void));
++size_t xeon_dmoe_private_bytes(void);
 +
 +// Whether mixed expert execution is configured for this process; nothing runs otherwise.
-+bool tosh_dmoe_enabled(void);
++bool xeon_dmoe_enabled(void);
 +
 +// Set by the GPU backend.
-+void     tosh_dmoe_set_stage(void * host, size_t layer_stride);
-+void *   tosh_dmoe_stage_layer(int il);
-+void     tosh_dmoe_set_event(void * ev, uint64_t (*get)(void *), void (*set)(void *, uint64_t));
-+uint64_t tosh_dmoe_event_get(void);
-+void     tosh_dmoe_event_set(uint64_t value);
++void     xeon_dmoe_set_stage(void * host, size_t layer_stride);
++void *   xeon_dmoe_stage_layer(int il);
++void     xeon_dmoe_set_event(void * ev, uint64_t (*get)(void *), void (*set)(void *, uint64_t));
++uint64_t xeon_dmoe_event_get(void);
++void     xeon_dmoe_event_set(uint64_t value);
 +
 +// Publish values are odd and grow in GPU order; the answer is value + 1. They are handed out
 +// when a graph is submitted, so a publish and its join agree however the graph is split.
-+uint64_t tosh_dmoe_next_value(void);
++uint64_t xeon_dmoe_next_value(void);
 +
-+struct tosh_dmoe_job * tosh_dmoe_job_of(uint64_t value);
++struct xeon_dmoe_job * xeon_dmoe_job_of(uint64_t value);
 +
 +// The host executor only spins while a graph with mixed layers is in flight.
-+void tosh_dmoe_set_active(bool active);
-+bool tosh_dmoe_wait_active(int timeout_us);
-+bool tosh_dmoe_is_active(void);
++void xeon_dmoe_set_active(bool active);
++bool xeon_dmoe_wait_active(int timeout_us);
++bool xeon_dmoe_is_active(void);
 +
 +// Dynamic residency. The GPU reads residency from host memory laid out as
-+// [TOSH_DMOE_VERSIONS][TOSH_DMOE_MAX_LAYERS][n_expert] int32; each graph takes the published version when it is
++// [XEON_DMOE_VERSIONS][XEON_DMOE_MAX_LAYERS][n_expert] int32; each graph takes the published version when it is
 +// submitted, so a table never changes under a running token.
-+void      tosh_dmoe_set_tables(int32_t * host, size_t bytes, int n_layers, int n_expert);
-+int32_t * tosh_dmoe_tables(size_t * bytes, int * n_layers, int * n_expert);
-+void      tosh_dmoe_publish_version(int version);
-+int       tosh_dmoe_published_version(void);
++void      xeon_dmoe_set_tables(int32_t * host, size_t bytes, int n_layers, int n_expert);
++int32_t * xeon_dmoe_tables(size_t * bytes, int * n_layers, int * n_expert);
++void      xeon_dmoe_publish_version(int version);
++int       xeon_dmoe_published_version(void);
 +
 +// Graphs are counted as they are submitted. The completed count grows at every synchronize,
 +// which waits for every graph submitted before it; submissions and synchronizes come from one
 +// thread, so whatever a table published before sync k named is no longer read after sync k + 2.
-+uint64_t tosh_dmoe_tick_next(void);
++uint64_t xeon_dmoe_tick_next(void);
 +// the last submitted graph was a wide batch (prefill) rather than mixed decode
-+void     tosh_dmoe_note_wide(bool wide);
-+bool     tosh_dmoe_wide(void);
-+uint64_t tosh_dmoe_tick(void);
-+void     tosh_dmoe_mark_completed(void);
-+uint64_t tosh_dmoe_completed_value(void);
-+uint64_t tosh_dmoe_last_value(void);
-+bool     tosh_dmoe_wait_completed(uint64_t seen, int timeout_us);
++void     xeon_dmoe_note_wide(bool wide);
++bool     xeon_dmoe_wide(void);
++uint64_t xeon_dmoe_tick(void);
++void     xeon_dmoe_mark_completed(void);
++uint64_t xeon_dmoe_completed_value(void);
++uint64_t xeon_dmoe_last_value(void);
++bool     xeon_dmoe_wait_completed(uint64_t seen, int timeout_us);
 +
 +// Uploads host bytes into GPU tensors on a queue of their own, through a bounded stage.
-+struct tosh_dmoe_copy {
++struct xeon_dmoe_copy {
 +    const void * dst;       // ggml_tensor
 +    size_t       offset;
 +    const void * src;
 +    size_t       size;
 +};
-+struct tosh_dmoe_uploader {
++struct xeon_dmoe_uploader {
 +    void *   ctx;
-+    uint64_t (*upload)(void * ctx, const struct tosh_dmoe_copy * copies, int n);   // 0 on failure
++    uint64_t (*upload)(void * ctx, const struct xeon_dmoe_copy * copies, int n);   // 0 on failure
 +    int      (*status)(void * ctx, uint64_t ticket);    // 0 pending, 1 done, -1 failed
 +    double   (*gpu_us)(void * ctx, uint64_t ticket);    // device time of a finished upload
 +    // the other way: src is the ggml_tensor and dst host memory; returns once the bytes are there
-+    bool     (*download)(void * ctx, const struct tosh_dmoe_copy * copies, int n);
++    bool     (*download)(void * ctx, const struct xeon_dmoe_copy * copies, int n);
 +};
-+void                              tosh_dmoe_set_uploader(const struct tosh_dmoe_uploader * u);
-+const struct tosh_dmoe_uploader * tosh_dmoe_get_uploader(void);
++void                              xeon_dmoe_set_uploader(const struct xeon_dmoe_uploader * u);
++const struct xeon_dmoe_uploader * xeon_dmoe_get_uploader(void);
 +// the GPU backend makes the uploader the first time it is asked for
-+void tosh_dmoe_set_uploader_factory(void (*make)(void));
++void xeon_dmoe_set_uploader_factory(void (*make)(void));
 +
 +// Prefill. A bank upload asks for the layer's residency so resident experts come from the
 +// VRAM arena and only the rest from host memory. Registered by whoever owns the banks.
-+struct tosh_dmoe_bank_plan {
++struct xeon_dmoe_bank_plan {
 +    const void *    arena;          // ggml_tensor holding the resident copies, slot-major
 +    const int32_t * slot_of;        // n_expert entries, slot or -1
 +    int             n_expert;
@@ -6966,15 +6966,15 @@ index 000000000..cc40c42f8
 +    int             il;
 +    int             which;          // 0 gate, 1 up, 2 down
 +};
-+typedef bool (*tosh_dmoe_bank_plan_fn)(const void * host, size_t size, struct tosh_dmoe_bank_plan * plan);
-+void tosh_dmoe_set_bank_planner(tosh_dmoe_bank_plan_fn fn);
-+bool tosh_dmoe_bank_planner(const void * host, size_t size, struct tosh_dmoe_bank_plan * plan);
++typedef bool (*xeon_dmoe_bank_plan_fn)(const void * host, size_t size, struct xeon_dmoe_bank_plan * plan);
++void xeon_dmoe_set_bank_planner(xeon_dmoe_bank_plan_fn fn);
++bool xeon_dmoe_bank_planner(const void * host, size_t size, struct xeon_dmoe_bank_plan * plan);
 +
 +// Prefill routing: the GPU copies a layer's ids into a host-visible ring and the policy reads
 +// them once the graph has completed. Records are overwritten when the ring wraps.
-+#define TOSH_DMOE_OBS_RING_BYTES (32u << 20)
-+#define TOSH_DMOE_OBS_RECORDS    4096
-+struct tosh_dmoe_obs_record {
++#define XEON_DMOE_OBS_RING_BYTES (32u << 20)
++#define XEON_DMOE_OBS_RECORDS    4096
++struct xeon_dmoe_obs_record {
 +    uint64_t seq;           // 0 while unused
 +    uint64_t sync;          // completed count when it was encoded
 +    uint64_t pos;           // bytes reserved before it, never wraps
@@ -6984,39 +6984,39 @@ index 000000000..cc40c42f8
 +    int32_t  n_tokens;
 +    uint32_t tick;
 +};
-+void                          tosh_dmoe_set_obs_ring(void * host);
-+void *                        tosh_dmoe_obs_ring(void);
-+struct tosh_dmoe_obs_record * tosh_dmoe_obs_reserve(int il, int n_used, int n_tokens);   // null if too big
-+struct tosh_dmoe_obs_record * tosh_dmoe_obs_record_at(uint64_t seq);
-+uint64_t                      tosh_dmoe_obs_head(void);
-+bool                          tosh_dmoe_obs_intact(const struct tosh_dmoe_obs_record * r);
++void                          xeon_dmoe_set_obs_ring(void * host);
++void *                        xeon_dmoe_obs_ring(void);
++struct xeon_dmoe_obs_record * xeon_dmoe_obs_reserve(int il, int n_used, int n_tokens);   // null if too big
++struct xeon_dmoe_obs_record * xeon_dmoe_obs_record_at(uint64_t seq);
++uint64_t                      xeon_dmoe_obs_head(void);
++bool                          xeon_dmoe_obs_intact(const struct xeon_dmoe_obs_record * r);
 +
 +// A failure latches until cleared: every later publish is answered at once so the GPU never
 +// waits forever, and the caller aborts the batch.
-+void         tosh_dmoe_fail(const char * why);
-+const char * tosh_dmoe_failed(void);
-+void         tosh_dmoe_clear_failure(void);
++void         xeon_dmoe_fail(const char * why);
++const char * xeon_dmoe_failed(void);
++void         xeon_dmoe_clear_failure(void);
 +
 +// Compact prefill: a wide batch uploads only the experts its chunk routes to. The scheduler reads
 +// the chunk's ids and sets the rows per expert right before the bank upload that consumes them.
-+bool            tosh_dmoe_compact(void);
-+void            tosh_dmoe_set_chunk_rows(const int32_t * rows, const float * tail, int n_expert);
-+const int32_t * tosh_dmoe_chunk_rows(int * n_expert);
-+// per expert, its routing weighted by closeness to the chunk's end (TOSH_DMOE_PREFILL_TOKEN_DECAY)
-+const float *   tosh_dmoe_chunk_tail(void);
-+float           tosh_dmoe_token_decay(void);
++bool            xeon_dmoe_compact(void);
++void            xeon_dmoe_set_chunk_rows(const int32_t * rows, const float * tail, int n_expert);
++const int32_t * xeon_dmoe_chunk_rows(int * n_expert);
++// per expert, its routing weighted by closeness to the chunk's end (XEON_DMOE_PREFILL_TOKEN_DECAY)
++const float *   xeon_dmoe_chunk_tail(void);
++float           xeon_dmoe_token_decay(void);
 +// prefill time accounting: 0 waiting for the chunk's ids, 1 issuing bank uploads, 2 upload GPU time,
 +// 3 counting rows per expert
-+void            tosh_dmoe_note_time(int what, int64_t us);
++void            xeon_dmoe_note_time(int what, int64_t us);
 +
 +#ifdef __cplusplus
 +}
 +#endif
-diff --git a/tosh-moe/tosh-hostcache.cpp b/tosh-moe/tosh-hostcache.cpp
+diff --git a/xeon-moe/xeon-hostcache.cpp b/xeon-moe/xeon-hostcache.cpp
 new file mode 100644
 index 000000000..94abfe510
 --- /dev/null
-+++ b/tosh-moe/tosh-hostcache.cpp
++++ b/xeon-moe/xeon-hostcache.cpp
 @@ -0,0 +1,102 @@
 +#ifdef __APPLE__
 +#include <sys/sysctl.h>
@@ -7045,8 +7045,8 @@ index 000000000..94abfe510
 +            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 +        }
 +#endif
-+        if (getenv("TOSH_DMOE_TEST_MLOCK_FAIL") != nullptr || mlock(base + o, std::min(step, bytes - o)) != 0) {
-+            const int e = getenv("TOSH_DMOE_TEST_MLOCK_FAIL") != nullptr ? EAGAIN : errno;
++        if (getenv("XEON_DMOE_TEST_MLOCK_FAIL") != nullptr || mlock(base + o, std::min(step, bytes - o)) != 0) {
++            const int e = getenv("XEON_DMOE_TEST_MLOCK_FAIL") != nullptr ? EAGAIN : errno;
 +            snprintf(err, err_len, "DMOE_HOST_BANK_NOT_LOCKABLE: mlock failed after %.0f of %.0f MiB (%s)",
 +                     o/1048576.0, bytes/1048576.0, strerror(e));
 +            munlock(base, o);
@@ -7064,7 +7064,7 @@ index 000000000..94abfe510
 +// slots from the moment the model finishes loading, past ready, until the budget or the slots run
 +// out. Demand never waits on it: an entry is published only once read, and last in line for eviction.
 +            for (int key; (key = (*next)++) < n_keys;) {
-+bool tosh_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len) {
++bool xeon_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len) {
 +    return mlock_paced(addr, bytes, err, err_len);
 +}
 +
@@ -7094,12 +7094,12 @@ index 000000000..94abfe510
 +}
 +
 +        const int s = readback_slot(il, e);
-+bool tosh_hostcache_store(int il, int e) {
++bool xeon_hostcache_store(int il, int e) {
 +    std::lock_guard<std::mutex> lock(g.m);
 +    return readback_slot(il, e) >= 0;
 +}
 +
-+void tosh_hostcache_store_done(int il, int e, bool ok) {
++void xeon_hostcache_store_done(int il, int e, bool ok) {
 +    {
 +        std::lock_guard<std::mutex> lock(g.m);
 +        const int s = g.base == nullptr ? -1 : g.slot_of[il*g.n_expert + e];
@@ -7117,20 +7117,20 @@ index 000000000..94abfe510
 +}
 +
 +    uint64_t hits = 0;
-+    for (int k = 0; k < TOSH_HC_KINDS; ++k) hits += g.hit[k];
-+    fprintf(stderr, "tosh_hostcache: read back on eviction %llu, copied back from VRAM %llu\n",
++    for (int k = 0; k < XEON_HC_KINDS; ++k) hits += g.hit[k];
++    fprintf(stderr, "xeon_hostcache: read back on eviction %llu, copied back from VRAM %llu\n",
 +            (unsigned long long) g.prefetches, (unsigned long long) g.stored);
-diff --git a/tosh-moe/tosh-hostcache.h b/tosh-moe/tosh-hostcache.h
+diff --git a/xeon-moe/xeon-hostcache.h b/xeon-moe/xeon-hostcache.h
 new file mode 100644
 index 000000000..103e5b32f
 --- /dev/null
-+++ b/tosh-moe/tosh-hostcache.h
++++ b/xeon-moe/xeon-hostcache.h
 @@ -0,0 +1,8 @@
 +// locks [addr, addr+bytes) a step at a time, waiting while the system reports memory pressure;
 +// false with a message in err (at least 256 bytes) when the lock fails or the pressure stays up
-+bool tosh_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len);
++bool xeon_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len);
 +
 +// the same expert, when the caller copies its bytes out of VRAM instead: true when a slot waits
-+// for them at tosh_hostcache_part(); done publishes it, or falls back to the file read
-+bool tosh_hostcache_store(int il, int e);
-+void tosh_hostcache_store_done(int il, int e, bool ok);
++// for them at xeon_hostcache_part(); done publishes it, or falls back to the file read
++bool xeon_hostcache_store(int il, int e);
++void xeon_hostcache_store_done(int il, int e, bool ok);

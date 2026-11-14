@@ -38,14 +38,14 @@ index 636d7a36e..b4bff03c2 100644
 +    add_opt(common_arg(
 +        {"--mcp-agent"}, "NAME",
 +        "experimental: answer /v1/chat/completions requests that bring no tools with the \"run\" tool of the MCP server NAME;\n"
-+        "requests with tools, a grammar or a response format, or the header X-Tosh-Agent: off, stay raw inference (default: none)",
++        "requests with tools, a grammar or a response format, or the header X-Xeon-Agent: off, stay raw inference (default: none)",
 +        [](common_params & params, const std::string & value) {
 +            params.mcp_agent = value;
 +        }
 +    ).set_examples({LLAMA_EXAMPLE_SERVER}).set_env("LLAMA_ARG_MCP_AGENT"));
 +    add_opt(common_arg(
 +        {"--mcp-agent-explicit"},
-+        "experimental: with --mcp-agent, answer only requests that carry X-Tosh-Agent: on or come from a page in a browser; the rest stay raw inference (default: disabled)",
++        "experimental: with --mcp-agent, answer only requests that carry X-Xeon-Agent: on or come from a page in a browser; the rest stay raw inference (default: disabled)",
 +        [](common_params & params) {
 +            params.mcp_agent_explicit = true;
 +        }
@@ -104,7 +104,7 @@ index 909f7f9e7..63a06f4d5 100644
      std::string mcp_servers_config;   // path to JSON file with MCP server definitions
      std::string mcp_servers_json;     // inline JSON with MCP server definitions
 +    std::string mcp_agent;            // MCP server whose "run" tool answers chat completions that bring no tools
-+    bool        mcp_agent_explicit = false; // the agent answers only requests with X-Tosh-Agent: on
++    bool        mcp_agent_explicit = false; // the agent answers only requests with X-Xeon-Agent: on
 +    std::string mcp_agent_only;       // comma-separated MCP servers whose tools only the agent may list and call
 +    bool        mcp_agent_client_tools = false; // requests with tools of their own go to the agent too
  
@@ -128,7 +128,7 @@ index 939016064..f539502a4 100644
          { "build_info",                  meta.build_info },
          { "is_sleeping",                 is_sleeping },
          { "cors_proxy_enabled",          params.ui_mcp_proxy },
-+        { "tosh_agent",                  !params.mcp_agent.empty() },
++        { "xeon_agent",                  !params.mcp_agent.empty() },
      };
      if (params.use_jinja) {
          if (!tmpl_tools.empty()) {
@@ -636,7 +636,7 @@ index c7f33a3f7..ce2f45530 100644
  struct server_mcp_transport {
      std::string name;
      int timeout_ms = 30000;
-+    // the server answers calls in parallel (the Tosh agent); the rest get one call at a time
++    // the server answers calls in parallel (the Xeon agent); the rest get one call at a time
 +    bool concurrent = false;
  
      server_pipe<std::string> to_server;   // serialized messages we send to the server
@@ -659,7 +659,7 @@ index c7f33a3f7..ce2f45530 100644
  protected:
 -    // per-transport: send_rpc() holds it across the reply wait, so sharing it would stall every server behind one slow call. guards all members below.
 +    // per-transport: guards the tool list and the members below; a tool call holds it only to take its id,
-+    // so a long call (the Tosh agent's turn) does not stall the calls of other clients
++    // so a long call (the Xeon agent's turn) does not stall the calls of other clients
      std::mutex rpc_mutex;
 +    std::timed_mutex call_mutex; // held across a whole call unless the server is concurrent; waited for cancellably
      uint64_t next_id = 1; // reset to 1 per (re)spawn
@@ -742,7 +742,7 @@ index 35d21c876..d0aad2668 100644
      preset.unset_option("LLAMA_ARG_MODELS_MAX");
      preset.unset_option("LLAMA_ARG_MODELS_PRESET");
      preset.unset_option("LLAMA_ARG_MODELS_AUTOLOAD");
-+    // the router runs the MCP servers and the Tosh agent; a worker only answers raw inference
++    // the router runs the MCP servers and the Xeon agent; a worker only answers raw inference
 +    preset.unset_option("LLAMA_ARG_MCP_SERVERS_CONFIG");
 +    preset.unset_option("LLAMA_ARG_MCP_SERVERS_JSON");
 +    preset.unset_option("LLAMA_ARG_MCP_AGENT");
@@ -878,7 +878,7 @@ index 12e9dbb8c..4bc757ff5 100644
      }
  
 -    handle_get = [this](const server_http_req &) -> server_http_res_ptr {
-+    // A page in a browser runs its own agent loop on these tools, without the checks the Tosh agent
++    // A page in a browser runs its own agent loop on these tools, without the checks the Xeon agent
 +    // puts around the MCP ones (math among them). It gets the built-in tools only; programs that are not
 +    // browsers keep the whole list. Browsers mark every request with Sec-Fetch-Site or Origin.
 +    auto from_browser = [](const server_http_req & req) {
@@ -895,7 +895,7 @@ index 12e9dbb8c..4bc757ff5 100644
 +        if (mcp_tool == nullptr || agent_only.count(mcp_tool->server_name) == 0) {
 +            return false;
 +        }
-+        return agent_key.empty() || get_header(req.headers, "x-tosh-agent-key") != agent_key;
++        return agent_key.empty() || get_header(req.headers, "x-xeon-agent-key") != agent_key;
 +    };
 +
 +    // The built-in tools reach this computer's shell and files: another computer gets them only with the
@@ -954,7 +954,7 @@ index 12e9dbb8c..4bc757ff5 100644
 +            if (from_browser(req) && tool.type() == "mcp") {
 +                res->status = 403;
 +                res->data   = safe_json_to_str(format_error_response(
-+                    "MCP tools are not run for pages in a browser; use the Tosh agent", ERROR_TYPE_PERMISSION));
++                    "MCP tools are not run for pages in a browser; use the Xeon agent", ERROR_TYPE_PERMISSION));
 +                return res;
 +            }
  
@@ -1061,7 +1061,7 @@ index 6e2d8ff9d..b51ded455 100644
  static std::function<void(int)> shutdown_handler;
 +
 +// an address only this computer reaches: loopback in IPv4 or IPv6, or a UNIX socket; a host name may resolve elsewhere
-+static bool tosh_local_address(std::string host) {
++static bool xeon_local_address(std::string host) {
 +    if (host == "localhost" || string_ends_with(host, ".sock")) {
 +        return true;
 +    }
@@ -1091,16 +1091,16 @@ index 6e2d8ff9d..b51ded455 100644
  }
  
  
-+// The Tosh agent (--mcp-agent NAME) answers /v1/chat/completions with the "run" tool of the MCP server
++// The Xeon agent (--mcp-agent NAME) answers /v1/chat/completions with the "run" tool of the MCP server
 +// NAME, which calls this server back for raw inference and /tools. The contract, per request:
-+//   X-Tosh-Agent: off (or raw)  raw model inference, always
-+//   X-Tosh-Agent: on            the agent; refused when the server runs none or the request brings tools
++//   X-Xeon-Agent: off (or raw)  raw model inference, always
++//   X-Xeon-Agent: on            the agent; refused when the server runs none or the request brings tools
 +//                               (with --mcp-agent-client-tools, tools of the client's own go to the agent too)
 +//   no header                   the agent, unless the server takes it on request only (--mcp-agent-explicit)
 +//                               and the request does not come from a page in a browser (the bundled web chat),
 +//                               or the request brings tools, functions, a grammar, json_schema or
 +//                               response_format: then raw, so clients that run their own tools are unaffected
-+static std::string tosh_header(const server_http_req & req, const char * name) {
++static std::string xeon_header(const server_http_req & req, const char * name) {
 +    for (const auto & [key, value] : req.headers) {
 +        std::string k = key, v = value;
 +        std::transform(k.begin(), k.end(), k.begin(), ::tolower);
@@ -1112,7 +1112,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    return "";
 +}
 +
-+static bool tosh_agent_constrained(const json & body, bool client_tools) {
++static bool xeon_agent_constrained(const json & body, bool client_tools) {
 +    for (const char * key : {"tools", "functions", "grammar", "json_schema", "response_format"}) {
 +        if (client_tools && (std::string(key) == "tools" || std::string(key) == "functions")) {
 +            continue;
@@ -1124,7 +1124,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    return false;
 +}
 +
-+static json tosh_agent_answer(const json & out, int & status) {
++static json xeon_agent_answer(const json & out, int & status) {
 +    status = 502;
 +    auto failure = [](const std::string & message) {
 +        return json{{"error", {{"message", message}, {"type", "agent_error"}}}};
@@ -1155,7 +1155,7 @@ index 6e2d8ff9d..b51ded455 100644
 +
 +// the answer goes out once the agent has checked it, except the text of a pass it streamed live; before that
 +// only progress events and keep-alives. `streamed` is the text already sent since the last retracted pass
-+static std::vector<std::string> tosh_agent_chunks(const json & answer, int status, const json & head,
++static std::vector<std::string> xeon_agent_chunks(const json & answer, int status, const json & head,
 +                                                  const std::string & streamed, bool retracted, bool started) {
 +    if (status != 200) {
 +        return {"data: " + answer.dump() + "\n\n", "data: [DONE]\n\n"};
@@ -1193,7 +1193,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    json last = head;
 +    last["choices"] = json::array({{{"index", 0}, {"delta", json::object()},
 +                                    {"finish_reason", calls.empty() ? "stop" : "tool_calls"}}});
-+    for (const char * key : {"usage", "tosh"}) {
++    for (const char * key : {"usage", "xeon"}) {
 +        if (answer.contains(key)) {
 +            last[key] = answer.at(key);
 +        }
@@ -1201,7 +1201,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    return {"data: " + first.dump() + "\n\n", "data: " + last.dump() + "\n\n", "data: [DONE]\n\n"};
 +}
 +
-+struct tosh_agent_state {
++struct xeon_agent_state {
 +    std::mutex mutex;
 +    std::condition_variable cv;
 +    std::deque<json> events;
@@ -1212,8 +1212,8 @@ index 6e2d8ff9d..b51ded455 100644
 +
 +// a client that goes away stops the agent, its model passes and its tool calls, unless the request names its
 +// conversation: then the agent runs to its end into the replay buffer, where the client picks the answer up again
-+struct tosh_agent_res : server_res_spipe {
-+    std::shared_ptr<tosh_agent_state> state;
++struct xeon_agent_res : server_res_spipe {
++    std::shared_ptr<xeon_agent_state> state;
 +    void on_complete() override {
 +        server_res_spipe::on_complete();
 +        state->cancelled = true;
@@ -1221,7 +1221,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    }
 +};
 +
-+static server_http_res_ptr tosh_agent_refuse(const std::string & message) {
++static server_http_res_ptr xeon_agent_refuse(const std::string & message) {
 +    auto res = std::make_unique<server_http_res>();
 +    res->status = 400;
 +    res->data = json{{"error", {{"message", message}, {"type", "invalid_request_error"}}}}.dump();
@@ -1229,7 +1229,7 @@ index 6e2d8ff9d..b51ded455 100644
 +}
 +
 +// 256 bits from the system's generator
-+static std::string tosh_agent_key() {
++static std::string xeon_agent_key() {
 +    std::random_device rd;
 +    std::string key;
 +    for (int i = 0; i < 8; i++) {
@@ -1238,12 +1238,12 @@ index 6e2d8ff9d..b51ded455 100644
 +    return key;
 +}
 +
-+static server_http_context::handler_t tosh_agent_handler(server_http_context::handler_t raw,
++static server_http_context::handler_t xeon_agent_handler(server_http_context::handler_t raw,
 +                                                         server_mcp & mcp_mgr,
 +                                                         const common_params & params,
 +                                                         const std::string & agent_key) {
 +    return [raw, &mcp_mgr, &params, agent_key](const server_http_req & req) -> server_http_res_ptr {
-+        const std::string mode = tosh_header(req, "x-tosh-agent");
++        const std::string mode = xeon_header(req, "x-xeon-agent");
 +        if (mode == "off" || mode == "raw") {
 +            return raw(req);
 +        }
@@ -1255,14 +1255,14 @@ index 6e2d8ff9d..b51ded455 100644
 +            return raw(req);
 +        }
 +        if (params.mcp_agent.empty()) {
-+            return asked ? tosh_agent_refuse("this server runs no Tosh agent: start it with --mcp-agent") : raw(req);
++            return asked ? xeon_agent_refuse("this server runs no Xeon agent: start it with --mcp-agent") : raw(req);
 +        }
-+        if (!body.is_object() || tosh_agent_constrained(body, params.mcp_agent_client_tools)) {
-+            return asked ? tosh_agent_refuse("a request for the Tosh agent cannot bring tools, functions, a grammar or a response format")
++        if (!body.is_object() || xeon_agent_constrained(body, params.mcp_agent_client_tools)) {
++            return asked ? xeon_agent_refuse("a request for the Xeon agent cannot bring tools, functions, a grammar or a response format")
 +                         : raw(req);
 +        }
 +        // browsers mark every request with one of these; a page never gets the MCP tools for its own loop
-+        const bool browser = !tosh_header(req, "sec-fetch-site").empty() || !tosh_header(req, "origin").empty();
++        const bool browser = !xeon_header(req, "sec-fetch-site").empty() || !xeon_header(req, "origin").empty();
 +        if (!asked && params.mcp_agent_explicit && !browser) {
 +            return raw(req);
 +        }
@@ -1285,12 +1285,12 @@ index 6e2d8ff9d..b51ded455 100644
 +        if (!body.value("stream", false)) {
 +            auto res = std::make_unique<server_http_res>();
 +            int status = 502;
-+            json answer = tosh_agent_answer(mcp_mgr.call_tool(params.mcp_agent, "run", args, req.should_stop), status);
++            json answer = xeon_agent_answer(mcp_mgr.call_tool(params.mcp_agent, "run", args, req.should_stop), status);
 +            res->status = status;
 +            res->data = answer.dump();
 +            return res;
 +        }
-+        auto state = std::make_shared<tosh_agent_state>();
++        auto state = std::make_shared<xeon_agent_state>();
 +        std::thread([state, args, &mcp_mgr, name = params.mcp_agent]() {
 +            json out = mcp_mgr.call_tool(name, "run", args,
 +                [state]() { return state->cancelled.load(); },
@@ -1304,14 +1304,14 @@ index 6e2d8ff9d..b51ded455 100644
 +            state->done = true;
 +            state->cv.notify_all();
 +        }).detach();
-+        auto res = std::make_unique<tosh_agent_res>();
++        auto res = std::make_unique<xeon_agent_res>();
 +        res->set_req(&req);
 +        res->state = state;
 +        res->content_type = "text/event-stream";
 +        res->status = 200;
-+        json head = {{"id", "chatcmpl-tosh-" + tosh_agent_key().substr(0, 32)}, {"object", "chat.completion.chunk"},
++        json head = {{"id", "chatcmpl-xeon-" + xeon_agent_key().substr(0, 32)}, {"object", "chat.completion.chunk"},
 +                     {"created", (int64_t) time(nullptr)},
-+                     {"model", body.contains("model") && body.at("model").is_string() ? body.at("model").get<std::string>() : "tosh-agent"}};
++                     {"model", body.contains("model") && body.at("model").is_string() ? body.at("model").get<std::string>() : "xeon-agent"}};
 +        auto gone = [self = res.get()]() { return self->should_stop(); };
 +        res->set_next([state, gone, head, finals = std::vector<std::string>(), sent = size_t(0),
 +                     streamed = std::string(), retracted = false, started = false](std::string & output) mutable -> bool {
@@ -1368,7 +1368,7 @@ index 6e2d8ff9d..b51ded455 100644
 +                    }
 +                    json chunk = {{"object", "chat.completion.chunk"},
 +                                  {"choices", json::array({{{"index", 0}, {"delta", json::object()}, {"finish_reason", nullptr}}})},
-+                                  {"tosh", {{"version", 1}, {"event", event}}}};
++                                  {"xeon", {{"version", 1}, {"event", event}}}};
 +                    output = "data: " + chunk.dump() + "\n\n";
 +                    return true;
 +                }
@@ -1377,7 +1377,7 @@ index 6e2d8ff9d..b51ded455 100644
 +                    return true;
 +                }
 +                int status = 502;
-+                finals = tosh_agent_chunks(tosh_agent_answer(state->out, status), status, head, streamed, retracted, started);
++                finals = xeon_agent_chunks(xeon_agent_answer(state->out, status), status, head, streamed, retracted, started);
 +            }
 +            output = finals[sent++];
 +            return sent < finals.size();
@@ -1400,9 +1400,9 @@ index 6e2d8ff9d..b51ded455 100644
 -    ctx_http.post("/chat/completions",         ex_wrapper(routes.post_chat_completions));
 -    ctx_http.post("/v1/chat/completions",      ex_wrapper(routes.post_chat_completions));
 +    // the agent shows this key to /tools for the servers only it may use; new on every start
-+    const std::string agent_key = params.mcp_agent.empty() ? "" : tosh_agent_key();
-+    // also without an agent, so that X-Tosh-Agent: on is refused instead of silently answered raw
-+    auto chat_completions = tosh_agent_handler(routes.post_chat_completions, mcp_mgr, params, agent_key);
++    const std::string agent_key = params.mcp_agent.empty() ? "" : xeon_agent_key();
++    // also without an agent, so that X-Xeon-Agent: on is refused instead of silently answered raw
++    auto chat_completions = xeon_agent_handler(routes.post_chat_completions, mcp_mgr, params, agent_key);
 +    ctx_http.post("/chat/completions",         ex_wrapper(chat_completions));
 +    ctx_http.post("/v1/chat/completions",      ex_wrapper(chat_completions));
      ctx_http.post("/v1/chat/completions/control", ex_wrapper(routes.post_control));
@@ -1440,7 +1440,7 @@ index 6e2d8ff9d..b51ded455 100644
 +    if (params.api_keys.empty()) {
 +        std::vector<std::string> open;
 +        for (const auto & host : params.hostnames) {
-+            if (!host.empty() && !tosh_local_address(host)) {
++            if (!host.empty() && !xeon_local_address(host)) {
 +                open.push_back(host);
 +            }
 +        }

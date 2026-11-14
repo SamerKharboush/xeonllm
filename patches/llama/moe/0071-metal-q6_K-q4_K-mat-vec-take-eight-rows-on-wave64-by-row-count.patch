@@ -6,13 +6,13 @@ index 0dde5d443..e8fcd7b9e 100644
                  // cover the small-matrix case, which still wants one group with four rows.
                  // Sixteen lanes with four rows each: +5.8% over eight lanes. Sixteen lanes
                  // with the inherited rows loses, so the win lives in the crossing of the two.
-                 if (simd_width == 64 && !q4k_small && TOSH_ENV("TOSH_MV_Q4K_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && !q4k_small && XEON_ENV("XEON_MV_Q4K_W64_DISABLE") == nullptr) {
                      nsg    = 1;
                      nr0    = 4;
                      suffix = "_L16r4";
                      w64    = true;
 +                    // eight rows share each x load; sixteen lanes win from 8192 rows up, plain below
-+                    if (TOSH_ENV("TOSH_MV_ROWS8_DISABLE") == nullptr) {
++                    if (XEON_ENV("XEON_MV_ROWS8_DISABLE") == nullptr) {
 +                        nr0    = 8;
 +                        suffix = ne01 >= 8192 ? "_L16r8" : "_r8";
 +                    }
@@ -31,10 +31,10 @@ index 0dde5d443..e8fcd7b9e 100644
                      nr0 = N_R0_Q6_K;
                  }
                  // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                      w64 = true;
 +                    // eight rows from 2048 rows up; fewer rows starve the grid and measured lower
-+                    if (ne01 >= 2048 && TOSH_ENV("TOSH_MV_ROWS8_DISABLE") == nullptr) {
++                    if (ne01 >= 2048 && XEON_ENV("XEON_MV_ROWS8_DISABLE") == nullptr) {
 +                        nr0    = 8;
 +                        suffix = "_r8";
 +                    }

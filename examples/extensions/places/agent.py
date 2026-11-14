@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The agent of the places example: answers questions about places with its tools, streams its passes, hands
-other turns back to the chat and offers a map. Contract in helpers/tosh-sympy/README.md ("Another agent")."""
+other turns back to the chat and offers a map. Contract in helpers/xeon-sympy/README.md ("Another agent")."""
 
 import http.client
 import json
@@ -30,7 +30,7 @@ MAP_WORDS = re.compile(r"\b(map|show me where|where (is|are)|mapa|mu[eé]strame 
 SPANISH = re.compile(r"[¿¡]|\b(el|los|las|qu[eé]|cu[aá]l|cu[aá]nto|d[oó]nde|entre|desde|est[aá]n?|lejos|cerca)\b",
                      re.I)
 # request fields that belong to this agent or to the client, never to a model pass
-NOT_FOR_PASSES = {"messages", "stream", "stream_options", "tosh", "tools", "tool_choice", "functions", "function_call"}
+NOT_FOR_PASSES = {"messages", "stream", "stream_options", "xeon", "tools", "tool_choice", "functions", "function_call"}
 
 
 class Cancelled(Exception):
@@ -38,17 +38,17 @@ class Cancelled(Exception):
 
 
 class Engine:
-    """The engine over HTTP. X-Tosh-Agent: off keeps every pass away from this agent; the agent key lets /tools
+    """The engine over HTTP. X-Xeon-Agent: off keeps every pass away from this agent; the agent key lets /tools
     list and run the servers only the agent may use."""
 
     def __init__(self, base_url, api_key, agent_key):
         parsed = urllib.parse.urlparse(base_url)
         self.host, self.port = parsed.hostname or "127.0.0.1", parsed.port or 80
-        self.headers = {"Content-Type": "application/json", "X-Tosh-Agent": "off"}
+        self.headers = {"Content-Type": "application/json", "X-Xeon-Agent": "off"}
         if api_key:
             self.headers["Authorization"] = "Bearer " + api_key
         if agent_key:
-            self.headers["X-Tosh-Agent-Key"] = agent_key
+            self.headers["X-Xeon-Agent-Key"] = agent_key
         self.cancelled = threading.Event()
         self.lock = threading.Lock()
         self.connection = None
@@ -151,7 +151,7 @@ def text_of(content):
     return ""
 
 
-def completion(request, content, tosh, usage=None):
+def completion(request, content, xeon, usage=None):
     usage = usage or {"prompt_tokens": 0, "completion_tokens": 0}
     return {
         "id": "chatcmpl-places-" + uuid.uuid4().hex,
@@ -160,7 +160,7 @@ def completion(request, content, tosh, usage=None):
         "model": str(request.get("model") or "places-agent"),
         "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
         "usage": dict(usage, total_tokens=usage["prompt_tokens"] + usage["completion_tokens"]),
-        "tosh": dict({"version": 1}, **tosh),
+        "xeon": dict({"version": 1}, **xeon),
     }
 
 
@@ -201,7 +201,7 @@ class Turn:
         self.lang = language(self.question)
         self.passes, self.calls, self.mapped = 0, [], []
         self.usage = {"prompt_tokens": 0, "completion_tokens": 0}
-        options = request.get("tosh") if isinstance(request.get("tosh"), dict) else {}
+        options = request.get("xeon") if isinstance(request.get("xeon"), dict) else {}
         self.options = options
         rounds = options.get("max_rounds")
         self.rounds = max(1, min(100, rounds)) if isinstance(rounds, int) and not isinstance(rounds, bool) else MAX_ROUNDS
@@ -285,14 +285,14 @@ class Turn:
             body["messages"].append({"role": "assistant", "content": message.get("content") or "",
                                      "tool_calls": message["tool_calls"]})
             body["messages"] += [self.run_call(call) for call in message["tool_calls"]]
-        tosh = {"intent": "places" if places else "no_places", "outcome": outcome, "passes": self.passes,
+        xeon = {"intent": "places" if places else "no_places", "outcome": outcome, "passes": self.passes,
                 "seconds": self.seconds(),
                 "calls": [{k: c[k] for k in ("tool", "arguments", "status")} for c in self.calls]}
         if self.mapped:
             # no geometry here: the client sends this back to get the map, so the answer is not delayed by it
-            tosh["map_request"] = {"show": bool(MAP_WORDS.search(self.question)), "names": self.mapped[:200],
+            xeon["map_request"] = {"show": bool(MAP_WORDS.search(self.question)), "names": self.mapped[:200],
                                    "lang": self.lang}
-        return completion(self.request, content, tosh, self.usage)
+        return completion(self.request, content, xeon, self.usage)
 
     def seconds(self):
         return round(time.monotonic() - self.started, 3)
@@ -326,7 +326,7 @@ def run(arguments, emit, register):
     engine = Engine(str(arguments.get("base_url") or ""), arguments.get("api_key"), arguments.get("agent_key"))
     register(engine)
     try:
-        asked = (request.get("tosh") or {}).get("map_request") if isinstance(request.get("tosh"), dict) else None
+        asked = (request.get("xeon") or {}).get("map_request") if isinstance(request.get("xeon"), dict) else None
         if isinstance(asked, dict):
             return map_answer(engine, request, asked)
         return Turn(engine, request, emit).run()

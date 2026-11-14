@@ -726,7 +726,7 @@ index 000000000..053550c51
 +
 +    res->t_logits = cur;
 +
-+    // tosh: at this pin each graph expands its own output; upstream does it in the caller
++    // xeon: at this pin each graph expands its own output; upstream does it in the caller
 +    ggml_build_forward_expand(gf, cur);
 +}
 diff --git a/src/models/models.h b/src/models/models.h

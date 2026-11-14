@@ -27,15 +27,15 @@ index c0595b00b..66a4dd7a0 100644
 @@ -826,20 +826,26 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv_ext(ggml_
      // q6_K measured slower with the header cached (its dequant is register-heavy), so it stays generic
      const bool is_khdr = tsrc0 == GGML_TYPE_Q5_K || tsrc0 == GGML_TYPE_Q2_K || tsrc0 == GGML_TYPE_Q3_K;
-         (simd_width_lds == 64 || TOSH_ENV("TOSH_EXT_LDS") != nullptr) &&
-         TOSH_ENV("TOSH_EXT_LDS_DISABLE") == nullptr &&
+         (simd_width_lds == 64 || XEON_ENV("XEON_EXT_LDS") != nullptr) &&
+         XEON_ENV("XEON_EXT_LDS_DISABLE") == nullptr &&
      if (!no_raw && tsrc0 == GGML_TYPE_Q4_K) {
      } else if (!no_raw && is_khdr) {
          snprintf(tname, sizeof(tname), "%s_hdr", ggml_type_name(tsrc0));
      } else {
 +
-+    // q6_K on 64 lanes uses the wave64-shaped variant; TOSH_EXT_W64_DISABLE falls back to the generic kernel
-     static const bool w64_disable = TOSH_ENV("TOSH_EXT_W64_DISABLE") != nullptr;
++    // q6_K on 64 lanes uses the wave64-shaped variant; XEON_EXT_W64_DISABLE falls back to the generic kernel
+     static const bool w64_disable = XEON_ENV("XEON_EXT_W64_DISABLE") != nullptr;
 +    const bool is_w64_q6k = !w64_disable && tsrc0 == GGML_TYPE_Q6_K && simd_width_lds == 64;
      // q8_0 reads its quads as halves on 64 lanes only: the same read is slower on 32
      const bool is_w64_q8  = !w64_disable && tsrc0 == GGML_TYPE_Q8_0 && simd_width_lds == 64 && nr0 == 1;
@@ -123,7 +123,7 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q4_0;
 -                nr0 = N_R0_Q4_0;
 +                // eight lanes per block with four rows each: +5.8% of generation
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_Q4_0_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_Q4_0_W64_DISABLE") == nullptr) {
 +                    nsg    = 1;
 +                    nr0    = 4;
 +                    suffix = "_L8r4";
@@ -138,7 +138,7 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q4_1;
 -                nr0 = N_R0_Q4_1;
 +                // four lanes per block with four rows each: +6.2% of generation
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_Q4_1_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_Q4_1_W64_DISABLE") == nullptr) {
 +                    nsg    = 1;
 +                    nr0    = 4;
 +                    suffix = "_L4r4";
@@ -153,8 +153,8 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q5_0;
 -                nr0 = N_R0_Q5_0;
 +                // eight rows per thread measured worse on 64 lanes for this type, so the
-+                // inherited pair stays; TOSH_MV_Q5_0_R8 opens it again for measuring
-                 if (TOSH_ENV("TOSH_MV_Q5_0_R8") != nullptr) {
++                // inherited pair stays; XEON_MV_Q5_0_R8 opens it again for measuring
+                 if (XEON_ENV("XEON_MV_Q5_0_R8") != nullptr) {
 +                    nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -163,7 +163,7 @@ index c0595b00b..66a4dd7a0 100644
 +                    nr0 = N_R0_Q5_0;
 +                }
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -172,8 +172,8 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q5_1;
 -                nr0 = N_R0_Q5_1;
 +                // eight rows per thread measured worse on 64 lanes for this type, so the
-+                // inherited pair stays; TOSH_MV_Q5_1_R8 opens it again for measuring
-                 if (TOSH_ENV("TOSH_MV_Q5_1_R8") != nullptr) {
++                // inherited pair stays; XEON_MV_Q5_1_R8 opens it again for measuring
+                 if (XEON_ENV("XEON_MV_Q5_1_R8") != nullptr) {
 +                    nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -182,7 +182,7 @@ index c0595b00b..66a4dd7a0 100644
 +                    nr0 = N_R0_Q5_1;
 +                }
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -191,13 +191,13 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q8_0;
 -                nr0 = N_R0_Q8_0;
 -                smem = 32*sizeof(float)*N_R0_Q8_0;
-+                // TOSH_MV_Q8_0_R8 asks for eight rows instead of the four this width takes,
++                // XEON_MV_Q8_0_R8 asks for eight rows instead of the four this width takes,
 +                // so the three values can be compared
-                 if (TOSH_ENV("TOSH_MV_Q8_0_R8") != nullptr) {
+                 if (XEON_ENV("XEON_MV_Q8_0_R8") != nullptr) {
 +                    nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
-                 } else if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 } else if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 4;
 +                    suffix = "_r4";
@@ -208,7 +208,7 @@ index c0595b00b..66a4dd7a0 100644
 +                // the reduction buffer scales with the rows, so it follows the effective nr0
 +                smem = 32*sizeof(float)*nr0;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -220,7 +220,7 @@ index c0595b00b..66a4dd7a0 100644
                  nr0 = N_R0_MXFP4;
                  smem = 32*sizeof(float);
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -228,7 +228,7 @@ index c0595b00b..66a4dd7a0 100644
              {
 -                nsg = N_SG_Q2_K;
 -                nr0 = N_R0_Q2_K;
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -237,7 +237,7 @@ index c0595b00b..66a4dd7a0 100644
 +                    nr0 = N_R0_Q2_K;
 +                }
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -247,14 +247,14 @@ index c0595b00b..66a4dd7a0 100644
 -                nr0 = N_R0_Q3_K;
 +                // A 64-lane variant with thirty-two lanes per block and the mask tables derived
 +                // instead of held: measured 127.2 against 126.2, so it stays behind the switch.
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_Q3K_W64") != nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_Q3K_W64") != nullptr) {
 +                    nsg = N_SG_Q3_K;
 +                    nr0 = N_R0_Q3_K;
 +                    suffix = "_w64";
 +                    break;
 +                }
 +                // 64 lanes want eight rows in one group (+7.2% tg); two groups there costs 30%
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -270,9 +270,9 @@ index c0595b00b..66a4dd7a0 100644
                  // small matrices: one simdgroup with 4 rows amortizes the
 +                // per-threadgroup setup better than two with 2. Unlike q5_K and q6_K,
 +                // 64 lanes do NOT want the four-row path at any size here, so the choice
-+                // stays by shape; TOSH_MV_Q4K_R4 opens it again for measuring
-                 const bool q4k_r4_wide = TOSH_ENV("TOSH_MV_Q4K_R4") != nullptr &&
-                                          TOSH_ENV("TOSH_MV_Q4K_R4_DISABLE") == nullptr;
++                // stays by shape; XEON_MV_Q4K_R4 opens it again for measuring
+                 const bool q4k_r4_wide = XEON_ENV("XEON_MV_Q4K_R4") != nullptr &&
+                                          XEON_ENV("XEON_MV_Q4K_R4_DISABLE") == nullptr;
 +                const bool q4k_small = ne00 <= 2048 || ne01 <= 2048 || q4k_r4_wide;
 +
 +                // 64 lanes have their own decomposition: sixteen cover a block instead of
@@ -280,7 +280,7 @@ index c0595b00b..66a4dd7a0 100644
 +                // cover the small-matrix case, which still wants one group with four rows.
 +                // Sixteen lanes with four rows each: +5.8% over eight lanes. Sixteen lanes
 +                // with the inherited rows loses, so the win lives in the crossing of the two.
-                 if (simd_width == 64 && !q4k_small && TOSH_ENV("TOSH_MV_Q4K_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && !q4k_small && XEON_ENV("XEON_MV_Q4K_W64_DISABLE") == nullptr) {
 +                    nsg    = 1;
 +                    nr0    = 4;
 +                    suffix = "_L16r4";
@@ -301,8 +301,8 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q5_K;
 -                nr0 = N_R0_Q5_K;
 +                // the shipped 2 rows per thread is a 32-lane number; 64 lanes want 8 (+15.9% tg).
-+                // TOSH_MV_R8 forces it on 32 too, so that width can be A/B'd without a rebuild
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
++                // XEON_MV_R8 forces it on 32 too, so that width can be A/B'd without a rebuild
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -315,7 +315,7 @@ index c0595b00b..66a4dd7a0 100644
 +                // over the inherited pair, five alternating pairs. Four lanes with eight rows
 +                // loses, which is why the two fronts have to be walked as a grid and not one
 +                // at a time.
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_Q5K_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_Q5K_W64_DISABLE") == nullptr) {
 +                    nsg    = 1;
 +                    nr0    = 2;
 +                    suffix = "_L16r2";
@@ -327,7 +327,7 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q6_K;
 -                nr0 = N_R0_Q6_K;
 +                // 64 lanes want four rows in one group (+16.3% tg); 32 keep the shipped pair
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 4;
 +                    suffix = "_r4";
@@ -336,7 +336,7 @@ index c0595b00b..66a4dd7a0 100644
 +                    nr0 = N_R0_Q6_K;
 +                }
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -351,7 +351,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    nr0 = N_R0_IQ2_XXS_SPLIT;
 -                    split = true;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -366,7 +366,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    nr0 = N_R0_IQ2_XS_SPLIT;
 -                    split = true;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -374,7 +374,7 @@ index c0595b00b..66a4dd7a0 100644
              {
 -                nsg = N_SG_IQ3_XXS;
 -                nr0 = N_R0_IQ3_XXS;
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -390,7 +390,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    nr0 = N_R0_IQ3_XXS_SPLIT;
 -                    split = true;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -405,7 +405,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    nr0 = N_R0_IQ3_S_SPLIT;
 -                    split = true;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -420,7 +420,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    split = true;
                  smem = 1024*8;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -435,7 +435,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    split = true;
                  smem = 2048*4;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -450,7 +450,7 @@ index c0595b00b..66a4dd7a0 100644
 -                    split = true;
                  smem = 2048*4;
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
                  }
              } break;
@@ -459,8 +459,8 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_IQ4_NL;
 -                nr0 = N_R0_IQ4_NL;
 +                // eight rows per thread measured worse on 64 lanes for this type, so the
-+                // inherited pair stays; TOSH_MV_IQ4_NL_R8 opens it again for measuring
-                 if (TOSH_ENV("TOSH_MV_IQ4_NL_R8") != nullptr) {
++                // inherited pair stays; XEON_MV_IQ4_NL_R8 opens it again for measuring
+                 if (XEON_ENV("XEON_MV_IQ4_NL_R8") != nullptr) {
 +                    nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -470,7 +470,7 @@ index c0595b00b..66a4dd7a0 100644
 +                }
                  smem = 32*sizeof(float);
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -479,8 +479,8 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_IQ4_XS;
 -                nr0 = N_R0_IQ4_XS;
 +                // eight rows per thread measured worse on 64 lanes for this type, so the
-+                // inherited pair stays; TOSH_MV_IQ4_XS_R8 opens it again for measuring
-                 if (TOSH_ENV("TOSH_MV_IQ4_XS_R8") != nullptr) {
++                // inherited pair stays; XEON_MV_IQ4_XS_R8 opens it again for measuring
+                 if (XEON_ENV("XEON_MV_IQ4_XS_R8") != nullptr) {
 +                    nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -490,7 +490,7 @@ index c0595b00b..66a4dd7a0 100644
 +                }
                  smem = 32*sizeof(float);
 +                // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
 +                    w64 = true;
 +                }
              } break;
@@ -527,19 +527,19 @@ index c0595b00b..66a4dd7a0 100644
      // loads and every type gains, while 32 lanes only measured a gain on q8_0.
      const bool row8_aligned = row4 && (op->src[0]->nb[1] % 4 == 0) && (op->src[0]->nb[2] % 4 == 0);
      const bool row8_width   = nw == 64 || (nw == 32 && tsrc0 == GGML_TYPE_Q8_0);
-     const bool row8 = row8_aligned && row8_width && TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
+     const bool row8 = row8_aligned && row8_width && XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
  
-+    // Sweep hook: TOSH_SWEEP_TYPE names one ggml type and TOSH_SWEEP_NR0 / TOSH_SWEEP_NSG
++    // Sweep hook: XEON_SWEEP_TYPE names one ggml type and XEON_SWEEP_NR0 / XEON_SWEEP_NSG
 +    // force its rows per lane and simdgroups, so the register front can be measured without
 +    // rebuilding. The pipeline name carries both, so a run can be checked against what it asked.
 +    {
-         const char * st = TOSH_ENV("TOSH_SWEEP_TYPE");
+         const char * st = XEON_ENV("XEON_SWEEP_TYPE");
 +
 +        if (st != nullptr && strcmp(st, ggml_type_name(tsrc0)) == 0) {
-             const char * snr = TOSH_ENV("TOSH_SWEEP_NR0");
-             const char * sns = TOSH_ENV("TOSH_SWEEP_NSG");
+             const char * snr = XEON_ENV("XEON_SWEEP_NR0");
+             const char * sns = XEON_ENV("XEON_SWEEP_NSG");
 +
-             const char * sln = TOSH_ENV("TOSH_SWEEP_LANES");
+             const char * sln = XEON_ENV("XEON_SWEEP_LANES");
 +
 +            if (snr != nullptr && sln != nullptr) {
 +                // cross sweep: the 32-block family carries one entry point per (lanes, rows)
@@ -570,7 +570,7 @@ index c0595b00b..66a4dd7a0 100644
 +        suffix = sfx;
 +    }
 +
-     if (TOSH_ENV("TOSH_SWEEP_DEBUG") != nullptr) {
+     if (XEON_ENV("XEON_SWEEP_DEBUG") != nullptr) {
 +        fprintf(stderr, "SWEEP pipeline = %s (nsg=%d nr0=%d)\n", name, nsg, nr0);
 +    }
  
@@ -611,7 +611,7 @@ index c0595b00b..66a4dd7a0 100644
 -                nsg = N_SG_Q5_K;
 -                nr0 = N_R0_Q5_K;
 +                // the expert mat-vec was short too: 8 rows measure +12.1% of tg on a 64-wide card
-                 if ((simd_width == 64 || TOSH_ENV("TOSH_MV_R8") != nullptr) && TOSH_ENV("TOSH_MV_R8_DISABLE") == nullptr) {
+                 if ((simd_width == 64 || XEON_ENV("XEON_MV_R8") != nullptr) && XEON_ENV("XEON_MV_R8_DISABLE") == nullptr) {
                      nsg = 1;
 +                    nr0 = 8;
 +                    suffix = "_r8";
@@ -696,7 +696,7 @@ index c0595b00b..66a4dd7a0 100644
 +    // decomposition as the standalone one, so the expert path stops falling back to 32.
 +    // Types whose shared memory holds a lookup grid keep the rows and the buffer the
 +    // switch above computed: only the reduction-buffer ones move.
-     bool id_w64 = simd_width == 64 && TOSH_ENV("TOSH_MVID_W64_DISABLE") == nullptr;
+     bool id_w64 = simd_width == 64 && XEON_ENV("XEON_MVID_W64_DISABLE") == nullptr;
 +    if (id_w64) {
 +        switch (tsrc0) {
 +            case GGML_TYPE_Q4_0: nr0 = 4; break;
@@ -748,13 +748,13 @@ index c0595b00b..66a4dd7a0 100644
      }
  
      const bool row4 = (op->src[0]->nb[1] % 2 == 0) && (op->src[0]->nb[2] % 2 == 0) &&
-                       TOSH_ENV("TOSH_MV_ROW4_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW4_DISABLE") == nullptr;
  
 +    // The expert kernels share the implementations of the dense path, so they can read the
 +    // quant arrays a word at a time under the same conditions.
 +    const bool row8 = row4 && (op->src[0]->nb[1] % 4 == 0) && (op->src[0]->nb[2] % 4 == 0) &&
 +                      (nw == 64 || (nw == 32 && tsrc0 == GGML_TYPE_Q8_0)) &&
-                       TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
+                       XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
  
 +    snprintf(base, 256, "kernel_mul_mv_id_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), suffix, id_w64 ? "_w64" : "");
 +
@@ -797,7 +797,7 @@ index ca31f54ab..754e0b0ae 100644
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id         (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv_id         (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argmax            (ggml_metal_library_t lib, const struct ggml_tensor * op);
-+struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_tosh_topk_moe     (ggml_metal_library_t lib);
++struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_xeon_topk_moe     (ggml_metal_library_t lib);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort           (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort_merge     (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_fwht              (ggml_metal_library_t lib, int n, enum ggml_type tsrc);
@@ -838,20 +838,20 @@ index a8e4c7357..e0130aafc 100644
      return 1;
  }
  
-     static const bool disabled = TOSH_ENV("TOSH_QKV_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_QKV_FUSION_DISABLE") != nullptr;
  
-     const bool qvk_w64 = props_dev->simd_width == 64 && TOSH_ENV("TOSH_QVK_W64_DISABLE") == nullptr;
+     const bool qvk_w64 = props_dev->simd_width == 64 && XEON_ENV("XEON_QVK_W64_DISABLE") == nullptr;
 +
 +        // the 64-lane twin carries the same decomposition as the standalone matvec, so the
 +        // fusion keeps that win instead of trading it for the saved dispatches
 +        pattern = qvk_w64 ? decltype(pattern){ "kernel_mul_mv_qvk_q4_0_q4_0_q4_0_f32_w64", 1, 4, 4, 4 }
 +                          : decltype(pattern){ "kernel_mul_mv_qvk_q4_0_q4_0_q4_0_f32",     1, 4, 4, 4 };
      } else if (tq == GGML_TYPE_Q2_K && tv == GGML_TYPE_Q4_K && tk == GGML_TYPE_Q2_K) {
-         const char * s = TOSH_ENV("TOSH_EXT_KQ_FLOOR");
-         const char * s = TOSH_ENV("TOSH_EXT_MAX");
+         const char * s = XEON_ENV("XEON_EXT_KQ_FLOOR");
+         const char * s = XEON_ENV("XEON_EXT_MAX");
          return s ? atoi(s) : 0;
      }();
-     static const bool disabled = TOSH_ENV("TOSH_SWIGLU_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_SWIGLU_FUSION_DISABLE") != nullptr;
      if (disabled || !ctx->use_fusion() || idx + 2 >= ctx->n_nodes()) {
  int ggml_metal_op_mul_mat(ggml_metal_op_t ctx, int idx) {
 @@ -2689,16 +2694,17 @@ int ggml_metal_op_mul_mat(ggml_metal_op_t ctx, int idx) {
@@ -862,7 +862,7 @@ index a8e4c7357..e0130aafc 100644
      // first try to use small-batch mat-mv kernels
      // these should be efficient for BS [2, ~8]
      if (op->src[1]->type == GGML_TYPE_F32 && (ne00%128 == 0) &&
-     static const bool ext_disabled = TOSH_ENV("TOSH_EXT_DISABLE") != nullptr;
+     static const bool ext_disabled = XEON_ENV("XEON_EXT_DISABLE") != nullptr;
 +        ggml_metal_mv_nc2_rows(op->src[0]->type, props_dev->simd_width, ne11, ne01, ne00) == 0 &&
          op->src[1]->type == GGML_TYPE_F32 && (ne00%128 == 0) &&
          (
@@ -891,7 +891,7 @@ index a8e4c7357..e0130aafc 100644
  
          static const int nr0_env = []() {
 @@ -2805,17 +2810,38 @@ int ggml_metal_op_mul_mat(ggml_metal_op_t ctx, int idx) {
-             const char * s = TOSH_ENV("TOSH_EXT_NR0_MINROWS");
+             const char * s = XEON_ENV("XEON_EXT_NR0_MINROWS");
              // off by default: the win depends on the weight's shape and one measured model
              // still regresses at four columns, so it stays opt-in until that is understood
              return s ? (int64_t) atoll(s) : (int64_t) 0;
@@ -903,14 +903,14 @@ index a8e4c7357..e0130aafc 100644
 +        // registers and ends up as slow as one pass per column (measured 4.0x one column at four
 +        // columns, 2.4x with four rows); two and three columns stay faster with two rows
 +        const bool nr0_w64 = props_dev->simd_width == 64 && op->src[0]->type == GGML_TYPE_Q4_K && ne11 >= 4 &&
-+                             TOSH_ENV("TOSH_EXT_NR0_W64_DISABLE") == nullptr;
++                             XEON_ENV("XEON_EXT_NR0_W64_DISABLE") == nullptr;
 +
 +        const int16_t nr0   = nr0_2 ? (nr0_env ? nr0_env : ((nr0_wide || nr0_w64) ? 4 : 2)) : 1;
 +
 +
 +        // the wave64 q6_K variant keeps four rows per simdgroup, so the row split does not apply
 +        // keep the gate in sync with the pipeline picker in ggml_metal_library_get_pipeline_mul_mv_ext
-         static const bool ext_w64_disable = TOSH_ENV("TOSH_EXT_W64_DISABLE") != nullptr;
+         static const bool ext_w64_disable = XEON_ENV("XEON_EXT_W64_DISABLE") != nullptr;
 +        const bool ext_w64_q6k = !ext_w64_disable &&
 +                                 props_dev->simd_width == 64 && op->src[0]->type == GGML_TYPE_Q6_K;
 +

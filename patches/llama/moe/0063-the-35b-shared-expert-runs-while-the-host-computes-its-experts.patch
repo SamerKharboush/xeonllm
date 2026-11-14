@@ -50,10 +50,10 @@ index c853ca186..8c71e017c 100644
      //call early so that topk-moe can be used
      ggml_build_forward_expand(gf, weights);
  
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +    // work that reads none of the routed experts goes between the publish and the join, where the
 +    // GPU would otherwise wait for the host's share
-+    static const bool overlap_off = getenv("TOSH_DMOE_OVERLAP_DISABLE") != nullptr;
++    static const bool overlap_off = getenv("XEON_DMOE_OVERLAP_DISABLE") != nullptr;
 +    if (overlap != nullptr && !overlap_off && (dmoe_slots != nullptr || dmoe_wide != nullptr)) {
 +        ggml_build_forward_expand(gf, expert_ids);
 +        ggml_build_forward_expand(gf, overlap);

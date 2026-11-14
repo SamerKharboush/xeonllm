@@ -72,7 +72,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-m
  
 +// A view that swaps two contiguous blocks of dims (dims [0, k) after [k, 4) in memory) copies
 +// as a transpose of an R x S matrix; dims of size 1 have no stride to check.
-+static bool tosh_cpy_as_transpose(const ggml_tensor * src, const ggml_tensor * dst, int64_t & R, int64_t & S) {
++static bool xeon_cpy_as_transpose(const ggml_tensor * src, const ggml_tensor * dst, int64_t & R, int64_t & S) {
 +    if (src->type != dst->type || (src->type != GGML_TYPE_F32 && src->type != GGML_TYPE_F16) ||
 +        !ggml_is_contiguous(dst) || ggml_is_contiguous(src)) {
 +        return false;
@@ -118,9 +118,9 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-m
      GGML_TENSOR_LOCALS( int32_t, ne,  op,         ne);
      GGML_TENSOR_LOCALS(uint64_t, nb,  op,         nb);
  
-+    static const bool transpose_off = getenv("TOSH_CPY_TRANSPOSE_DISABLE") != nullptr;
++    static const bool transpose_off = getenv("XEON_CPY_TRANSPOSE_DISABLE") != nullptr;
 +    int64_t tR = 0, tS = 0;
-+    if (!transpose_off && tosh_cpy_as_transpose(op->src[0], op, tR, tS)) {
++    if (!transpose_off && xeon_cpy_as_transpose(op->src[0], op, tR, tS)) {
 +        ggml_metal_kargs_cpy_transpose args_t = { /*.R =*/ tR, /*.S =*/ tS };
 +
 +        auto pipeline_t = ggml_metal_library_get_pipeline_cpy_transpose(lib, op->type);
@@ -139,7 +139,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-m
      // recomputing 4-D indices for every element instead
      const bool contig = ggml_blck_size(op->src[0]->type) == 1 && ggml_blck_size(op->type) == 1 &&
                          ggml_is_contiguous(op->src[0]) && ggml_is_contiguous(op) &&
-                         getenv("TOSH_CPY_CONTIG_DISABLE") == nullptr;
+                         getenv("XEON_CPY_CONTIG_DISABLE") == nullptr;
 diff --git a/ggml/src/ggml-metal/ggml-metal.metal b/ggml/src/ggml-metal/ggml-metal.metal
 --- a/ggml/src/ggml-metal/ggml-metal.metal
 +++ b/ggml/src/ggml-metal/ggml-metal.metal

@@ -5,7 +5,7 @@
 # usage: scripts/check-kernel-coverage.sh <bin-dir>
 #
 # Two paths:
-#   - engine built after this gate: TOSH_METAL_CHECK_KERNELS=1 makes the selector walk every
+#   - engine built after this gate: XEON_METAL_CHECK_KERNELS=1 makes the selector walk every
 #     type x batch class x row count at library init and exit non-zero on a missing name.
 #   - older engine (beta.5, for the record): no switch, so the names are compared against the
 #     host_name() strings embedded in the binary, using the wide lists in the our selector.
@@ -21,12 +21,12 @@ OPS="$BIN_DIR/test-backend-ops"
 echo "# bin: $BIN_DIR"
 echo "# sha256 llama-server: $(shasum -a 256 "$SERVER" | cut -c1-16)"
 
-if strings "$SERVER" | grep -q "TOSH_METAL_CHECK_KERNELS"; then
-    echo "# path: engine self-check (TOSH_METAL_CHECK_KERNELS=1)"
+if strings "$SERVER" | grep -q "XEON_METAL_CHECK_KERNELS"; then
+    echo "# path: engine self-check (XEON_METAL_CHECK_KERNELS=1)"
     [ -x "$OPS" ] || { echo "no test-backend-ops in $BIN_DIR" >&2; exit 2; }
     fail=0
     for idx in 0 1; do
-        log=$(GGML_METAL_DEVICE_INDEX=$idx TOSH_METAL_CHECK_KERNELS=1 \
+        log=$(GGML_METAL_DEVICE_INDEX=$idx XEON_METAL_CHECK_KERNELS=1 \
               "$OPS" -b MTL0 -o RMS_NORM 2>&1)
         rc=$?
         miss=$(printf '%s\n' "$log" | grep -c "kernel missing:")

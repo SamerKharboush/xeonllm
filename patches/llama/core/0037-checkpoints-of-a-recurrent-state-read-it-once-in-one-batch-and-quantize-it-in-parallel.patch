@@ -2,7 +2,7 @@ diff --git a/src/llama-context.cpp b/src/llama-context.cpp
 index 5785065dc..5515c39cf 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
-@@ -17,16 +17,18 @@ static inline size_t tosh_dmoe_private_bytes(void) { return 0; }
+@@ -17,16 +17,18 @@ static inline size_t xeon_dmoe_private_bytes(void) { return 0; }
  #include "llama-model.h"
  #include "llama-ext.h"
  #include "llama-sampler.h"

@@ -13,7 +13,7 @@
       "command": "{python}",
       "args": ["-I", "-B", "{extension}/server.py"],
       "timeout_ms": 20000,
-      "enabled_by": "TOSH_PLACES_ENABLED",
+      "enabled_by": "XEON_PLACES_ENABLED",
       "agent_only": true
     }
   },
@@ -31,7 +31,7 @@
         "en": "Well-known places and your own, with distances and a map. Questions that are not about places are answered by the chat with its own tools."
       },
       "notice": {
-        "when_empty": ["TOSH_PLACES_EXTRA", "TOSH_PLACES_FILES"],
+        "when_empty": ["XEON_PLACES_EXTRA", "XEON_PLACES_FILES"],
         "text": {
           "es": "Solo los lugares de serie: añade los tuyos en Lugares propios o en Archivos.",
           "en": "Built-in places only: add your own in Own places or in Files."
@@ -39,7 +39,7 @@
       },
       "fields": [
         {
-          "key": "TOSH_PLACES_ENABLED",
+          "key": "XEON_PLACES_ENABLED",
           "kind": "toggle",
           "default": "1",
           "title": {"es": "Lugares activo", "en": "Places on"},
@@ -49,7 +49,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_UNITS",
+          "key": "XEON_PLACES_UNITS",
           "kind": "choice",
           "default": "km",
           "options": [
@@ -63,7 +63,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_CATEGORIES",
+          "key": "XEON_PLACES_CATEGORIES",
           "kind": "choices",
           "default": "capital,mountain,landmark,custom",
           "options": [
@@ -79,7 +79,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_HOME",
+          "key": "XEON_PLACES_HOME",
           "kind": "text",
           "placeholder": "Madrid",
           "title": {"es": "Lugar de partida", "en": "Home place"},
@@ -89,7 +89,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_EXTRA",
+          "key": "XEON_PLACES_EXTRA",
           "kind": "json",
           "placeholder": "{\"Office\": [40.4531, -3.6883]}",
           "title": {"es": "Lugares propios", "en": "Own places"},
@@ -99,7 +99,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_FILES",
+          "key": "XEON_PLACES_FILES",
           "kind": "paths",
           "file_types": ["geojson", "json", "csv"],
           "folder_types": ["*"],
@@ -110,7 +110,7 @@
           }
         },
         {
-          "key": "TOSH_PLACES_SERVICE_KEY",
+          "key": "XEON_PLACES_SERVICE_KEY",
           "kind": "secret",
           "title": {"es": "Clave del servicio", "en": "Service key"},
           "help": {

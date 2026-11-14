@@ -5,7 +5,7 @@ Subject: [PATCH] metal: unary, binary and GLU kernels spread one row over
  several threadgroups
 
 Port of upstream 6d194531e1. A decode step has one row, and one threadgroup per row ran
-each of these ops on a single GPU core. On by default; TOSH_FULL_TG_DISABLE=1 restores the
+each of these ops on a single GPU core. On by default; XEON_FULL_TG_DISABLE=1 restores the
 one-threadgroup dispatch.
 ---
  ggml/src/ggml-metal/ggml-metal-ops.cpp     |  18 ++-
@@ -22,7 +22,7 @@ index 38fcbe580..71ab82314 100644
          const int n = pipeline.c4 ? ggml_nelements(op)/4 : ggml_nelements(op);
  
 -        ggml_metal_encoder_dispatch_threadgroups(enc, n, 1, 1, 1, 1, 1);
-+        static const bool full_tg = TOSH_ENV("TOSH_FULL_TG_DISABLE") == nullptr;
++        static const bool full_tg = XEON_ENV("XEON_FULL_TG_DISABLE") == nullptr;
 +        const int nth = full_tg ? MIN(256, n) : 1;
 +
 +        ggml_metal_encoder_dispatch_threadgroups(enc, (n + nth - 1)/nth, 1, 1, nth, 1, 1);
@@ -35,7 +35,7 @@ index 38fcbe580..71ab82314 100644
  
 -    const int32_t nth = std::max(1, std::min(ggml_metal_pipeline_max_theads_per_threadgroup(pipeline), ne00/2));
 +    // split each row over several threadgroups: with a single row (decode) one threadgroup would run on one GPU core
-+    static const bool full_tg = TOSH_ENV("TOSH_FULL_TG_DISABLE") == nullptr;
++    static const bool full_tg = XEON_ENV("XEON_FULL_TG_DISABLE") == nullptr;
 +    const int32_t nth = full_tg ? std::max(1, std::min(ggml_metal_pipeline_max_theads_per_threadgroup(pipeline), std::min(256, ne0)))
 +                                : std::max(1, std::min(ggml_metal_pipeline_max_theads_per_threadgroup(pipeline), ne00/2));
 +    const int32_t nk  = full_tg ? (ne0 + nth - 1)/nth : 1;
@@ -56,7 +56,7 @@ index 38fcbe580..71ab82314 100644
  
      if (pipeline.cnt) {
 -        ggml_metal_encoder_dispatch_threadgroups(enc, args.ne0, ggml_nrows(op), 1, 1, 1, 1);
-+        static const bool full_tg = TOSH_ENV("TOSH_FULL_TG_DISABLE") == nullptr;
++        static const bool full_tg = XEON_ENV("XEON_FULL_TG_DISABLE") == nullptr;
 +        const int nth = full_tg ? MIN(256, args.ne0) : 1;
 +
 +        ggml_metal_encoder_dispatch_threadgroups(enc, (args.ne0 + nth - 1)/nth, ggml_nrows(op), 1, nth, 1, 1);

@@ -1,9 +1,9 @@
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 index 04b6a2084..a545c6209 100644
---- a/common/tosh-plan.cpp
-+++ b/common/tosh-plan.cpp
-@@ -1042,38 +1042,67 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
-     std::vector<double> reserves = { reserve_pref, env_mib("TOSH_AUTO_MIN_RESERVE_MIB", std::max(512.0, reserve_pref - 256.0)) };
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
+@@ -1042,38 +1042,67 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
+     std::vector<double> reserves = { reserve_pref, env_mib("XEON_AUTO_MIN_RESERVE_MIB", std::max(512.0, reserve_pref - 256.0)) };
      // the head is optional: where it leaves no room, the plan is made again without it
      const size_t n_with_head = reserves.size();
      if (mtp_mib > 0) {
@@ -18,16 +18,16 @@ index 04b6a2084..a545c6209 100644
      for (size_t ri = 0; ri < reserves.size(); ++ri) {
          const double R = reserves[ri];
          evaluate(R);
-         const tosh_plan_candidate * f16 = find("full_gpu", kvs[0], 0);
-         const tosh_plan_candidate * q8  = kvs.size() > 1 ? find("full_gpu", kvs[1], 0) : nullptr;
+         const xeon_plan_candidate * f16 = find("full_gpu", kvs[0], 0);
+         const xeon_plan_candidate * q8  = kvs.size() > 1 ? find("full_gpu", kvs[1], 0) : nullptr;
          if (force.empty() || force == "full") {
              if (f16 && f16->valid) { sel = f16; p.reason = "the model and the requested context fit with the reserve"; }
              else if (q8 && q8->valid) { sel = q8; p.reason = "q8_0 cache makes the full model fit with the reserve"; }
          }
 -        if (sel == nullptr && !no_dmoe && (force.empty() || force == "dmoe")) {
-+        auto pick_dmoe = [&]() -> const tosh_plan_candidate * {
-             tosh_plan_candidate * a = pick_ub(kvs[0]);
-             tosh_plan_candidate * b = kvs.size() > 1 ? pick_ub(kvs[1]) : nullptr;
++        auto pick_dmoe = [&]() -> const xeon_plan_candidate * {
+             xeon_plan_candidate * a = pick_ub(kvs[0]);
+             xeon_plan_candidate * b = kvs.size() > 1 ? pick_ub(kvs[1]) : nullptr;
              // while the bank does not fit, every MiB the q8_0 cache saves holds experts the CPU would compute
              if (a && b && a->arena_mib < mi.bank_mib && b->arena_mib - a->arena_mib >= std::max(512.0, 0.08*a->arena_mib)) {
 -                sel = b; p.reason = "q8_0 cache gives the expert arena a material share of the bank";
@@ -52,7 +52,7 @@ index 04b6a2084..a545c6209 100644
 +            sel = pick_dmoe();
 +            // with mixed execution the head's VRAM comes out of the expert arena, and past this share
 +            // the experts it pushes to the host cost more than its drafts save
-+            static const double max_share = env_mib("TOSH_AUTO_MTP_ARENA_SHARE", 0.20);
++            static const double max_share = env_mib("XEON_AUTO_MTP_ARENA_SHARE", 0.20);
 +            if (sel && !head_off && mtp_mib > 0 && max_share > 0) {
 +                // the probes above already hold the head's context, so the arena without it comes from
 +                // a probe of the model as it loads without the head
@@ -71,12 +71,12 @@ index 04b6a2084..a545c6209 100644
              }
          }
          if (sel == nullptr && (pass == 1 || force == "legacy") && (force.empty() || force == "legacy")) {
-             const tosh_plan_candidate * l16 = find("legacy_offload", kvs[0], 0);
-             const tosh_plan_candidate * l8  = kvs.size() > 1 ? find("legacy_offload", kvs[1], 0) : nullptr;
-             const char * simd_width = getenv("TOSH_METAL_SIMD_WIDTH");
+             const xeon_plan_candidate * l16 = find("legacy_offload", kvs[0], 0);
+             const xeon_plan_candidate * l8  = kvs.size() > 1 ? find("legacy_offload", kvs[1], 0) : nullptr;
+             const char * simd_width = getenv("XEON_METAL_SIMD_WIDTH");
              const bool simd64 = simd_width != nullptr && strcmp(simd_width, "64") == 0;
              if (simd64 && force != "legacy") {
-@@ -1085,18 +1114,19 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+@@ -1085,18 +1114,19 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
              } else if (l16 && l16->valid) {
                  sel = l16;
              } else if (l8 && l8->valid) {
@@ -95,13 +95,13 @@ index 04b6a2084..a545c6209 100644
      }
  
      if (sel == nullptr) {
-         p.state  = TOSH_PLAN_UNSUPPORTED;
+         p.state  = XEON_PLAN_UNSUPPORTED;
          p.mode   = "none";
          p.code   = "PLAN_UNSUPPORTED";
-@@ -1249,17 +1279,18 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+@@ -1249,17 +1279,18 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
      plan_emit(p);
      if (out) *out = p;
-     if (getenv("TOSH_AUTO_DRY_RUN") != nullptr || sel == nullptr) {
+     if (getenv("XEON_AUTO_DRY_RUN") != nullptr || sel == nullptr) {
          return false;
      }
  
@@ -118,13 +118,13 @@ index 04b6a2084..a545c6209 100644
      params.fit_params = false;
      params.n_gpu_layers = 999;
      params.cache_type_k = p.kv;
-diff --git a/common/tosh-plan.h b/common/tosh-plan.h
+diff --git a/common/xeon-plan.h b/common/xeon-plan.h
 index c2c065553..5ee8ae95c 100644
---- a/common/tosh-plan.h
-+++ b/common/tosh-plan.h
-@@ -98,16 +98,17 @@ struct tosh_plan {
+--- a/common/xeon-plan.h
++++ b/common/xeon-plan.h
+@@ -98,16 +98,17 @@ struct xeon_plan {
      std::string dispersion;         // normal, high
-     // TOSH_AUTO_HOST_POLICY=runtime (experimental): host memory budget from the machine's state now
+     // XEON_AUTO_HOST_POLICY=runtime (experimental): host memory budget from the machine's state now
      std::string host_policy;        // static, runtime
      std::string host_pressure;      // NORMAL, ELEVATED, CRITICAL
      std::string full_host_code;     // FULL_HOST_SAFE or why the whole bank is not taken

@@ -2,7 +2,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 index a3cbe3a93..3cc5eec7b 100644
 --- a/ggml/src/ggml-metal/ggml-metal-context.m
 +++ b/ggml/src/ggml-metal/ggml-metal-context.m
-@@ -315,16 +315,25 @@ static void tosh_cbp_dump_dev(ggml_metal_device_t dev) {
+@@ -315,16 +315,25 @@ static void xeon_cbp_dump_dev(ggml_metal_device_t dev) {
      id<MTLCaptureScope> capture_scope;
  
      // command buffer state
@@ -34,25 +34,25 @@ index a3cbe3a93..3cc5eec7b 100644
          // discrete GPUs (AMD) corrupt their output with a concurrent encoder: the driver does
          // not honour the memory barrier. GGML_METAL_CONCURRENCY_ENABLE forces it back on to test.
          res->use_concurrency = props_dev->has_unified_memory
-             ? TOSH_ENV("GGML_METAL_CONCURRENCY_DISABLE") == nil
-             : TOSH_ENV("GGML_METAL_CONCURRENCY_ENABLE")  != nil;
+             ? XEON_ENV("GGML_METAL_CONCURRENCY_DISABLE") == nil
+             : XEON_ENV("GGML_METAL_CONCURRENCY_ENABLE")  != nil;
  
-+        res->adapt_n_main = !props_dev->has_unified_memory && TOSH_ENV("TOSH_N_MAIN_FIXED") == nil;
++        res->adapt_n_main = !props_dev->has_unified_memory && XEON_ENV("XEON_N_MAIN_FIXED") == nil;
 +
          {
-             const char * val = TOSH_ENV("GGML_METAL_GRAPH_DEBUG");
+             const char * val = XEON_ENV("GGML_METAL_GRAPH_DEBUG");
              res->debug_graph = val ? atoi(val) : 0;
          }
  
          res->use_graph_optimize = true;
  
-         if (TOSH_ENV("GGML_METAL_GRAPH_OPTIMIZE_DISABLE") != NULL) {
+         if (XEON_ENV("GGML_METAL_GRAPH_OPTIMIZE_DISABLE") != NULL) {
 @@ -4166,16 +4177,67 @@ bool ggml_metal_exchange_reduce(ggml_metal_t ctx_self, ggml_metal_t ctx_peer,
  }
  
  
  
- // TOSH_MGPU_MERGE=1: a tensor split cuts the graph at every partial node, so a token costs one
+ // XEON_MGPU_MERGE=1: a tensor split cuts the graph at every partial node, so a token costs one
  // command buffer for each collective plus one for each subgraph that follows it. With this on,
  // the collective leaves its buffer open and the next subgraph encodes into it instead of
  // submitting its own, which halves the command buffers a split token creates.
@@ -110,7 +110,7 @@ index a3cbe3a93..3cc5eec7b 100644
  static bool ggml_metal_merge_graph(void) {
      static int v = -1;
      if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_MERGE");
+         const char * s = XEON_ENV("XEON_MGPU_MERGE");
          // on by default: it is inert unless a collective left a buffer held, which only the
          // batch gate above does, so a prompt never sees it
          v = s ? (s[0] == '1' ? 1 : 0) : 1;
@@ -118,10 +118,10 @@ index a3cbe3a93..3cc5eec7b 100644
 @@ -4245,21 +4307,25 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
  
      // number of nodes encoded by the main thread (empirically determined)
-     // the split was tuned on unified memory; TOSH_N_MAIN overrides it to A/B the share here
+     // the split was tuned on unified memory; XEON_N_MAIN overrides it to A/B the share here
      static int n_main_env = -2;
      if (n_main_env == -2) {
-         const char * v = TOSH_ENV("TOSH_N_MAIN");
+         const char * v = XEON_ENV("XEON_N_MAIN");
          n_main_env = v ? atoi(v) : -1;
      }
 -    const int n_main = n_main_env >= 0 ? n_main_env : MAX(64, 0.1*gf->n_nodes);
@@ -145,7 +145,7 @@ index a3cbe3a93..3cc5eec7b 100644
 @@ -4428,22 +4494,25 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
  
              // timeline: host span of this call (kind 22)
-             if (tl_on) { tosh_dmoe_timeline(22, gf->n_nodes, tl_enter, tosh_dmoe_host_seconds()); }
+             if (tl_on) { xeon_dmoe_timeline(22, gf->n_nodes, tl_enter, xeon_dmoe_host_seconds()); }
              return GGML_STATUS_SUCCESS;
          }
  
@@ -162,7 +162,7 @@ index a3cbe3a93..3cc5eec7b 100644
 +                am_measure = false;
                  // the collective is already encoded in here; anything that queued a wait since
                  // then has to land between it and this subgraph, not be dropped
-                 if (tosh_mgpu_trace()) {
+                 if (xeon_mgpu_trace()) {
                      if (ctx->n_ev_wait_pending > 0 || ctx->n_peer_waits > 0) {
                          atomic_fetch_add(&g_tr_merge_waits, ctx->n_ev_wait_pending + ctx->n_peer_waits);
                      }
@@ -172,7 +172,7 @@ index a3cbe3a93..3cc5eec7b 100644
              }
              ctx->cmd_bufs[n_cb].obj = cmd_buf;
  
-             tosh_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
+             xeon_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
  
              [cmd_buf enqueue];
  
@@ -199,13 +199,13 @@ index 11d6ce58d..13ddeb6dc 100644
          case GGML_TYPE_Q5_1:
              {
                  // eight rows per thread measured worse on 64 lanes for this type, so the
-                 // inherited pair stays; TOSH_MV_Q5_1_R8 opens it again for measuring
-                 if (TOSH_ENV("TOSH_MV_Q5_1_R8") != nullptr) {
+                 // inherited pair stays; XEON_MV_Q5_1_R8 opens it again for measuring
+                 if (XEON_ENV("XEON_MV_Q5_1_R8") != nullptr) {
                      nsg = 1;
                      nr0 = 8;
                      suffix = "_r8";
 +                } else if (simd_width == 32 && !ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->has_unified_memory &&
-+                           TOSH_ENV("TOSH_MV_Q5_1_L2_DISABLE") == nullptr) {
++                           XEON_ENV("XEON_MV_Q5_1_L2_DISABLE") == nullptr) {
 +                    // two lanes per block with two rows each on discrete 32-lane cards: +10% of generation
 +                    nsg    = N_SG_Q5_1;
 +                    nr0    = 2;
@@ -215,6 +215,6 @@ index 11d6ce58d..13ddeb6dc 100644
                      nr0 = N_R0_Q5_1;
                  }
                  // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                      w64 = true;
                  }

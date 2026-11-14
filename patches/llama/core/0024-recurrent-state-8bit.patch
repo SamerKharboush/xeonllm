@@ -1,7 +1,7 @@
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 index 7b82d081c..a93bedbe7 100644
---- a/common/tosh-plan.cpp
-+++ b/common/tosh-plan.cpp
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
 @@ -57,16 +57,18 @@ struct moe_info {
      double max_tensor_mib = 0;  // one layer's largest expert tensor: a prefill slot
      double embd_mib  = 0;       // token embeddings, kept in host memory
@@ -49,8 +49,8 @@ index 7b82d081c..a93bedbe7 100644
          char prefix[PATH_MAX] = {}, shard[PATH_MAX] = {};
          if (llama_split_prefix(prefix, sizeof(prefix), path, 0, mi.n_split) == 0) {
              mi.error = string_format("SPLIT_GGUF_METADATA_ERROR: %s is not the first of %d shards", path, mi.n_split);
-@@ -961,16 +974,23 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
-     if (p.plan_mode == TOSH_PLAN_MODE_FULL_HOST_DMOE || p.plan_mode == TOSH_PLAN_MODE_BOUNDED_DMOE) {
+@@ -961,16 +974,23 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
+     if (p.plan_mode == XEON_PLAN_MODE_FULL_HOST_DMOE || p.plan_mode == XEON_PLAN_MODE_BOUNDED_DMOE) {
          p.coverage_state = p.coverage >= BOUNDED_GOOD_COVERAGE ? "GOOD" : p.coverage >= BOUNDED_MIN_COVERAGE ? "CONSTRAINED" : "REJECT";
          if (p.coverage_state == "CONSTRAINED") p.warnings.push_back("COVERAGE_CONSTRAINED");
      }
@@ -60,7 +60,7 @@ index 7b82d081c..a93bedbe7 100644
      double left = runtime ? p.effective_mib - p.host_required_mib : hi.available_mib - HOST_MARGIN_MIB - p.host_required_mib;
 +    if (sel && (mi.swa_elems > 0 || mi.recr_elems > 0) && params.n_ctx_checkpoints > 0) {
 +        // the server keeps checkpoints of a recurrent state in 8 bits unless told otherwise
-+        const char * rs = getenv("TOSH_RS_STATE_TYPE");
++        const char * rs = getenv("XEON_RS_STATE_TYPE");
 +        const std::string rs_type = rs ? rs : "q8_0";
 +        const double rs_bytes = rs_type == "f32" ? 4.0 : rs_type == "f16" || rs_type == "bf16" ? 2.0 : 34.0/32.0;
 +        p.checkpoint_mib = mi.swa_elems*(mi.n_swa + sel->ubatch)*ggml_type_size(sel->kv)/ggml_blck_size(sel->kv)/MiB +
@@ -141,7 +141,7 @@ index 6c6835640..f35b55917 100644
          return false;
      }
  
-     const uint64_t t0 = tosh_prof_on() ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
+     const uint64_t t0 = xeon_prof_on() ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
  
      [dev->stage_lock lock];
  
@@ -247,7 +247,7 @@ index 53130e868..187bff861 100644
 +// cached copies of an f32 state are kept in 8 bits: restoring rounds once, the live state stays f32
 +static ggml_type rs_save_type() {
 +    static const ggml_type t = [] {
-+        const char * e = getenv("TOSH_RS_STATE_TYPE");
++        const char * e = getenv("XEON_RS_STATE_TYPE");
 +        const std::string v = e ? e : "q8_0";
 +        return v == "f16" ? GGML_TYPE_F16 : v == "bf16" ? GGML_TYPE_BF16 : v == "q8_0" ? GGML_TYPE_Q8_0 : GGML_TYPE_F32;
 +    }();

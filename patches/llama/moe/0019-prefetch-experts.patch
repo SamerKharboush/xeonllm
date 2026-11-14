@@ -196,14 +196,14 @@ index 02a6cefba..2cc32ec89 100644
          int split_backend_id = split->backend_id;
          ggml_backend_t split_backend = sched->backends[split_backend_id];
  
-+        // TOSH_MOE_PROFILE: dump the first splits once, to map which ops run where
-+        static int tosh_split_dump = -1;
-+        if (tosh_split_dump < 0) {
-+            const char * v = getenv("TOSH_MOE_PROFILE");
-+            tosh_split_dump = (v && v[0] == '1') ? 90 : 0;
++        // XEON_MOE_PROFILE: dump the first splits once, to map which ops run where
++        static int xeon_split_dump = -1;
++        if (xeon_split_dump < 0) {
++            const char * v = getenv("XEON_MOE_PROFILE");
++            xeon_split_dump = (v && v[0] == '1') ? 90 : 0;
 +        }
-+        if (tosh_split_dump > 0) {
-+            tosh_split_dump--;
++        if (xeon_split_dump > 0) {
++            xeon_split_dump--;
 +            struct ggml_tensor * n0 = split->graph.n_nodes > 0 ? split->graph.nodes[0] : NULL;
 +            char ins[160] = "";
 +            for (int i = 0, off = 0; i < split->n_inputs && off < 140; i++) {

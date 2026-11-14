@@ -21,7 +21,7 @@ TOOLS = [{
 
 
 def now(arguments):
-    zone = arguments.get("zone") or os.environ.get("TOSH_CLOCK_DEFAULT_ZONE") or "UTC"
+    zone = arguments.get("zone") or os.environ.get("XEON_CLOCK_DEFAULT_ZONE") or "UTC"
     try:
         moment = datetime.datetime.now(zoneinfo.ZoneInfo(zone))
     except (zoneinfo.ZoneInfoNotFoundError, ValueError):

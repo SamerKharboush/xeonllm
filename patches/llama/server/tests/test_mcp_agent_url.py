@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The address the patched llama-server hands its agent to call it back: a URL the agent reads with its host and
@@ -63,7 +63,7 @@ class AgentUrlTest(unittest.TestCase):
                     connection.close()
             connection = http.client.HTTPConnection(host, port, timeout=60)
             connection.request("POST", "/v1/chat/completions", json.dumps({"messages": [{"role": "user", "content": "hi"}]}),
-                               {"Content-Type": "application/json", "X-Tosh-Agent": "on"})
+                               {"Content-Type": "application/json", "X-Xeon-Agent": "on"})
             connection.getresponse().read()
             connection.close()
         finally:

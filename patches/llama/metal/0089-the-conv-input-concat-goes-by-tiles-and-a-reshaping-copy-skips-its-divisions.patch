@@ -48,7 +48,7 @@ index fb4fb94c8..a0dc2e5a3 100644
 +    if (props_cat->simd_width == 32 && !props_cat->has_unified_memory && dim == 0 &&
 +        op->type == GGML_TYPE_F32 && op->src[0]->type == GGML_TYPE_F32 && op->src[1]->type == GGML_TYPE_F32 &&
 +        nb0 == sizeof(float) && nb11 == sizeof(float) && nb10 > nb11 && ne00 <= 64 && ne10 >= 32 && ne1 >= 32 &&
-+        TOSH_ENV("TOSH_CONCAT_TRANSPOSE_DISABLE") == nullptr) {
++        XEON_ENV("XEON_CONCAT_TRANSPOSE_DISABLE") == nullptr) {
 +        ggml_metal_kargs_concat args = {
 +            /*.ne00 =*/ ne00, /*.ne01 =*/ ne01, /*.ne02 =*/ ne02, /*.ne03 =*/ ne03,
 +            /*.nb00 =*/ nb00, /*.nb01 =*/ nb01, /*.nb02 =*/ nb02, /*.nb03 =*/ nb03,
@@ -84,7 +84,7 @@ index fb4fb94c8..a0dc2e5a3 100644
 +    const auto f32_f16 = [](ggml_type t) { return t == GGML_TYPE_F32 || t == GGML_TYPE_F16; };
 +    const bool flat = ggml_metal_device_get_props(ctx->dev)->simd_width == 32 && !ggml_metal_device_get_props(ctx->dev)->has_unified_memory &&
 +                      f32_f16(op->src[0]->type) && f32_f16(op->type) && ggml_is_contiguous(op) &&
-+                      (ne00 != ne0 || ne01 != ne1 || ne02 != ne2) && TOSH_ENV("TOSH_CPY_FLAT_DISABLE") == nullptr;
++                      (ne00 != ne0 || ne01 != ne1 || ne02 != ne2) && XEON_ENV("XEON_CPY_FLAT_DISABLE") == nullptr;
 +
 +    auto pipeline = flat ? ggml_metal_library_get_pipeline_cpy_flat(lib, op->src[0]->type, op->type)
 +                         : ggml_metal_library_get_pipeline_cpy(lib, op->src[0]->type, op->type, false);

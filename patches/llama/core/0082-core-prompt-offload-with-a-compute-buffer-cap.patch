@@ -7,7 +7,7 @@ index 14d62621e..5efdd5359 100644
                  int src_backend_id = ggml_backend_sched_backend_from_buffer(sched, src, tensor);
                  // check if a backend with higher prio wants to offload the op
 -                if (sched->op_offload && src_backend_id == sched->n_backends - 1 && ggml_backend_buffer_is_host(src->buffer)) {
-+                // tosh: "the last backend" is the CPU only without an accelerator; with BLAS (Accelerate)
++                // xeon: "the last backend" is the CPU only without an accelerator; with BLAS (Accelerate)
 +                // registered the host weights map to BLAS and no op was ever offloaded. Any host-side
 +                // backend (CPU or ACCEL) holding the weight qualifies.
 +                const enum ggml_backend_dev_type src_type = ggml_backend_dev_type(ggml_backend_get_device(sched->backends[src_backend_id]));
@@ -20,7 +20,7 @@ diff --git a/src/llama-context.cpp b/src/llama-context.cpp
 index 9bb8eff34..84566d23e 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
-@@ -21,6 +21,7 @@ static inline size_t tosh_dmoe_private_bytes(void) { return 0; }
+@@ -21,6 +21,7 @@ static inline size_t xeon_dmoe_private_bytes(void) { return 0; }
  #include "llama.h"
  
  #include <atomic>
@@ -32,13 +32,13 @@ index 9bb8eff34..84566d23e 100644
  
      resolve_fused_ops(mctx.get(), n_seqs);
  
-+    // tosh: op offload computes large batches on a GPU from copies of host weights, and the
++    // xeon: op offload computes large batches on a GPU from copies of host weights, and the
 +    // GPU's compute buffer then grows with the context: gemma4 12B at -ngl 0 and its trained
 +    // context asked a 6 GB D700 for 5.37 GB. Size the worst-case graph without allocating and
 +    // keep offload only if every GPU's compute buffer stays under the cap.
 +    if (cparams.op_offload && !model.hparams.no_alloc) {
 +        static const size_t cap_mib = []() {
-+            const char * e = getenv("TOSH_OFFLOAD_MAX_COMPUTE_MB");
++            const char * e = getenv("XEON_OFFLOAD_MAX_COMPUTE_MB");
 +            const long long v = e ? atoll(e) : 0;
 +            return v > 0 ? (size_t) v : (size_t) 1536;
 +        }();
@@ -57,7 +57,7 @@ index 9bb8eff34..84566d23e 100644
 +        if (worst_i >= 0) {
 +            const char * name = ggml_backend_buft_name(backend_buft[worst_i]);
 +            if (worst > cap_mib * 1024 * 1024) {
-+                LLAMA_LOG_WARN("%s: op offload off: %s compute buffer would be %.2f MiB, cap %zu MiB (TOSH_OFFLOAD_MAX_COMPUTE_MB)\n",
++                LLAMA_LOG_WARN("%s: op offload off: %s compute buffer would be %.2f MiB, cap %zu MiB (XEON_OFFLOAD_MAX_COMPUTE_MB)\n",
 +                        __func__, name, worst / 1024.0 / 1024.0, cap_mib);
 +                cparams.op_offload = false;
 +                sched.reset(ggml_backend_sched_new(backend_ptrs.data(), backend_buft.data(), backend_ptrs.size(), max_nodes, cparams.pipeline_parallel, false));

@@ -5,7 +5,7 @@ index 6baea915c..e7bf010a7 100644
 @@ -1751,20 +1751,22 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv(ggml_meta
                  // Sixteen lanes with four rows each: +5.8% over eight lanes. Sixteen lanes
                  // with the inherited rows loses, so the win lives in the crossing of the two.
-                 if (simd_width == 64 && !q4k_small && TOSH_ENV("TOSH_MV_Q4K_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && !q4k_small && XEON_ENV("XEON_MV_Q4K_W64_DISABLE") == nullptr) {
                      nsg    = 1;
                      nr0    = 4;
                      suffix = "_L16r4";
@@ -14,7 +14,7 @@ index 6baea915c..e7bf010a7 100644
 -                    // below (plain measured ahead at 8192 and 10240)
 +                    // below (plain measured ahead at 8192 and 10240); at k 2560 sixteen lanes
 +                    // measured ahead from 6144 rows. Other k move it both ways, so not fitted.
-                     if (TOSH_ENV("TOSH_MV_ROWS8_DISABLE") == nullptr) {
+                     if (XEON_ENV("XEON_MV_ROWS8_DISABLE") == nullptr) {
                          nr0    = 8;
 -                        suffix = ne01 >= 12288 ? "_L16r8" : "_r8";
 +                        const bool l16 = ne01 >= 12288 || (ne00 <= 2560 && ne01 >= 6144);
@@ -34,17 +34,17 @@ index 6baea915c..e7bf010a7 100644
                      nr0 = N_R0_Q6_K;
                  }
                  // the 64-lane twin of this kernel lives in mul_mv_w64.metal
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_W64_DISABLE") == nullptr) {
                      w64 = true;
 -                    // eight rows from 1792 rows up; fewer rows starve the grid and measured lower
--                    if (ne01 >= 1792 && TOSH_ENV("TOSH_MV_ROWS8_DISABLE") == nullptr) {
+-                    if (ne01 >= 1792 && XEON_ENV("XEON_MV_ROWS8_DISABLE") == nullptr) {
 +                    // eight rows from 1792 rows up, from 1536 at k >= 4096, 1280 at k >= 8192 and
 +                    // 1024 at k >= 12288 (the crossover measured at k 1024, 4096, 8192, 12288)
 +                    const bool rows8 = ne01 >= 1792 ||
 +                                       (ne01 >= 1536 && ne00 >= 4096) ||
 +                                       (ne01 >= 1280 && ne00 >= 8192) ||
 +                                       (ne01 >= 1024 && ne00 >= 12288);
-+                    if (rows8 && TOSH_ENV("TOSH_MV_ROWS8_DISABLE") == nullptr) {
++                    if (rows8 && XEON_ENV("XEON_MV_ROWS8_DISABLE") == nullptr) {
                          nr0    = 8;
                          suffix = "_r8";
                      }

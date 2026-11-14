@@ -12,7 +12,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 +    // behind that nothing will ever signal.
 +    const uint64_t seq = link->seq + 1;
          @autoreleasepool {
-             if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
+             if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_cmd_all, 1);
              id<MTLCommandBuffer> cmd_src = [ctx_src->queue commandBuffer];
 @@ -2212,6 +2216,20 @@
              (unsigned long long) atomic_load(&g_xdev_ev),
@@ -27,7 +27,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 +static int64_t xdev_wait_timeout_ms(void) {
 +    static int64_t v = -1;
 +    if (v < 0) {
-+        const char * e = TOSH_ENV("TOSH_MGPU_XDEV_TIMEOUT_MS");
++        const char * e = XEON_ENV("XEON_MGPU_XDEV_TIMEOUT_MS");
 +        long n = e ? strtol(e, NULL, 10) : 0;
 +        v = n > 0 ? n : 2000;
 +    }
@@ -36,7 +36,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
  
  static bool ggml_metal_cpy_xdev_events(ggml_metal_t ctx_src, ggml_metal_t ctx_dst,
 @@ -2255,10 +2273,42 @@
-         if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
+         if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
          [cmd_src encodeSignalEvent:link->ev_ready value:seq];
          ggml_metal_cmd_buf_end(ctx_src, cmd_src, false);
 +        link->seq = seq;
@@ -51,7 +51,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 +        // xdev tally froze at 2. Waiting here bounds it, and the copy still lands in the
 +        // destination's held command buffer, which is its current position in the queue.
 +        const int64_t timeout_ms = xdev_wait_timeout_ms();
-         if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
+         if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
 -        [cmd_dst encodeWaitForEvent:link->ev_ready value:seq];
 +        if (![link->ev_ready waitUntilSignaledValue:seq timeoutMS:timeout_ms]) {
 +            // Nothing is waiting on ev_done for this sequence, so the pair is not deadlocked

@@ -2,74 +2,74 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 index 54ab54e30..a3cbe3a93 100644
 --- a/ggml/src/ggml-metal/ggml-metal-context.m
 +++ b/ggml/src/ggml-metal/ggml-metal-context.m
-@@ -413,16 +413,176 @@ static bool tosh_tl_on(void) {
+@@ -413,16 +413,176 @@ static bool xeon_tl_on(void) {
      }
      return on == 1;
  }
  
- static uint64_t tosh_now_ns(void) {
+ static uint64_t xeon_now_ns(void) {
      return clock_gettime_nsec_np(CLOCK_MONOTONIC);
  }
  
 +
-+// TOSH_OPGPU=1: each graph is encoded with one command buffer per op, so the per-buffer GPU
++// XEON_OPGPU=1: each graph is encoded with one command buffer per op, so the per-buffer GPU
 +// timestamps give per-op GPU time. Each buffer's GPUEndTime - GPUStartTime is summed per op
 +// kind, keyed by the graph's node count so decode and prefill report apart, and the table is
 +// printed at exit. Completion handlers run off-thread, so the table sits behind a lock.
-+#define TOSH_OPGPU_MAX_GRAPHS  12
-+#define TOSH_OPGPU_MAX_OPS     56
-+#define TOSH_OPGPU_NAME_LEN    48
++#define XEON_OPGPU_MAX_GRAPHS  12
++#define XEON_OPGPU_MAX_OPS     56
++#define XEON_OPGPU_NAME_LEN    48
 +
-+static bool tosh_opgpu_on(void) {
++static bool xeon_opgpu_on(void) {
 +    static int on = -1;
 +    if (on < 0) {
-+        const char * v = TOSH_ENV("TOSH_OPGPU");
++        const char * v = XEON_ENV("XEON_OPGPU");
 +        on = (v && v[0] == '1') ? 1 : 0;
 +    }
 +    return on == 1;
 +}
 +
-+struct tosh_opgpu_op {
-+    char             name[TOSH_OPGPU_NAME_LEN];
++struct xeon_opgpu_op {
++    char             name[XEON_OPGPU_NAME_LEN];
 +    _Atomic uint64_t ns;   // GPU time summed over every run
 +    _Atomic uint64_t n;    // how many times the op ran
 +};
 +
-+struct tosh_opgpu_key {
++struct xeon_opgpu_key {
 +    int  n_nodes;      // graph size the op belongs to
-+    char name[TOSH_OPGPU_NAME_LEN];
++    char name[XEON_OPGPU_NAME_LEN];
 +};
 +
-+struct tosh_opgpu_graph {
++struct xeon_opgpu_graph {
 +    _Atomic int          n_nodes;    // graph size, 0 = free slot
 +    _Atomic uint64_t     n_graphs;
 +    int                  n_ops;      // guarded by g_opgpu_lock
-+    struct tosh_opgpu_op ops[TOSH_OPGPU_MAX_OPS];
++    struct xeon_opgpu_op ops[XEON_OPGPU_MAX_OPS];
 +};
 +
-+static struct tosh_opgpu_graph g_opgpu[TOSH_OPGPU_MAX_GRAPHS];
++static struct xeon_opgpu_graph g_opgpu[XEON_OPGPU_MAX_GRAPHS];
 +static _Atomic int      g_opgpu_reg;
 +static _Atomic uint64_t g_opgpu_drop;
 +
 +static os_unfair_lock g_opgpu_lock = OS_UNFAIR_LOCK_INIT;
 +
-+static void tosh_opgpu_report(void);
++static void xeon_opgpu_report(void);
 +
-+static void tosh_opgpu_reg(void) {
++static void xeon_opgpu_reg(void) {
 +    int expected = 0;
 +    if (atomic_compare_exchange_strong(&g_opgpu_reg, &expected, 1)) {
-+        atexit(tosh_opgpu_report);
++        atexit(xeon_opgpu_report);
 +    }
 +}
 +
 +// assumes the caller holds the lock
-+static struct tosh_opgpu_graph * tosh_opgpu_graph_slot(int n_nodes) {
-+    for (int i = 0; i < TOSH_OPGPU_MAX_GRAPHS; ++i) {
++static struct xeon_opgpu_graph * xeon_opgpu_graph_slot(int n_nodes) {
++    for (int i = 0; i < XEON_OPGPU_MAX_GRAPHS; ++i) {
 +        if (atomic_load_explicit(&g_opgpu[i].n_nodes, memory_order_relaxed) == n_nodes) {
 +            return &g_opgpu[i];
 +        }
 +    }
-+    for (int i = 0; i < TOSH_OPGPU_MAX_GRAPHS; ++i) {
++    for (int i = 0; i < XEON_OPGPU_MAX_GRAPHS; ++i) {
 +        int expected = 0;
 +        if (atomic_compare_exchange_strong(&g_opgpu[i].n_nodes, &expected, n_nodes)) {
 +            return &g_opgpu[i];
@@ -78,9 +78,9 @@ index 54ab54e30..a3cbe3a93 100644
 +    return NULL;
 +}
 +
-+static void tosh_opgpu_graph_start(int n_nodes) {
++static void xeon_opgpu_graph_start(int n_nodes) {
 +    os_unfair_lock_lock(&g_opgpu_lock);
-+    struct tosh_opgpu_graph * g = tosh_opgpu_graph_slot(n_nodes);
++    struct xeon_opgpu_graph * g = xeon_opgpu_graph_slot(n_nodes);
 +    if (g != NULL) {
 +        atomic_fetch_add(&g->n_graphs, 1);
 +    } else {
@@ -89,10 +89,10 @@ index 54ab54e30..a3cbe3a93 100644
 +    os_unfair_lock_unlock(&g_opgpu_lock);
 +}
 +
-+static void tosh_opgpu_record(int n_nodes, const char * name, uint64_t ns) {
++static void xeon_opgpu_record(int n_nodes, const char * name, uint64_t ns) {
 +    os_unfair_lock_lock(&g_opgpu_lock);
-+    struct tosh_opgpu_graph * g = tosh_opgpu_graph_slot(n_nodes);
-+    struct tosh_opgpu_op * o = NULL;
++    struct xeon_opgpu_graph * g = xeon_opgpu_graph_slot(n_nodes);
++    struct xeon_opgpu_op * o = NULL;
 +    if (g != NULL) {
 +        for (int i = 0; i < g->n_ops; ++i) {
 +            if (strcmp(g->ops[i].name, name) == 0) {
@@ -100,7 +100,7 @@ index 54ab54e30..a3cbe3a93 100644
 +                break;
 +            }
 +        }
-+        if (o == NULL && g->n_ops < TOSH_OPGPU_MAX_OPS) {
++        if (o == NULL && g->n_ops < XEON_OPGPU_MAX_OPS) {
 +            o = &g->ops[g->n_ops++];
 +            snprintf(o->name, sizeof(o->name), "%s", name);
 +        }
@@ -114,23 +114,23 @@ index 54ab54e30..a3cbe3a93 100644
 +    os_unfair_lock_unlock(&g_opgpu_lock);
 +}
 +
-+static void tosh_opgpu_report(void) {
++static void xeon_opgpu_report(void) {
 +    if (atomic_load_explicit(&g_opgpu_drop, memory_order_relaxed) > 0) {
-+        fprintf(stderr, "TOSH_OPGPU %llu entries dropped past the table\n",
++        fprintf(stderr, "XEON_OPGPU %llu entries dropped past the table\n",
 +                (unsigned long long) atomic_load_explicit(&g_opgpu_drop, memory_order_relaxed));
 +    }
 +
-+    for (int i = 0; i < TOSH_OPGPU_MAX_GRAPHS; ++i) {
++    for (int i = 0; i < XEON_OPGPU_MAX_GRAPHS; ++i) {
 +        const int      n_nodes  = atomic_load(&g_opgpu[i].n_nodes);
 +        const uint64_t n_graphs = atomic_load(&g_opgpu[i].n_graphs);
 +        if (n_nodes <= 0 || n_graphs < 10) {
 +            continue;
 +        }
 +
-+        const struct tosh_opgpu_op * ops[TOSH_OPGPU_MAX_OPS];
-+        uint64_t ns[TOSH_OPGPU_MAX_OPS];
-+        uint64_t n [TOSH_OPGPU_MAX_OPS];
-+        int      order[TOSH_OPGPU_MAX_OPS];
++        const struct xeon_opgpu_op * ops[XEON_OPGPU_MAX_OPS];
++        uint64_t ns[XEON_OPGPU_MAX_OPS];
++        uint64_t n [XEON_OPGPU_MAX_OPS];
++        int      order[XEON_OPGPU_MAX_OPS];
 +        int      n_ops;
 +
 +        os_unfair_lock_lock(&g_opgpu_lock);
@@ -158,7 +158,7 @@ index 54ab54e30..a3cbe3a93 100644
 +        }
 +
 +        double ms_sum = 0.0;
-+        fprintf(stderr, "TOSH_OPGPU nodes=%d graphs=%llu\n", n_nodes, (unsigned long long) n_graphs);
++        fprintf(stderr, "XEON_OPGPU nodes=%d graphs=%llu\n", n_nodes, (unsigned long long) n_graphs);
 +        for (int j = 0; j < n_ops; ++j) {
 +            ms_sum += (double) ns[order[j]] / n_graphs / 1e6;
 +            fprintf(stderr, "  %-24s n/graph=%8.2f  ms/graph=%9.3f  us/op=%9.2f\n",
@@ -175,7 +175,7 @@ index 54ab54e30..a3cbe3a93 100644
  // side, when each GPU started the collective, and the signed order of both. The collective
  // loop is serial on the CPU, so a GPU-start difference is not evidence of compute imbalance
  // until the commit difference is subtracted from it.
- #define TOSH_SKEW_SLOTS 8192
+ #define XEON_SKEW_SLOTS 8192
  static struct {
      _Atomic uint64_t seq[2];
      _Atomic uint64_t commit_ns[2];
@@ -188,12 +188,12 @@ index 54ab54e30..a3cbe3a93 100644
  
          const uint64_t cbp_tc = cbp != NULL ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
  
-+        // TOSH_OPGPU=1: one command buffer per op. Metal on this GPU reports GPU timestamps
++        // XEON_OPGPU=1: one command buffer per op. Metal on this GPU reports GPU timestamps
 +        // per command buffer only, so this is the way to measure per-op GPU time. Normal
 +        // encoding below is untouched when the variable is unset.
-+        if (tosh_opgpu_on() && !use_capture) {
-+            tosh_opgpu_reg();
-+            tosh_opgpu_graph_start(gf->n_nodes);
++        if (xeon_opgpu_on() && !use_capture) {
++            xeon_opgpu_reg();
++            xeon_opgpu_graph_start(gf->n_nodes);
 +
 +            // every encoder sees the whole graph and encodes one op of it: the encoders look
 +            // across neighbouring nodes to fuse them (gated_delta_net folds the gather before it
@@ -233,7 +233,7 @@ index 54ab54e30..a3cbe3a93 100644
 +
 +                // quant types are told apart for the matmul pair ops, fused ops report
 +                // under their first node
-+                char name[TOSH_OPGPU_NAME_LEN];
++                char name[XEON_OPGPU_NAME_LEN];
 +                const char * desc = ggml_op_desc(node);
 +                if (res > 1) {
 +                    snprintf(name, sizeof(name), "%s+fused", desc);
@@ -243,14 +243,14 @@ index 54ab54e30..a3cbe3a93 100644
 +                    snprintf(name, sizeof(name), "%s", desc);
 +                }
 +
-+                struct tosh_opgpu_key opgpu_key;
++                struct xeon_opgpu_key opgpu_key;
 +                opgpu_key.n_nodes = gf->n_nodes;
 +                snprintf(opgpu_key.name, sizeof(opgpu_key.name), "%s", name);
 +                [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) {
 +                    const double t0 = [cb GPUStartTime];
 +                    const double t1 = [cb GPUEndTime];
 +                    if (t1 > t0) {
-+                        tosh_opgpu_record(opgpu_key.n_nodes, opgpu_key.name, (uint64_t) ((t1 - t0)*1e9));
++                        xeon_opgpu_record(opgpu_key.n_nodes, opgpu_key.name, (uint64_t) ((t1 - t0)*1e9));
 +                    }
 +                }];
 +
@@ -272,14 +272,14 @@ index 54ab54e30..a3cbe3a93 100644
 +            if (cbp != NULL) {
 +                atomic_fetch_add_explicit(&cbp->bucket->enc_ns,
 +                        clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - cbp_tc, memory_order_relaxed);
-+                // no tosh_cbp_attach here: the counter starts at 1 and drops to 0 below
++                // no xeon_cbp_attach here: the counter starts at 1 and drops to 0 below
 +                if (atomic_fetch_sub_explicit(&cbp->n_left, 1, memory_order_acq_rel) == 1) {
 +                    free(cbp);
 +                }
 +            }
 +
 +            // timeline: host span of this call (kind 22)
-+            if (tl_on) { tosh_dmoe_timeline(22, gf->n_nodes, tl_enter, tosh_dmoe_host_seconds()); }
++            if (tl_on) { xeon_dmoe_timeline(22, gf->n_nodes, tl_enter, xeon_dmoe_host_seconds()); }
 +            return GGML_STATUS_SUCCESS;
 +        }
 +

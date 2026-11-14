@@ -17,7 +17,7 @@ index dc6aae8a0..1dba3af31 100644
      // The 8x4 tile halves the simdgroups per threadgroup, so it needs enough tokens to keep
      // the GPU in threadgroups; below ~192 it loses (measured 8.7% at 64 tokens on q8_0).
 +    static const int wide_floor_env = []() {
-         const char * s = TOSH_ENV("TOSH_MM_WIDE_FLOOR");
+         const char * s = XEON_ENV("XEON_MM_WIDE_FLOOR");
          return s ? atoi(s) : 0;
      }();
 +
@@ -28,9 +28,9 @@ index dc6aae8a0..1dba3af31 100644
 +    // so it must not follow the wide floor down
 +    // The 192 bound was measured on 32 lanes. On 64 the tail path stops paying earlier: 128 gains
 +    // 1.8 to 3.6% between 130 and 160 tokens and is neutral elsewhere, while raising it costs 8%.
-+    // TOSH_MM_TAIL_MAX overrides it on either width.
++    // XEON_MM_TAIL_MAX overrides it on either width.
 +    static const int tail_max_env = []() {
-         const char * s = TOSH_ENV("TOSH_MM_TAIL_MAX");
+         const char * s = XEON_ENV("XEON_MM_TAIL_MAX");
          return s ? atoi(s) : 0;
      }();
 +
@@ -38,7 +38,7 @@ index dc6aae8a0..1dba3af31 100644
 +    const int tail_max = tail_max_env ? tail_max_env : (simd_width_tail == 64 ? 128 : 192);
 +
 +    bool tail_32 = op->ne[1] < tail_max && (op->ne[1] % 64) >= 1 && (op->ne[1] % 64) <= 32 &&
-                    TOSH_ENV("TOSH_MM_NARROW_TAIL_DISABLE") == nullptr;
+                    XEON_ENV("XEON_MM_NARROW_TAIL_DISABLE") == nullptr;
 +    if (tail_32 && op->ne[1] > 128) {
 +        switch (tsrc0) {
 +            case GGML_TYPE_IQ1_S:
@@ -56,7 +56,7 @@ index dc6aae8a0..1dba3af31 100644
 +    // wave64 wants a far higher floor: between 288 and 384 the tile loses on two models,
 +    // and from 448 up it wins 4 to 6%
 +    const int simd_width = ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width;
-     const bool wide_width_ok = simd_width != 64 || TOSH_ENV("TOSH_MM_WIDE_W64_DISABLE") == nullptr;
+     const bool wide_width_ok = simd_width != 64 || XEON_ENV("XEON_MM_WIDE_W64_DISABLE") == nullptr;
 +    // Both floors were derived against the 32-lane tile. The 64-lane rewrite moved the
 +    // crossover, and it moved by a different amount per type, so each carries its own:
 +    // a single number would have to pick whom to hurt (q8_0 gains 3.7% where q4_K loses 3.1%).
@@ -90,7 +90,7 @@ index dc6aae8a0..1dba3af31 100644
 +    // threadgroup costs more where the rows run out: on 64 lanes 2560 rows lose 7 to 10% at 512
 +    // tokens while 4096 and up keep winning
 +    static const int ne0_floor_env = []() {
-         const char * s = TOSH_ENV("TOSH_MM_NE0_FLOOR");
+         const char * s = XEON_ENV("XEON_MM_NE0_FLOOR");
          return s ? atoi(s) : 0;
      }();
 +
@@ -106,14 +106,14 @@ index dc6aae8a0..1dba3af31 100644
 +    }
 +
 +    static const int wide_ext_floor_env = []() {
-         const char * s = TOSH_ENV("TOSH_MM_WIDE_EXT_FLOOR");
+         const char * s = XEON_ENV("XEON_MM_WIDE_EXT_FLOOR");
 +        return s ? atoi(s) : 0;
 +    }();
 +    const int wide_ext_floor = wide_ext_floor_env ? wide_ext_floor_env : 2048;
 +
 +    bool wide = use_mm_manual && !has_tensor && !narrow && tsrc1 == GGML_TYPE_F32 && wide_width_ok &&
-                 op->ne[1] >= wide_floor && (op->ne[0] >= ne0_floor || TOSH_ENV("TOSH_MM_NE0_FLOOR_DISABLE") != nullptr) &&
-                 TOSH_ENV("TOSH_MM_WIDE_DISABLE") == nullptr;
+                 op->ne[1] >= wide_floor && (op->ne[0] >= ne0_floor || XEON_ENV("XEON_MM_NE0_FLOOR_DISABLE") != nullptr) &&
+                 XEON_ENV("XEON_MM_WIDE_DISABLE") == nullptr;
      if (wide) {
          // it needs 64 accumulators, so only where the dequant leaves the registers
          switch (tsrc0) {
@@ -141,34 +141,34 @@ index dc6aae8a0..1dba3af31 100644
              case GGML_TYPE_IQ2_XS:
              case GGML_TYPE_IQ3_XXS:
 +                // third floor, for the types whose dequant leaves less room: it was picked
-+                // against the 32-lane tile too, so TOSH_MM_WIDE_EXT_FLOOR opens it for sweeping
-                 wide = op->ne[0] >= wide_ext_floor && TOSH_ENV("TOSH_MM_WIDE_EXT_DISABLE") == nullptr; break;
++                // against the 32-lane tile too, so XEON_MM_WIDE_EXT_FLOOR opens it for sweeping
+                 wide = op->ne[0] >= wide_ext_floor && XEON_ENV("XEON_MM_WIDE_EXT_DISABLE") == nullptr; break;
 +            // f32 and bf16 have never been through this gate; the override opens them so the
 +            // exclusion can be measured instead of inherited
-             default: wide = TOSH_ENV("TOSH_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
+             default: wide = XEON_ENV("XEON_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
          }
      }
  
      // attention matmuls read a permuted KV cache view and can exceed half range in the packed
      // accumulator; bfloat has no native arithmetic here, so float is faster for it too
      const bool acc_f32 = use_mm_manual && (!ggml_is_contiguous(op->src[0]) || tsrc0 == GGML_TYPE_BF16) &&
-                          TOSH_ENV("TOSH_MM_ACC_F32_DISABLE") == nullptr;
+                          XEON_ENV("XEON_MM_ACC_F32_DISABLE") == nullptr;
  
 +    // iq4_nl is the one type this kernel does not suit at every batch: it costs 3.9% at 256
 +    // tokens and gains 1.0% at 512, so it takes a floor rather than lose the gain.
 +    static const int w64_floor_env = []() {
-         const char * s = TOSH_ENV("TOSH_MM_W64_FLOOR");
+         const char * s = XEON_ENV("XEON_MM_W64_FLOOR");
 +        return s ? atoi(s) : 0;
 +    }();
 +    const int w64_floor = w64_floor_env ? w64_floor_env :
 +                          (tsrc0 == GGML_TYPE_IQ4_NL ? 384 : 0);
 +
 +                     op->ne[1] >= w64_floor &&
-                      TOSH_ENV("TOSH_MM_W64_DISABLE") == nullptr;
+                      XEON_ENV("XEON_MM_W64_DISABLE") == nullptr;
 +    // measured on 32 lanes only; the 64-lane tile lives in its own kernel
 +    const bool uniform_scale = (tsrc0 == GGML_TYPE_Q4_K || tsrc0 == GGML_TYPE_Q5_K) && wide && !w64 &&
 +                               use_mm_manual && !has_tensor && simd_width == 32 &&
-                                TOSH_ENV("TOSH_MM_UNIFORM_SCALE_DISABLE") == nullptr;
+                                XEON_ENV("XEON_MM_UNIFORM_SCALE_DISABLE") == nullptr;
  
 +    snprintf(name, 256, "%s_bci=%d_bco=%d_ne12=%d_ne13=%d_r2=%d_r3=%d_mm=%d_db=%d_af=%d_us=%d",
 +             base, bc_inp, bc_out, ne12, ne13, r2, r3, use_mm_manual + 2*narrow, use_mm_double_buffer, acc_f32, uniform_scale);
@@ -209,26 +209,26 @@ index dc6aae8a0..1dba3af31 100644
 -    snprintf(name, 256, "%s_bci=%d_amax=%d", base, bc_inp, amax);
 +    // a rescaled src1 still overflows the half partial sums, so those ops accumulate in float
 +    const bool acc_f32 = use_mm_manual && (!ggml_is_contiguous(op->src[0]) || tsrc0 == GGML_TYPE_BF16 || amax) &&
-                          TOSH_ENV("TOSH_MM_ACC_F32_DISABLE") == nullptr;
+                          XEON_ENV("XEON_MM_ACC_F32_DISABLE") == nullptr;
  
 +    // one grid per expert already keeps the GPU in threadgroups, so the 8x4 tile does not need
 +    // the dense token floor. What it needs is an average expert that fills the narrow tile:
 +    // below that its 64 columns are mostly padding and it loses (measured -5% at 14 tokens
 +    // per expert, +2.3% at 45)
 +    static const int wide_floor = []() {
-         const char * s = TOSH_ENV("TOSH_MMID_WIDE_FLOOR");
+         const char * s = XEON_ENV("XEON_MMID_WIDE_FLOOR");
 +        return s ? atoi(s) : 32;
 +    }();
 +
 +    // wave64 is off by the dense tile's result, not by one measured here: the expert path splits
 +    // its work per expert, so the opt-in exists for a GCN card to settle it
 +    const int simd_width = ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width;
-     const bool wide_width_ok = simd_width != 64 || TOSH_ENV("TOSH_MMID_WIDE_W64_ENABLE") != nullptr;
+     const bool wide_width_ok = simd_width != 64 || XEON_ENV("XEON_MMID_WIDE_W64_ENABLE") != nullptr;
  
 +    const int64_t tpe = op->src[0]->ne[2] > 0 ? op->src[2]->ne[0]*op->src[2]->ne[1] / op->src[0]->ne[2] : 0;
 +
 +    bool wide = use_mm_manual && tsrc1 == GGML_TYPE_F32 && wide_width_ok &&
-                 tpe >= wide_floor && TOSH_ENV("TOSH_MMID_WIDE_DISABLE") == nullptr;
+                 tpe >= wide_floor && XEON_ENV("XEON_MMID_WIDE_DISABLE") == nullptr;
 +    if (wide) {
 +        // it needs 64 accumulators, so only where the dequant leaves the registers
 +        switch (tsrc0) {
@@ -256,7 +256,7 @@ index dc6aae8a0..1dba3af31 100644
 +            default: wide = false; break;
 +        }
 +    }
-                      TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
+                      XEON_ENV("XEON_MMID_W64_DISABLE") == nullptr;
  
      ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
      if (!res.pipeline) {
@@ -325,13 +325,13 @@ index e60b1bbbc..587ae7801 100644
 +            // them on half the engines and a multiple of four on a single one (measured 1.8x and
 +            // 3.4x). One inert tile restores the spread; it returns before reading anything.
 +            if (props_dev->simd_width == 64 && ntg0 % 2 == 0 &&
-                 TOSH_ENV("TOSH_MMID_ODD_GRID_DISABLE") == nullptr) {
+                 XEON_ENV("XEON_MMID_ODD_GRID_DISABLE") == nullptr) {
 +                ntg0 += 1;
 +            }
 +
 +            // on 32 lanes these tile counts leave part of the card idle, and one or two more inert
 +            // tiles avoid them; like the tile above they return before reading anything
-+            if (props_dev->simd_width == 32 && TOSH_ENV("TOSH_MMID_RDNA2_GRID_DISABLE") == nullptr) {
++            if (props_dev->simd_width == 32 && XEON_ENV("XEON_MMID_RDNA2_GRID_DISABLE") == nullptr) {
 +                if (ntg0 == 3 || ntg0 == 5) {
 +                    ntg0 += 1;
 +                } else if (ntg0 == 9 || ntg0 == 10) {
@@ -632,7 +632,7 @@ index 6b91fc179..96f10f276 100644
 +    const bool loadA = !FC_mul_mm_manual || NLR == 8 || tiitg < 128;
 +
      for (int loop_k = 0; loop_k < args.ne00; loop_k += NK) {
-+        // ToshGEMM ping-pongs two 8 KiB tiles.  While a fast simdgroup starts
++        // XeonGEMM ping-pongs two 8 KiB tiles.  While a fast simdgroup starts
 +        // filling the alternate tile, slower simdgroups can finish consuming
 +        // the current one; the barrier below then publishes the complete next
 +        // tile.  This removes the pre-load barrier from every K iteration.

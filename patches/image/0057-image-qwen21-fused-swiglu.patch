@@ -12,7 +12,7 @@ index 09311c2..80d9a85 100644
              ggml_tensor* gate;
              auto fused = blocks.find("img_mlp.gate_up");
 -            if (fused != blocks.end()) {
-+            static const bool swiglu_off = getenv("TOSH_QWEN21_SWIGLU_DISABLE") != nullptr;
++            static const bool swiglu_off = getenv("XEON_QWEN21_SWIGLU_DISABLE") != nullptr;
 +            if (fused != blocks.end() && !swiglu_off) {
 +                // silu(gate) * up in one pass: chunking the fused output first copies both halves
                  auto gate_up = std::dynamic_pointer_cast<Linear>(fused->second)->forward(ctx, h);

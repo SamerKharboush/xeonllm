@@ -9,19 +9,19 @@ index 49363af64..81e85834c 100644
  
  #include "build-info.h"
 +
-+// TOSH_PREFILL_SHARE: prompt tokens per step while two or more requests are in flight (default n_ubatch, 0 = off)
++// XEON_PREFILL_SHARE: prompt tokens per step while two or more requests are in flight (default n_ubatch, 0 = off)
 +static int32_t prefill_share(int32_t n_ubatch) {
 +    static const int32_t v = [] {
-+        const char * e = getenv("TOSH_PREFILL_SHARE");
++        const char * e = getenv("XEON_PREFILL_SHARE");
 +        return e ? atoi(e) : -1;
 +    }();
 +    return v < 0 ? n_ubatch : v;
 +}
 +
-+// TOSH_PREFIX_COPY=0: a new request never takes a shared prefix from a busy slot
++// XEON_PREFIX_COPY=0: a new request never takes a shared prefix from a busy slot
 +static bool prefix_copy() {
 +    static const bool v = [] {
-+        const char * e = getenv("TOSH_PREFIX_COPY");
++        const char * e = getenv("XEON_PREFIX_COPY");
 +        return !e || strcmp(e, "0") != 0;
 +    }();
 +    return v;

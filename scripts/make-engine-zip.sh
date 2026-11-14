@@ -30,11 +30,11 @@ cmake -B "$BUILD" \
     -DBUILD_SHARED_LIBS=OFF \
     -DGGML_METAL=ON \
     -DGGML_METAL_EMBED_LIBRARY=ON \
-    -DTOSH_ENABLE_DYNAMIC_MOE=ON \
+    -DXEON_ENABLE_DYNAMIC_MOE=ON \
     -DGGML_NATIVE=OFF \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-    -DCMAKE_CXX_FLAGS="-DTOSH_VERSION=$VERSION" \
+    -DCMAKE_CXX_FLAGS="-DXEON_VERSION=$VERSION" \
     -DLLAMA_OPENSSL=OFF \
     -DGGML_SSE42=ON -DGGML_AVX=OFF -DGGML_AVX2=OFF -DGGML_FMA=OFF \
     -DGGML_F16C=OFF -DGGML_BMI2=OFF -DGGML_AVX_VNNI=OFF -DGGML_AVX512=OFF
@@ -87,7 +87,7 @@ MODEL="$1"
 shift
 
 # the AMD attention kernels are off unless asked for
-export TOSH_FA_AMD=1
+export XEON_FA_AMD=1
 
 # the backend keeps an external GPU's weights in system memory, read over Thunderbolt on every step
 if [ "$EGPU" = "1" ]; then
@@ -133,7 +133,7 @@ Requirements: an Intel Mac on macOS 12 or newer with a Metal GPU.
 
        cd $NAME
        ./bin/test-backend-ops -b MTL0 -o MUL_MAT > mul_mat.txt 2>&1
-       TOSH_FA_AMD=1 ./bin/test-backend-ops -b MTL0 -o FLASH_ATTN_EXT > flash_attn.txt 2>&1
+       XEON_FA_AMD=1 ./bin/test-backend-ops -b MTL0 -o FLASH_ATTN_EXT > flash_attn.txt 2>&1
 
 
 3. Start it with a model
@@ -157,10 +157,10 @@ Requirements: an Intel Mac on macOS 12 or newer with a Metal GPU.
    Any other llama-server option can be added after the model path.
 
 
-Problems: https://github.com/engeldlgado/toshllm/issues (attach the files from step 2 and the
+Problems: https://github.com/engeldlgado/xeonllm/issues (attach the files from step 2 and the
 startup log, run with -lv 4 after the model path for more detail).
 
-Source code: https://github.com/engeldlgado/toshllm (GPL-3.0, see LICENSE).
+Source code: https://github.com/engeldlgado/xeonllm (GPL-3.0, see LICENSE).
 EOF
 
 # SIGN_IDENTITY (CI): Developer ID with the hardened runtime, so the zip can be notarized

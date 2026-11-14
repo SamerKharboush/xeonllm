@@ -10,7 +10,7 @@ index 13ddeb6dc..aa92cc22a 100644
  
 +    // the low-bit rewrites keep the standalone geometry, so every 32-lane device takes them
 +    {
-+        static const bool v2 = TOSH_ENV("TOSH_MV_V2_DISABLE") == nullptr;
++        static const bool v2 = XEON_ENV("XEON_MV_V2_DISABLE") == nullptr;
 +        if (v2 && suffix[0] == '\0' && nw == 32 &&
 +            (tsrc0 == GGML_TYPE_IQ3_XXS || tsrc0 == GGML_TYPE_IQ3_S || tsrc0 == GGML_TYPE_IQ2_S ||
 +             tsrc0 == GGML_TYPE_IQ2_XXS || tsrc0 == GGML_TYPE_IQ2_XS || tsrc0 == GGML_TYPE_IQ1_S ||
@@ -20,16 +20,16 @@ index 13ddeb6dc..aa92cc22a 100644
 +        }
 +    }
 +
-     // Sweep hook: TOSH_SWEEP_TYPE names one ggml type and TOSH_SWEEP_NR0 / TOSH_SWEEP_NSG
+     // Sweep hook: XEON_SWEEP_TYPE names one ggml type and XEON_SWEEP_NR0 / XEON_SWEEP_NSG
      // force its rows per lane and simdgroups, so the register front can be measured without
      // rebuilding. The pipeline name carries both, so a run can be checked against what it asked.
      {
-         const char * st = TOSH_ENV("TOSH_SWEEP_TYPE");
+         const char * st = XEON_ENV("XEON_SWEEP_TYPE");
 @@ -1976,11 +1988,15 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv(ggml_meta
-             const char * snr = TOSH_ENV("TOSH_SWEEP_NR0");
-             const char * sns = TOSH_ENV("TOSH_SWEEP_NSG");
+             const char * snr = XEON_ENV("XEON_SWEEP_NR0");
+             const char * sns = XEON_ENV("XEON_SWEEP_NSG");
  
-             const char * sln = TOSH_ENV("TOSH_SWEEP_LANES");
+             const char * sln = XEON_ENV("XEON_SWEEP_LANES");
  
 -            if (snr != nullptr && sln != nullptr) {
 +            if (snr != nullptr && strcmp(suffix, "_v2") == 0) {
@@ -50,9 +50,9 @@ index 13ddeb6dc..aa92cc22a 100644
  
 +    // a grid kernel stages its table once per threadgroup, which measured worth amortizing from
 +    // 2 KB up except on iq2_xxs; 640 threadgroups still fill the largest cards it runs on.
-+    // TOSH_MV_NTG overrides, 0 is no cap
++    // XEON_MV_NTG overrides, 0 is no cap
 +    if (strncmp(suffix, "_v2", 3) == 0 && smem > 0) {
-+        static const int ntg_env = TOSH_ENV("TOSH_MV_NTG") ? atoi(TOSH_ENV("TOSH_MV_NTG")) : -1;
++        static const int ntg_env = XEON_ENV("XEON_MV_NTG") ? atoi(XEON_ENV("XEON_MV_NTG")) : -1;
 +        res.ntg = ntg_env >= 0 ? ntg_env : (smem >= 2048 && tsrc0 != GGML_TYPE_IQ2_XXS ? 640 : 0);
 +    }
 +

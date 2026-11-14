@@ -64,7 +64,7 @@ index 192624551..130d8728f 100644
          case GGML_OP_UNARY:
              {
 -                n_fuse = ggml_metal_op_unary(ctx, idx);
-+                n_fuse = ggml_metal_op_tosh_gate_add(ctx, idx);
++                n_fuse = ggml_metal_op_xeon_gate_add(ctx, idx);
 +                if (n_fuse == 0) {
 +                    n_fuse = ggml_metal_op_unary(ctx, idx);
 +                }
@@ -81,8 +81,8 @@ index 192624551..130d8728f 100644
  
 +// sigmoid -> mul -> add [-> add]: a gated shared expert joining the routed sum and the residual. Three
 +// small dispatches per MoE layer become one; unified memory keeps the separate ones, unmeasured there.
-+int ggml_metal_op_tosh_gate_add(ggml_metal_op_t ctx, int idx) {
-+    static const bool disabled = TOSH_ENV("TOSH_GATE_ADD_FUSION_DISABLE") != nullptr;
++int ggml_metal_op_xeon_gate_add(ggml_metal_op_t ctx, int idx) {
++    static const bool disabled = XEON_ENV("XEON_GATE_ADD_FUSION_DISABLE") != nullptr;
 +    if (disabled || !ctx->use_fusion() || idx + 2 >= ctx->n_nodes() ||
 +        ggml_metal_device_get_props(ctx->dev)->has_unified_memory) {
 +        return 0;
@@ -146,9 +146,9 @@ index 192624551..130d8728f 100644
 +        }
 +    }
 +
-+    auto pipeline = ggml_metal_library_get_pipeline(ctx->lib, "tosh_gate_add_f32");
++    auto pipeline = ggml_metal_library_get_pipeline(ctx->lib, "xeon_gate_add_f32");
 +    if (!pipeline.pipeline) {
-+        pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "tosh_gate_add_f32", "tosh_gate_add_f32", nullptr);
++        pipeline = ggml_metal_library_compile_pipeline(ctx->lib, "xeon_gate_add_f32", "xeon_gate_add_f32", nullptr);
 +    }
 +    if (!pipeline.pipeline) {
 +        return 0;
@@ -184,7 +184,7 @@ index 192624551..130d8728f 100644
  
      ggml_metal_library_t lib = ctx->lib;
      ggml_metal_encoder_t enc = ctx->enc;
-@@ -7505,45 +7612,61 @@ static bool ggml_metal_tosh_topk_moe_fusion(ggml_metal_op_t ctx, int idx, ggml_m
+@@ -7505,45 +7612,61 @@ static bool ggml_metal_xeon_topk_moe_fusion(ggml_metal_op_t ctx, int idx, ggml_m
      if (!ggml_is_contiguous(softmax->src[0]) || !ggml_is_contiguous(softmax) ||
          !ggml_is_contiguous(argsort) || !ggml_is_contiguous(getrows)) {
          return false;
@@ -205,10 +205,10 @@ index 192624551..130d8728f 100644
          ggml_tensor * div     = ctx->node(idx + 5);
  
 -        if (sumrows->op != GGML_OP_SUM_ROWS || clamp->op != GGML_OP_CLAMP || div->op != GGML_OP_DIV ||
--            !ggml_metal_tosh_topk_moe_same(sumrows->src[0], getrows) ||
--            !ggml_metal_tosh_topk_moe_same(clamp->src[0], sumrows) ||
--            !ggml_metal_tosh_topk_moe_same(div->src[0], getrows) ||
--            !ggml_metal_tosh_topk_moe_same(div->src[1], clamp) ||
+-            !ggml_metal_xeon_topk_moe_same(sumrows->src[0], getrows) ||
+-            !ggml_metal_xeon_topk_moe_same(clamp->src[0], sumrows) ||
+-            !ggml_metal_xeon_topk_moe_same(div->src[0], getrows) ||
+-            !ggml_metal_xeon_topk_moe_same(div->src[1], clamp) ||
 -            !ggml_is_contiguous(div) ||
 -            !ctx->has_n_uses(idx + 3, 1) ||
 -            !ctx->has_n_uses(idx + 4, 1)) {
@@ -244,10 +244,10 @@ index 192624551..130d8728f 100644
 -        return false;
 +        norm = uses_ok &&
 +            sumrows->op == GGML_OP_SUM_ROWS && clamp->op == GGML_OP_CLAMP && div->op == GGML_OP_DIV &&
-+            ggml_metal_tosh_topk_moe_same(sumrows->src[0], getrows) &&
-+            ggml_metal_tosh_topk_moe_same(clamp->src[0], sumrows) &&
-+            ggml_metal_tosh_topk_moe_same(div->src[0], getrows) &&
-+            ggml_metal_tosh_topk_moe_same(div->src[1], clamp) &&
++            ggml_metal_xeon_topk_moe_same(sumrows->src[0], getrows) &&
++            ggml_metal_xeon_topk_moe_same(clamp->src[0], sumrows) &&
++            ggml_metal_xeon_topk_moe_same(div->src[0], getrows) &&
++            ggml_metal_xeon_topk_moe_same(div->src[1], clamp) &&
 +            ggml_is_contiguous(div) && div->ne[0] <= 32 &&
 +            ctx->has_n_uses(idx + 3, 1) &&
 +            ctx->has_n_uses(idx + 4, 1) &&
@@ -271,7 +271,7 @@ index 192624551..130d8728f 100644
      const int64_t n_expert = softmax->ne[0];
      if (n_expert > 512 || n_expert < 1) {
          return false;
-@@ -7627,12 +7750,13 @@ int ggml_metal_op_tosh_topk_moe(ggml_metal_op_t ctx, int idx) {
+@@ -7627,12 +7750,13 @@ int ggml_metal_op_xeon_topk_moe(ggml_metal_op_t ctx, int idx) {
      if (!pipeline.pipeline) {
          return 0;
      }
@@ -295,8 +295,8 @@ index 01e4e92d4..5f22ec6d4 100644
  int ggml_metal_op_arange            (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_timestep_embedding(ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_argmax            (ggml_metal_op_t ctx, int idx);
- int ggml_metal_op_tosh_topk_moe     (ggml_metal_op_t ctx, int idx);
-+int ggml_metal_op_tosh_gate_add     (ggml_metal_op_t ctx, int idx);
+ int ggml_metal_op_xeon_topk_moe     (ggml_metal_op_t ctx, int idx);
++int ggml_metal_op_xeon_gate_add     (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_argsort           (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_top_k             (ggml_metal_op_t ctx, int idx);
  int ggml_metal_op_topk_moe          (ggml_metal_op_t ctx, int idx);
@@ -306,7 +306,7 @@ diff --git a/ggml/src/ggml-metal/kernels/softmax.metal b/ggml/src/ggml-metal/ker
 index 172e94478..8f3c749b4 100644
 --- a/ggml/src/ggml-metal/kernels/softmax.metal
 +++ b/ggml/src/ggml-metal/kernels/softmax.metal
-@@ -232,10 +232,12 @@ kernel void kernel_tosh_topk_moe_f32(
+@@ -232,10 +232,12 @@ kernel void kernel_xeon_topk_moe_f32(
          device       char * dst_ids,
          threadgroup float * sf [[threadgroup(0)]],
          threadgroup int   * si [[threadgroup(1)]],
@@ -319,7 +319,7 @@ index 172e94478..8f3c749b4 100644
      const int row = tgpig.x;
      if (row >= args.nrows) {
          return;
-@@ -349,27 +351,31 @@ kernel void kernel_tosh_topk_moe_f32(
+@@ -349,27 +351,31 @@ kernel void kernel_xeon_topk_moe_f32(
              sel[e]     = -INFINITY;
          }
          threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
@@ -363,11 +363,11 @@ index 172e94478..8f3c749b4 100644
      }
  
      if (args.delayed_softmax != 0) {
-diff --git a/ggml/src/ggml-metal/kernels/tosh_moe.metal b/ggml/src/ggml-metal/kernels/tosh_moe.metal
+diff --git a/ggml/src/ggml-metal/kernels/xeon_moe.metal b/ggml/src/ggml-metal/kernels/xeon_moe.metal
 index 89467c892..04ea02cca 100644
---- a/ggml/src/ggml-metal/kernels/tosh_moe.metal
-+++ b/ggml/src/ggml-metal/kernels/tosh_moe.metal
-@@ -181,5 +181,32 @@ kernel void tosh_dmoe_observe(
+--- a/ggml/src/ggml-metal/kernels/xeon_moe.metal
++++ b/ggml/src/ggml-metal/kernels/xeon_moe.metal
+@@ -181,5 +181,32 @@ kernel void xeon_dmoe_observe(
          uint  tpit [[thread_position_in_threadgroup]]) {
      for (int j = tpit; j < args.n_used; j += 32) {
          ring[t*args.n_used + j] = ((device const int32_t *) (ids + t*args.nb1))[j];
@@ -376,14 +376,14 @@ index 89467c892..04ea02cca 100644
 +
 +// y + x*sigmoid(g) [+ r] over float4, g one value per row: the gated shared expert and the sums
 +// that close a MoE block
-+struct tosh_gate_add_args {
++struct xeon_gate_add_args {
 +    int32_t ne0_4;
 +    int32_t n_4;
 +    int32_t has_res;
 +};
 +
-+kernel void tosh_gate_add_f32(
-+        constant tosh_gate_add_args & args,
++kernel void xeon_gate_add_f32(
++        constant xeon_gate_add_args & args,
 +        device const float  * g,
 +        device const float4 * x,
 +        device const float4 * y,

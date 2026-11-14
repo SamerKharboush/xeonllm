@@ -26,7 +26,7 @@ index 0dde5d443..11d6ce58d 100644
 +
 +    // the word-wide reads the standalone q8_0 mat-vec takes for this stride
 +    const bool row8  = type == GGML_TYPE_Q8_0 && w->nb[1] % 4 == 0 &&
-+                       TOSH_ENV("TOSH_MV_ROW4_DISABLE") == nullptr && TOSH_ENV("TOSH_MV_ROW8_DISABLE") == nullptr;
++                       XEON_ENV("XEON_MV_ROW4_DISABLE") == nullptr && XEON_ENV("XEON_MV_ROW8_DISABLE") == nullptr;
 +    const bool align = props->needs_aligned_loads;
 +
 +    char base[256];
@@ -64,15 +64,15 @@ index 0dde5d443..11d6ce58d 100644
 +
  // a pair of columns shares one read of each block, where one pass per column would read and
  // unpack the weights twice. Four columns go as two pairs where that measured faster.
- // TOSH_MV_NC2_PROBE=R opens the untuned widths with R rows, for measuring
+ // XEON_MV_NC2_PROBE=R opens the untuned widths with R rows, for measuring
  static int nc2_probe() {
-     static const int r = TOSH_ENV("TOSH_MV_NC2_PROBE") ? atoi(TOSH_ENV("TOSH_MV_NC2_PROBE")) : 0;
+     static const int r = XEON_ENV("XEON_MV_NC2_PROBE") ? atoi(XEON_ENV("XEON_MV_NC2_PROBE")) : 0;
 diff --git a/ggml/src/ggml-metal/ggml-metal-device.h b/ggml/src/ggml-metal/ggml-metal-device.h
 index 1806555c9..2e8e998b6 100644
 --- a/ggml/src/ggml-metal/ggml-metal-device.h
 +++ b/ggml/src/ggml-metal/ggml-metal-device.h
 @@ -168,10 +168,11 @@ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argmax
- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_tosh_topk_moe     (ggml_metal_library_t lib);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_xeon_topk_moe     (ggml_metal_library_t lib);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort           (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort_merge     (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_fwht              (ggml_metal_library_t lib, int n, enum ggml_type tsrc, bool w64);
@@ -100,7 +100,7 @@ index 5a3daa3e4..35b70f00c 100644
 +// kernel writes the swiglu output. The three nodes are adjacent, so writing that output early only
 +// needs it apart from the activation the kernel reads.
  static int ggml_metal_op_mul_mat_swiglu(ggml_metal_op_t ctx, int idx) {
-     static const bool disabled = TOSH_ENV("TOSH_SWIGLU_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_SWIGLU_FUSION_DISABLE") != nullptr;
      if (disabled || !ctx->use_fusion() || idx + 2 >= ctx->n_nodes()) {
          return 0;
      }
@@ -112,7 +112,7 @@ index 5a3daa3e4..35b70f00c 100644
  
 +    // the dense kernels copy the 32-lane standalone mat-vecs (q4_K only where those run two groups of
 +    // two rows); measured on discrete cards only, so unified memory keeps the separate ones
-+    static const bool dense_disabled = TOSH_ENV("TOSH_DENSE_SWIGLU_FUSION_DISABLE") != nullptr;
++    static const bool dense_disabled = XEON_ENV("XEON_DENSE_SWIGLU_FUSION_DISABLE") != nullptr;
 +    const ggml_type wt = gate->src[0]->type;
 +    const ggml_metal_device_props * props = ggml_metal_device_get_props(ctx->dev);
 +    const bool dense = !dense_disabled && props->simd_width == 32 && !props->has_unified_memory &&

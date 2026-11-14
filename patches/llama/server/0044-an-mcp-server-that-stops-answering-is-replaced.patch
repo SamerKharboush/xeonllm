@@ -241,7 +241,7 @@ index ce2f45530..fb312b37d 100644
 +
  protected:
      // per-transport: guards the tool list and the members below; a tool call holds it only to take its id,
-     // so a long call (the Tosh agent's turn) does not stall the calls of other clients
+     // so a long call (the Xeon agent's turn) does not stall the calls of other clients
      std::mutex rpc_mutex;
      std::timed_mutex call_mutex; // held across a whole call unless the server is concurrent; waited for cancellably
 @@ -107,11 +116,12 @@ protected:

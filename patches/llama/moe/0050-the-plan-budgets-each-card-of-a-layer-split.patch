@@ -1,7 +1,7 @@
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 index 346984fd6..04b6a2084 100644
---- a/common/tosh-plan.cpp
-+++ b/common/tosh-plan.cpp
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
 @@ -84,18 +84,25 @@ struct host_mem {
      double self_rss_mib    = 0;
      int    pressure_level  = 1;  // kern.memorystatus_vm_pressure_level: 1 normal, 2 warn, 4 critical
@@ -91,9 +91,9 @@ index 346984fd6..04b6a2084 100644
 +            continue;
 +        }
 +        size_t f = 0, t = 0;
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
++#ifdef XEON_ENABLE_DYNAMIC_MOE
 +        if (gpu_index == 0) {
-+            // Device 0: use the existing read_vram logic (which uses tosh_vram_read internally)
++            // Device 0: use the existing read_vram logic (which uses xeon_vram_read internally)
 +            double free_d = 0, total_d = 0;
 +            if (!read_vram(free_d, total_d)) {
 +                // fall back to backend query
@@ -103,8 +103,8 @@ index 346984fd6..04b6a2084 100644
 +                t = (size_t) (total_d * MiB);
 +            }
 +        } else {
-+            // Device >0: try tosh_dmoe_vram_dev first (set by Metal backend at init)
-+            if (!tosh_dmoe_vram_dev(gpu_index, &f, &t)) {
++            // Device >0: try xeon_dmoe_vram_dev first (set by Metal backend at init)
++            if (!xeon_dmoe_vram_dev(gpu_index, &f, &t)) {
 +                // fall back to backend query
 +                ggml_backend_dev_memory(dev, &f, &t);
 +            }
@@ -119,7 +119,7 @@ index 346984fd6..04b6a2084 100644
 +        ++gpu_index;
 +    }
 +    // Apply simulation override if set (applies to all devices equally)
-+    const double sim = env_mib("TOSH_AUTO_SIM_VRAM_MIB", 0);
++    const double sim = env_mib("XEON_AUTO_SIM_VRAM_MIB", 0);
 +    if (sim > 0) {
 +        for (size_t i = 0; i < free_mib.size(); ++i) {
 +            free_mib[i] = std::max(0.0, sim - (total_mib[i] - free_mib[i]));
@@ -132,11 +132,11 @@ index 346984fd6..04b6a2084 100644
  
  } // namespace
  
- const char * tosh_plan_state_name(tosh_plan_state s) {
+ const char * xeon_plan_state_name(xeon_plan_state s) {
      switch (s) {
-         case TOSH_PLAN_NOT_PLANNED:            return "NOT_PLANNED";
-         case TOSH_PLAN_FULL_GPU_OPTIMAL:       return "FULL_GPU_OPTIMAL";
-@@ -485,17 +559,28 @@ std::string tosh_plan_json(const tosh_plan & p) {
+         case XEON_PLAN_NOT_PLANNED:            return "NOT_PLANNED";
+         case XEON_PLAN_FULL_GPU_OPTIMAL:       return "FULL_GPU_OPTIMAL";
+@@ -485,17 +559,28 @@ std::string xeon_plan_json(const xeon_plan & p) {
      o += ", \"candidates\": [";
      for (size_t i = 0; i < p.candidates.size(); ++i) {
          const auto & c = p.candidates[i];
@@ -160,13 +160,13 @@ index 346984fd6..04b6a2084 100644
 +    return o + "}";
  }
  
- static void plan_log(const tosh_plan & p) {
-     LOG_DBG("Tosh auto memory plan\n");
+ static void plan_log(const xeon_plan & p) {
+     LOG_DBG("Xeon auto memory plan\n");
      LOG_DBG("  requested context %d, VRAM %.1f GiB (%.1f free), reserve %.1f GiB\n",
              p.n_ctx, p.vram_total_mib/1024, p.vram_free_mib/1024, p.reserve_mib/1024);
      for (const auto & c : p.candidates) {
          LOG_DBG("  %-22s ub %4d  private %6.0f MiB  free %6.0f MiB  arena %6.0f MiB  %s: %s\n", c.name.c_str(), c.ubatch,
-@@ -657,16 +742,35 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+@@ -657,16 +742,35 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
          f.model += mi.bank_mib;
          f.host_model = std::max(0.0, f.host_model - mi.bank_mib);
          full.push_back({ kvs[k], f });
@@ -198,11 +198,11 @@ index 346984fd6..04b6a2084 100644
      p.host_weights_mib = dm[0][0].ok ? std::max(mi.embd_mib, dm[0][0].host_model - mi.bank_mib - mi.lazy_mib) : mi.embd_mib;
      p.host_lazy_mib = mi.lazy_mib;
      const bool runtime = host_policy_runtime() && dmoe_built;
-     const tosh_plan base = p;
+     const xeon_plan base = p;
  
      // the decision from one host memory snapshot; run again when memory changed before committing
-     auto decide = [&](const host_mem & hi) -> const tosh_plan_candidate * {
-@@ -751,83 +855,151 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+     auto decide = [&](const host_mem & hi) -> const xeon_plan_candidate * {
+@@ -751,83 +855,151 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
                 why.find("LOCK_LIMIT") != std::string::npos ? "WIRE_LIMIT" :
                 why.find("STRUCTURAL_WARM") != std::string::npos ? "STRUCTURAL_WARM_TOO_SMALL" :
                 why.find("COVERAGE") != std::string::npos ? "COVERAGE_TOO_LOW" :
@@ -214,7 +214,7 @@ index 346984fd6..04b6a2084 100644
 +        const int n_dev = dm[0][0].n_dev;
 +        const bool multi_gpu = n_dev >= 2 && !p.devices.empty();
          for (auto & [kv, pr] : full) {
-             tosh_plan_candidate c;
+             xeon_plan_candidate c;
              c.name = std::string("full_gpu+") + kv_name(kv); c.mode = "full_gpu"; c.kv = kv; c.ubatch = ub_full;
 -            c.private_mib = pr.model + pr.context + pr.compute;
 -            c.free_mib    = p.vram_free_mib - c.private_mib;
@@ -255,7 +255,7 @@ index 346984fd6..04b6a2084 100644
          for (size_t k = 0; k < kvs.size() && dmoe_built; ++k) {
              for (int u = 0; u < 3; ++u) {
                  const probe & pr = dm[k][u];
-                 tosh_plan_candidate c;
+                 xeon_plan_candidate c;
                  c.name = std::string("dmoe+") + kv_name(kvs[k]); c.mode = "dmoe"; c.kv = kvs[k]; c.ubatch = ubs[u];
 -                const double base = pr.model + pr.context + pr.compute;
 -                c.arena_mib   = std::max(0.0, p.vram_free_mib - base - slots - overhead - R);
@@ -339,7 +339,7 @@ index 346984fd6..04b6a2084 100644
          }
          // legacy: the fewest layers of experts on the host that leave the reserve
          for (auto & [kv, pr] : full) {
-             tosh_plan_candidate c;
+             xeon_plan_candidate c;
              c.name = std::string("legacy+") + kv_name(kv); c.mode = "legacy_offload"; c.kv = kv; c.ubatch = ub_full;
 -            const double per_layer = mi.bank_mib/std::max(1, mi.n_moe);
 -            const double full_priv = pr.model + pr.context + pr.compute;
@@ -397,14 +397,14 @@ index 346984fd6..04b6a2084 100644
          }
      };
  
-     auto find = [&](const std::string & mode, ggml_type kv, int ub) -> tosh_plan_candidate * {
+     auto find = [&](const std::string & mode, ggml_type kv, int ub) -> xeon_plan_candidate * {
          for (auto & c : p.candidates) if (c.mode == mode && c.kv == kv && (ub == 0 || c.ubatch == ub)) return &c;
          return nullptr;
      };
-@@ -953,16 +1125,22 @@ bool tosh_plan_apply(common_params & params, tosh_plan * out) {
+@@ -953,16 +1125,22 @@ bool xeon_plan_apply(common_params & params, xeon_plan * out) {
              if (runtime) p.coverage = (sel->arena_mib + mi.bank_mib)/mi.bank_mib;
          } else {
-             p.state = TOSH_PLAN_LEGACY_OFFLOAD_BETTER;
+             p.state = XEON_PLAN_LEGACY_OFFLOAD_BETTER;
              p.host_required_mib = mi.bank_mib*sel->ncmoe/std::max(1, mi.n_moe) + host_engine;
              p.mlock = "not_required";
              if (!dmoe_block.empty()) p.fallback = dmoe_block;
@@ -424,11 +424,11 @@ index 346984fd6..04b6a2084 100644
          p.projected_left_mib = hi.reclaimable_mib - p.host_required_mib;
      }
      // what ruled out each mode preferred over the selected one
-diff --git a/common/tosh-plan.h b/common/tosh-plan.h
+diff --git a/common/xeon-plan.h b/common/xeon-plan.h
 index 186a81684..c2c065553 100644
---- a/common/tosh-plan.h
-+++ b/common/tosh-plan.h
-@@ -44,16 +44,18 @@ struct tosh_plan_candidate {
+--- a/common/xeon-plan.h
++++ b/common/xeon-plan.h
+@@ -44,16 +44,18 @@ struct xeon_plan_candidate {
      std::string reason;
      double      private_mib = 0;    // projected VRAM this process holds
      double      free_mib    = 0;    // projected VRAM left on the card
@@ -441,13 +441,13 @@ index 186a81684..c2c065553 100644
 +    std::vector<double> dev_arena_mib;
  };
  
- struct tosh_plan {
-     tosh_plan_state state = TOSH_PLAN_NOT_PLANNED;
-     tosh_plan_mode  plan_mode = TOSH_PLAN_MODE_NONE;
+ struct xeon_plan {
+     xeon_plan_state state = XEON_PLAN_NOT_PLANNED;
+     xeon_plan_mode  plan_mode = XEON_PLAN_MODE_NONE;
      std::string primary_reason;     // why this mode and not the preferred one, e.g. CURRENT_RAM_LIMIT
      std::vector<std::string> warnings;  // e.g. COVERAGE_CONSTRAINED, RESERVE_LOWERED, REPLANNED
      std::string limiting_resource;  // VRAM, HOST_RAM, WIRE, METADATA or NONE
-@@ -112,16 +114,27 @@ struct tosh_plan {
+@@ -112,16 +114,27 @@ struct xeon_plan {
      double      static_cap_mib    = 0;  // every budget below is bytes this load may still add
      double      dynamic_cap_mib   = 0;
      double      lockable_mib      = 0;
@@ -457,7 +457,7 @@ index 186a81684..c2c065553 100644
      double      projected_rss_mib = 0;
      double      projected_left_mib = 0; // reclaimable memory left to the system after the load
 +    // per-device breakdown (only populated when n_dev >= 2)
-+    struct tosh_plan_device {
++    struct xeon_plan_device {
 +        int     index = 0;
 +        double  free_mib       = 0;
 +        double  total_mib      = 0;
@@ -466,13 +466,13 @@ index 186a81684..c2c065553 100644
 +        double  compute_mib    = 0;
 +        double  arena_mib      = 0;
 +    };
-+    std::vector<tosh_plan_device> devices;
-     std::vector<tosh_plan_candidate> candidates;
++    std::vector<xeon_plan_device> devices;
+     std::vector<xeon_plan_candidate> candidates;
  };
  
- const char * tosh_plan_state_name(tosh_plan_state s);
- const char * tosh_plan_mode_name(tosh_plan_mode m);
- std::string  tosh_plan_json(const tosh_plan & plan);
+ const char * xeon_plan_state_name(xeon_plan_state s);
+ const char * xeon_plan_mode_name(xeon_plan_mode m);
+ std::string  xeon_plan_json(const xeon_plan & plan);
  
  // Plans and applies the result to params. Returns false when planning is off or not needed, and
 diff --git a/ggml/src/ggml-metal/ggml-metal-device.m b/ggml/src/ggml-metal/ggml-metal-device.m
@@ -483,30 +483,30 @@ index 4ec61f38d..642248f96 100644
                  // the expert arena is sized from what the card has free before anything is allocated;
                  // taken for every process, since mixed execution can be chosen after the device starts
                  {
-                     tosh_dmoe_set_private_query(ggml_metal_private_bytes);
+                     xeon_dmoe_set_private_query(ggml_metal_private_bytes);
                      if (g_vram_dev == nil) {
                          g_vram_dev = dev->mtl_device;
-                         tosh_dmoe_set_vram_query(ggml_metal_vram_query);
+                         xeon_dmoe_set_vram_query(ggml_metal_vram_query);
                      }
 -                    size_t vfree = 0, vtotal = 0;
--                    if (tosh_vram_read(&vfree, &vtotal)) {
--                        tosh_dmoe_set_vram(vfree, vtotal);
+-                    if (xeon_vram_read(&vfree, &vtotal)) {
+-                        xeon_dmoe_set_vram(vfree, vtotal);
 -                    } else {
--                        tosh_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
+-                        xeon_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
 +                    // record VRAM for this specific Metal device (index matches Metal backend's device order)
 +                    int64_t vfree = 0, vused = 0;
 +                    if (ggml_metal_vram_stats(dev->mtl_device, &vfree, &vused)) {
 +                        size_t total = (size_t) vfree + (size_t) vused;
 +                        size_t free  = vfree > 0 ? (size_t) vfree : total; // driver free can lag; use not-in-use as free
-+                        tosh_dmoe_set_vram_dev(device, free, total);
++                        xeon_dmoe_set_vram_dev(device, free, total);
 +                    }
 +                    // also set the legacy single-device VRAM from the first device
 +                    if (device == 0) {
 +                        size_t vfree2 = 0, vtotal2 = 0;
-+                        if (tosh_vram_read(&vfree2, &vtotal2)) {
-+                            tosh_dmoe_set_vram(vfree2, vtotal2);
++                        if (xeon_vram_read(&vfree2, &vtotal2)) {
++                            xeon_dmoe_set_vram(vfree2, vtotal2);
 +                        } else {
-+                            tosh_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
++                            xeon_dmoe_set_vram(dev->props.max_working_set_size, dev->props.max_working_set_size);
 +                        }
                      }
                  }
@@ -516,12 +516,12 @@ index 4ec61f38d..642248f96 100644
                      const char * val = getenv("GGML_METAL_FUSION_DEBUG");
                      dev->finfo = ggml_metal_fusion_info_init(
                              getenv("GGML_METAL_FUSION_DISABLE") == nil,
-diff --git a/tosh-moe/tosh-dmoe.cpp b/tosh-moe/tosh-dmoe.cpp
+diff --git a/xeon-moe/xeon-dmoe.cpp b/xeon-moe/xeon-dmoe.cpp
 index 7423a52cf..75a1fb1b1 100644
---- a/tosh-moe/tosh-dmoe.cpp
-+++ b/tosh-moe/tosh-dmoe.cpp
-@@ -152,27 +152,42 @@ void tosh_dmoe_timeline(int kind, int il, double t0, double t1) {
-     static const bool on = getenv("TOSH_DMOE_TIMELINE") != nullptr;
+--- a/xeon-moe/xeon-dmoe.cpp
++++ b/xeon-moe/xeon-dmoe.cpp
+@@ -152,27 +152,42 @@ void xeon_dmoe_timeline(int kind, int il, double t0, double t1) {
+     static const bool on = getenv("XEON_DMOE_TIMELINE") != nullptr;
      if (!on) return;
      std::lock_guard<std::mutex> lock(g_tl_mutex);
      if (g_tl.empty()) { g_tl.reserve(1 << 20); atexit(tl_dump); }
@@ -531,24 +531,24 @@ index 7423a52cf..75a1fb1b1 100644
  static size_t g_vram_free = 0, g_vram_total = 0;
 +static size_t g_vram_dev_free[8]  = { 0 };
 +static size_t g_vram_dev_total[8] = { 0 };
- void tosh_dmoe_set_vram(size_t free_at_start, size_t total) {
+ void xeon_dmoe_set_vram(size_t free_at_start, size_t total) {
      if (g_vram_total == 0) { g_vram_free = free_at_start; g_vram_total = total; }
  }
 -static size_t (*g_private_query)(void) = nullptr;
--void   tosh_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
--size_t tosh_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
+-void   xeon_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
+-size_t xeon_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
 -
-+void tosh_dmoe_set_vram_dev(int index, size_t free_at_start, size_t total) {
++void xeon_dmoe_set_vram_dev(int index, size_t free_at_start, size_t total) {
 +    if (index >= 0 && index < 8 && g_vram_dev_total[index] == 0) {
 +        g_vram_dev_free[index]  = free_at_start;
 +        g_vram_dev_total[index] = total;
 +    }
 +}
- bool tosh_dmoe_vram(size_t * free_at_start, size_t * total) {
+ bool xeon_dmoe_vram(size_t * free_at_start, size_t * total) {
      *free_at_start = g_vram_free; *total = g_vram_total;
      return g_vram_total > 0;
  }
-+bool tosh_dmoe_vram_dev(int index, size_t * free_at_start, size_t * total) {
++bool xeon_dmoe_vram_dev(int index, size_t * free_at_start, size_t * total) {
 +    if (index >= 0 && index < 8 && g_vram_dev_total[index] > 0) {
 +        *free_at_start = g_vram_dev_free[index];
 +        *total = g_vram_dev_total[index];
@@ -557,37 +557,37 @@ index 7423a52cf..75a1fb1b1 100644
 +    return false;
 +}
 +static size_t (*g_private_query)(void) = nullptr;
-+void   tosh_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
-+size_t tosh_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
++void   xeon_dmoe_set_private_query(size_t (*fn)(void)) { g_private_query = fn; }
++size_t xeon_dmoe_private_bytes(void) { return g_private_query ? g_private_query() : 0; }
  
  static bool (*g_vram_query)(int64_t *, int64_t *) = nullptr;
- void tosh_dmoe_set_vram_query(bool (*fn)(int64_t *, int64_t *)) { g_vram_query = fn; }
+ void xeon_dmoe_set_vram_query(bool (*fn)(int64_t *, int64_t *)) { g_vram_query = fn; }
  
- bool tosh_vram_read(size_t * vfree, size_t * total) {
+ bool xeon_vram_read(size_t * vfree, size_t * total) {
      if (g_vram_query == nullptr) {
          return false;
      }
-diff --git a/tosh-moe/tosh-dmoe.h b/tosh-moe/tosh-dmoe.h
+diff --git a/xeon-moe/xeon-dmoe.h b/xeon-moe/xeon-dmoe.h
 index cc40c42f8..e5a5098fe 100644
---- a/tosh-moe/tosh-dmoe.h
-+++ b/tosh-moe/tosh-dmoe.h
-@@ -73,16 +73,19 @@ void tosh_dmoe_rare_interrupt(void);
+--- a/xeon-moe/xeon-dmoe.h
++++ b/xeon-moe/xeon-dmoe.h
+@@ -73,16 +73,19 @@ void xeon_dmoe_rare_interrupt(void);
  
- // Prefill timeline for overlap studies (TOSH_DMOE_TIMELINE=<file>): kind, layer, host seconds.
- void tosh_dmoe_timeline(int kind, int il, double t0, double t1);
- double tosh_dmoe_host_seconds(void);
+ // Prefill timeline for overlap studies (XEON_DMOE_TIMELINE=<file>): kind, layer, host seconds.
+ void xeon_dmoe_timeline(int kind, int il, double t0, double t1);
+ double xeon_dmoe_host_seconds(void);
  
  // Free VRAM before this process allocated anything, and the card's total, as the driver sees them.
- void tosh_dmoe_set_vram(size_t free_at_start, size_t total);
- bool tosh_dmoe_vram(size_t * free_at_start, size_t * total);
+ void xeon_dmoe_set_vram(size_t free_at_start, size_t total);
+ bool xeon_dmoe_vram(size_t * free_at_start, size_t * total);
 +// Per-device VRAM (for multi-GPU). Index matches the Metal backend's device order.
-+void tosh_dmoe_set_vram_dev(int index, size_t free_at_start, size_t total);
-+bool tosh_dmoe_vram_dev(int index, size_t * free_at_start, size_t * total);
++void xeon_dmoe_set_vram_dev(int index, size_t free_at_start, size_t total);
++bool xeon_dmoe_vram_dev(int index, size_t * free_at_start, size_t * total);
  // The driver's live counters (free, and in use by every process), set by the GPU backend.
- void tosh_dmoe_set_vram_query(bool (*fn)(int64_t * vfree, int64_t * vused));
+ void xeon_dmoe_set_vram_query(bool (*fn)(int64_t * vfree, int64_t * vused));
  // Free VRAM as the card's size less what every process holds, median of three samples. The
  // driver's free counter lags behind released memory; a disagreement is logged, not used.
- bool tosh_vram_read(size_t * vfree, size_t * total);
+ bool xeon_vram_read(size_t * vfree, size_t * total);
  // Mixed execution chosen at run time, after the environment was first read.
- void tosh_dmoe_enable(void);
+ void xeon_dmoe_enable(void);
  // VRAM this process holds in the GPU backend's own buffers, 0 when the backend does not say

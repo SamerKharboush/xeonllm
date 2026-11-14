@@ -8,7 +8,7 @@ index 20585220a..fb4fb94c8 100644
  
 +    // prefill by tiles of 64 channels x 32 tokens, both sides coalesced
 +    const ggml_metal_device_props * props_ssm = ggml_metal_device_get_props(ctx->dev);
-+    if (props_ssm->simd_width == 32 && !props_ssm->has_unified_memory && ne1 > 1 && ne10 <= 8 && nb00 == sizeof(float) && nb0 == sizeof(float) && TOSH_ENV("TOSH_SSM_CONV_TILED_DISABLE") == nullptr) {
++    if (props_ssm->simd_width == 32 && !props_ssm->has_unified_memory && ne1 > 1 && ne10 <= 8 && nb00 == sizeof(float) && nb0 == sizeof(float) && XEON_ENV("XEON_SSM_CONV_TILED_DISABLE") == nullptr) {
 +        char name[128];
 +        snprintf(name, sizeof(name), "kernel_ssm_conv_f32_f32_tiled_nc=%d_silu=%d", (int) ne10, use_silu ? 1 : 0);
 +        ggml_metal_pipeline_with_params pipeline = ggml_metal_library_get_pipeline(lib, name);

@@ -19,18 +19,18 @@ index 71ab82314..90bd728a5 100644
 @@ -2358,6 +2358,14 @@ static const ggml_tensor * ggml_metal_gdn_fold_dst(ggml_metal_op_t ctx, int idx)
  
  static bool ggml_metal_gdn_state_fusion_on(ggml_metal_op_t ctx) {
-     static const bool disabled = TOSH_ENV("TOSH_GDN_STATE_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_GDN_STATE_FUSION_DISABLE") != nullptr;
 +    // the fused state gather/copy is wrong when more than one Metal device is in use: the dense
 +    // qwen35 27B layer split over two D700s answered zeros (beta 8 ticket 16), root cause still
 +    // open; the unfused path is correct there
-+    static const bool multi = TOSH_ENV("TOSH_GDN_STATE_FUSION_MULTI") != nullptr &&
-+                              atoi(TOSH_ENV("TOSH_GDN_STATE_FUSION_MULTI")) != 0;
++    static const bool multi = XEON_ENV("XEON_GDN_STATE_FUSION_MULTI") != nullptr &&
++                              atoi(XEON_ENV("XEON_GDN_STATE_FUSION_MULTI")) != 0;
 +    if (!multi && ggml_metal_device_count() > 1) {
 +        return false;
 +    }
      // with expert layers on two cards the fused state gather/copy answers with NaN (found on the
      // 35B with Dynamic MoE across both D700s, root cause open); the unfused path is correct there
- #ifdef TOSH_ENABLE_DYNAMIC_MOE
+ #ifdef XEON_ENABLE_DYNAMIC_MOE
 diff --git a/ggml/src/ggml-metal/ggml-metal.cpp b/ggml/src/ggml-metal/ggml-metal.cpp
 index f93624097..c55610ee1 100644
 --- a/ggml/src/ggml-metal/ggml-metal.cpp

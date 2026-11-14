@@ -21,7 +21,7 @@
       "title": {"es": "Reloj", "en": "Clock"},
       "fields": [
         {
-          "key": "TOSH_CLOCK_DEFAULT_ZONE",
+          "key": "XEON_CLOCK_DEFAULT_ZONE",
           "kind": "text",
           "placeholder": "Europe/Madrid",
           "title": {"es": "Zona por defecto", "en": "Default zone"},

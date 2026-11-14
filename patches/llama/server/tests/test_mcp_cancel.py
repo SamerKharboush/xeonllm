@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """POST /tools of the patched llama-server against the synthetic MCP server in mcp_probe.py: a caller
@@ -34,8 +34,8 @@ HOST = "127.0.0.1"
 # far above every bound asserted below, so a call that waits for another call's timeout fails the test
 LONG_MS = 10000
 TEST_SECONDS = 90
-KEEP = os.environ.get("TOSH_TEST_KEEP") == "1"
-TIMINGS = os.environ.get("TOSH_TEST_TIMINGS")
+KEEP = os.environ.get("XEON_TEST_KEEP") == "1"
+TIMINGS = os.environ.get("XEON_TEST_TIMINGS")
 
 
 def note(key, seconds):
@@ -84,7 +84,7 @@ class Engine:
     answers chat requests."""
 
     def __init__(self, timeout_ms, agent=False):
-        self.dir = tempfile.mkdtemp(prefix="tosh-mcp-test-")
+        self.dir = tempfile.mkdtemp(prefix="xeon-mcp-test-")
         self.log = os.path.join(self.dir, "probe.log")
         self.port = free_port()
         self.timeout_ms = timeout_ms
@@ -136,7 +136,7 @@ class Engine:
     def start_chat(self, timeout=30):
         connection = http.client.HTTPConnection(HOST, self.port, timeout=timeout)
         connection.request("POST", "/v1/chat/completions", json.dumps({"messages": [{"role": "user", "content": "hi"}]}),
-                           {"Content-Type": "application/json", "X-Tosh-Agent": "on"})
+                           {"Content-Type": "application/json", "X-Xeon-Agent": "on"})
         return connection
 
     def hold(self):
@@ -461,7 +461,7 @@ class McpCancelTest(EngineTest):
         connection = http.client.HTTPConnection(HOST, engine.port, timeout=30)
         connection.request("POST", "/v1/chat/completions",
                            json.dumps({"messages": [{"role": "user", "content": "hi"}], "stream": True}),
-                           {"Content-Type": "application/json", "X-Tosh-Agent": "on"})
+                           {"Content-Type": "application/json", "X-Xeon-Agent": "on"})
         content, events = "", []
         for raw in connection.getresponse():
             line = raw.decode().strip()
@@ -470,8 +470,8 @@ class McpCancelTest(EngineTest):
             chunk = json.loads(line[6:])
             for choice in chunk.get("choices") or []:
                 content += (choice.get("delta") or {}).get("content") or ""
-            if (chunk.get("tosh") or {}).get("event"):
-                events.append(chunk["tosh"]["event"]["type"])
+            if (chunk.get("xeon") or {}).get("event"):
+                events.append(chunk["xeon"]["event"]["type"])
         connection.close()
         self.assertEqual(content, "The answer is 42.")
         self.assertIn("draft", events)

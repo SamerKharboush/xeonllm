@@ -325,7 +325,7 @@ index 0c1ade4..7079844 100644
 -            q      = Rope::apply_rope(ctx->ggml_ctx, q, pe);
 -            k      = Rope::apply_rope(ctx->ggml_ctx, k, pe);
 +            // one pass over the table instead of the generic permute/repeat/mul/add chain
-+            static const bool rope_table_off = getenv("TOSH_QWEN21_ROPE_TABLE_DISABLE") != nullptr;
++            static const bool rope_table_off = getenv("XEON_QWEN21_ROPE_TABLE_DISABLE") != nullptr;
 +            auto rope = [&](ggml_tensor* t) {
 +                return rope_table_off ? Rope::apply_rope(ctx->ggml_ctx, t, pe) : ggml_rope_table(ctx->ggml_ctx, t, pe);
 +            };

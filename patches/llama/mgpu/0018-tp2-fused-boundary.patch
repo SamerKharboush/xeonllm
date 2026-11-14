@@ -17,7 +17,7 @@ index 35748eac9..9d6fba29a 100644
  
  static bool ggml_metal_ctime_barrier(void) {
      static int v = -1;
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
      return v == 1;
  }
  
@@ -27,13 +27,13 @@ index 35748eac9..9d6fba29a 100644
  static _Atomic uint64_t g_ct_hw[8], g_ct_hp[8], g_ct_hr[8];
  static double g_ct_ns_per_tick = 0.0;
  
- static int tosh_ct_bucket(double us) {
+ static int xeon_ct_bucket(double us) {
      return us < 1 ? 0 : us < 5 ? 1 : us < 10 ? 2 : us < 20 ? 3 :
             us < 50 ? 4 : us < 100 ? 5 : us < 200 ? 6 : 7;
  }
 @@ -689,17 +692,30 @@ static bool ggml_metal_bp_satisfied(void) {
          if (v) {
-             fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_BP_SATISFIED=1, the collective does not "
+             fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_BP_SATISFIED=1, the collective does not "
                              "wait before reusing the staging block. Benchmark only.\n");
          }
      }
@@ -45,7 +45,7 @@ index 35748eac9..9d6fba29a 100644
 +static bool ggml_metal_tp2_fused_boundary(int64_t batch) {
 +    static int v = -2;
 +    if (v == -2) {
-         const char * s = TOSH_ENV("TOSH_MGPU_TP2_FUSED_BOUNDARY");
+         const char * s = XEON_ENV("XEON_MGPU_TP2_FUSED_BOUNDARY");
 +        v = s ? (s[0] == '1' ? 1 : 0) : -1;
 +    }
 +    if (v >= 0) {
@@ -57,12 +57,12 @@ index 35748eac9..9d6fba29a 100644
  static bool ggml_metal_wait_satisfied(void) {
      static int v = -1;
      if (v < 0) {
-         const char * s = TOSH_ENV("TOSH_MGPU_WAIT_SATISFIED");
+         const char * s = XEON_ENV("XEON_MGPU_WAIT_SATISFIED");
          v = (s && s[0] == '1') ? 1 : 0;
          if (v) {
-             fprintf(stderr, "ggml_metal: WARNING TOSH_MGPU_WAIT_SATISFIED=1, the collective never "
+             fprintf(stderr, "ggml_metal: WARNING XEON_MGPU_WAIT_SATISFIED=1, the collective never "
                              "waits for the peer and the output is meaningless. Benchmark only.\n");
-@@ -795,16 +811,18 @@ static void tosh_mgpu_trace_report(void) {
+@@ -795,16 +811,18 @@ static void xeon_mgpu_trace_report(void) {
              _Atomic uint64_t * hh[3] = {g_ct_hp, g_ct_hw, g_ct_hr};
              for (int k = 0; k < 3; k++) {
                  fprintf(stderr, "    %s us ", rn[k]);
@@ -90,12 +90,12 @@ index 35748eac9..9d6fba29a 100644
  
  // acc += a plain buffer laid out exactly like acc. The collective's partner publishes its
  // partial that way, so the add can read it straight across the fabric with no tensor to wrap.
-+// TOSH_MGPU_FB_ADD_RB=0 keeps the generic add below. A single row goes through the row-broadcast
++// XEON_MGPU_FB_ADD_RB=0 keeps the generic add below. A single row goes through the row-broadcast
 +// float4 variant the graph already uses for the residual, since bin_one strides a few threads
 +// across the whole row and is several times slower on it.
 +static bool ggml_metal_fb_add_rb(void) {
 +    static int v = -1;
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
 +    return v == 1;
 +}
 +
@@ -170,10 +170,10 @@ index 35748eac9..9d6fba29a 100644
 +// residual add that consumes the reduced tensor folds it in as a third addend, which saves the
 +// boundary's own add and encoder. The slot is released at the end of that subgraph, so the
 +// staged exchange alternates two slots and back-pressure waits on the round that used the slot.
-+// TOSH_MGPU_FB_RESIDUAL=0 keeps the add inside the boundary.
++// XEON_MGPU_FB_RESIDUAL=0 keeps the add inside the boundary.
 +static bool ggml_metal_fb_residual(void) {
 +    static int v = -1;
-+    if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_FB_RESIDUAL"); v = (s && s[0] == '0') ? 0 : 1; }
++    if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_FB_RESIDUAL"); v = (s && s[0] == '0') ? 0 : 1; }
 +    return v == 1;
 +}
 +
@@ -217,7 +217,7 @@ index 35748eac9..9d6fba29a 100644
 +    peer->metal = st->buf;
 +    peer->offs  = st->off;
 +    st->state = 3;
-+    if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_res_fold, 1);
++    if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_res_fold, 1);
 +    return true;
 +}
 +
@@ -267,7 +267,7 @@ index 35748eac9..9d6fba29a 100644
 +    }
 +    const bool added = ggml_metal_add_inplace_buffer(ctx, cmd_buf, (struct ggml_tensor *) t, st->buf, st->off);
 +    GGML_ASSERT(added);
-+    if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++    if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +    [cmd_buf encodeSignalEvent:st->ev_done value:st->seq];
 +    st->state = 0;
 +}
@@ -280,7 +280,7 @@ index 35748eac9..9d6fba29a 100644
 +    }
 +    GGML_ASSERT(st->state != 2 && "an armed TP2 partial was not folded");
 +    if (st->state == 3) {
-+        if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++        if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +        [cmd_buf encodeSignalEvent:st->ev_done value:st->seq];
 +        st->state = 0;
 +    }
@@ -309,7 +309,7 @@ index 35748eac9..9d6fba29a 100644
 -        id<MTLCommandBuffer> cmd_buf = [queue commandBuffer];
 -        ggml_metal_event_encode_wait(ctx_dst->ev_sync, cmd_buf);
 -        id<MTLBlitCommandEncoder> encoder = [cmd_buf blitCommandEncoder];
-     const uint64_t t_enter = tosh_mgpu_trace() ? tosh_now_ns() : 0;
+     const uint64_t t_enter = xeon_mgpu_trace() ? xeon_now_ns() : 0;
  
 +    // The add reads the shared block in place of a temporary: same element type, same shape,
 +    // contiguous, and the block is a page-aligned host allocation at least this long.
@@ -346,19 +346,19 @@ index 35748eac9..9d6fba29a 100644
          id<MTLCommandBuffer> cmd_buf = ggml_metal_cmd_buf_continue(ctx_self);
  
 +        if (bp_seq > 0) {
-             if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
+             if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
              if (ggml_metal_bp_satisfied()) {
-                 [cmd_buf encodeWaitForEvent:tosh_wait_dummy(ctx_self) value:1];
+                 [cmd_buf encodeWaitForEvent:xeon_wait_dummy(ctx_self) value:1];
              } else {
 +                [cmd_buf encodeWaitForEvent:link_out->ev_x_done value:bp_seq];
              }
          }
  
-         id<MTLCounterSampleBuffer> cts = tosh_ct_buffer(ctx_self);
+         id<MTLCounterSampleBuffer> cts = xeon_ct_buffer(ctx_self);
          uint64_t cbase = 0;
          const bool cbar = ggml_metal_ctime_barrier();
          if (cts != nil) {
-             cbase = (atomic_fetch_add(&ctx_self->ct_idx, 1) % TOSH_CT_SLOTS)*TOSH_CT_PER;
+             cbase = (atomic_fetch_add(&ctx_self->ct_idx, 1) % XEON_CT_SLOTS)*XEON_CT_PER;
          }
  
 -        ggml_metal_event_t ev_cpy = ggml_metal_get_ev_cpy(ctx_src);
@@ -386,7 +386,7 @@ index 35748eac9..9d6fba29a 100644
 +            ggml_metal_encoder_dispatch_threadgroups(ec, (n + nth - 1)/nth, 1, 1, nth, 1, 1);
 +            ggml_metal_encoder_end_encoding(ec);
 +            ggml_metal_encoder_free(ec);
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_fused_bnd, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_fused_bnd, 1);
 +        } else {
 +            id<MTLBlitCommandEncoder> enc_out = [cmd_buf blitCommandEncoder];
 +            if (cts != nil) { [enc_out sampleCountersInBuffer:cts atSampleIndex:cbase + 0 withBarrier:cbar]; }
@@ -395,13 +395,13 @@ index 35748eac9..9d6fba29a 100644
 +            if (cts != nil) { [enc_out sampleCountersInBuffer:cts atSampleIndex:cbase + 1 withBarrier:cbar]; }
 +            [enc_out endEncoding];
 +        }
-         if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
+         if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
          [cmd_buf encodeSignalEvent:link_out->ev_x_ready value:seq_out];
  
 -        [cmd_buf commit];
-         if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
+         if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_waits, 1);
          if (ggml_metal_wait_satisfied()) {
-             [cmd_buf encodeWaitForEvent:tosh_wait_dummy(ctx_self) value:1];
+             [cmd_buf encodeWaitForEvent:xeon_wait_dummy(ctx_self) value:1];
          } else {
              [cmd_buf encodeWaitForEvent:link_in->ev_x_ready value:seq_in];
          }
@@ -420,7 +420,7 @@ index 35748eac9..9d6fba29a 100644
 +            } else {
 +                const bool added = ggml_metal_add_inplace_buffer(ctx_self, cmd_buf, t_self, link_in->wrap_dst, 0);
 +                GGML_ASSERT(added);
-+                if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++                if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +                [cmd_buf encodeSignalEvent:link_in->ev_x_done value:seq_in];
 +            }
 +        } else {
@@ -430,7 +430,7 @@ index 35748eac9..9d6fba29a 100644
 +                          toBuffer:bid_tmp.metal destinationOffset:bid_tmp.offs size:size];
 +            if (cts != nil) { [enc_in sampleCountersInBuffer:cts atSampleIndex:cbase + 3 withBarrier:cbar]; }
 +            [enc_in endEncoding];
-+            if (tosh_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
++            if (xeon_mgpu_trace()) atomic_fetch_add(&g_tr_signals, 1);
 +            [cmd_buf encodeSignalEvent:link_in->ev_x_done value:seq_in];
  
 +            ggml_metal_add_inplace_into(ctx_self, cmd_buf, t_self, tmp_self);
@@ -439,16 +439,16 @@ index 35748eac9..9d6fba29a 100644
          if (cts != nil) {
              id<MTLCounterSampleBuffer> csr = cts;
              const uint64_t cb2 = cbase;
-             [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) { (void) cb; tosh_ct_record(csr, cb2); }];
+             [cmd_buf addCompletedHandler:^(id<MTLCommandBuffer> cb) { (void) cb; xeon_ct_record(csr, cb2); }];
          }
  
-         tosh_trace_cmd_buf(cmd_buf);
+         xeon_trace_cmd_buf(cmd_buf);
 @@ -3439,16 +3688,17 @@ enum ggml_status ggml_metal_graph_compute(ggml_metal_t ctx, struct ggml_cgraph *
                  [ctx->cmd_bufs[n_cb].obj release];
              }
              ctx->cmd_bufs[n_cb].obj = cmd_buf;
  
-             tosh_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
+             xeon_trace_graph_end(cmd_buf, (int) (([(id<MTLDevice>) ggml_metal_device_get_obj(ctx->dev) peerIndex]) & 1));
  
              [cmd_buf enqueue];
  
@@ -699,7 +699,7 @@ index e8f0c816f..7ce270237 100644
      if (pipeline.pipeline) {
 @@ -4872,19 +4904,25 @@ int ggml_metal_op_flash_attn_ext(ggml_metal_op_t ctx, int idx) {
          static const int64_t wg_dk128_env = []() {
-             const char * s = TOSH_ENV("TOSH_FA_WG_DK128_MIN_KV");
+             const char * s = XEON_ENV("XEON_FA_WG_DK128_MIN_KV");
              return s ? (int64_t) atoll(s) : (int64_t) -1;
          }();
          const bool wg_wide_head =
@@ -708,9 +708,9 @@ index e8f0c816f..7ce270237 100644
          const int64_t wg_dk128_min_kv = wg_dk128_env >= 0 ? wg_dk128_env
 +                                      : (props_dev->simd_width == 64 ? ggml_metal_fa_wg_dk128_min_kv_w64(ne02, ne12) : 24576);
          const bool wg_dk128_width_ok = props_dev->simd_width == 32 || props_dev->simd_width == 64;
-+        // TOSH_FA_WG_DK64=<kv> sets the head-64 depth for every shape, 0 closes it
++        // XEON_FA_WG_DK64=<kv> sets the head-64 depth for every shape, 0 closes it
 +        static const int64_t wg_dk64_env = []() {
-             const char * s = TOSH_ENV("TOSH_FA_WG_DK64");
+             const char * s = XEON_ENV("XEON_FA_WG_DK64");
 +            return s ? (int64_t) atoll(s) : (int64_t) -1;
          }();
 +        const int64_t wg_dk64_min_kv = wg_dk64_env >= 0 ? wg_dk64_env
@@ -739,7 +739,7 @@ index e8f0c816f..7ce270237 100644
 +            // the norm that reads the sum and its weight can run in the same kernel when nothing
 +            // else reads the unweighted norm
 +            static int fuse_rms = -1;
-+            if (fuse_rms < 0) { const char * e = getenv("TOSH_MGPU_FB_RMS"); fuse_rms = (e && e[0] == '0') ? 0 : 1; }
++            if (fuse_rms < 0) { const char * e = getenv("XEON_MGPU_FB_RMS"); fuse_rms = (e && e[0] == '0') ? 0 : 1; }
 +            ggml_tensor * rms = idx + 2 < ctx->n_nodes() ? ctx->node(idx + 1) : nullptr;
 +            ggml_tensor * mul = idx + 2 < ctx->n_nodes() ? ctx->node(idx + 2) : nullptr;
 +            bool fuse = fuse_rms && rms != nullptr && mul != nullptr &&

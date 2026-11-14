@@ -35,7 +35,7 @@ index 4804d838b..e65093e46 100644
 +    // already does as a neox rope; the per-cell 2D extras are untouched. ref: PR #13870
      if (hparams.n_pos_per_embd() > 1) {
 -        return false;
-+        return getenv("TOSH_MROPE_SHIFT_DISABLE") == nullptr;
++        return getenv("XEON_MROPE_SHIFT_DISABLE") == nullptr;
      }
      return true;
  }

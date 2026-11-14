@@ -670,8 +670,8 @@ index 477c83b9c..6ce1051fe 100644
 -    snprintf(base, 256, "kernel_gated_delta_net_%s_%d", ggml_type_name(op->src[0]->type), nsg);
 -    snprintf(name, 256, "%s_ne20=%d_ne30=%d_K=%d", base, ne20, ne30, K);
 +    // rows of 128 split over 16 lanes instead of 32: the per-token reductions get shorter and each
-+    // lane reads q and k as whole vectors. TOSH_GDN_LPR picks another split, 0 the 32-lane kernel
-     static const int lpr_env = []() { const char * e = TOSH_ENV("TOSH_GDN_LPR"); return e ? atoi(e) : 16; }();
++    // lane reads q and k as whole vectors. XEON_GDN_LPR picks another split, 0 the 32-lane kernel
+     static const int lpr_env = []() { const char * e = XEON_ENV("XEON_GDN_LPR"); return e ? atoi(e) : 16; }();
 +    const int lpr = (ne20 == 128 && ggml_is_contiguous_rows(op->src[0]) && ggml_is_contiguous_rows(op->src[1])) ? lpr_env : 0;
 +
 +    if (lpr) {
@@ -781,9 +781,9 @@ index 477c83b9c..6ce1051fe 100644
 +
  // a pair of columns shares one read of each block, where one pass per column would read and
  // unpack the weights twice. Four columns go as two pairs where that measured faster.
- // TOSH_MV_NC2_PROBE=R opens the untuned widths with R rows, for measuring
+ // XEON_MV_NC2_PROBE=R opens the untuned widths with R rows, for measuring
  static int nc2_probe() {
-     static const int r = TOSH_ENV("TOSH_MV_NC2_PROBE") ? atoi(TOSH_ENV("TOSH_MV_NC2_PROBE")) : 0;
+     static const int r = XEON_ENV("XEON_MV_NC2_PROBE") ? atoi(XEON_ENV("XEON_MV_NC2_PROBE")) : 0;
      return r;
  }
  
@@ -835,7 +835,7 @@ index 477c83b9c..6ce1051fe 100644
          case GGML_TYPE_Q4_0:
              {
                  // eight lanes per block with four rows each: +5.8% of generation
-                 if (simd_width == 64 && TOSH_ENV("TOSH_MV_Q4_0_W64_DISABLE") == nullptr) {
+                 if (simd_width == 64 && XEON_ENV("XEON_MV_Q4_0_W64_DISABLE") == nullptr) {
                      nsg    = 1;
                      nr0    = 4;
                      suffix = "_L8r4";
@@ -1005,7 +1005,7 @@ index 17f272fac..aa51ce537 100644
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm_id         (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv_id         (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argmax            (ggml_metal_library_t lib, const struct ggml_tensor * op);
- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_tosh_topk_moe     (ggml_metal_library_t lib);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_xeon_topk_moe     (ggml_metal_library_t lib);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort           (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort_merge     (ggml_metal_library_t lib, const struct ggml_tensor * op);
 -struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_fwht              (ggml_metal_library_t lib, int n, enum ggml_type tsrc);
@@ -1197,7 +1197,7 @@ index 49592b393..d8d24af5e 100644
      int32_t has_bias;
      float   clamp;
      float   scale;
- } ggml_metal_kargs_tosh_topk_moe;
+ } ggml_metal_kargs_xeon_topk_moe;
 +
  typedef struct {
      int32_t nrows;
@@ -1340,7 +1340,7 @@ index 431b1b71a..d94c3babe 100644
              } break;
          case GGML_OP_SOFT_MAX:
              {
-+                n_fuse = ggml_metal_op_tosh_topk_moe(ctx, idx);
++                n_fuse = ggml_metal_op_xeon_topk_moe(ctx, idx);
                  if (n_fuse == 0) {
                      n_fuse = ggml_metal_op_soft_max(ctx, idx);
                  }
@@ -1442,7 +1442,7 @@ index 431b1b71a..d94c3babe 100644
 +}
 +
 +static bool ggml_metal_gdn_state_fusion_on(ggml_metal_op_t ctx) {
-     static const bool disabled = TOSH_ENV("TOSH_GDN_STATE_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_GDN_STATE_FUSION_DISABLE") != nullptr;
      return ctx->use_fusion() && !ctx->use_concurrency && !disabled;
 +}
 +
@@ -1657,7 +1657,7 @@ index 431b1b71a..d94c3babe 100644
 +// rms_norm -> mul by the norm weight -> the Hadamard transform of a folded weight's input, all
 +// adjacent: one kernel writes the transform, and the norm too when other nodes read it
 +static int ggml_metal_op_rms_norm_fwht(ggml_metal_op_t ctx, int idx) {
-     static const bool disabled = TOSH_ENV("TOSH_NORM_FWHT_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_NORM_FWHT_FUSION_DISABLE") != nullptr;
 +    if (disabled || idx + 3 >= ctx->n_nodes()) {
 +        return 0;
 +    }
@@ -1890,7 +1890,7 @@ index 431b1b71a..d94c3babe 100644
 +// output. The three nodes are adjacent, so writing that output early only needs it apart from
 +// the activation the kernel reads.
 +static int ggml_metal_op_mul_mat_swiglu(ggml_metal_op_t ctx, int idx) {
-     static const bool disabled = TOSH_ENV("TOSH_SWIGLU_FUSION_DISABLE") != nullptr;
+     static const bool disabled = XEON_ENV("XEON_SWIGLU_FUSION_DISABLE") != nullptr;
      if (disabled || !ctx->use_fusion() || idx + 2 >= ctx->n_nodes()) {
 +        return 0;
 +    }

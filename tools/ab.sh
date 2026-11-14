@@ -100,13 +100,13 @@ preflight() {
 
 # preflight_control <binary> <label>
 # The drop counter reads zero on a good build, and a check that only ever reads zero proves
-# nothing. TOSH_FA_AMD_NSG_* asks the attention path for more threads than the kernel
+# nothing. XEON_FA_AMD_NSG_* asks the attention path for more threads than the kernel
 # admits, which is the same drop the counter looks for: the control has to read non-zero, or
 # the counter is not a check.
 preflight_control() {
     local bin=$1 label=$2 log pid ready=no toks=0 pf
     log=$(mktemp)
-    env TOSH_FA_AMD_NSG_64=9999 TOSH_FA_AMD_NSG_128=9999 TOSH_FA_AMD_NSG_WIDE=9999 \
+    env XEON_FA_AMD_NSG_64=9999 XEON_FA_AMD_NSG_128=9999 XEON_FA_AMD_NSG_WIDE=9999 \
         "$bin" -m "$SMOKE_MODEL" -ngl 99 -sm tensor -c 2048 -t 6 \
         --host 127.0.0.1 --port "$PORT" --no-webui >"$log" 2>&1 &
     pid=$!

@@ -10,8 +10,8 @@ index 5efdd5359..4936152ef 100644
 +                // MoE with host weights stays on the host (beta 8 ticket 22): with both cards visible,
 +                // the 35B Q6_K at -ngl 0 aborted at pp2048 in the used-expert copy below
 +                // (GGML_ASSERT id < n_expert) once core/0082 let MUL_MAT_ID offload. Cause not
-+                // isolated; not reproduced with one card. TOSH_OFFLOAD_MOE=1 allows it.
-+                static const bool moe_off = getenv("TOSH_OFFLOAD_MOE") != nullptr;
++                // isolated; not reproduced with one card. XEON_OFFLOAD_MOE=1 allows it.
++                static const bool moe_off = getenv("XEON_OFFLOAD_MOE") != nullptr;
 +                const bool off_ok = tensor->op != GGML_OP_MUL_MAT_ID || moe_off;
 +                if (sched->op_offload && src_on_host && ggml_backend_buffer_is_host(src->buffer) && off_ok) {
                      for (int b = 0; b < src_backend_id; b++) {

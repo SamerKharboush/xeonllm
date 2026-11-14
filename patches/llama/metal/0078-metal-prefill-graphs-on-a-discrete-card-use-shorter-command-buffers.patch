@@ -10,9 +10,9 @@ layer over two D700s at -c 32768 overcommits each card (about 6.9 GB against a 6
 set); paged, that second buffer runs past the GPU watchdog on a 5k-token prompt
 (kIOAccelCommandBufferCallbackErrorTimeout) and the backend fails every request after it.
 
-A graph whose first matrix product carries 32 or more tokens now uses TOSH_MTL_PREFILL_CB extra
+A graph whose first matrix product carries 32 or more tokens now uses XEON_MTL_PREFILL_CB extra
 buffers (default 4) on a device without unified memory; decode graphs and Apple Silicon keep
-the layout they had. TOSH_MTL_PREFILL_CB=1 restores it everywhere. The adaptive main-thread
+the layout they had. XEON_MTL_PREFILL_CB=1 restores it everywhere. The adaptive main-thread
 share reads the main buffer of the graph it measured and skips a graph whose layout changed,
 and synchronize checks every slot, since a batch graph fills slots a decode graph leaves alone.
 ---
@@ -23,7 +23,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-context.m b/ggml/src/ggml-metal/ggml
 index 7ac5e54..1ee33cb 100644
 --- a/ggml/src/ggml-metal/ggml-metal-context.m
 +++ b/ggml/src/ggml-metal/ggml-metal-context.m
-@@ -316,6 +316,10 @@ static void tosh_cbp_dump_dev(ggml_metal_device_t dev) {
+@@ -316,6 +316,10 @@ static void xeon_cbp_dump_dev(ggml_metal_device_t dev) {
  
      // command buffer state
      int n_cb;           // number of extra threads used to submit the command buffers
@@ -36,19 +36,19 @@ index 7ac5e54..1ee33cb 100644
      int n_nodes_per_cb;
 @@ -1196,6 +1200,15 @@ ggml_metal_t ggml_metal_init(ggml_metal_device_t dev, bool prefetch) {
  
-         res->adapt_n_main = !props_dev->has_unified_memory && TOSH_ENV("TOSH_N_MAIN_FIXED") == nil;
+         res->adapt_n_main = !props_dev->has_unified_memory && XEON_ENV("XEON_N_MAIN_FIXED") == nil;
  
-+        // TOSH_MTL_PREFILL_CB=<n>: extra command buffers for a batch graph on a discrete card
++        // XEON_MTL_PREFILL_CB=<n>: extra command buffers for a batch graph on a discrete card
 +        // (default 4; 1 is the layout every other graph uses). A paged card runs a prefill
 +        // buffer past the GPU watchdog (kIOAccelCommandBufferCallbackErrorTimeout) when the
 +        // graph is cut in two, and the backend then fails every later request.
 +        if (!props_dev->has_unified_memory) {
-+            const char * v = TOSH_ENV("TOSH_MTL_PREFILL_CB");
++            const char * v = XEON_ENV("XEON_MTL_PREFILL_CB");
 +            res->n_cb_prefill = MAX(1, MIN(v ? atoi(v) : 4, GGML_METAL_MAX_COMMAND_BUFFERS));
 +        }
 +
          {
-             const char * val = TOSH_ENV("GGML_METAL_GRAPH_DEBUG");
+             const char * val = XEON_ENV("GGML_METAL_GRAPH_DEBUG");
              res->debug_graph = val ? atoi(val) : 0;
 @@ -1413,9 +1426,10 @@ void ggml_metal_synchronize(ggml_metal_t ctx) {
                  clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - cbp_t, memory_order_relaxed);
@@ -97,7 +97,7 @@ index 7ac5e54..1ee33cb 100644
      }
      int n_main = n_main_env >= 0 ? n_main_env : MAX(64, 0.1*gf->n_nodes);
  
-+    // a batch graph on a discrete card is cut into more, shorter buffers (TOSH_MTL_PREFILL_CB);
++    // a batch graph on a discrete card is cut into more, shorter buffers (XEON_MTL_PREFILL_CB);
 +    // the enqueue path only commits buffers past the second without an abort callback
 +    ctx->n_cb = ctx->n_cb_set;
 +    if (ctx->n_cb_prefill > ctx->n_cb && ctx->n_cb > 0 && ctx->abort_callback == NULL &&
@@ -105,7 +105,7 @@ index 7ac5e54..1ee33cb 100644
 +        ctx->n_cb = ctx->n_cb_prefill;
 +        if (!ctx->n_cb_logged) {
 +            ctx->n_cb_logged = true;
-+            GGML_LOG_INFO("%s: %s: batch graphs use %d command buffers (TOSH_MTL_PREFILL_CB=%d)\n",
++            GGML_LOG_INFO("%s: %s: batch graphs use %d command buffers (XEON_MTL_PREFILL_CB=%d)\n",
 +                    __func__, ctx->name, ctx->n_cb + 1, ctx->n_cb);
 +        }
 +    }

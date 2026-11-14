@@ -141,7 +141,7 @@ index dcd26e245..508a2378f 100644
          case GGML_TYPE_TURBO2_0: return "turbo2";
          case GGML_TYPE_TURBO3_0: return "turbo3";
 @@ -5112,23 +5124,27 @@ int ggml_metal_op_flash_attn_ext(ggml_metal_op_t ctx, int idx) {
-                     TOSH_ENV("TOSH_FA_PF_W64_DISABLE") == nullptr) {
+                     XEON_ENV("XEON_FA_PF_W64_DISABLE") == nullptr) {
                      char w64_name[96];
                      if (pf_bq > 0) {
                          snprintf(w64_name, sizeof(w64_name), "%s_w64_lg%dq%dk%d", fa_pf_pipeline, pf_lg, pf_bq,
@@ -169,7 +169,7 @@ index dcd26e245..508a2378f 100644
              // the asymmetric heads compose their name in the branches above, so their twin is
              // picked here instead. Same group of sixteen; the fallback is the 32-lane kernel.
              if (fa_pf_asym && props_dev->simd_width == 64 &&
-                 TOSH_ENV("TOSH_FA_PF_W64_DISABLE") == nullptr) {
+                 XEON_ENV("XEON_FA_PF_W64_DISABLE") == nullptr) {
 @@ -5168,16 +5184,20 @@ int ggml_metal_op_flash_attn_ext(ggml_metal_op_t ctx, int idx) {
                  ggml_metal_encoder_set_buffer  (enc, bid_pad,  6);
                  ggml_metal_encoder_set_buffer  (enc, bid_dst,  7);
@@ -187,7 +187,7 @@ index dcd26e245..508a2378f 100644
  
          // prefill goes to the tile kernel (K/V shared across 16 queries);
          // decode keeps the per-query vec kernel
-         if (ne01 >= 16 && TOSH_ENV("TOSH_FA_TILE_DISABLE") == NULL) {
+         if (ne01 >= 16 && XEON_ENV("XEON_FA_TILE_DISABLE") == NULL) {
              char fa_tile_pipeline[80];
              if (ne20 != ne00) {
                  // MLA heads carry the value width in the name: 576/512 and 320/256
@@ -205,8 +205,8 @@ index dcd26e245..508a2378f 100644
 +        const char * fa_amd_name = fa_amd_nwg > 1 ? fa_amd_wg_pipeline : fa_amd_pipeline;
 +        auto pipeline = ggml_metal_fa_amd_pipeline(lib, fa_amd_name);
          // 32 KB of threadgroup memory (GCN 1.0) does not hold the 64-lane kernel; its twin
-         // with half the simdgroups does. TOSH_FA_AMD_LDS32=1 takes the twin on any wave64 card.
-         static const bool lds32_force = TOSH_ENV("TOSH_FA_AMD_LDS32") != NULL;
+         // with half the simdgroups does. XEON_FA_AMD_LDS32=1 takes the twin on any wave64 card.
+         static const bool lds32_force = XEON_ENV("XEON_FA_AMD_LDS32") != NULL;
          if ((!pipeline.pipeline || lds32_force) && props_dev->simd_width == 64) {
 -            char lds_pipeline[112];
 -            snprintf(lds_pipeline, sizeof(lds_pipeline), "%s_lds32", fa_amd_nwg > 1 ? fa_amd_wg_pipeline : fa_amd_pipeline);

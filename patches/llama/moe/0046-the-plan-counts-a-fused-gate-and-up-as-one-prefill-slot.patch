@@ -1,7 +1,7 @@
-diff --git a/common/tosh-plan.cpp b/common/tosh-plan.cpp
+diff --git a/common/xeon-plan.cpp b/common/xeon-plan.cpp
 index 83d4e679c..cbb2872a9 100644
---- a/common/tosh-plan.cpp
-+++ b/common/tosh-plan.cpp
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
 @@ -164,16 +164,20 @@ moe_info read_moe_info(const char * path, llama_lazy_mode lazy) {
          for (int i = 1; i < mi.n_split; ++i) {
              llama_split_path(shard, sizeof(shard), prefix, i, mi.n_split);
@@ -12,8 +12,8 @@ index 83d4e679c..cbb2872a9 100644
      const std::regex bank("^blk\\.([0-9]+)\\.ffn_(up|down|gate|gate_up)_exps\\.weight$");
      std::vector<double> layer_mib(mi.n_layer + 1, 0.0);
 +    // a 64-lane card loads a layer's gate and up as one tensor (llama-model.cpp), so its prefill slot holds both
-+    const char * simd_width = getenv("TOSH_METAL_SIMD_WIDTH");
-+    const bool fuse_gate_up = simd_width != nullptr && strcmp(simd_width, "64") == 0 && getenv("TOSH_MOE_GATE_UP_DISABLE") == nullptr;
++    const char * simd_width = getenv("XEON_METAL_SIMD_WIDTH");
++    const bool fuse_gate_up = simd_width != nullptr && strcmp(simd_width, "64") == 0 && getenv("XEON_MOE_GATE_UP_DISABLE") == nullptr;
 +    std::vector<double> gate_mib(mi.n_layer + 1, 0.0), up_mib(mi.n_layer + 1, 0.0);
      for (size_t f = 0; f < paths.size(); ++f) {
          gguf_context * gs = f == 0 ? g : gguf_init_from_file(paths[f].c_str(), gp);

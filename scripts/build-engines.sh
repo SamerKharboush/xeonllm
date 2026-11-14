@@ -7,7 +7,7 @@
 #   ./scripts/build-engines.sh                  # host architecture
 #   ARCH=x86_64 ./scripts/build-engines.sh      # cross-compile (CI on arm64 runners)
 #   ARCH=universal ./scripts/build-engines.sh   # x86_64 + arm64 fat binaries (experimental)
-#   TOSH_BUILD_JOBS=N ./scripts/build-engines.sh # compile jobs (default 8: a 24-thread build on the
+#   XEON_BUILD_JOBS=N ./scripts/build-engines.sh # compile jobs (default 8: a 24-thread build on the
 #                                               # Mac Pro 6,1 coincided with a frozen display card, 2026-11-10)
 set -e
 cd "$(dirname "$0")/.."
@@ -70,16 +70,16 @@ fi
 
 # Stamped into the binaries so a log identifies the XeonLLM build, not just the
 # upstream commit (which is unchanged across releases that only touch the patch).
-TOSH_VERSION="$(tr -d '[:space:]' < "$(dirname "$0")/../VERSION")"
+XEON_VERSION="$(tr -d '[:space:]' < "$(dirname "$0")/../VERSION")"
 
 # CMAKE_CXX_FLAGS lives in the build cache, so a VERSION bump with no configure leaves the
-# previous -DTOSH_VERSION on every object CMake recompiles. beta.5 shipped reporting beta.4
+# previous -DXEON_VERSION on every object CMake recompiles. beta.5 shipped reporting beta.4
 # exactly this way. Rewrite the cached flag from VERSION before every build.
-sync_tosh_version() {
+sync_xeon_version() {
     local dir="$1"
     local cache="$dir/CMakeCache.txt"
     [ -f "$cache" ] || return 0
-    local want="-DTOSH_VERSION=$TOSH_VERSION"
+    local want="-DXEON_VERSION=$XEON_VERSION"
     local cur
     cur=$(sed -n 's/^CMAKE_CXX_FLAGS:STRING=//p' "$cache")
     if [ "$cur" != "$want" ]; then
@@ -90,11 +90,11 @@ sync_tosh_version() {
 
 # A binary that names another version is a release blocker, not a warning: it cannot be
 # told apart from an older engine in a log.
-check_tosh_version() {
+check_xeon_version() {
     local bin="$1"
     [ -x "$bin" ] || return 0
-    if ! strings "$bin" | grep -Fqx "$TOSH_VERSION"; then
-        echo "BUILD CHECK FAILED: $bin does not carry the version string '$TOSH_VERSION' from VERSION"
+    if ! strings "$bin" | grep -Fqx "$XEON_VERSION"; then
+        echo "BUILD CHECK FAILED: $bin does not carry the version string '$XEON_VERSION' from VERSION"
         exit 1
     fi
 }
@@ -145,14 +145,14 @@ CMAKE_FLAGS=(
     # ggml-backend-meta.cpp is in ggml's source list unconditionally, not because of any
     # flag. Do not re-add it without a gate in the tree that actually reads it.
     # Compile the experimental MoE cache into the bundled engine. It remains
-    # inert unless the app explicitly sets TOSH_MOE_MODE at process launch.
-    -DTOSH_ENABLE_DYNAMIC_MOE=ON
+    # inert unless the app explicitly sets XEON_MOE_MODE at process launch.
+    -DXEON_ENABLE_DYNAMIC_MOE=ON
     -DGGML_NATIVE=OFF
     -DCMAKE_OSX_ARCHITECTURES="$ARCH"
     # cmake defaults it to the build host, so a macos-26 runner emits binaries dyld
     # refuses to start on older systems
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
-    -DCMAKE_CXX_FLAGS="-DTOSH_VERSION=$TOSH_VERSION"
+    -DCMAKE_CXX_FLAGS="-DXEON_VERSION=$XEON_VERSION"
     # The server binds to localhost only; skip OpenSSL so static cross-builds
     # don't pick up host-arch Homebrew libraries on CI runners.
     -DLLAMA_OPENSSL=OFF
@@ -160,8 +160,8 @@ CMAKE_FLAGS=(
 
 # pin every ISA flag in both variants: with GGML_NATIVE=OFF ggml's defaults follow the build
 # host, an arm64 runner cross-building x86_64 does not count as cross-compiling, and a flag left
-# out keeps whatever the previous variant cached in build-static. TOSH_NO_AVX2=1 is the SSE4.2
-# baseline for pre-AVX Xeons. TOSH_AVX1=1 is the middle variant for AVX-but-no-AVX2 chips
+# out keeps whatever the previous variant cached in build-static. XEON_NO_AVX2=1 is the SSE4.2
+# baseline for pre-AVX Xeons. XEON_AVX1=1 is the middle variant for AVX-but-no-AVX2 chips
 # (e.g. Ivy Bridge Xeon E5-2697 v2): AVX+F16C on, AVX2/FMA/BMI2 off (FMA needs AVX2).
 ISA_FLAGS=()
 
@@ -170,16 +170,16 @@ ISA_FLAGS=()
 # instruction -- the same defect class as shipping a "no-avx2" build compiled with AVX2. Only
 # auto-detect for a native build; a cross-build's host says nothing about the target.
 if [ "$ARCH" = "x86_64" ] && [ "$(uname -m)" = "x86_64" ] \
-   && [ -z "${TOSH_AVX1:-}" ] && [ -z "${TOSH_NO_AVX2:-}" ] \
+   && [ -z "${XEON_AVX1:-}" ] && [ -z "${XEON_NO_AVX2:-}" ] \
    && ! sysctl -n machdep.cpu.leaf7_features 2>/dev/null | grep -q AVX2; then
-    TOSH_AVX1=1
+    XEON_AVX1=1
 fi
 
 if [ "$ARCH" = "x86_64" ]; then
-    if [ -n "${TOSH_AVX1:-}" ]; then
+    if [ -n "${XEON_AVX1:-}" ]; then
         ISA_FLAGS=(-DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF
                    -DGGML_F16C=ON -DGGML_BMI2=OFF -DGGML_AVX_VNNI=OFF -DGGML_AVX512=OFF)
-    elif [ -z "${TOSH_NO_AVX2:-}" ]; then
+    elif [ -z "${XEON_NO_AVX2:-}" ]; then
         ISA_FLAGS=(-DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON
                    -DGGML_F16C=ON -DGGML_BMI2=ON -DGGML_AVX_VNNI=OFF -DGGML_AVX512=OFF)
     else
@@ -211,11 +211,11 @@ build_engine() {
     done
 
     reset_stale_cmake_cache build-static
-    sync_tosh_version build-static
+    sync_xeon_version build-static
     cmake -B build-static "${CMAKE_FLAGS[@]}"
-    cmake --build build-static --config Release -j "${TOSH_BUILD_JOBS:-8}" -t llama-server llama-bench llama-cli llama-perplexity test-backend-ops
-    check_tosh_version build-static/bin/llama-server
-    check_tosh_version build-static/bin/llama-bench
+    cmake --build build-static --config Release -j "${XEON_BUILD_JOBS:-8}" -t llama-server llama-bench llama-cli llama-perplexity test-backend-ops
+    check_xeon_version build-static/bin/llama-server
+    check_xeon_version build-static/bin/llama-bench
 
     # One library per kernel source, with the same defines the runtime would use on an Intel/AMD
     # GPU. They cannot be linked into one metallib: the sources share helper names.
@@ -259,7 +259,7 @@ build_engine() {
         if [ -x "$eserver" ]; then
             if ! "$eserver" --version >/dev/null 2>&1; then
                 echo "BUILD CHECK FAILED: $eserver does not execute on this host"
-                echo "  the AVX2 variant SIGILLs on an AVX1-only CPU; use TOSH_AVX1=1 or TOSH_NO_AVX2=1"
+                echo "  the AVX2 variant SIGILLs on an AVX1-only CPU; use XEON_AVX1=1 or XEON_NO_AVX2=1"
                 exit 1
             fi
             if ! sysctl -n machdep.cpu.leaf7_features 2>/dev/null | grep -q AVX2; then
@@ -319,7 +319,7 @@ build_whisper_engine() {
         "${isa[@]}" \
         -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
-    cmake --build build-static --config Release -j "${TOSH_BUILD_JOBS:-8}" -t whisper-cli whisper-server
+    cmake --build build-static --config Release -j "${XEON_BUILD_JOBS:-8}" -t whisper-cli whisper-server
 
     # Precompile Metal shaders for first use.
     local merged="build-static/ggml/src/ggml-metal/autogenerated/ggml-metal-embed.metal"
@@ -423,16 +423,16 @@ build_image_engine() {
     # buffers it has not reclaimed yet, and the engine then refuses work that fits.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0055-image-metal-live-vram-report.patch"
     # Half partials as an opt-in: float stays the default because some models overflow half,
-    # and the app sets TOSH_MM_ACC_HALF only for the models checked with it.
+    # and the app sets XEON_MM_ACC_HALF only for the models checked with it.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0056-image-metal-half-partials.patch"
     # Qwen-Image 2.1 runs its fused gate/up projection through one SwiGLU instead of copying
-    # both halves out first; TOSH_QWEN21_SWIGLU_DISABLE restores the split graph.
+    # both halves out first; XEON_QWEN21_SWIGLU_DISABLE restores the split graph.
     git apply -p1 "$ROOT/patches/image/0057-image-qwen21-fused-swiglu.patch"
     # A fully contiguous copy runs as one flat range instead of rebuilding a 4-D index per
     # element; same port as the speech engine's 0028.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0058-image-metal-cpy-contiguous.patch"
     # Qwen-Image 2.1 rotates q and k straight from its cos/sin table in one kernel, with a CPU
-    # twin for the fallback; TOSH_QWEN21_ROPE_TABLE_DISABLE restores the generic graph.
+    # twin for the fallback; XEON_QWEN21_ROPE_TABLE_DISABLE restores the generic graph.
     git apply -p1 "$ROOT/patches/image/0059-image-qwen21-rope-table.patch"
     # The cached prefix and the new keys meet in F16, the type flash attention reads.
     git apply -p1 "$ROOT/patches/image/0060-image-qwen21-prefix-f16.patch"
@@ -445,16 +445,16 @@ build_image_engine() {
     git apply -p1 "$ROOT/patches/image/0063-image-qwen21-v-view.patch"
     # 2D im2col runs one threadgroup per output pixel, like im2col_3d, instead of a few threads
     # per channel, and 3x3 kernels stage their input rows to write each pixel in wide stores;
-    # TOSH_IM2COL_PX_DISABLE and TOSH_IM2COL_TILE_DISABLE restore the older dispatches.
+    # XEON_IM2COL_PX_DISABLE and XEON_IM2COL_TILE_DISABLE restore the older dispatches.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0064-image-metal-im2col.patch"
     # A copy that swaps two contiguous blocks of dims (the Wan VAE's channel-first norm) goes
-    # through 32x32 tiles; TOSH_CPY_TRANSPOSE_DISABLE restores the generic copy.
+    # through 32x32 tiles; XEON_CPY_TRANSPOSE_DISABLE restores the generic copy.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0065-image-metal-cpy-transpose.patch"
     # Diffusion attention (f16 K/V, no mask) runs a prefill kernel without the mask paths;
-    # TOSH_FA_NOMASK_DISABLE restores pf_amd.
+    # XEON_FA_NOMASK_DISABLE restores pf_amd.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0066-image-metal-fa-nomask.patch"
     # Large matrix products walk their tiles in bands of src1 that stay in the cache;
-    # TOSH_MM_BAND_MB=0 restores the plain order.
+    # XEON_MM_BAND_MB=0 restores the plain order.
     git apply --include='ggml/src/ggml-metal/*' -p1 "$ROOT/patches/image/0067-image-metal-mm-band.patch"
     echo "applied ggml-metal hunks of 0001 + 0003 + core fallback 0004 + ext wave64 0008 to stable-diffusion.cpp"
 
@@ -482,7 +482,7 @@ build_image_engine() {
         "${isa[@]}" \
         -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
-    cmake --build build-static --config Release -j "${TOSH_BUILD_JOBS:-8}" -t sd-cli
+    cmake --build build-static --config Release -j "${XEON_BUILD_JOBS:-8}" -t sd-cli
 
     local merged="build-static/ggml/src/ggml-metal/autogenerated/ggml-metal-embed.metal"
     if [ "$METAL_PRECOMPILE" = 1 ] && [ -f "$merged" ]; then

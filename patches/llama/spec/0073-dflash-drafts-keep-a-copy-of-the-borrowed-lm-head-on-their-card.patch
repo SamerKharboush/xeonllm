@@ -3,11 +3,11 @@ index 7ce655617..9bb8eff34 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
 @@ -2,16 +2,17 @@
- #include "llama-tosh-dmoe.h"
- #ifdef TOSH_ENABLE_DYNAMIC_MOE
- #include "tosh-dmoe.h"
+ #include "llama-xeon-dmoe.h"
+ #ifdef XEON_ENABLE_DYNAMIC_MOE
+ #include "xeon-dmoe.h"
  #else
- static inline size_t tosh_dmoe_private_bytes(void) { return 0; }
+ static inline size_t xeon_dmoe_private_bytes(void) { return 0; }
  #endif
  
  #include "ggml.h"
@@ -47,8 +47,8 @@ index 7ce655617..9bb8eff34 100644
          }
      }
  
-+    // tosh: a dflash draft on a card that borrows a host lm head gets one copy of it on its
-+    // own device at load, so each draft's 4-column head product runs there (TOSH_DFLASH_HEAD_HOST=1 keeps the host path).
++    // xeon: a dflash draft on a card that borrows a host lm head gets one copy of it on its
++    // own device at load, so each draft's 4-column head product runs there (XEON_DFLASH_HEAD_HOST=1 keeps the host path).
 +    // A head on another card (the expert tier's target, the draft on the idle card) is copied the same way: a
 +    // private buffer of one card cannot be read by the other, and the scheduler aborts on it.
 +    if (model.arch == LLM_ARCH_DFLASH && model.output == nullptr && cparams.ctx_other != nullptr) {
@@ -61,8 +61,8 @@ index 7ce655617..9bb8eff34 100644
 +            !ggml_backend_buft_is_host(ggml_backend_buffer_get_type(w->buffer))) {
 +            ggml_backend_buffer_type_t buft = ggml_backend_buffer_get_type(w->buffer);
 +            const double mib = ggml_nbytes(src)/1048576.0;
-+            if (src_host && getenv("TOSH_DFLASH_HEAD_HOST")) {
-+                LLAMA_LOG_INFO("%s: dflash lm head kept on the host (TOSH_DFLASH_HEAD_HOST, %.1f MiB)\n", __func__, mib);
++            if (src_host && getenv("XEON_DFLASH_HEAD_HOST")) {
++                LLAMA_LOG_INFO("%s: dflash lm head kept on the host (XEON_DFLASH_HEAD_HOST, %.1f MiB)\n", __func__, mib);
 +            } else {
 +                ggml_init_params ip = { ggml_tensor_overhead(), nullptr, true };
 +                ctx_head_dev.reset(ggml_init(ip));
@@ -110,7 +110,7 @@ index eb57695ab..bf0f61d11 100644
      ggml_backend_buffer_ptr buf_output;
  
 +
-+    ggml_context_ptr        ctx_head_dev; // tosh: owns output_other_dev
++    ggml_context_ptr        ctx_head_dev; // xeon: owns output_other_dev
 +    ggml_backend_buffer_ptr buf_head_dev;
      // keep copies of the per-sequence memory on the device
      std::map<llama_seq_id, llama_memory_buffers> mem_storage;
@@ -134,7 +134,7 @@ index 004fec5a6..a0b4eec5f 100644
  
      llama_context * ctx_other;
 +
-+    ggml_tensor * output_other_dev; // tosh: device copy of a borrowed host lm head, or null
++    ggml_tensor * output_other_dev; // xeon: device copy of a borrowed host lm head, or null
  };
 diff --git a/src/models/dflash.cpp b/src/models/dflash.cpp
 index b8be25bbc..80351a82a 100644
@@ -149,7 +149,7 @@ index b8be25bbc..80351a82a 100644
          output   = model_other->output;
          output_s = model_other->output_s;
          cur = build_hadamard_input(output, cur, &model_other->hadamard_rotations);
-+        // tosh: the rotation is keyed on the target's tensor; the product reads the card copy
++        // xeon: the rotation is keyed on the target's tensor; the product reads the card copy
 +        if (cparams.output_other_dev) {
 +            output = cparams.output_other_dev;
 +        }

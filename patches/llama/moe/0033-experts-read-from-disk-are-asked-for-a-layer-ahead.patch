@@ -1,7 +1,7 @@
-diff --git a/src/llama-tosh-dmoe.cpp b/src/llama-tosh-dmoe.cpp
+diff --git a/src/llama-xeon-dmoe.cpp b/src/llama-xeon-dmoe.cpp
 index 0680c8a0e..56f85f742 100644
---- a/src/llama-tosh-dmoe.cpp
-+++ b/src/llama-tosh-dmoe.cpp
+--- a/src/llama-xeon-dmoe.cpp
++++ b/src/llama-xeon-dmoe.cpp
 @@ -79,19 +79,21 @@ struct host_bank {
      const ggml_tensor * up   = nullptr;
      const ggml_tensor * down = nullptr;
@@ -27,8 +27,8 @@ index 0680c8a0e..56f85f742 100644
  
 @@ -441,16 +443,53 @@ struct executor {
          us_wide += (uint64_t) ((t1 - t0)*1e6);
-         tosh_dmoe_timeline(1, il, t0, t1);
-         tosh_dmoe_rare_host_done(il, t0, t1, tosh_dmoe_reach_get() >= jb.value);
+         xeon_dmoe_timeline(1, il, t0, t1);
+         xeon_dmoe_rare_host_done(il, t0, t1, xeon_dmoe_reach_get() >= jb.value);
          return true;
      }
      std::vector<uint8_t> wide_seen;
@@ -43,10 +43,10 @@ index 0680c8a0e..56f85f742 100644
 +        const host_bank & nb = banks[nl];
 +        size_t tb_bytes = 0;
 +        int tb_layers = 0, tb_expert = 0;
-+        const int32_t * tb = tosh_dmoe_tables(&tb_bytes, &tb_layers, &tb_expert);
++        const int32_t * tb = xeon_dmoe_tables(&tb_bytes, &tb_layers, &tb_expert);
 +        const int ne = nb.router.empty() ? 0 : (int) (nb.router.size()/n_embd);
 +        if (tb == nullptr || ne == 0 || ne != tb_expert) return;
-+        const int32_t * vram = tb + ((size_t) tosh_dmoe_published_version()*TOSH_DMOE_MAX_LAYERS + nl)*ne;
++        const int32_t * vram = tb + ((size_t) xeon_dmoe_published_version()*XEON_DMOE_MAX_LAYERS + nl)*ne;
 +        const int k = std::min(ne, n_used + n_used/2);
 +        ahead_score.resize(ne);
 +        ahead_order.resize(ne);
@@ -65,24 +65,24 @@ index 0680c8a0e..56f85f742 100644
 +                          [this](int a, int b) { return ahead_score[a] > ahead_score[b]; });
 +        for (int j = 0; j < k; ++j) {
 +            if (vram[ahead_order[j]] < 0) {
-+                tosh_hostcache_prefetch(nl, ahead_order[j]);
++                xeon_hostcache_prefetch(nl, ahead_order[j]);
 +                n_ahead++;
 +            }
 +        }
 +    }
 +
      // one layer: find the non-resident experts, compute them, answer the GPU
-     bool job(int il, const tosh_dmoe_job & jb) {
+     bool job(int il, const xeon_dmoe_job & jb) {
          const clk::time_point t0 = clk::now();
  
-         char * stage = (char *) tosh_dmoe_stage_layer(il);
+         char * stage = (char *) xeon_dmoe_stage_layer(il);
          if (stage == nullptr || il >= (int) banks.size() || banks[il].gate == nullptr) {
-             tosh_dmoe_fail("a mixed layer has no host bank or stage");
+             xeon_dmoe_fail("a mixed layer has no host bank or stage");
              return false;
 @@ -523,18 +562,22 @@ struct executor {
              us_quant += (uint64_t) us_since(tq);
  
-             if (!pin_misses(il, TOSH_HC_DECODE)) {
+             if (!pin_misses(il, XEON_HC_DECODE)) {
                  return false;
              }
              next1.store(0, std::memory_order_relaxed);
@@ -111,18 +111,18 @@ index 0680c8a0e..56f85f742 100644
              return;
          }
          const uint64_t m = n_miss.load();
--        fprintf(stderr, "tosh_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%\n",
-+        fprintf(stderr, "tosh_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%, read ahead %llu\n",
+-        fprintf(stderr, "xeon_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%\n",
++        fprintf(stderr, "xeon_dmoe: jobs %llu, routed %llu, host %llu, hit rate %.2f%%, read ahead %llu\n",
                  (unsigned long long) n_jobs.load(), (unsigned long long) routed, (unsigned long long) m,
 -                100.0*(double) (routed - m)/(double) routed);
 +                100.0*(double) (routed - m)/(double) routed, (unsigned long long) n_ahead);
-         fprintf(stderr, "tosh_dmoe: host time per job %.1f us (quantize %.1f, gate/up %.1f, down %.1f)\n",
+         fprintf(stderr, "xeon_dmoe: host time per job %.1f us (quantize %.1f, gate/up %.1f, down %.1f)\n",
                  (double) us_job.load()/n_jobs.load(), (double) us_quant.load()/n_jobs.load(),
                  (double) us_p1.load()/n_jobs.load(), (double) us_p2.load()/n_jobs.load());
-         fprintf(stderr, "tosh_dmoe: host expert time %.3f ms total over %llu host experts (%.1f us each)\n",
+         fprintf(stderr, "xeon_dmoe: host expert time %.3f ms total over %llu host experts (%.1f us each)\n",
                  us_job.load()/1e3, (unsigned long long) m, m ? (double) us_job.load()/m : 0.0);
          static const int edges[] = { 1, 9, 17, 33, 65, 129, 257, 513, 1 << 16 };
-         std::string line = "tosh_dmoe: hit rate by graph";
+         std::string line = "xeon_dmoe: hit rate by graph";
          for (int b = 0; b + 1 < (int) (sizeof(edges)/sizeof(edges[0])); ++b) {
 @@ -1855,16 +1898,32 @@ static void dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & h
          hb.up    = L.ffn_up_exps;
@@ -131,13 +131,13 @@ index 0680c8a0e..56f85f742 100644
          ex->n_embd = (int) hb.gate->ne[0];
          ex->n_ff   = (int) (hb.fused ? hb.gate->ne[1]/2 : hb.gate->ne[1]);
          if (hb.fused && L.ffn_gate_up_exps_b != nullptr) {
-             throw std::runtime_error("TOSH_DMOE_CACHE_MIB: biases on a fused gate/up bank are not supported");
+             throw std::runtime_error("XEON_DMOE_CACHE_MIB: biases on a fused gate/up bank are not supported");
          }
-+        // with experts read from disk (TOSH_AUTO_DISK_EXPERTS) decode reads the next layer ahead; TOSH_HC_DECODE_AHEAD=0 turns it off
-+        static const bool decode_ahead = getenv("TOSH_AUTO_DISK_EXPERTS") != nullptr && atoi(getenv("TOSH_AUTO_DISK_EXPERTS")) != 0 &&
-+                                         (getenv("TOSH_HC_DECODE_AHEAD") == nullptr || atoi(getenv("TOSH_HC_DECODE_AHEAD")) != 0);
++        // with experts read from disk (XEON_AUTO_DISK_EXPERTS) decode reads the next layer ahead; XEON_HC_DECODE_AHEAD=0 turns it off
++        static const bool decode_ahead = getenv("XEON_AUTO_DISK_EXPERTS") != nullptr && atoi(getenv("XEON_AUTO_DISK_EXPERTS")) != 0 &&
++                                         (getenv("XEON_HC_DECODE_AHEAD") == nullptr || atoi(getenv("XEON_HC_DECODE_AHEAD")) != 0);
 +        const ggml_tensor * rt = L.ffn_gate_inp;
-+        if (decode_ahead && tosh_hostcache_on() && rt != nullptr && rt->ne[1] == n_expert && ggml_get_type_traits(rt->type)->to_float) {
++        if (decode_ahead && xeon_hostcache_on() && rt != nullptr && rt->ne[1] == n_expert && ggml_get_type_traits(rt->type)->to_float) {
 +            std::vector<uint8_t> raw(ggml_nbytes(rt));
 +            ggml_backend_tensor_get(rt, raw.data(), 0, raw.size());
 +            hb.router.resize((size_t) rt->ne[0]*rt->ne[1]);
@@ -154,13 +154,13 @@ index 0680c8a0e..56f85f742 100644
                  continue;
              }
              if (b->type != GGML_TYPE_F32 || b->ne[0] != ex->n_ff || b->ne[1] != n_expert) {
-                 throw std::runtime_error("TOSH_DMOE_CACHE_MIB: expert biases of an unexpected type or shape");
+                 throw std::runtime_error("XEON_DMOE_CACHE_MIB: expert biases of an unexpected type or shape");
              }
              dst->resize(ggml_nelements(b));
-diff --git a/tosh-moe/tosh-hostcache.cpp b/tosh-moe/tosh-hostcache.cpp
+diff --git a/xeon-moe/xeon-hostcache.cpp b/xeon-moe/xeon-hostcache.cpp
 index e1957bc13..49adb07c4 100644
---- a/tosh-moe/tosh-hostcache.cpp
-+++ b/tosh-moe/tosh-hostcache.cpp
+--- a/xeon-moe/xeon-hostcache.cpp
++++ b/xeon-moe/xeon-hostcache.cpp
 @@ -24,16 +24,23 @@
  #include <sys/sysctl.h>
  #endif
@@ -170,7 +170,7 @@ index e1957bc13..49adb07c4 100644
  
  enum slot_state : uint8_t { EMPTY, LOADING, RESIDENT };
  
-+// TOSH_HC_LOOKAHEAD=1 / TOSH_HC_PROMPT_LAST=1: prompt lookahead and prompt-first eviction, off by default
++// XEON_HC_LOOKAHEAD=1 / XEON_HC_PROMPT_LAST=1: prompt lookahead and prompt-first eviction, off by default
 +static bool env_on(const char * name) {
 +    const char * v = getenv(name);
 +    return v != nullptr && strcmp(v, "0") != 0;
@@ -206,11 +206,11 @@ index e1957bc13..49adb07c4 100644
      std::string error;
  
      // stats
-     uint64_t req[TOSH_HC_KINDS] = {}, hit[TOSH_HC_KINDS] = {}, cold[TOSH_HC_KINDS] = {}, coalesced = 0;
+     uint64_t req[XEON_HC_KINDS] = {}, hit[XEON_HC_KINDS] = {}, cold[XEON_HC_KINDS] = {}, coalesced = 0;
      uint64_t evictions = 0, reloads = 0, reads = 0, read_bytes = 0, prefetches = 0, stored = 0;
-     double wait_us[TOSH_HC_KINDS] = {};
+     double wait_us[XEON_HC_KINDS] = {};
      // queue and read time per class (0 demand, 1 read-back), where acquire waits, read-back reuse
-@@ -371,16 +386,19 @@ bool tosh_hostcache_start(int n_layer, int n_expert) {
+@@ -371,16 +386,19 @@ bool xeon_hostcache_start(int n_layer, int n_expert) {
      g.prev.assign(g.n_slots, -1);
      g.next.assign(g.n_slots, -1);
      g.state.assign(g.n_slots, EMPTY);
@@ -228,28 +228,28 @@ index e1957bc13..49adb07c4 100644
          for (int s = pl.first + pl.n - 1; s >= pl.first; --s) { pl.free_slots.push_back(s); g.pool_of_slot[s] = k; }
      }
  
-     const int n_io = std::max(1, getenv("TOSH_DMOE_HOST_IO") ? atoi(getenv("TOSH_DMOE_HOST_IO")) : 4);
+     const int n_io = std::max(1, getenv("XEON_DMOE_HOST_IO") ? atoi(getenv("XEON_DMOE_HOST_IO")) : 4);
      for (int i = 0; i < n_io; ++i) std::thread(reader_main).detach();
 @@ -594,29 +612,57 @@ static void prewarm(int n_io) {
              slots.size(), bytes/1048576.0, strcmp(src, "seq") == 0 ? "layer order" : "a list", by_offset ? "file" : "list",
              (unsigned long long) n_reads.load(), g.prewarm_us/1000, bytes/(g.prewarm_us*1e3));
  }
  
- bool tosh_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len) {
+ bool xeon_mlock_paced(void * addr, size_t bytes, char * err, size_t err_len) {
      return mlock_paced(addr, bytes, err, err_len);
  }
  
 +static int readback_slot(int il, int e);
 +
- bool tosh_hostcache_acquire(int il, const int32_t * ids, int n, int kind) {
+ bool xeon_hostcache_acquire(int il, const int32_t * ids, int n, int kind) {
      const double t0 = now_us();
      std::unique_lock<std::mutex> lock(g.m);
      std::vector<int> wait;
      std::vector<uint8_t> wait_cls;     // 0 own read, 1 another demand, 2 a read-back
      bool queued = false;
-+    const bool prompt = kind == TOSH_HC_PREFILL || kind == TOSH_HC_WIDE;
++    const bool prompt = kind == XEON_HC_PREFILL || kind == XEON_HC_WIDE;
 +    if (prompt && g.base != nullptr) {
-+        static const bool lookahead = env_on("TOSH_HC_LOOKAHEAD");
++        static const bool lookahead = env_on("XEON_HC_LOOKAHEAD");
 +        // a chunk walks the layers in order; host rows may trail the uploads by a layer
 +        if (il + 2 < g.pf_il) { g.pf_chunk++; g.pf_il = il; } else g.pf_il = std::max(g.pf_il, il);
 +        if (g.pf_chunk_of[il] != g.pf_chunk) {
@@ -288,7 +288,7 @@ index e1957bc13..49adb07c4 100644
              }
              if (g.ready && g.origin[s] != 0 && !g.reused[s]) {
                  g.reused[s] = 1;
-@@ -646,16 +692,17 @@ bool tosh_hostcache_acquire(int il, const int32_t * ids, int n, int kind) {
+@@ -646,16 +692,17 @@ bool xeon_hostcache_acquire(int il, const int32_t * ids, int n, int kind) {
          if (s < 0) {
              if (g.error.empty()) g.error = "the expert cache is smaller than the experts pinned at once";
              return false;
@@ -306,10 +306,10 @@ index e1957bc13..49adb07c4 100644
          g.bg[s] = 0;
          g.bg_unused[s] = 0;
          g.origin[s] = g.ready ? 0 : 1;
-@@ -687,17 +734,20 @@ const char * tosh_hostcache_part(int il, int e, int part) {
+@@ -687,17 +734,20 @@ const char * xeon_hostcache_part(int il, int e, int part) {
  }
  
- void tosh_hostcache_release(int il, const int32_t * ids, int n) {
+ void xeon_hostcache_release(int il, const int32_t * ids, int n) {
      std::lock_guard<std::mutex> lock(g.m);
      for (int i = 0; i < n; ++i) {
          const int e = ids[i];
@@ -317,13 +317,13 @@ index e1957bc13..49adb07c4 100644
          const int s = g.slot_of[il*g.n_expert + e];
 -        if (s >= 0 && --g.ref[s] == 0) g.lru_push(s);
 +        if (s >= 0 && --g.ref[s] == 0) {
-+            static const bool prompt_last = env_on("TOSH_HC_PROMPT_LAST");
++            static const bool prompt_last = env_on("XEON_HC_PROMPT_LAST");
 +            if (prompt_last && g.prompt_only[s]) g.lru_push_tail(s); else g.lru_push(s);
 +        }
      }
  }
  
- void tosh_hostcache_drop(int il, int e) {
+ void xeon_hostcache_drop(int il, int e) {
      std::lock_guard<std::mutex> lock(g.m);
      if (g.base == nullptr) return;
      const int key = il*g.n_expert + e;
@@ -341,26 +341,26 @@ index e1957bc13..49adb07c4 100644
      return s;
  }
  
- void tosh_hostcache_prefetch(int il, int e) {
+ void xeon_hostcache_prefetch(int il, int e) {
      {
          std::lock_guard<std::mutex> lock(g.m);
          const int s = readback_slot(il, e);
          if (s < 0) return;
-@@ -849,16 +900,17 @@ void tosh_hostcache_report(void) {
+@@ -849,16 +900,17 @@ void xeon_hostcache_report(void) {
          if (g.req[k] == 0) continue;
-         fprintf(stderr, "tosh_hostcache: %-7s waits: own reads %.1f ms, another demand %.1f ms, a read-back %.1f ms\n", names[k],
+         fprintf(stderr, "xeon_hostcache: %-7s waits: own reads %.1f ms, another demand %.1f ms, a read-back %.1f ms\n", names[k],
                  g.wait_own_us[k]/1000, g.wait_co_dem_us[k]/1000, g.wait_co_bg_us[k]/1000);
      }
      const uint64_t bg_left = [] { uint64_t n = 0; for (auto u : g.bg_unused) n += u; return n; }();
-     fprintf(stderr, "tosh_hostcache: read-backs used %llu (%llu while loading), evicted unused %llu, dropped unused %llu, still unused %llu\n",
+     fprintf(stderr, "xeon_hostcache: read-backs used %llu (%llu while loading), evicted unused %llu, dropped unused %llu, still unused %llu\n",
              (unsigned long long) g.bg_used, (unsigned long long) g.bg_used_loading, (unsigned long long) g.bg_wasted,
              (unsigned long long) g.bg_dropped_unused, (unsigned long long) bg_left);
-+    fprintf(stderr, "tosh_hostcache: prompt lookahead queued %llu reads\n", (unsigned long long) g.ahead_queued);
-     fprintf(stderr, "tosh_hostcache: file reads: first touch %llu, capacity miss %llu, read-back %llu\n",
++    fprintf(stderr, "xeon_hostcache: prompt lookahead queued %llu reads\n", (unsigned long long) g.ahead_queued);
+     fprintf(stderr, "xeon_hostcache: file reads: first touch %llu, capacity miss %llu, read-back %llu\n",
              (unsigned long long) (g.rd_n[0] > g.reloads ? g.rd_n[0] - g.reloads : 0), (unsigned long long) g.reloads, (unsigned long long) g.rd_n[1]);
-     fprintf(stderr, "tosh_hostcache: read-backs moved ahead for a waiting demand %llu | promoted copies kept %llu, refreshed on eviction %llu\n",
+     fprintf(stderr, "xeon_hostcache: read-backs moved ahead for a waiting demand %llu | promoted copies kept %llu, refreshed on eviction %llu\n",
              (unsigned long long) g.boosted, (unsigned long long) g.kept_on_promotion, (unsigned long long) g.refreshed);
      std::vector<float> v = g.read_us;
      std::sort(v.begin(), v.end());
      auto q = [&](double f) { return v.empty() ? 0.0 : (double) v[std::min(v.size() - 1, (size_t) (f*v.size()))]; };
-     fprintf(stderr, "tosh_hostcache: read back on eviction %llu, copied back from VRAM %llu\n",
+     fprintf(stderr, "xeon_hostcache: read back on eviction %llu, copied back from VRAM %llu\n",

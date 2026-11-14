@@ -1,17 +1,17 @@
-diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte
+diff --git a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte
 index 7977dfe56..489c3f1ba 100644
---- a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte
-+++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/ToshPanel.svelte
+--- a/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte
++++ b/tools/ui/src/lib/components/app/chat/ChatMessages/ChatMessage/ChatMessageAssistant/XeonPanel.svelte
 @@ -87,6 +87,10 @@
  			</CollapsibleContentBlock>
  		{/if}
  
-+		{#if tosh.progress}
-+			<p class="animate-pulse text-xs text-muted-foreground">{tosh.progress}…</p>
++		{#if xeon.progress}
++			<p class="animate-pulse text-xs text-muted-foreground">{xeon.progress}…</p>
 +		{/if}
 +
- 		{#if tosh.sketches?.length}
- 			<ToshSketches sketches={tosh.sketches} />
+ 		{#if xeon.sketches?.length}
+ 			<XeonSketches sketches={xeon.sketches} />
  		{/if}
 diff --git a/tools/ui/src/lib/services/chat.service.ts b/tools/ui/src/lib/services/chat.service.ts
 index 8bf7c2944..1b5de8e8c 100644
@@ -49,7 +49,7 @@ index 8bf7c2944..1b5de8e8c 100644
 +										drafted = false;
 +										aggregatedContent = '';
 +
-+										if (!abortSignal?.aborted) onTosh?.({ event: { type: 'retract' } });
++										if (!abortSignal?.aborted) onXeon?.({ event: { type: 'retract' } });
 +									}
 +
 +									streamFinished = true;
@@ -57,8 +57,8 @@ index 8bf7c2944..1b5de8e8c 100644
 +									continue;
 +								}
  
- 								// the Tosh agent's progress and metadata; a retract drops the text streamed so far
- 								if (parsed.tosh && typeof parsed.tosh === 'object') {
+ 								// the Xeon agent's progress and metadata; a retract drops the text streamed so far
+ 								if (parsed.xeon && typeof parsed.xeon === 'object') {
 @@ -657,6 +685,8 @@ export class ChatService {
  
  								const choice = parsed.choices?.[0];
@@ -129,12 +129,12 @@ index c0f8c8353..2dc72b75d 100644
 @@ -897,9 +897,12 @@ class ChatStore implements ChatStreamHost, ChatFlowsHost {
  
  			if (event?.type === 'tool_call' && event.call) {
- 				tosh = { ...tosh, steps: [...(tosh.steps ?? []), event.call] };
+ 				xeon = { ...xeon, steps: [...(xeon.steps ?? []), event.call] };
 +			} else if (event?.type === 'progress' && typeof event.label === 'string') {
-+				tosh = { ...tosh, progress: event.label };
++				xeon = { ...xeon, progress: event.label };
  			} else if (!event) {
- 				tosh = {
- 					...tosh,
+ 				xeon = {
+ 					...xeon,
 +					progress: undefined,
  					...(chunk.sketches?.length ? { sketches: chunk.sketches } : {}),
  					...(chunk.map_request ? { mapRequest: chunk.map_request } : {})
@@ -143,26 +143,26 @@ index c0f8c8353..2dc72b75d 100644
  				}
  
  				console.error('Streaming error:', error);
-+				if (tosh.progress) {
-+					tosh = { ...tosh, progress: undefined };
++				if (xeon.progress) {
++					xeon = { ...xeon, progress: undefined };
 +					conversationsStore.updateMessageAtIndex(
 +						conversationsStore.findMessageIndex(currentMessageId),
-+						{ tosh }
++						{ xeon }
 +					);
 +				}
  				// keep whatever was streamed so far, the message stays in memory and in DB
  				await this.savePartialResponseIfNeeded(convId);
  				cleanupStreamingState();
-diff --git a/tools/ui/src/lib/types/tosh.d.ts b/tools/ui/src/lib/types/tosh.d.ts
+diff --git a/tools/ui/src/lib/types/xeon.d.ts b/tools/ui/src/lib/types/xeon.d.ts
 index 30f3ddc58..a9936ef8d 100644
---- a/tools/ui/src/lib/types/tosh.d.ts
-+++ b/tools/ui/src/lib/types/tosh.d.ts
-@@ -54,6 +54,8 @@ export interface ToshChunk {
+--- a/tools/ui/src/lib/types/xeon.d.ts
++++ b/tools/ui/src/lib/types/xeon.d.ts
+@@ -54,6 +54,8 @@ export interface XeonChunk {
  /** What an assistant message keeps of the agent's work. */
- export interface ToshMessageData {
- 	steps?: ToshCall[];
+ export interface XeonMessageData {
+ 	steps?: XeonCall[];
 +	/** What the agent is doing while it works, as it says it; gone once it answers. */
 +	progress?: string;
- 	sketches?: ToshSketch[];
- 	mapRequest?: ToshMapRequest;
- 	map?: { layers: ToshMapLayer[] };
+ 	sketches?: XeonSketch[];
+ 	mapRequest?: XeonMapRequest;
+ 	map?: { layers: XeonMapLayer[] };

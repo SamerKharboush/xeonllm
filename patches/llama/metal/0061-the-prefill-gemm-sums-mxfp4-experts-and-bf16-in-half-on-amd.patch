@@ -3,7 +3,7 @@ index e49737a39..9b1fc0ccc 100644
 --- a/ggml/src/ggml-metal/ggml-metal-device.cpp
 +++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
 @@ -1223,10 +1223,11 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm(ggml_meta
-                 TOSH_ENV("TOSH_MM_WIDE_DISABLE") == nullptr;
+                 XEON_ENV("XEON_MM_WIDE_DISABLE") == nullptr;
      if (wide) {
          // it needs 64 accumulators, so only where the dequant leaves the registers
          switch (tsrc0) {
@@ -18,13 +18,13 @@ index e49737a39..9b1fc0ccc 100644
              case GGML_TYPE_IQ2_XS:
              case GGML_TYPE_IQ3_XXS:
                  // third floor, for the types whose dequant leaves less room: it was picked
-                 // against the 32-lane tile too, so TOSH_MM_WIDE_EXT_FLOOR opens it for sweeping
-                 wide = op->ne[0] >= wide_ext_floor && TOSH_ENV("TOSH_MM_WIDE_EXT_DISABLE") == nullptr; break;
+                 // against the 32-lane tile too, so XEON_MM_WIDE_EXT_FLOOR opens it for sweeping
+                 wide = op->ne[0] >= wide_ext_floor && XEON_ENV("XEON_MM_WIDE_EXT_DISABLE") == nullptr; break;
 -            // f32 and bf16 have never been through this gate; the override opens them so the
 -            // exclusion can be measured instead of inherited
 +            // f32 has never been through this gate; the override opens it so the exclusion can
 +            // be measured instead of inherited
-             default: wide = TOSH_ENV("TOSH_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
+             default: wide = XEON_ENV("XEON_MM_WIDE_ALL") != nullptr && op->ne[0] >= wide_ext_floor; break;
          }
      }
  
@@ -34,8 +34,8 @@ index e49737a39..9b1fc0ccc 100644
 +    // accumulator. bf16 weights already reach the tile as half, so they sum like f16.
 +    const bool acc_f32 = use_mm_manual &&
 +                         (!ggml_is_contiguous(op->src[0]) ||
-+                          (tsrc0 == GGML_TYPE_BF16 && TOSH_ENV("TOSH_MM_BF16_ACC_F32") != nullptr)) &&
-                          TOSH_ENV("TOSH_MM_ACC_F32_DISABLE") == nullptr;
++                          (tsrc0 == GGML_TYPE_BF16 && XEON_ENV("XEON_MM_BF16_ACC_F32") != nullptr)) &&
+                          XEON_ENV("XEON_MM_ACC_F32_DISABLE") == nullptr;
  
      // the 64-lane GEMM lives in mul_mm_w64.metal: one wave is one tile there, so it needs the
      // dispatch to hand it whole waves instead of the 32-thread groups the shared kernel expects
@@ -44,7 +44,7 @@ index e49737a39..9b1fc0ccc 100644
      // the 64-lane twin lives in mul_mm_w64.metal, beside the dense one; it has no src1 rescale
      const int simd_width_id = ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width;
      const bool w64 = simd_width_id == 64 && use_mm_manual && !amax &&
-                      TOSH_ENV("TOSH_MMID_W64_DISABLE") == nullptr;
+                      XEON_ENV("XEON_MMID_W64_DISABLE") == nullptr;
  
 -    snprintf(base, 256, "kernel_mul_mm_id_%s_%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "");
 +    // the narrow mxfp4 kernel is bfloat when the device has the type, and the manual path keeps
@@ -52,7 +52,7 @@ index e49737a39..9b1fc0ccc 100644
 +    // narrow one without bfloat
 +    const bool half_id = use_mm_manual && !wide && !w64 && tsrc0 == GGML_TYPE_MXFP4 && tsrc1 == GGML_TYPE_F32 &&
 +                         ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->has_bfloat &&
-+                         TOSH_ENV("TOSH_MMID_HALF_DISABLE") == nullptr;
++                         XEON_ENV("XEON_MMID_HALF_DISABLE") == nullptr;
 +
 +    snprintf(base, 256, "kernel_mul_mm_id_%s_%s%s%s%s", ggml_metal_tname_pair(lib, tsrc0, tsrc1), ggml_type_name(tsrc1), wide ? "_w" : "", w64 ? "_w64" : "", half_id ? "_h" : "");
      snprintf(name, 256, "%s_bci=%d_mm=%d_af=%d_amax=%d", base, bc_inp, use_mm_manual, acc_f32, amax);

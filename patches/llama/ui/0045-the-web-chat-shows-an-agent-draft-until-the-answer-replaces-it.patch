@@ -19,17 +19,17 @@ index 569a3e910..8bf7c2944 100644
  							try {
  								const parsed: ApiChatCompletionStreamChunk = JSON.parse(data);
  
- 								// the Tosh agent's progress and metadata; a retract drops the text streamed so far
- 								if (parsed.tosh && typeof parsed.tosh === 'object') {
--									if (parsed.tosh.event?.type === 'retract') aggregatedContent = '';
-+									const event = parsed.tosh.event;
+ 								// the Xeon agent's progress and metadata; a retract drops the text streamed so far
+ 								if (parsed.xeon && typeof parsed.xeon === 'object') {
+-									if (parsed.xeon.event?.type === 'retract') aggregatedContent = '';
++									const event = parsed.xeon.event;
 +
 +									if (event?.type === 'retract') {
 +										aggregatedContent = '';
 +										drafted = false;
 +									}
  
- 									if (!abortSignal?.aborted) onTosh?.(parsed.tosh);
+ 									if (!abortSignal?.aborted) onXeon?.(parsed.xeon);
 +
 +									if (
 +										event?.type === 'draft' &&
@@ -56,7 +56,7 @@ index 569a3e910..8bf7c2944 100644
 +									if (drafted) {
 +										drafted = false;
 +
-+										if (!abortSignal?.aborted) onTosh?.({ event: { type: 'retract' } });
++										if (!abortSignal?.aborted) onXeon?.({ event: { type: 'retract' } });
 +									}
 +
  									aggregatedContent += content;

@@ -1,11 +1,11 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Concurrent requests on the patched llama-server with a real model: a prompt that arrives while another request
 generates advances a share per step, a single request keeps whole batches, a new request takes the prefix it shares
 with a busy slot, and a checkpoint that already holds the prefix is kept. Skipped without a model.
 
-    TOSH_TEST_MODEL=~/models/Qwen3.5-4B-Q4_K_M.gguf TOSH_FA_AMD=1 \\
+    XEON_TEST_MODEL=~/models/Qwen3.5-4B-Q4_K_M.gguf XEON_FA_AMD=1 \\
     LLAMA_SERVER_BIN_PATH=vendor/llama.cpp/build-static/bin/llama-server \\
         python3 -I patches/llama/server/tests/test_concurrent_prefill.py [-v]
 """
@@ -26,9 +26,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 BINARY = os.environ.get("LLAMA_SERVER_BIN_PATH") or os.path.join(ROOT, "vendor", "llama.cpp", "build-static", "bin",
                                                                   "llama-server")
-MODEL = os.path.expanduser(os.environ.get("TOSH_TEST_MODEL", ""))
+MODEL = os.path.expanduser(os.environ.get("XEON_TEST_MODEL", ""))
 HOST = "127.0.0.1"
-KEEP = os.environ.get("TOSH_TEST_KEEP") == "1"
+KEEP = os.environ.get("XEON_TEST_KEEP") == "1"
 
 WORDS = ("river delta trade route glacier printing coral railway signal volcanic island bread harbour orchard "
          "lighthouse copper weather balloon monsoon bridge salt desert telescope paper tide").split()
@@ -48,12 +48,12 @@ def filler(n_words, seed):
 
 class Engine:
     def __init__(self, slots, cache_ram=0, env=None):
-        self.dir = tempfile.mkdtemp(prefix="tosh-prefill-test-")
+        self.dir = tempfile.mkdtemp(prefix="xeon-prefill-test-")
         self.port = free_port()
         self.slots, self.cache_ram, self.env = slots, cache_ram, env or {}
 
     def start(self, seconds=180):
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("LLAMA_", "TOSH_PREFILL", "TOSH_PREFIX"))}
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("LLAMA_", "XEON_PREFILL", "XEON_PREFIX"))}
         env.update(self.env)
         self.output = open(os.path.join(self.dir, "server.log"), "wb")
         self.process = subprocess.Popen(
@@ -133,7 +133,7 @@ def wait_tokens(record, n, seconds=120):
     return len(record.get("arrivals", [])) >= n
 
 
-@unittest.skipUnless(MODEL and os.path.exists(MODEL), "set TOSH_TEST_MODEL to a GGUF model")
+@unittest.skipUnless(MODEL and os.path.exists(MODEL), "set XEON_TEST_MODEL to a GGUF model")
 class ConcurrentPrefillTest(unittest.TestCase):
     def engine(self, slots, cache_ram=0, env=None):
         engine = Engine(slots, cache_ram, env)
@@ -165,7 +165,7 @@ class ConcurrentPrefillTest(unittest.TestCase):
         self.assertLess(gap, prompt_s / 3, f"a {n}-token prompt of {prompt_s:.2f} s held the other request {gap:.2f} s")
 
     def test_switch_restores_whole_batches(self):
-        gap, prompt_s, n = self.generation_gap({"TOSH_PREFILL_SHARE": "0"})
+        gap, prompt_s, n = self.generation_gap({"XEON_PREFILL_SHARE": "0"})
         self.assertGreater(gap, prompt_s / 3, f"a {n}-token prompt of {prompt_s:.2f} s held the other request only {gap:.2f} s")
 
     def test_one_request_keeps_whole_batches(self):
@@ -201,7 +201,7 @@ class ConcurrentPrefillTest(unittest.TestCase):
         self.assertGreater(cached, shared * 0.8, f"reused {cached} of a {shared}-token prompt")
 
     def test_prefix_copy_switch(self):
-        cached, shared = self.busy_prefix({"TOSH_PREFIX_COPY": "0"})
+        cached, shared = self.busy_prefix({"XEON_PREFIX_COPY": "0"})
         self.assertLess(cached, shared * 0.2)
 
     def test_a_checkpoint_holding_the_prefix_is_kept(self):

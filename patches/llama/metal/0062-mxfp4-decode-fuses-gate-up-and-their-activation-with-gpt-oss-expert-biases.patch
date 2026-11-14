@@ -56,7 +56,7 @@ diff --git a/ggml/src/ggml-metal/ggml-metal-device.h b/ggml/src/ggml-metal/ggml-
 index 14ca88ebb..5d13c2822 100644
 --- a/ggml/src/ggml-metal/ggml-metal-device.h
 +++ b/ggml/src/ggml-metal/ggml-metal-device.h
-@@ -174,10 +174,11 @@ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_tosh_topk
+@@ -174,10 +174,11 @@ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_xeon_topk
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort           (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_argsort_merge     (ggml_metal_library_t lib, const struct ggml_tensor * op);
  struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_fwht              (ggml_metal_library_t lib, int n, enum ggml_type tsrc, bool w64);
@@ -97,7 +97,7 @@ index 130d8728f..3b2409b50 100644
 +++ b/ggml/src/ggml-metal/ggml-metal-ops.cpp
 @@ -3611,11 +3611,11 @@ static int ggml_metal_op_mul_mat_swiglu(ggml_metal_op_t ctx, int idx) {
      // two rows); measured on discrete cards only, so unified memory keeps the separate ones
-     static const bool dense_disabled = TOSH_ENV("TOSH_DENSE_SWIGLU_FUSION_DISABLE") != nullptr;
+     static const bool dense_disabled = XEON_ENV("XEON_DENSE_SWIGLU_FUSION_DISABLE") != nullptr;
      const ggml_type wt = gate->src[0]->type;
      const ggml_metal_device_props * props = ggml_metal_device_get_props(ctx->dev);
      const bool dense = !dense_disabled && props->simd_width == 32 && !props->has_unified_memory &&
@@ -131,7 +131,7 @@ index 130d8728f..3b2409b50 100644
 +// gpt-oss decode: the gate and up expert mat-vecs, their per-expert bias adds and the clamped
 +// swiglu that follow them go as one kernel that writes the swiglu output
 +static int ggml_metal_op_mul_mat_id_swiglu_oai(ggml_metal_op_t ctx, int idx) {
-+    static const bool disabled = TOSH_ENV("TOSH_MOE_SWIGLU_OAI_FUSION_DISABLE") != nullptr;
++    static const bool disabled = XEON_ENV("XEON_MOE_SWIGLU_OAI_FUSION_DISABLE") != nullptr;
 +    if (disabled || !ctx->use_fusion() || idx + 4 >= ctx->n_nodes()) {
 +        return 0;
 +    }
@@ -172,8 +172,8 @@ index 130d8728f..3b2409b50 100644
 +        gate->src[0]->type == GGML_TYPE_MXFP4 && up->src[0]->type == GGML_TYPE_MXFP4 &&
 +        ggml_are_same_shape(gate->src[0], up->src[0]) && ggml_is_contiguous(gate->src[0]) && ggml_is_contiguous(up->src[0]) &&
 +        up->src[1] == x && up->src[2] == ids && gate_b->src[2] == ids && up_b->src[2] == ids &&
-+#ifdef TOSH_ENABLE_DYNAMIC_MOE
-+        ids->op != GGML_OP_TOSH_DMOE_PUBLISH &&
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++        ids->op != GGML_OP_XEON_DMOE_PUBLISH &&
 +#endif
 +        !ggml_metal_op_mul_mat_id_use_mm(gate, props->has_simdgroup_mm || props->use_mm_manual) &&
 +        x->type == GGML_TYPE_F32 && x->nb[0] == sizeof(float) &&

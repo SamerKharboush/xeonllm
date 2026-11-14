@@ -19,7 +19,7 @@ The port to upstream `d81235049` (v0.6.0), one patch per feature, in a folder pe
 
 | folder | what lives there |
 |---|---|
-| `metal/` | the AMD Metal backend: host side, reductions and quant loads, matvec and ToshGEMM for both lane widths, AMD flash and sparse attention, fusions, older GCN and macOS 12 |
+| `metal/` | the AMD Metal backend: host side, reductions and quant loads, matvec and XeonGEMM for both lane widths, AMD flash and sparse attention, fusions, older GCN and macOS 12 |
 | `quant/` | turbo KV cache, Prism ternary types |
 | `mgpu/` | multi-GPU: tensor groups, events and subgraphs, allreduce, TP2 fused boundary |
 | `moe/` | expert prefetch, Dynamic MoE, its host cache and auto plan |

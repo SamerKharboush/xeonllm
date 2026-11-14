@@ -209,9 +209,9 @@ index 6b035b287..8e9c1f827 100644
  #include <stdatomic.h>
  #include <time.h>
  
- // TOSH_CB_PROFILE=1: per-command-buffer GPU accounting, bucketed by graph size.
+ // XEON_CB_PROFILE=1: per-command-buffer GPU accounting, bucketed by graph size.
  // Off by default, and it attaches no completion handler when off.
- #define TOSH_CBP_MAX_BUCKETS 24
+ #define XEON_CBP_MAX_BUCKETS 24
 @@ -301,26 +303,129 @@ struct ggml_metal {
  
      // abort ggml_metal_graph_compute if callback returns true
@@ -239,23 +239,23 @@ index 6b035b287..8e9c1f827 100644
  };
  
  ggml_metal_t ggml_metal_init(ggml_metal_device_t dev) {
-+// TOSH_MGPU_DEFER_WAITS folds a cross-device wait into the next command buffer this context
++// XEON_MGPU_DEFER_WAITS folds a cross-device wait into the next command buffer this context
 +// submits instead of spending a whole one on it. Opt-in: on a single card both contexts share
 +// the device queue, so it measures slightly negative there and only 2 real GPUs can settle it.
 +static bool ggml_metal_defer_waits(void) {
 +    static int val = -1;
 +    if (val < 0) {
-         const char * v = TOSH_ENV("TOSH_MGPU_DEFER_WAITS");
+         const char * v = XEON_ENV("XEON_MGPU_DEFER_WAITS");
 +        val = (v && v[0] == '1') ? 1 : 0;
 +    }
 +    return val;
 +}
-         const char * v = TOSH_ENV("TOSH_MGPU_TRACE");
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_CTIME"); v = (s && s[0] == '1') ? 1 : 0; }
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
-         const char * s = TOSH_ENV("TOSH_MGPU_BP_SATISFIED");
-         const char * s = TOSH_ENV("TOSH_MGPU_TP2_FUSED_BOUNDARY");
-         const char * s = TOSH_ENV("TOSH_MGPU_WAIT_SATISFIED");
+         const char * v = XEON_ENV("XEON_MGPU_TRACE");
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_CTIME"); v = (s && s[0] == '1') ? 1 : 0; }
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_CTIME_BARRIER"); v = (s && s[0] == '1') ? 1 : 0; }
+         const char * s = XEON_ENV("XEON_MGPU_BP_SATISFIED");
+         const char * s = XEON_ENV("XEON_MGPU_TP2_FUSED_BOUNDARY");
+         const char * s = XEON_ENV("XEON_MGPU_WAIT_SATISFIED");
 +static void ggml_metal_encode_pending_waits(ggml_metal_t ctx, id<MTLCommandBuffer> cmd_buf) {
 +    for (int i = 0; i < ctx->n_ev_wait_pending; ++i) {
 +        ggml_metal_event_encode_wait(ctx->ev_wait_pending[i], (ggml_metal_cmd_buf_t) cmd_buf);
@@ -347,7 +347,7 @@ index 6b035b287..8e9c1f827 100644
  }
  
  void ggml_metal_free(ggml_metal_t ctx) {
-     tosh_cbp_dump_dev(ctx->dev);
+     xeon_cbp_dump_dev(ctx->dev);
  
      GGML_LOG_INFO("%s: deallocating\n", __func__);
  
@@ -480,14 +480,14 @@ index 6b035b287..8e9c1f827 100644
          }
      }
      return true;
-         const char * s = TOSH_ENV("TOSH_MGPU_NOWAIT");
-+// TOSH_MGPU_PEER_SELF runs the peer hand-off between two logical devices backed by the
+         const char * s = XEON_ENV("XEON_MGPU_NOWAIT");
++// XEON_MGPU_PEER_SELF runs the peer hand-off between two logical devices backed by the
 +// same GPU (GGML_METAL_DEVICE_LIST=0,0), which needs no bridge: the queues are still
 +// separate, so the cross-device ordering is testable on a single card.
 +static bool ggml_metal_peer_self(void) {
 +    static int val = -1;
 +    if (val < 0) {
-         const char * v = TOSH_ENV("TOSH_MGPU_PEER_SELF");
+         const char * v = XEON_ENV("XEON_MGPU_PEER_SELF");
 +        val = (v && v[0] == '1') ? 1 : 0;
 +    }
 +    return val;
@@ -576,8 +576,8 @@ index 6b035b287..8e9c1f827 100644
  
              link->peer_logged = true;
 @@ -996,16 +1153,18 @@ static _Atomic uint64_t g_xdev_ev = 0, g_xdev_peer = 0, g_xdev_gen = 0;
- static void tosh_xdev_report(void) {
-     fprintf(stderr, "TOSH_XDEV  events=%llu  peer=%llu  generic=%llu\n",
+ static void xeon_xdev_report(void) {
+     fprintf(stderr, "XEON_XDEV  events=%llu  peer=%llu  generic=%llu\n",
              (unsigned long long) atomic_load(&g_xdev_ev),
              (unsigned long long) atomic_load(&g_xdev_peer),
              (unsigned long long) atomic_load(&g_xdev_gen));
@@ -628,15 +628,15 @@ index 6b035b287..8e9c1f827 100644
      // A Metal blit can't reach a buffer owned by another device, so a multi-GPU layer
      // hand-off goes through host memory (GGML_METAL_CROSS_STAGING_DISABLE uses the generic copy).
      if (ctx_src->dev != ctx_dst->dev) {
-         if (TOSH_ENV("GGML_METAL_CROSS_STAGING_DISABLE") != NULL) {
+         if (XEON_ENV("GGML_METAL_CROSS_STAGING_DISABLE") != NULL) {
              return false;
          }
  
          // both buffers must be private for the cross-device blits
 @@ -1060,20 +1235,28 @@ static bool ggml_metal_cpy_xdev_events(ggml_metal_t ctx_src, ggml_metal_t ctx_ds
-             count = TOSH_ENV("TOSH_MGPU_XDEV_COUNT") != NULL;
+             count = XEON_ENV("XEON_MGPU_XDEV_COUNT") != NULL;
              if (count) {
-                 atexit(tosh_xdev_report);
+                 atexit(xeon_xdev_report);
              }
          }
  
@@ -795,10 +795,10 @@ index 6b035b287..8e9c1f827 100644
 +        ggml_metal_encoder_end_encoding(enc);
 +        ggml_metal_encoder_free(enc);
 +
-     if (v < 0) { const char * s = TOSH_ENV("TOSH_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
-         const char * s = TOSH_ENV("TOSH_MGPU_PEER_MIN_BATCH");
-         const char * s = TOSH_ENV("TOSH_MGPU_HOLD");
-         const char * v = TOSH_ENV("TOSH_MGPU_PEER");
+     if (v < 0) { const char * s = XEON_ENV("XEON_MGPU_FB_ADD_RB"); v = (s && s[0] == '0') ? 0 : 1; }
+         const char * s = XEON_ENV("XEON_MGPU_PEER_MIN_BATCH");
+         const char * s = XEON_ENV("XEON_MGPU_HOLD");
+         const char * v = XEON_ENV("XEON_MGPU_PEER");
  
              MTLCommandBufferStatus status = [cmd_buf status];
              if (status != MTLCommandBufferStatusCompleted) {
@@ -807,7 +807,7 @@ index 6b035b287..8e9c1f827 100644
          ggml_metal_event_wait(ctx_dst, ev_cpy);
  
          return true;
-         const char * s = TOSH_ENV("TOSH_MGPU_MERGE");
+         const char * s = XEON_ENV("XEON_MGPU_MERGE");
      }
  }
  
@@ -831,7 +831,7 @@ index 6b035b287..8e9c1f827 100644
              id<MTLCommandBuffer> cmd_buf = [queue commandBufferWithUnretainedReferences];
              [cmd_buf retain];
 +            ggml_metal_encode_pending_waits(ctx, cmd_buf);
-             tosh_cbp_attach(cmd_buf, cbp);
+             xeon_cbp_attach(cmd_buf, cbp);
  
              if (ctx->cmd_bufs[n_cb].obj) {
                  [ctx->cmd_bufs[n_cb].obj release];
@@ -856,7 +856,7 @@ index 6b035b287..8e9c1f827 100644
          for (int cb_idx = 0; cb_idx < n_cb; ++cb_idx) {
              id<MTLCommandBuffer> cmd_buf = [queue commandBufferWithUnretainedReferences];
 +            ggml_metal_encode_pending_waits(ctx, cmd_buf);
-             tosh_cbp_attach(cmd_buf, cbp);
+             xeon_cbp_attach(cmd_buf, cbp);
              [cmd_buf retain];
  
              if (ctx->cmd_bufs[cb_idx].obj) {
@@ -928,7 +928,7 @@ index aa51ce537..7d48753b9 100644
 +                                      size_t n_copies, size_t stride_tensor, size_t stride_data);
  bool   ggml_metal_device_stage_get(ggml_metal_device_t dev, struct ggml_metal_buffer_id bid_src, void * data, size_t size);
  
- // TOSH_MOE_PROFILE: per-tensor-name transfer accounting; no-op when disabled
+ // XEON_MOE_PROFILE: per-tensor-name transfer accounting; no-op when disabled
  void   ggml_metal_prof_note(const char * name, size_t size, bool d2h);
  
  // batch small synchronous reads into one device round-trip
@@ -948,7 +948,7 @@ index 88b7e69b9..3eb975c96 100644
  };
  
 +// tensor split blocks the main thread on the queue's in-flight command buffer limit (64 by
-+// default), so allow raising it: TOSH_MTL_QUEUE_DEPTH
++// default), so allow raising it: XEON_MTL_QUEUE_DEPTH
  // macOS can hand out an integrated iGPU (isLowPower, ~1 GB) as the system
  // default. Auto-selection skips it; explicit DEVICE_INDEX/LIST can still pin it.
  static id<MTLDevice> ggml_metal_device_default_discrete(void) {
@@ -968,7 +968,7 @@ index 88b7e69b9..3eb975c96 100644
  
 +
 +static id<MTLCommandQueue> ggml_metal_new_queue(id<MTLDevice> device) {
-     const char * s = TOSH_ENV("TOSH_MTL_QUEUE_DEPTH");
+     const char * s = XEON_ENV("XEON_MTL_QUEUE_DEPTH");
 +    const int depth = s ? atoi(s) : 0;
 +
 +    if (depth > 0) {
@@ -1009,7 +1009,7 @@ index 88b7e69b9..3eb975c96 100644
                      }
                      if (is_wave64 || monterey || force != NULL) {
                          fprintf(stderr, "ggml_metal: aligned mat-vec reads %s by %s "
-                                         "(override with TOSH_MV_ALIGN=1 or =0)\n",
+                                         "(override with XEON_MV_ALIGN=1 or =0)\n",
                                  dev->props.needs_aligned_loads ? "ON" : "off", how);
                      }
                  }
@@ -1017,8 +1017,8 @@ index 88b7e69b9..3eb975c96 100644
 +                // Auto-on for wave64: run the quantized/f16 mat-vec decode on the GPU
                  // (large tg win, validated on GCN); escape hatch forces it off.
                  // GGML_METAL_WAVE64_SAFEMODE is the user-facing alias the app documents.
-                 dev->props.wave64_decode = is_wave64 && TOSH_ENV("GGML_METAL_WAVE64_DECODE_DISABLE") == NULL
-                                                      && TOSH_ENV("GGML_METAL_WAVE64_SAFEMODE") == NULL;
+                 dev->props.wave64_decode = is_wave64 && XEON_ENV("GGML_METAL_WAVE64_DECODE_DISABLE") == NULL
+                                                      && XEON_ENV("GGML_METAL_WAVE64_SAFEMODE") == NULL;
                  if (dev->props.wave64_decode) {
 +                    fprintf(stderr, "ggml_metal: wave64 decode ON: quantized/f16/bf16 mat-vec on GPU "
 +                                    "(see the allowlist in ggml_metal_library_get_pipeline_mul_mv)\n");
@@ -1052,7 +1052,7 @@ index 88b7e69b9..3eb975c96 100644
 @@ -3147,16 +3165,94 @@ bool ggml_metal_device_stage_set(ggml_metal_device_t dev, struct ggml_metal_buff
  
      if (t0) {
-         tosh_prof_add(TOSH_PROF_H2D_STAGE, size, t0);
+         xeon_prof_add(XEON_PROF_H2D_STAGE, size, t0);
      }
  
      return true;
@@ -1070,7 +1070,7 @@ index 88b7e69b9..3eb975c96 100644
 +        return false;
 +    }
 +
-+    const uint64_t t0 = tosh_prof_on() ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
++    const uint64_t t0 = xeon_prof_on() ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
 +
 +    const size_t per_batch = MAX((size_t) 1, GGML_METAL_STAGE_BUF_MAX / size);
 +
@@ -1130,7 +1130,7 @@ index 88b7e69b9..3eb975c96 100644
 +    [dev->stage_lock unlock];
 +
 +    if (t0) {
-+        tosh_prof_add(TOSH_PROF_H2D_STAGE, size*n_copies, t0);
++        xeon_prof_add(XEON_PROF_H2D_STAGE, size*n_copies, t0);
 +    }
 +
 +    return true;
@@ -1145,11 +1145,11 @@ index 88b7e69b9..3eb975c96 100644
      [dev->stage_batch_cmd commit];
      [dev->stage_batch_cmd waitUntilCompleted];
 @@ -3258,16 +3354,39 @@ bool ggml_metal_device_stage_get(ggml_metal_device_t dev, struct ggml_metal_buff
- _Atomic uint64_t g_tosh_d2h_ns, g_tosh_d2h_bytes, g_tosh_d2h_n;
- _Atomic uint64_t g_tosh_h2d_ns, g_tosh_h2d_bytes, g_tosh_h2d_n;
- static _Atomic int g_tosh_xfer_state = 0;
+ _Atomic uint64_t g_xeon_d2h_ns, g_xeon_d2h_bytes, g_xeon_d2h_n;
+ _Atomic uint64_t g_xeon_h2d_ns, g_xeon_h2d_bytes, g_xeon_h2d_n;
+ static _Atomic int g_xeon_xfer_state = 0;
  
- static bool tosh_xfer_on(void);
+ static bool xeon_xfer_on(void);
  static void ggml_metal_buffer_set_tensor_impl(ggml_metal_buffer_t buf, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size);
  static void ggml_metal_buffer_get_tensor_impl(ggml_metal_buffer_t buf, const struct ggml_tensor * tensor, void * data, size_t offset, size_t size);
  
@@ -1178,11 +1178,11 @@ index 88b7e69b9..3eb975c96 100644
 +}
  
  void ggml_metal_buffer_set_tensor(ggml_metal_buffer_t buf, struct ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
-     const bool xf = tosh_xfer_on();
+     const bool xf = xeon_xfer_on();
      const uint64_t xf_t0 = xf ? clock_gettime_nsec_np(CLOCK_UPTIME_RAW) : 0;
      if (xf) {
-         atomic_fetch_add_explicit(&g_tosh_h2d_n, 1, memory_order_relaxed);
-         atomic_fetch_add_explicit(&g_tosh_h2d_bytes, size, memory_order_relaxed);
+         atomic_fetch_add_explicit(&g_xeon_h2d_n, 1, memory_order_relaxed);
+         atomic_fetch_add_explicit(&g_xeon_h2d_bytes, size, memory_order_relaxed);
      }
 diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-metal-ops.cpp
 index d94c3babe..e8f0c816f 100644
@@ -1321,7 +1321,7 @@ index 76563cbe5..fd508bab5 100644
 +static int64_t ggml_metal_peer_min_batch(void) {
 +    static int64_t v = -1;
 +    if (v < 0) {
-+        const char * s = getenv("TOSH_MGPU_PEER_MIN_BATCH");
++        const char * s = getenv("XEON_MGPU_PEER_MIN_BATCH");
 +        v = s ? atoll(s) : 32;
 +    }
 +    return v;
@@ -1381,7 +1381,7 @@ index 76563cbe5..fd508bab5 100644
 +}
 +
 +static void * ggml_backend_metal_comm_init(ggml_backend_t * backends, size_t n_backends) {
-+    if (n_backends < 2 || getenv("TOSH_MGPU_COMM_DISABLE") != NULL) {
++    if (n_backends < 2 || getenv("XEON_MGPU_COMM_DISABLE") != NULL) {
 +        return nullptr;
 +    }
 +
@@ -1476,7 +1476,7 @@ index 76563cbe5..fd508bab5 100644
 +    // buffer stays open between the two calls
 +    static int fuse = -1;
 +    if (fuse < 0) {
-+        fuse = getenv("TOSH_MGPU_FUSE_ADD_DISABLE") == NULL ? 1 : 0;
++        fuse = getenv("XEON_MGPU_FUSE_ADD_DISABLE") == NULL ? 1 : 0;
 +    }
 +    const bool hold_dst = fuse == 1;
 +
@@ -1699,9 +1699,9 @@ index 9beb14841..e31f696f1 100644
 +// Tensor parallelism across every device drops generation as 1/N, because a synchronisation point
 +// costs the same whatever it carries. Grouping the devices keeps the tensor split inside each
 +// group and the layer split between groups, which trades some prefill for most of the generation
-+// back. TOSH_MGPU_TENSOR_GROUP is the group size; unset or 0 keeps one group, as before.
++// back. XEON_MGPU_TENSOR_GROUP is the group size; unset or 0 keeps one group, as before.
 +static size_t llama_tensor_group_size(size_t n_devs) {
-+    const char * s = getenv("TOSH_MGPU_TENSOR_GROUP");
++    const char * s = getenv("XEON_MGPU_TENSOR_GROUP");
 +    if (s == nullptr) {
 +        return n_devs;
 +    }
@@ -1712,14 +1712,14 @@ index 9beb14841..e31f696f1 100644
 +    }
 +
 +    if (n_devs % (size_t) g != 0) {
-+        LLAMA_LOG_WARN("%s: TOSH_MGPU_TENSOR_GROUP=%ld does not divide %zu devices, using one group\n",
++        LLAMA_LOG_WARN("%s: XEON_MGPU_TENSOR_GROUP=%ld does not divide %zu devices, using one group\n",
 +                __func__, g, n_devs);
 +        return n_devs;
 +    }
 +
 +    // the grouping is invisible in the log otherwise, so there is no way to tell whether the
 +    // variable took effect
-+    LLAMA_LOG_INFO("%s: TOSH_MGPU_TENSOR_GROUP=%ld: %zu devices in %zu groups of %ld\n",
++    LLAMA_LOG_INFO("%s: XEON_MGPU_TENSOR_GROUP=%ld: %zu devices in %zu groups of %ld\n",
 +            __func__, g, n_devs, n_devs / (size_t) g, g);
 +
 +    return (size_t) g;
