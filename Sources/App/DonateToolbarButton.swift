@@ -19,9 +19,15 @@ struct DonateToolbarButton: View {
         // inside a fixed width.
         HStack {
             Spacer(minLength: 0)
-            Button {
-                guard let url = URL(string: AppInfo.repositoryURL) else { return }
-                NSWorkspace.shared.open(url)
+            Menu {
+                ForEach(AppInfo.donateOptions, id: \.url) { option in
+                    Button {
+                        guard let url = URL(string: option.url) else { return }
+                        NSWorkspace.shared.open(url)
+                    } label: {
+                        Text(option.label)
+                    }
+                }
             } label: {
                 HStack(spacing: 6) {
                     if expanded {
@@ -39,9 +45,11 @@ struct DonateToolbarButton: View {
                 .background(.quaternary.opacity(expanded ? 1 : 0.6), in: Capsule())
                 .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
             .accessibilityLabel(AppInfo.branded("Donate"))
-            .help(AppInfo.branded("Open the project repository"))
+            .help(AppInfo.branded("Support development"))
             .onHover { inside in animate { hovering = inside } }
         }
         .frame(width: 96, height: 28)

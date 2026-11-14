@@ -14,7 +14,7 @@ import CryptoKit
 final class BenchmarkSharing: ObservableObject {
     static let shared = BenchmarkSharing()
 
-    static let baseURL = "https://toshllm.com"
+    static let baseURL = "https://samerkharboush.github.io/xeonllm-site"
     static let consentVersion = "benchmark-share-v1"
     private static let bundleID = AppInfo.identifier
     private static let keyAccount = "benchmark-signing-key.v1"

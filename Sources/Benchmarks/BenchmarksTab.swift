@@ -115,7 +115,7 @@ struct BenchmarksView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(AppInfo.branded("Share with the community"))
                             .font(.title3.weight(.semibold))
-                        Text(AppInfo.branded("Publish a verifiable measurement on toshllm.com"))
+                        Text(AppInfo.branded("Publish a verifiable measurement on the XeonLLM site"))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()

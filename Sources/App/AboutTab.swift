@@ -19,6 +19,13 @@ enum AppInfo {
     static let featureRequestURL = repositoryURL + "/issues/new?template=feature_request.yml"
     static let discussionsURL = repositoryURL + "/discussions"
 
+    /// Ways to support development. Every donate surface (toolbar, About, docs) reads
+    /// this list so they cannot drift apart, and the test checks it is exactly these two.
+    static let donateOptions: [(label: String, url: String)] = [
+        ("GitHub Sponsors", "https://github.com/sponsors/SamerKharboush"),
+        ("PayPal", "https://paypal.me/Samerelnady"),
+    ]
+
     // A build packaged under another identity (XEON_APP_NAME in make-app.sh) carries these keys;
     // a plain build has none of them and keeps XeonLLM's.
     static let identity = Identity(values: Bundle.main.infoDictionary ?? [:])
@@ -236,10 +243,16 @@ struct AboutView: View {
                     Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                 }
                 .glassButton().fixedSize()
-                Button { open(AppInfo.repositoryURL) } label: {
+                Menu {
+                    ForEach(AppInfo.donateOptions, id: \.url) { option in
+                        Button(option.label) { open(option.url) }
+                    }
+                } label: {
                     Label(AppInfo.branded("Donate"), systemImage: "heart.fill")
                 }
-                .glassButton(prominent: true).fixedSize()
+                .menuStyle(.button)
+                .glassButton(prominent: true)
+                .fixedSize()
             }
         }
     }

@@ -71,18 +71,73 @@ PY
 # ico/svg by theme). The iOS splash screens carry upstream's logo and only matter
 # for "add to home screen", so they go, and the service worker manifest is rebuilt
 # to match: a stale precache is what keeps serving the old icon.
-ICON="$ROOT/icon-1024.png"
+ICON="$ROOT/icon.png"
 if [ -f "$ICON" ]; then
     for spec in "apple-touch-icon-180x180.png 180" "pwa-64x64.png 64" "pwa-192x192.png 192" \
-                "pwa-512x512.png 512" "maskable-icon-512x512.png 512"; do
+                "pwa-512x512.png 512"; do
         set -- ${=spec}
         sips -s format png -z "$2" "$2" "$ICON" --out "$OUT/$1" >/dev/null
     done
+    # Maskable icons are cropped to a circle by the launcher: the art is scaled
+    # down onto a transparent 512 canvas so its whole frame stays inside the 80%
+    # safe zone (its opaque box is 371x422 of 600, so 410 px keeps the corner
+    # distance at 192 < the 205 px safe radius).
+    sips -s format png -z 410 410 "$ICON" --out "$OUT/.mask.png" >/dev/null
+    python3 - "$OUT" <<'PYMASK'
+import os, struct, sys, zlib
+out = sys.argv[1]
+src = open(os.path.join(out, ".mask.png"), "rb").read()
+
+# minimal PNG decode (RGBA8) — sips writes non-interlaced truecolour+alpha
+pos, idat, w, h = 8, b"", 0, 0
+while pos < len(src):
+    ln = struct.unpack(">I", src[pos:pos + 4])[0]
+    typ, data = src[pos + 4:pos + 8], src[pos + 8:pos + 8 + ln]
+    if typ == b"IHDR":
+        w, h = struct.unpack(">II", data[:8])
+    elif typ == b"IDAT":
+        idat += data
+    pos += 12 + ln
+bpp = 4
+raw, prev, i, rows = zlib.decompress(idat), bytearray(w * bpp), 0, []
+for _ in range(h):
+    f = raw[i]; i += 1
+    line = bytearray(raw[i:i + w * bpp]); i += w * bpp
+    for x in range(len(line)):
+        a = line[x - bpp] if x >= bpp else 0
+        b = prev[x]
+        c = prev[x - bpp] if x >= bpp else 0
+        if f == 1: line[x] = (line[x] + a) & 255
+        elif f == 2: line[x] = (line[x] + b) & 255
+        elif f == 3: line[x] = (line[x] + (a + b) // 2) & 255
+        elif f == 4:
+            p = a + b - c
+            pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+            line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+    rows.append(bytes(line)); prev = line
+
+S = 512
+off = (S - w) // 2
+canvas = bytearray(S * S * bpp)
+for y in range(h):
+    dst = (y + off) * S * bpp + off * bpp
+    canvas[dst:dst + w * bpp] = rows[y]
+
+def chunk(typ, data):
+    return (struct.pack(">I", len(data)) + typ + data
+            + struct.pack(">I", zlib.crc32(typ + data) & 0xffffffff))
+
+png = (b"\x89PNG\r\n\x1a\n"
+       + chunk(b"IHDR", struct.pack(">IIBBBBB", S, S, 8, 6, 0, 0, 0))
+       + chunk(b"IDAT", zlib.compress(b"".join(b"\x00" + bytes(canvas[y * S * bpp:(y + 1) * S * bpp]) for y in range(S)), 9))
+       + chunk(b"IEND", b""))
+open(os.path.join(out, "maskable-icon-512x512.png"), "wb").write(png)
+os.remove(os.path.join(out, ".mask.png"))
+PYMASK
+    rm -f "$OUT"/apple-splash-*.png
     sips -s format png -z 48 48   "$ICON" --out "$OUT/.ico48.png"  >/dev/null
     sips -s format png -z 512 512 "$ICON" --out "$OUT/.icon512.png" >/dev/null
-    rm -f "$OUT"/apple-splash-*.png
-    GLYPH="$ROOT/AppIcon.icon/Assets/glyph.png"
-    sips -s format png -z 256 256 "${GLYPH:-$ICON}" --out "$OUT/.icon256.png" >/dev/null
+    sips -s format png -z 256 256 "$ICON" --out "$OUT/.icon256.png" >/dev/null
     python3 - "$OUT" <<'PYICON'
 import base64, glob, hashlib, os, re, struct, sys, zlib
 out = sys.argv[1]
@@ -108,6 +163,7 @@ html = re.sub(r'\s*<link[^>]*rel="apple-touch-startup-image"[^>]*>', '', html)
 open(index, "w", encoding="utf-8").write(html)
 
 # The sidebar mark is upstream's logo inlined in the bundle as a template literal.
+# Our art goes in as-is: no recolouring, no mask, its own transparent margin.
 png256 = open(os.path.join(out, ".icon256.png"), "rb").read()
 os.remove(os.path.join(out, ".icon256.png"))
 bundle = glob.glob(os.path.join(out, "_app", "immutable", "bundle.*.js"))[0]
@@ -115,50 +171,9 @@ js = open(bundle, encoding="utf-8").read()
 m = re.search(r'`<svg width="512" height="512" viewBox="0 0 512 512" fill="none".*?</svg>\s*`', js, re.S)
 if not m:
     raise SystemExit("rebrand: inline logo svg not found in bundle")
-# the glyph asset is padded like an app icon, so crop to its opaque box and scale it
-# to the same optical size upstream's mark had, then paint it with currentColor
-def alpha_box(png):
-    pos, idat, w, h = 8, b"", 0, 0
-    while pos < len(png):
-        ln = struct.unpack(">I", png[pos:pos + 4])[0]
-        typ, data = png[pos + 4:pos + 8], png[pos + 8:pos + 8 + ln]
-        if typ == b"IHDR":
-            w, h = struct.unpack(">II", data[:8])
-        elif typ == b"IDAT":
-            idat += data
-        pos += 12 + ln
-    bpp = 4
-    raw, prev, i, rows = zlib.decompress(idat), bytearray(w * bpp), 0, []
-    for _ in range(h):
-        f = raw[i]; i += 1
-        line = bytearray(raw[i:i + w * bpp]); i += w * bpp
-        for x in range(len(line)):
-            a = line[x - bpp] if x >= bpp else 0
-            b = prev[x]
-            c = prev[x - bpp] if x >= bpp else 0
-            if f == 1: line[x] = (line[x] + a) & 255
-            elif f == 2: line[x] = (line[x] + b) & 255
-            elif f == 3: line[x] = (line[x] + (a + b) // 2) & 255
-            elif f == 4:
-                p = a + b - c
-                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
-                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
-        rows.append(bytes(line)); prev = line
-    xs = [x for y in range(h) for x in range(w) if rows[y][x * 4 + 3] > 16]
-    ys = [y for y in range(h) for x in range(w) if rows[y][x * 4 + 3] > 16]
-    return w, h, min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
-
-sw_px, sh_px, bx, by, bw, bh = alpha_box(png256)
-target = 502.0
-k = target / max(bw, bh)
-ix = (512 - bw * k) / 2 - bx * k
-iy = (512 - bh * k) / 2 - by * k
 ours = ('`<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">'
-        '<defs><mask id="xeonGlyphMask">'
-        f'<image x="{ix:.1f}" y="{iy:.1f}" width="{sw_px * k:.1f}" height="{sh_px * k:.1f}" '
-        'href="data:image/png;base64,' + base64.b64encode(png256).decode() + '"/>'
-        '</mask></defs>'
-        '<rect width="512" height="512" fill="currentColor" mask="url(#xeonGlyphMask)"/></svg>`')
+        '<image width="512" height="512" href="data:image/png;base64,'
+        + base64.b64encode(png256).decode() + '"/></svg>`')
 open(bundle, "w", encoding="utf-8").write(js[:m.start()] + ours + js[m.end():])
 
 sw = os.path.join(out, "sw.js")
@@ -183,7 +198,7 @@ if os.path.exists(sw):
     print(f"  service worker: {kept} entradas revalidadas, {dropped} obsoletas fuera")
 PYICON
 else
-    echo "WARNING: icon-1024.png missing; keeping upstream art"
+    echo "WARNING: icon.png missing; keeping upstream art"
 fi
 
 echo "web UI rebranded into ${OUT#$ROOT/} ($(du -sh "$OUT" | cut -f1))"

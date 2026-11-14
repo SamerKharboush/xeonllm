@@ -5,18 +5,18 @@
 // Renders the installer window background. The cinematic artwork and the
 // app's brand details are composed here so typography stays pixel-perfect.
 //   swiftc -O scripts/dmg-background.swift -o /tmp/dmgbg
-//   /tmp/dmgbg out.png Assets/dmg/obsidian-hardware.png AppIcon.icon/Assets/glyph.png 2
+//   /tmp/dmgbg out.png Assets/dmg/obsidian-hardware.png icon.png 2
 
 import AppKit
 
 let args = CommandLine.arguments
 guard args.count >= 4 else {
     FileHandle.standardError.write(
-        "usage: dmgbg <out.png> <artwork.png> <glyph.png> [scale]\n".data(using: .utf8)!
+        "usage: dmgbg <out.png> <artwork.png> <icon.png> [scale]\n".data(using: .utf8)!
     )
     exit(2)
 }
-let outPath = args[1], artworkPath = args[2], glyphPath = args[3]
+let outPath = args[1], artworkPath = args[2], markPath = args[3]
 let scale = args.count > 4 ? (Double(args[4]) ?? 1) : 1
 
 let W = 640.0, H = 400.0
@@ -68,11 +68,13 @@ wash(CGPoint(x: appSlot.x, y: appSlot.y + 2), radius: 112,
 wash(CGPoint(x: dstSlot.x, y: dstSlot.y + 2), radius: 112,
      color: srgb(0.58, 0.48, 1.0), alpha: 0.09)
 
-// A quiet watermark ties the installer to the app icon without adding clutter.
-if let glyph = NSImage(contentsOfFile: glyphPath) {
-    let side = 210.0
-    glyph.draw(in: NSRect(x: -side * 0.48, y: -side * 0.58, width: side, height: side),
-               from: .zero, operation: .sourceOver, fraction: 0.035)
+// A quiet watermark ties the installer to the app icon without adding clutter. The
+// art is a complete illustration inside a padded canvas, so it is drawn as a whole,
+// fully on canvas, in the free bottom-left corner.
+if let mark = NSImage(contentsOfFile: markPath) {
+    let side = 132.0
+    mark.draw(in: NSRect(x: 24, y: 22, width: side, height: side),
+              from: .zero, operation: .sourceOver, fraction: 0.10)
 }
 
 // Glass landing zones make the gesture obvious without competing with Finder.

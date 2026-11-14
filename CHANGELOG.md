@@ -1875,7 +1875,7 @@ Measured on a Radeon RX 6700 XT against 0.84.3. Models without any of these trai
 ## [0.82.3] - 2026-07-17
 
 ### Added
-- **Share your benchmarks to [toshllm.com](https://toshllm.com) from the app**... Benchmarks → Share with the community runs the standard workload and, after you review the exact data, submits it signed per-install (no account needed); opt-in, nothing leaves your machine until you confirm.
+- **Share your benchmarks to [the XeonLLM site](https://samerkharboush.github.io/xeonllm-site/) from the app**... Benchmarks → Share with the community runs the standard workload and, after you review the exact data, submits it signed per-install (no account needed); opt-in, nothing leaves your machine until you confirm.
 
 ### Fixed
 - **Image generation no longer aborts on AMD GCN/Vega (wave64) GPUs** ([#39](https://github.com/engeldlgado/toshllm/issues/39))... an op the wave64 backend has no kernel for (e.g. the VAE encode's small matmul in img2img) now falls to CPU instead of crashing the whole run.
@@ -2660,6 +2660,5 @@ before 1.0.
 - Profiles (full config snapshots, engine included), menu bar mode, auto-start.
 - Bilingual UI (English/Spanish) with tooltips on every setting and built-in docs.
 - OpenAI-compatible API + minimal web chat.
-- Donations: Binance Pay and USDT (TRC-20).
 - GPL-3.0 license, CI releases, CodeQL analysis, unit tests, update checker,
   weekly automated engine bumps with smoke tests.

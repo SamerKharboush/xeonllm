@@ -304,7 +304,10 @@ Built on the work of:
 - **llama.cpp** (ggml-org) — the inference engine
 - **iRon-Llama** (Basten7) — Metal patch research for AMD GPUs on Intel Macs
 
-If the app is useful to you, you can support development from **About → Donate**.
+If the app is useful to you, you can support development from **About → Donate**:
+
+- GitHub Sponsors: <https://github.com/sponsors/SamerKharboush>
+- PayPal: <https://paypal.me/Samerelnady>
 """),
     ]
 }

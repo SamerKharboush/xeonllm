@@ -11,7 +11,7 @@ identifiers:
     value: 10.5281/zenodo.21908524
     description: Concept DOI, always resolves to the latest version
 repository-code: "https://github.com/engeldlgado/toshllm"
-url: "https://toshllm.com"
+url: "https://samerkharboush.github.io/xeonllm-site/"
 license: GPL-3.0-or-later
 version: 0.83.21
 date-released: "2026-08-12"

@@ -44,11 +44,10 @@ else
 fi
 
 # Another product can be packaged from this tree without editing it: these set its name, bundle id,
-# data folder, version, icon, updater and defaults (XEON_APP_DEFAULTS), and a plain build keeps XeonLLM's.
+# data folder, version, updater and defaults (XEON_APP_DEFAULTS), and a plain build keeps XeonLLM's.
 APP_NAME="${XEON_APP_NAME:-XeonLLM}"
 BUNDLE_ID="${XEON_BUNDLE_ID:-dev.xeonllm.app}"
 PRODUCT_VERSION="${XEON_PRODUCT_VERSION:-$VERSION}"
-APP_ICON="${XEON_APP_ICON:-AppIcon.icon}"
 
 APP="dist/$APP_NAME.app"
 rm -rf "$APP"
@@ -239,29 +238,6 @@ fi
 if [ -n "$XEON_APP_EXTENSIONS" ]; then
     cp -R "$XEON_APP_EXTENSIONS" "$APP/Contents/Resources/extensions"
     echo "bundled extensions from $XEON_APP_EXTENSIONS"
-fi
-
-# macOS 26 Liquid Glass icon: compile the layered AppIcon.icon when the
-# toolchain has actool 26+; ships Assets.car plus a freshly rendered legacy
-# icns. Without it the repo icns above remains the icon.
-# CLT-only setups need Xcode.app spelled out (same story as scripts/test.sh).
-ACTOOL=$(xcrun --find actool 2>/dev/null || true)
-if [ -z "$ACTOOL" ] && [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/actool ]; then
-    ACTOOL=/Applications/Xcode.app/Contents/Developer/usr/bin/actool
-    export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-fi
-if [ -d "$APP_ICON" ] && [ -n "$ACTOOL" ]; then
-    ICONTMP=$(mktemp -d)
-    if "$ACTOOL" "$APP_ICON" --compile "$ICONTMP" --platform macosx \
-        --minimum-deployment-target 14.0 --app-icon AppIcon \
-        --output-partial-info-plist "$ICONTMP/icon.plist" > /dev/null 2>&1 \
-        && [ -f "$ICONTMP/Assets.car" ]; then
-        cp "$ICONTMP/Assets.car" "$APP/Contents/Resources/"
-        [ -f "$ICONTMP/AppIcon.icns" ] && cp "$ICONTMP/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-        /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string AppIcon" "$APP/Contents/Info.plist" 2>/dev/null || true
-        echo "bundled Liquid Glass icon (Assets.car + rendered icns)"
-    fi
-    rm -rf "$ICONTMP"
 fi
 
 # a binary built for a newer macOS than the app's floor fails to launch on the testers'
