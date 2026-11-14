@@ -6,7 +6,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The extensions found inside the app and in the chosen folder (docs/extensions.md): each with its
+/// The extensions found inside the app and in the chosen folder (EXTENSIONS.md): each with its
 /// switch and, once on, the settings it declares. Everything applies at the next server start.
 struct ExtensionsSettingsView: View {
     @EnvironmentObject private var loc: Localizer
@@ -99,7 +99,7 @@ struct ExtensionsSettingsView: View {
             Text(AppInfo.branded("An extension is a folder with an extension.json that declares MCP servers and their settings. Any person or program can create one."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            if let docs = URL(string: AppInfo.repositoryURL + "/blob/main/docs/extensions.md") {
+            if let docs = URL(string: AppInfo.repositoryURL + "/blob/main/EXTENSIONS.md") {
                 Link(AppInfo.branded("Extension format"), destination: docs)
                     .font(.caption)
                     .help(AppInfo.branded("Opens the specification on GitHub."))

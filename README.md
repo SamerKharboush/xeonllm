@@ -299,7 +299,7 @@ Measured on the dual-FirePro-D700 Mac Pro this fork runs on. Method lines are co
 the release notes or evidence that produced each table, so each table keeps its own
 conditions; numbers from different tables are not comparable with each other.
 
-**0.87.31-beta.6** (from [`dist/beta31b6-notes.md`](dist/beta31b6-notes.md)). Method: the
+**0.87.31-beta.6** (release notes kept with the project). Method: the
 bundled engine (llama-bench sha256 `82725c76…`, llama.cpp `d81235049` plus 88 patches), card
 1, `llama-bench -p 0 -n 128 -r 5 -fa 1`, one process per cell, llama-bench discards its own
 warmup. A separate CPU-only `llama-server` (14B, `-ngl 0`, idle) was resident during the run.
@@ -311,7 +311,7 @@ is in the binary.
 | Qwen3-4B Q4_K_M | 16.644 (sd 0.007) | 14.120 (sd 0.006) | 16.599 (sd 0.004) |
 | Nemotron-3.5-Bolt-E4B Q4_K_M | 13.752 (sd 0.007) | 11.969 (sd 0.006) | 13.514 (sd 0.009) |
 
-**0.87.31-beta.5** (from [`dist/beta31b5-notes.md`](dist/beta31b5-notes.md)). Method: the dev
+**0.87.31-beta.5** (release notes kept with the project). Method: the dev
 tree `build-static` of the same source (llama.cpp `d81235049` plus 84 patches), card 1,
 `llama-bench -p 0 -n 128 -r 5 -fa 1`; old and new binaries alternated, two rounds, 4
 processes per cell, llama-bench discards its own warmup. "old" is the same tree with the
@@ -336,7 +336,7 @@ reported separately:
 
 Texts are byte-identical across cells and to plain decoding in both tables.
 
-**Threshold retuning, 0.87.31-beta.4** (from [`dist/beta31b4-notes.md`](dist/beta31b4-notes.md)).
+**Threshold retuning, 0.87.31-beta.4** (release notes kept with the project).
 Method: engine `llama.cpp d81235049` plus 82 patches, AVX1 variant; llama-server sha256
 `22a21a08...`; `llama-bench -p 0 -n 128 -r 5 -fa 1`, N = 5, llama-bench discards its own
 warmup; cells alternated with a 10 s gap. "old" is `XEON_MV_ROWS8_DISABLE=1` on the same
@@ -353,7 +353,7 @@ Tensor split rows compare tensor split with itself only, not with layer split or
 Text: llama-server, greedy, 256 tokens, two prompts. On one card (8B) and in tensor split (4B
 and 8B), old and new are byte-identical.
 
-**0.87.31-beta.3** (from [`dist/beta31b3-notes.md`](dist/beta31b3-notes.md)). Method: engine
+**0.87.31-beta.3** (release notes kept with the project). Method: engine
 llama.cpp `d81235049` plus 81 patches, AVX1 variant, llama-server sha256 `4f87c3d8...`;
 `llama-bench -p 0 -n 128 -fa 1`, llama-bench discards its own warmup, cells alternated with a
 10 s gap. "old" is `XEON_MV_ROWS8_DISABLE=1` on the same binary.
@@ -364,7 +364,7 @@ llama.cpp `d81235049` plus 81 patches, AVX1 variant, llama-server sha256 `4f87c3
 | Qwen3-4B Q6_K | one card | 5 | 12.06 (0.00) | 13.84 (0.00) |
 | Qwen3-14B Q4_K_M | layer split, both cards | 3 | 5.08 (0.00) | 6.61 (0.00) |
 
-**Baseline, 2026-09-30** (from [`docs/bench-baseline-2026-09-30.md`](docs/bench-baseline-2026-09-30.md)).
+**Baseline, 2026-09-30** (baseline doc kept with the project).
 Method: engine 0.87.11, `XEON_NO_AVX2=1`, `GGML_METAL_CONCURRENCY_DISABLE=1`, 12 threads,
 `-ngl 99 --load-mode none -fa 1`, `XEON_FA_AMD=1` (named `TOSH_FA_AMD` in the engines measured here); prompt figures are pp512. The tensor and
 layer rows are different split modes, not two speeds of one thing.
@@ -379,7 +379,7 @@ layer rows are different split modes, not two speeds of one thing.
 | Qwen3-14B-Q4_K_M | layer dual (DEVICES=2) | 29.24 | 5.10 |
 
 Per-kernel bandwidth at the moved thresholds, card 1, `test-backend-ops perf`, N = 5, GB/s
-(also from `dist/beta31b4-notes.md`):
+(also from the beta.4 release notes):
 
 | shape (k x rows) | old | new | kernel now |
 |---|---|---|---|
@@ -394,8 +394,8 @@ Method: every row is one run on this Mac Pro (Xeon E5-2697 v2, 64 GB, 2x FirePro
 the engine named in the row, the model and quant as the row says, one card unless the row
 says both, N as the row says. The rows marked `R1` to `R27` are the run ids used by this
 fork's release notes and evidence, and each row carries its own method in the third column.
-R1, R2, R3 and R19–R22 come from that evidence file; R24–R27 from the app-launch and
-shipped-engine comparisons; the last block from `docs/bench-baseline-2026-09-30.md`, whose
+R1, R2, R3 and R19–R22 come from the recorded evidence, R24–R27 from the app-launch and
+shipped-engine comparisons; the last block from the 2026-09-30 baseline doc, whose
 method is engine 0.87.11, `XEON_NO_AVX2=1`, `GGML_METAL_CONCURRENCY_DISABLE=1`, 12 threads,
 `-ngl 99 --load-mode none -fa 1`, `XEON_FA_AMD=1` (named `TOSH_FA_AMD` in the engines measured here).
 
@@ -423,12 +423,12 @@ method is engine 0.87.11, `XEON_NO_AVX2=1`, `GGML_METAL_CONCURRENCY_DISABLE=1`, 
 | 8B Q4_K_M, a tensor split on the card | R16 | the shipped build aborts; this build runs it at 8.39 tok/s |
 | 8B Q4_K_M, the draft on the second card | R13 | 2.6250 tok/s, 138 drafted and 45 accepted, 3.17x slower than not drafting |
 | the engine gate | R8 | counts drops, and the forced-drop control reads 1 |
-| 14B Q4_K_M, both D700s, layer split | `docs/bench-baseline-2026-09-30.md` | prompt 21.25 tok/s, generate 5.08 tok/s |
-| 27B, both D700s, layer split | `docs/bench-baseline-2026-09-30.md` | prompt 11.51 tok/s, generate 6.20 tok/s |
-| chat through the shipped binary | `docs/bench-baseline-2026-09-30.md` | coherent, `finish_reason: stop`, 5.05 tok/s |
-| engine backend suite | `docs/bench-baseline-2026-09-30.md` | 11682 / 11682 |
-| `swift test` | `docs/bench-baseline-2026-09-30.md` | 424 tests, 0 failures |
-| first launch to listening, precompiled kernels | `docs/bench-baseline-2026-09-30.md` | 16 s (was 143 s) |
+| 14B Q4_K_M, both D700s, layer split | 2026-09-30 baseline | prompt 21.25 tok/s, generate 5.08 tok/s |
+| 27B, both D700s, layer split | 2026-09-30 baseline | prompt 11.51 tok/s, generate 6.20 tok/s |
+| chat through the shipped binary | 2026-09-30 baseline | coherent, `finish_reason: stop`, 5.05 tok/s |
+| engine backend suite | 2026-09-30 baseline | 11682 / 11682 |
+| `swift test` | 2026-09-30 baseline | 424 tests, 0 failures |
+| first launch to listening, precompiled kernels | 2026-09-30 baseline | 16 s (was 143 s) |
 
 ### Where a 35B belongs on this machine
 
@@ -632,8 +632,7 @@ planning makes it plan again; it also leaves room for the server's prompt cache 
 checkpoints. The plan, with projected RAM, VRAM and coverage, is shown before the model starts, and
 the measured memory once it is running.
 
-Measurements and the reasoning behind each limit are in
-[`research/bounded-host-residency`](research/bounded-host-residency/).
+Measurements and the reasoning behind each limit are kept with the project notes.
 
 ### Flash Attention (decode)
 

@@ -1057,7 +1057,7 @@ struct ServerSettings {
     /// the cards can actually address each other. Measured on a non-bridged pair
     /// (2x FirePro D700, peer group 0) at 14B on a tensor split: pp 41.4 with peer off vs
     /// 43.1 with it on, but holding events on, peer alone moved pp by 0.00 and tg by 0.00
-    /// (docs/mgpu-peer-2026-10-02.md). The flag used to default on regardless of topology,
+    /// (the mgpu-peer note kept with the project). The flag used to default on regardless of topology,
     /// so an unbridged pair paid for a copy that bought nothing.
     ///
     /// A group of two or more is the only evidence of a link: a card with no bridge reports
@@ -1073,7 +1073,7 @@ struct ServerSettings {
     nonisolated(unsafe) static var peerBridgeOverride: Bool?
 
     static func resolvedThreads(_ d: UserDefaults) -> Int {
-        // 0 or unset = physical cores; SMT threads collapse decode (docs/thread-sweep-2026-09-30.md).
+        // 0 or unset = physical cores; SMT threads collapse decode (thread-sweep note kept with the project).
         let raw = d.object(forKey: SettingsKeys.threads) == nil ? 0 : d.integer(forKey: SettingsKeys.threads)
         let phys = max(1, HardwareInfo.detect().physicalCores)
         return raw <= 0 ? phys : min(raw, phys)

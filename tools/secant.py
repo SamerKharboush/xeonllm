@@ -27,12 +27,13 @@ come out even. A cell named here but absent from the CSV, or in the CSV without 
 is refused, as is a duplicate name or a zero-width interval.
 
 The mean is refused, not caveated, when neighbouring secants disagree beyond
-AGREE_SIGMA. CLAUDE.md rule 3, corollary: two probes that disagree by more than the
+AGREE_SIGMA. Project rule 3, corollary: two probes that disagree by more than the
 noise floor are two observations, not one quantity. A script that computes a forbidden
 average and leaves the decision to its reader will eventually be read by someone who
 prints it, so the refused mean is never computed and no number reaches stdout. The
 limit is a constant, not a flag: a flag would put the decision back in the hands of
-whoever runs the tool, and the whole ticket is that it must not be there.
+whoever runs the tool, and the whole ticket is that it must not be there. Dev-only
+tool: tools/calibrate/results/ is kept outside the public repo.
 
 usage:
   ./tools/secant.py --calib tools/calibrate/results/calibration-5cell-2026-10-18.csv \\

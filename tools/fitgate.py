@@ -5,7 +5,8 @@ Standard library only.
 
 The calibration CSV is versioned: its first line is `# schema_version=1`. A file with
 no version line, or with a version this gate does not know, is refused rather than
-parsed, so a format change cannot be read as a measurement change.
+parsed, so a format change cannot be read as a measurement change. Dev-only tool:
+tools/calibrate/results/ is kept outside the public repo.
 
 Below MIN_CELLS cells the gate reports insufficiency and exits without fitting: with
 p = 2 parameters, too few cells means one cell owns the leverage and the chord

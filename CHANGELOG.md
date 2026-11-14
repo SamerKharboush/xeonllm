@@ -6,7 +6,7 @@ Deep prompts on the D700s read faster, a model in RAM reads its prompt on a card
 split over both cards and RAM no longer answers zeros, and the app's "AMD flash attention" switch
 really turns it off. The llama.cpp series is 96 patches on the pin `d81235049`; the new ones are
 `core/0082`, `metal/0083`, `metal/0084`, `metal/0085` and `core/0086`. Details, method lines and
-gates: `dist/beta31b8-notes.md`.
+gates are kept with the project notes.
 
 ### Added
 
@@ -92,7 +92,7 @@ The llama.cpp series is 91 patches on the pin `d81235049`; the new ones are `mod
 ## [0.87.31-beta.6] - 2026-11-03
 
 beta.5 loaded every model and then failed in chat (ticket 74). This beta fixes every cause
-found, and it is the first release gated by `specs/release-contract.md`, on its shipped
+found, and it is the first release gated by the release contract, on its shipped
 binaries and the app's real launch. The llama.cpp series is 88 patches on the pin
 `d81235049`; the new ones are `metal/0075`, `metal/0076`, `server/0077` and `metal/0078`.
 
@@ -146,9 +146,7 @@ binaries and the app's real launch. The llama.cpp series is 88 patches on the pi
 **ToshLLM is now XeonLLM**, a fork of [ToshLLM](https://github.com/engeldlgado/toshllm) by
 Engelbert Delgado, at <https://github.com/SamerKharboush/xeonllm>. Every entry below this one
 is historical and describes ToshLLM; none is rewritten. The llama.cpp series is 84 patches on
-the pin `d81235049`; the new ones are `spec/0073` and `metal/0074`. Evidence:
-`.scratch/firellama-maxperf/evidence/the-drafter-head-on-the-card-2026-10-31.md` and
-`thresholds-at-other-k-2026-10-31.md`.
+the pin `d81235049`; the new ones are `spec/0073` and `metal/0074`. Evidence is kept with the project.
 
 ### Changed
 
@@ -175,8 +173,7 @@ the pin `d81235049`; the new ones are `spec/0073` and `metal/0074`. Evidence:
 ## [0.87.31-beta.4] - 2026-10-30
 
 This beta closes the four items 0.87.31-beta.3 left uncovered. The llama.cpp series is 82
-patches on the pin `d81235049`; the new one is `metal/0072`. Evidence:
-`.scratch/firellama-maxperf/evidence/the-four-gaps-of-0056-2026-10-30.md`.
+patches on the pin `d81235049`; the new one is `metal/0072`. Evidence is kept with the project.
 
 ### Changed
 
@@ -560,7 +557,7 @@ fork carries is unchanged: the engine pin did not move and upstream added no new
 - **Chat: the model can draw places, routes and areas on a map under its answer.** What it draws is dashed and marked as approximate; a route by road comes from Apple Maps, with its distance and time, only after you allow the internet.
 - **Chat: an extension's agent can attach a map of its data to an answer.** A click on a feature shows its attributes, and the features export as GeoJSON.
 - **Chat: a remote MCP server can be offered to the server agent, like a local one.** It works over HTTP or SSE, with its headers kept in the Keychain.
-- **Tools and agents from a folder of extensions, each with its own settings page.** An extension stays off until you approve it; docs/extensions.md has the format and two examples to copy.
+- **Tools and agents from a folder of extensions, each with its own settings page.** An extension stays off until you approve it; EXTENSIONS.md has the format and two examples to copy.
 - **Ukrainian interface.** Contributed by [andruwa13](https://github.com/andruwa13) in [#121](https://github.com/engeldlgado/toshllm/pull/121).
 
 ### Improved
@@ -868,9 +865,9 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 ### Added
 
-- **LLMs: symbolic math tools with SymPy.** The model can factor, solve equations and differential equations, differentiate, integrate, take limits and work with matrices, all exactly. Off by default, in chat settings under Agents ([details](helpers/tosh-sympy/README.md)).
+- **LLMs: symbolic math tools with SymPy.** The model can factor, solve equations and differential equations, differentiate, integrate, take limits and work with matrices, all exactly. Off by default, in chat settings under Agents (details are in the helper's README).
 
-- **LLMs: numerical tools with NumPy and SciPy.** The model can integrate numerically, find roots, fit curves, run FFTs and filters and compute statistics, sending numbers and never code. Off by default, next to the SymPy switch; the two add 47 MB to the download ([details](helpers/tosh-scientific/README.md)).
+- **LLMs: numerical tools with NumPy and SciPy.** The model can integrate numerically, find roots, fit curves, run FFTs and filters and compute statistics, sending numbers and never code. Off by default, next to the SymPy switch; the two add 47 MB to the download (details are in the helper's README).
 
 - **LLMs: math tool calls are checked against your message before they run.** A call that drops or changes part of the problem is refused instead of computed, and the card shows what was computed. After a refusal the model can only correct the call or ask you.
 
@@ -887,7 +884,7 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 - **LLMs: the details of a model show when it was published** ([#112](https://github.com/engeldlgado/toshllm/issues/112)). For a quantized file it is the date of the original model on Hugging Face.
 
-- **LLMs: a Save RAM switch for Dynamic MoE.** RAM keeps only the experts that are not in video memory: on a Radeon RX 6700 XT with 32 GB, Qwen3.6-35B-A3B locks 14.3 GB instead of 18.5 and generates 11 to 17% slower. Tables in [Dynamic MoE](docs/performance/0.87.13-dynamic-moe.md).
+- **LLMs: a Save RAM switch for Dynamic MoE.** RAM keeps only the experts that are not in video memory: on a Radeon RX 6700 XT with 32 GB, Qwen3.6-35B-A3B locks 14.3 GB instead of 18.5 and generates 11 to 17% slower. Tables are kept with the project notes.
 
 - **LLMs: default reasoning level and response limit for requests that bring none.** In Settings, next to Reasoning as plain text: VS Code and agents that send no level or no max_tokens get these, and a request that sets its own still wins.
 
@@ -903,7 +900,7 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 - **LLMs: Dynamic MoE leaves the CPU cores to the experts it computes there.** The engine's own CPU threads had little to do and competed with them for the cores. On a Radeon RX 6700 XT with a 6-core Core i5, Qwen3.6-35B-A3B writes prose 12% faster and code 7% faster.
 
-- **LLMs: Qwen3.8-Flash-Next uses its MTP head under Dynamic MoE.** On one card of a Radeon Pro Vega II Duo it writes prose 20% faster and code 52% faster. Tables in [Dynamic MoE](docs/performance/0.87.13-dynamic-moe.md).
+- **LLMs: Qwen3.8-Flash-Next uses its MTP head under Dynamic MoE.** On one card of a Radeon Pro Vega II Duo it writes prose 20% faster and code 52% faster. Tables are kept with the project notes.
 
 - **LLMs: Dynamic MoE starts on cards with little video memory.** When the MTP head does not fit beside the model it is left out, instead of the server refusing to start. With the memory of a 6 GB card, Qwen3.6-35B-A3B writes prose at 38 tokens a second against 23 with expert offload.
 
@@ -1109,7 +1106,7 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 - **LLMs: long conversations on a model split by tensors across the dies of a Radeon Pro Vega II Duo generate faster.** At 8K of context an 8B goes from 52 to 59 tokens a second, a 14B from 38 to 41 and a 1B from 150 to 160, with the same output and memory.
 
-- **LLMs: Qwen3.8 Flash Next reads prompts and generates faster with TensorMesh.** Against the published 0.87.4 binary, the 177B model goes from 181 to 277 prompt tokens a second and from 23.5 to 25.0 generated tokens a second. The complete A/B, including the 8B and 27B models, is in [Radeon Pro Vega II Duo](docs/performance/0.87.4-radeon-pro-vega-ii-duo.md#0874-against-0875).
+- **LLMs: Qwen3.8 Flash Next reads prompts and generates faster with TensorMesh.** Against the published 0.87.4 binary, the 177B model goes from 181 to 277 prompt tokens a second and from 23.5 to 25.0 generated tokens a second. The complete A/B, including the 8B and 27B models, is kept with the project notes.
 
 ### Fixed
 
@@ -1121,7 +1118,7 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 ### Improved
 
-- **LLMs: generating on a model split by tensors across the dies of a Radeon Pro Vega II Duo.** A 27B goes from 19.1 to 24.1 tokens a second on the two dies of one card, from 13.9 to 21.7 across the four dies of two cards, and from 18.9 to 23.8 with TensorMesh, with identical output. Tables per arrangement in [Radeon Pro Vega II Duo](docs/performance/0.87.4-radeon-pro-vega-ii-duo.md).
+- **LLMs: generating on a model split by tensors across the dies of a Radeon Pro Vega II Duo.** A 27B goes from 19.1 to 24.1 tokens a second on the two dies of one card, from 13.9 to 21.7 across the four dies of two cards, and from 18.9 to 23.8 with TensorMesh, with identical output. Tables per arrangement are kept with the project notes.
 
 - **LLMs: a model split by tensors across two Radeon Pro Vega II Duo cards reads long prompts faster.** A 177B mixture-of-experts goes from 197 to 309 tokens a second with TensorMesh, and generates 25.3 instead of 20.3.
 
@@ -1187,9 +1184,9 @@ new multi-GPU default. Known gaps are listed at the bottom of this section.
 
 ### Improved
 
-- **LLMs: GCN cards generate and read prompts faster.** They now have kernels written for them instead of running code laid out for RDNA. Generation gains about 18% on average across twenty quantization types and reading a prompt about 4%. Perplexity and generated text are identical. Per-type tables in [GCN/VEGA](docs/performance/radeon-pro-vega.md).
+- **LLMs: GCN cards generate and read prompts faster.** They now have kernels written for them instead of running code laid out for RDNA. Generation gains about 18% on average across twenty quantization types and reading a prompt about 4%. Perplexity and generated text are identical. Per-type tables are kept with the project notes.
 
-- **LLMs: RDNA reads Q5_0 and Q5_1 prompts up to 17% faster.** Both were being handed a wide tile that costs them at every prompt length. Reading a prompt gains about 9% on those two and Q5_K generates 3% faster; the other types are unchanged. Perplexity and generated text are identical. Per-type tables in [RDNA](docs/performance/radeon-rx.md).
+- **LLMs: RDNA reads Q5_0 and Q5_1 prompts up to 17% faster.** Both were being handed a wide tile that costs them at every prompt length. Reading a prompt gains about 9% on those two and Q5_K generates 3% faster; the other types are unchanged. Perplexity and generated text are identical. Per-type tables are kept with the project notes.
 
 - **LLMs: the engine moves to a newer upstream.** It brings the fixes and the model architectures added there since the last one. Speed and generated text are unchanged.
 

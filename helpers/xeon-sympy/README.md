@@ -224,7 +224,7 @@ the conversation, Spanish or English, and English when in doubt.
 ### Another agent
 
 An extension can bring its own agent in place of this one (see
-[`docs/extensions.md`](../../docs/extensions.md#the-agent)). The engine calls its `run` tool with
+[`EXTENSIONS.md`](../../EXTENSIONS.md#the-agent)). The engine calls its `run` tool with
 `request` (the client's request as sent), `base_url`, `api_key` and `agent_key`, and takes back a
 chat completion or `{"status": n, "error": {...}}`. The agent reaches the model and the tools
 through `base_url` with `X-Xeon-Agent: off`, so its passes never come back to it, and sends

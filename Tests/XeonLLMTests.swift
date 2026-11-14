@@ -584,7 +584,7 @@ final class EstimatorTests: XCTestCase {
 
     func testThe14BFitsAcrossBothCardsAndStaysOnThem() {
         // Qwen3-14B Q4_K_M: 8.38 GiB. It does not fit on one card, but it does
-        // across both, and it runs there (docs/bench-baseline-2026-09-30.md).
+        // across both, and it runs there (2026-09-30 baseline doc).
         let spec = ModelSpec(fileGB: 8.38, paramsB: 14.8, layers: 40, isMoE: false)
         XCTAssertEqual(Estimator.estimate(spec: spec, hw: d700HW, multiGPU: true).placement, .card)
         XCTAssertEqual(Estimator.estimate(spec: spec, hw: d700HW).placement, .host)

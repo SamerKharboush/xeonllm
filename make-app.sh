@@ -234,7 +234,7 @@ if [ -n "${XEON_APP_DEFAULTS:-}" ]; then
     cp "$XEON_APP_DEFAULTS" "$APP/Contents/Resources/AppDefaults.plist"
     echo "defaults from $XEON_APP_DEFAULTS"
 fi
-# a folder of extensions in the format of docs/extensions.md, on by default inside the app
+# a folder of extensions in the format of EXTENSIONS.md, on by default inside the app
 if [ -n "$XEON_APP_EXTENSIONS" ]; then
     cp -R "$XEON_APP_EXTENSIONS" "$APP/Contents/Resources/extensions"
     echo "bundled extensions from $XEON_APP_EXTENSIONS"

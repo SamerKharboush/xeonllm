@@ -1,4 +1,6 @@
 #!/bin/bash
+# Dev-only tool: specs/ is kept outside the public repo, so this reads its contract from the
+# internal checkout (or from FA_CONTRACT).
 # Enforces clause (c) of specs/metal-fa-contract.md: on the wave64 FA AMD path, no build the
 # probe refused is a dead end. Compares the names the selector can construct against the
 # refusal record in the contract -- that record is existing probe output, not a new

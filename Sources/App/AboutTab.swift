@@ -16,7 +16,7 @@ enum AppInfo {
     static let githubURL = "https://github.com/SamerKharboush"
     static let repositoryURL = "https://github.com/SamerKharboush/xeonllm"
     static let issuesURL = repositoryURL + "/issues"
-    static let featureRequestURL = repositoryURL + "/issues/new?template=feature_request.yml"
+    static let featureRequestURL = repositoryURL + "/issues/new"
     static let discussionsURL = repositoryURL + "/discussions"
 
     /// Ways to support development. Every donate surface (toolbar, About, docs) reads
