@@ -1,4 +1,0 @@
-preflight[baseline]: --version -> version: 0.6.0-dev (build 11429, commit d81235049)
-preflight[baseline]: -ngl 0 served, produced 32 tokens
-preflight[baseline]: -ngl 99 served, produced 32 tokens
-preflight[baseline]: drop counter reads 1 on a forced drop (the control passes)

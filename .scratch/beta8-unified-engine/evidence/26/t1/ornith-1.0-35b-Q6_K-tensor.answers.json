@@ -1,5 +1,0 @@
-{
- "band16": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Text provided:** \"the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile the quick brown fox jumps over the lazy dog while the compiler waits for the next token\n--\n",
- "band300": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Text:** A highly repetitive paragraph about \"the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile\" repeated many times.\n   - **Question:** \"In\n--\n",
- "band1100": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Text:** A highly repetitive string: \"the quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile\" repeated many times.\n   - **Question:** \"In\n--\n"
-}

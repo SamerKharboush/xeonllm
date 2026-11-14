@@ -1,5 +1,0 @@
-model	split	cell	verdict	detail	prompt_tokens
-Qwen3-4B-Q4_K_M.gguf	ngl0	band16	PASS	prompt_tokens=80 completion_tokens=64 8.2s	80
-Qwen3-4B-Q4_K_M.gguf	ngl0	band300	PASS	prompt_tokens=448 completion_tokens=64 20.3s	448
-Qwen3-4B-Q4_K_M.gguf	ngl0	band1100	PASS	prompt_tokens=1483 completion_tokens=64 52.5s	1483
-Qwen3-4B-Q4_K_M.gguf	ngl0	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0

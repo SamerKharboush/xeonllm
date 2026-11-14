@@ -1,3 +1,0 @@
-Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	evict	PASS	prompt_tokens=20549 completion_tokens=64 1145.1s	20549
-Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	after-evict	PASS	prompt_tokens=148 completion_tokens=64 20.1s	148
-Ternary-Bonsai-2-27B-PQ2_0.gguf	tensor	identical-vs-ngl0	SKIP	no ngl0 run of this model	0

@@ -1,4 +1,0 @@
-evict	PASS	prompt_tokens=15168 completion_tokens=64 758.6s	15168
-after-evict	PASS	prompt_tokens=103 completion_tokens=64 11.0s	103
-over-ctx	PASS	refused with 400 at n_ctx=16384	0
-after-over-ctx	PASS	prompt_tokens=103 completion_tokens=64 9.6s	103

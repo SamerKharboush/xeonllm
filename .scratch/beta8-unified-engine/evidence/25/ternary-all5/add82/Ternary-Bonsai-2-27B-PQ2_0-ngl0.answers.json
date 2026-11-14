@@ -1,5 +1,0 @@
-{
- "band16": "We need answer user's request. User: \"You are a terse assistant. Read the text and answer the final question.\n\nthe quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile the quick brown fox jumps over the lazy dog while the compiler waits for the\n--\n",
- "band300": "We need answer user's final question. User: terse assistant. Read text and answer final question. Text is repeated pangram with compiler/gpu. Final question: \"In one word, what colour is the sky?\" Need answer one word. Likely \"blue\". Need be terse. Ensure final one word.\n\n--\n",
- "band1100": "We need answer user's final question. User: \"You are a terse assistant. Read the text and answer the final question.\n\n[long repeated text]\n\nIn one word, what colour is the sky?\"\n\nNeed answer one word. Likely \"blue\". Need terse. Ensure final one word.\n\n--\n"
-}

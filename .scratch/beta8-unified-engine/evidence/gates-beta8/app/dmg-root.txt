@@ -1,8 +1,0 @@
-total 128
-drwx------@    7 sam  staff     224 Nov 13 00:44 .
-drwx------@ 5358 sam  staff  171456 Nov 13 17:56 ..
-drwxr-xr-x     3 sam  staff      96 Nov 13 00:44 .background
--rw-r--r--     1 sam  staff   10244 Nov 13 00:44 .DS_Store
--rw-r--r--     1 sam  staff   52660 Nov 13 00:44 .VolumeIcon.icns
-lrwxr-xr-x     1 sam  staff      13 Nov 13 00:44 Applications -> /Applications
-drwxr-xr-x     3 sam  staff      96 Nov 13 00:44 XeonLLM.app

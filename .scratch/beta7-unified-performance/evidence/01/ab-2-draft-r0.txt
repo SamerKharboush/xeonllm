@@ -1,9 +1,0 @@
-Here's a thinking process:
-
-1.  **Understand User Request:** The user wants a binary search tree (BST) insert function in Python.
-
-2.  **Identify Key Concepts:**
-   - Binary Search Tree (BST): A tree data structure where each node has at most two children, and for each node, all values in the left subtree are less than the node's value, and all values in the right subtree are greater.
-   - Insert Function: Adds a new value to the BST while maintaining the BST property.
-   - Python Implementation: Can be done recursively or iteratively. I should provide
----

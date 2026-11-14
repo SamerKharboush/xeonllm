@@ -1,8 +1,0 @@
-Qwen3-14B-Q4_K_M.gguf	layer	band4200	PASS	prompt_tokens=5439 completion_tokens=64 251.8s	5439
-Qwen3-14B-Q4_K_M.gguf	layer	band8300	PASS	prompt_tokens=10683 completion_tokens=64 340.8s	10683
-Qwen3-14B-Q4_K_M.gguf	layer	evict	PASS	prompt_tokens=20504 completion_tokens=64 832.3s	20504
-Qwen3-14B-Q4_K_M.gguf	layer	after-evict	PASS	prompt_tokens=103 completion_tokens=64 30.2s	103
-Qwen3-14B-Q4_K_M.gguf	layer	tools	PASS	prompt_tokens=156 completion_tokens=100 47.8s	156
-Qwen3-14B-Q4_K_M.gguf	layer	after-cancel	PASS	prompt_tokens=149 completion_tokens=64 28.8s	149
-Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
-Qwen3-14B-Q4_K_M.gguf	layer	identical-vs-tensor	SKIP	no tensor run of this model	0

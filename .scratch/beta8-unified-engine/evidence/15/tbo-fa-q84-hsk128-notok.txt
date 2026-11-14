@@ -1,2 +1,0 @@
-  FLASH_ATTN_EXT(hsk=128,hsv=64,nh=4,nr23=[1,1],kv=128,nb=2,mask=1,sinks=0,max_bias=0.000000,logit_softcap=0.000000,prec=f32,type_K=q1_0,type_V=q4_0,permute=[0,1,2,3],kv_view=1,v_is_view_of_k=0,n_kv_max=0): not supported [MTL0] 
-  FLASH_ATTN_EXT(hsk=128,hsv=64,nh=4,nr23=[1,1],kv=128,nb=2,mask=1,sinks=0,max_bias=0.000000,logit_softcap=0.000000,prec=f32,type_K=q2_0,type_V=q4_0,permute=[0,1,2,3],kv_view=1,v_is_view_of_k=0,n_kv_max=0): not supported [MTL0] 

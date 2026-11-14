@@ -1,5 +1,0 @@
-label status  secs    prompt                 prompt_ms_tok eval_ms_tok text     mismatch timeouts
-d10  200     448.1   12.64 tok/s 292.03 ms/tok text ok 'Okay, the user asked why the sk 0        0       
-d7   200     448.3   12.63 tok/s 293.29 ms/tok text ok 'Okay, the user asked why the sk 0        0       
-d8   200     448.4   12.63 tok/s 294.25 ms/tok text ok 'Okay, the user asked why the sk 0        0       
-d9   200     448.2   12.63 tok/s 292.90 ms/tok text ok 'Okay, the user asked why the sk 0        0       

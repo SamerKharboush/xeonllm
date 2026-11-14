@@ -1,8 +1,0 @@
-label	sha256_prefix	type	band16_s	band300_s	band1100_s	band300_len	shape
-b8	63eb2a01af361672	beta.8 dist	137.1	163.0	240.1	276	beta.8
-b7	1a68d3efcbf476e7	beta.7 gate	161.7	235.0	420.5	274	beta.7
-all5	8bd15fbb1d1e15fd	worktree all 5 reverted	163.5	239.5	428.1	274	beta.7
-add82	71fdf177c84abdc3	worktree +0082	137.4	163.6	239.6	276	beta.8
-only82	81c3ca8264068fc5	only 0082 reverted (HEAD base)	161.0	236.8	420.8	274	beta.7
-no82ctx	d0991ba08d9ca04d	only 0082 ctx hunk reverted	135.0	160.8	235.8	276	beta.8
-final	53546683d2539c54	worktree clean HEAD	135.7	160.9	240.7	276	beta.8

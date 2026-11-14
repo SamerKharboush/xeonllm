@@ -1,1 +1,0 @@
-  747 /Users/sam/llama.cpp/build-metal/bin/llama-server

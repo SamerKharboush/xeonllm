@@ -1,7 +1,0 @@
-17:22  up 1 day,  8:48, 10 users, load averages: 3.19 3.20 3.30
- %CPU COMM
- 32.9 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent
- 26.0 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
- 25.6 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU
- 18.4 ps
- 18.3 head

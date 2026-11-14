@@ -1,1 +1,0 @@
-launched .scratch/beta8-unified-engine/evidence/gates-beta8/testapp/XeonLLM.app (/Users/sam/models/LFM3-1.7B-F16.gguf ctx=8192 layer, port 18099)

@@ -1,5 +1,0 @@
-model	split	cell	verdict	detail	prompt_tokens
-Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	band16	PASS	prompt_tokens=125 completion_tokens=64 136.6s	125
-Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	band300	PASS	prompt_tokens=493 completion_tokens=64 162.5s	493
-Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	band1100	PASS	prompt_tokens=1528 completion_tokens=64 237.9s	1528
-Ternary-Bonsai-2-27B-PQ2_0.gguf	ngl0	identical-vs-previous	FAIL	band300 differs at offset 226	0

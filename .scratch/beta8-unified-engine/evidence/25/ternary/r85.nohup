@@ -1,4 +1,0 @@
-no app log under '/Users/sam/Library/Application Support/XeonLLM/logs'; using the flags Sources/Servers/Server.swift builds
-== Ternary-Bonsai-2-27B-PQ2_0.gguf [ngl0] port 60537
-results: /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/25/ternary/r85/tables/stress.tsv
-logs:    /Users/sam/firellama/.scratch/beta8-unified-engine/evidence/25/ternary/r85

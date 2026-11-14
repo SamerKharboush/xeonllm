@@ -1,7 +1,0 @@
-model	split	cell	verdict	detail	prompt_tokens
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	band16	PASS	prompt_tokens=80 completion_tokens=64 14.3s	80
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	band300	PASS	prompt_tokens=448 completion_tokens=64 35.3s	448
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	band1100	PASS	prompt_tokens=1483 completion_tokens=64 91.5s	1483
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	identical-vs-ngl0	SKIP	no ngl0 run of this model	0
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	identical-vs-tensor	SKIP	no tensor run of this model	0
-Qwen3-8B-Q4_K_M.gguf	ngl0nopo	identical-vs-previous	SKIP	no ngl0nopo run in /Users/sam/firellama//Users/sam/firellama/.scratch/beta8-unified-engine/evidence/gates-beta8/../gates-beta7/out2/set/Qwen3-8B-Q4_K_M	0

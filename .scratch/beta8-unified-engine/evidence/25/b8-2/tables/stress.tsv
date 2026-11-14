@@ -1,2 +1,0 @@
-model	split	cell	verdict	detail	prompt_tokens
-Qwen3-0.6B-Q8_0.gguf	ngl0	band1100	PASS	prompt_tokens=1483 completion_tokens=64 16.4s	1483

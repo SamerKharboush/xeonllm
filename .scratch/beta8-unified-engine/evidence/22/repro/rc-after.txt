@@ -1,4 +1,0 @@
-fa1 rc=0
-moe1 rc=0
-gate rc=0
-moe1 rc=0

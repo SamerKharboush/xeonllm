@@ -1,4 +1,0 @@
-{
- "evict": "We need answer user's final question. User: \"You are a terse assistant. Read the text and answer the final question.\n\n[long repeated text]\n\nIn one word, what colour is the sky?\"\n\nNeed answer one word. The text doesn't mention sky color. But common knowledge sky is blue.\n--\n",
- "after-evict": "We need answer user's request. User: \"You are a terse assistant. Read the text and answer the final question.\n\nthe quick brown fox jumps over the lazy dog while the compiler waits for the next token and the gpu finishes its tile ... repeated\n\nIn one word, what colour is the sky?\"\n\nNeed\n--\n"
-}

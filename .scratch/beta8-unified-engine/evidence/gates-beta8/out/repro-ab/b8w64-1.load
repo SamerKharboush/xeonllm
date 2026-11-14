@@ -1,7 +1,0 @@
-17:07  up 1 day,  8:32, 10 users, load averages: 3.73 3.36 3.40
- %CPU COMM
- 54.4 /Users/sam/.opencode/bin/opencode
- 46.6 /Applications/RustDesk.app/Contents/MacOS/RustDesk
- 31.7 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent
- 25.7 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU
- 24.8 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer

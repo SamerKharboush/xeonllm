@@ -1,8 +1,0 @@
-[Start thinking]
-
-A paragraph consisting of the exact same sentence repeated 30 times: "The history of the city of Paris begins with a small settlement on an island in the Seine."
-Summarize the text in one sentence.
-
-    *   The text is entirely redundant.
-    *   The core information is
-

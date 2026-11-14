@@ -1,2 +1,0 @@
-header offsets (1114989617, 8192, 2048, 8192)
-record '䉵搱' block 8192 len 0

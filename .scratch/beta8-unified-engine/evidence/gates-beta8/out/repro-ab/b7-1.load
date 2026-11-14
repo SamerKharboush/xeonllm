@@ -1,7 +1,0 @@
-16:59  up 1 day,  8:24, 10 users, load averages: 3.57 3.32 3.47
- %CPU COMM
- 56.0 /Applications/RustDesk.app/Contents/MacOS/RustDesk
- 49.6 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent
- 26.6 /System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU
- 25.7 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
- 23.2 /bin/zsh

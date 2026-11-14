@@ -9,3 +9,19 @@ AppIcon.iconset/
 __pycache__/
 .scratch/firellama-maxperf/evidence/gates-beta6/models35/
 .scratch/beta8-unified-engine/evidence/gates-beta8/build-engines*.log
+
+# Internal material: kept on the maintainer's Mac, not published (ticket 09, 2026-11-14)
+.scratch/
+.github/
+.swiftpm/
+CLAUDE.md
+CLAUDE.md.firellama-skills
+CONTEXT.md
+SECURITY.md
+docs/
+evidence/
+specs/
+research/
+reference/
+tools/calibrate/results/
+next.md

@@ -1,6 +1,0 @@
-a1 rc=0
-a2 rc=0
-b1 rc=0
-c1 rc=0
-d1 rc=0
-e1 rc=0

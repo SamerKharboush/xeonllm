@@ -1,4 +1,0 @@
-total 2880
-drwxr-xr-x  3 sam  staff       96 Nov 13 00:44 .
-drwx------@ 7 sam  staff      224 Nov 13 00:44 ..
--rw-r--r--  1 sam  staff  1473784 Nov 13 00:44 background.tiff

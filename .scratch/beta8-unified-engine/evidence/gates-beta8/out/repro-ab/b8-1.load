@@ -1,7 +1,0 @@
-16:49  up 1 day,  8:14, 10 users, load averages: 3.02 3.38 3.70
- %CPU COMM
- 22.4 /sbin/launchd
- 22.3 /bin/zsh
- 18.1 /Applications/RustDesk.app/Contents/MacOS/RustDesk
-  9.4 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
-  5.7 /Users/sam/.opencode/bin/opencode

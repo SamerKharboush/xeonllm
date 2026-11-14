@@ -1,9 +1,0 @@
-# orchestrator comparison of saved answers (python, exact string equality; @N = first differing char)
-Qwen3-4B-Q4_K_M b7 band16=IDENT band300=IDENT band1100=IDENT
-Qwen3-4B-Q4_K_M b8 band16=IDENT band300=IDENT band1100=@143
-Qwen3-4B-Q6_K b7 band16=IDENT band300=IDENT band1100=IDENT
-Qwen3-4B-Q6_K b8 band16=IDENT band300=IDENT band1100=@51
-Qwen3-14B-Q4_K_M b7 band16=IDENT band300=IDENT band1100=IDENT
-Qwen3-14B-Q4_K_M b8 band16=IDENT band300=@6 band1100=IDENT
-Ternary-Bonsai-2-27B-PQ2_0 b7 band16=IDENT band300=@226 band1100=IDENT
-Ternary-Bonsai-2-27B-PQ2_0 b8 band16=IDENT band300=IDENT band1100=IDENT

@@ -1,6 +1,0 @@
-== exact task check: strings llama-server | grep -m1 -o 'XeonLLM engine.*' ==
-XeonLLM engine %s (app %s)
--- rebuttal: embedded TOSH_VERSION occurrences --
-1
--- app version string in binary --
-0.87.31-beta.8

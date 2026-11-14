@@ -1,9 +1,0 @@
-Orchestrator re-run, 2026-11-12, same binary (llama-bench 1a8385e3), Qwen3-4B Q4_K_M, card 1, -ub 128 -b 2048 -r 2:
-fa=1 d=2048: pp512 51.928 ± 0.000, tg128 14.842 ± 0.014   (Mocca: 51.94, 14.84)
-fa=0 d=2048: pp512 79.129 ± 0.051, tg128 10.838 ± 0.007   (Mocca: 79.20-79.22, 10.82-10.85)
-fa=1 + TOSH_FA_PF_DISABLE=1 (the fork's blocked-FA prefill rule for head 64/128 switched off, so prompt
-batches take the decomposed path and decode keeps flash attention):
-  d=0    pp512 92.861 ± 0.098  tg128 16.724 ± 0.002
-  d=2048 pp512 76.400 ± 0.024  tg128 14.843 ± 0.002
-  d=6144 pp512 56.378 ± 0.021  tg128 12.133 ± 0.004
-(one process each; FA on alone: pp 88.0 / 51.9 / 27.6, tg 16.7 / 14.8 / 12.1; FA off: pp 93.5 / 79.2 / 60.2, tg 15.7 / 10.8 / 6.6)

@@ -1,3 +1,0 @@
-Qwen3-0.6B-Q8_0.gguf	ngl0	band16	PASS	prompt_tokens=80 completion_tokens=64 1.8s	80
-Qwen3-0.6B-Q8_0.gguf	ngl0	band300	PASS	prompt_tokens=448 completion_tokens=64 4.6s	448
-Qwen3-0.6B-Q8_0.gguf	ngl0	band1100	PASS	prompt_tokens=1483 completion_tokens=64 12.4s	1483

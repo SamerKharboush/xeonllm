@@ -1,4 +1,0 @@
-Qwen3-14B-Q4_K_M.gguf	ngl0	band16	PASS	prompt_tokens=80 completion_tokens=64 24.3s	80
-Qwen3-14B-Q4_K_M.gguf	ngl0	band300	PASS	prompt_tokens=448 completion_tokens=64 61.5s	448
-Qwen3-14B-Q4_K_M.gguf	ngl0	band1100	PASS	prompt_tokens=1483 completion_tokens=64 153.7s	1483
-Qwen3-14B-Q4_K_M.gguf	ngl0	identical-vs-previous	PASS	band16 band300 band1100 byte-identical	0

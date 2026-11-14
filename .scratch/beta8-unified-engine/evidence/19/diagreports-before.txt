@@ -1,8 +1,0 @@
-total 56176
--rw-rw----@ 1 root  _analyticsusers    19900 Nov 11 21:15 codesign_2026-11-11-211515_Sams-Mac-Pro.diag
--rw-rw----@ 1 root  _analyticsusers     3963 Nov 11 09:29 cp_2026-11-11-092927_Sams-Mac-Pro.diag
--rw-rw-rw-@ 1 root  _analyticsusers  5076289 Nov 11 08:35 Kernel-2026-11-11-083524.panic
--rw-rw----@ 1 root  _analyticsusers  3298032 Nov 10 21:30 WindowServer_2026-11-10-213045_Sams-Mac-Pro.userspace_watchdog_timeout.spin
--rw-rw----@ 1 root  _analyticsusers  2049637 Nov 10 21:30 WindowServer-2026-11-10-213042.ips
--rw-rw----@ 1 root  _analyticsusers  3378491 Nov 10 21:30 WindowServer_2026-11-10-213011_Sams-Mac-Pro.userspace_watchdog_timeout.spin
--rw-rw----@ 1 root  _analyticsusers  2056168 Nov 10 21:30 WindowServer-2026-11-10-213002.ips

@@ -1,9 +1,0 @@
- ggml/src/ggml-backend.cpp               |  13 +--
- ggml/src/ggml-metal/ggml-metal-device.h |   3 -
- ggml/src/ggml-metal/ggml-metal-ops.cpp  |   8 --
- ggml/src/ggml-metal/ggml-metal.cpp      |   5 -
- src/llama-context.cpp                   |  37 ------
- src/llama-graph.cpp                     |  35 +-----
- tests/CMakeLists.txt                    |   3 -
- tests/test-sched-offload.cpp            | 200 --------------------------------
- 8 files changed, 5 insertions(+), 299 deletions(-)

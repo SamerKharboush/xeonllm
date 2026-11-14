@@ -1,2 +1,0 @@
-default rc=0
-nopo rc=0

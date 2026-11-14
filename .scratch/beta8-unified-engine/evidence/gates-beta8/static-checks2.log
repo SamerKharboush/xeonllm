@@ -1,9 +1,0 @@
-== AVX2/FMA mnemonic counts (must be 0) ==
-dist/XeonLLM.app/Contents/Resources/bin/llama-bench: 0
-dist/XeonLLM.app/Contents/Resources/bin/llama-perplexity: 0
-dist/XeonLLM.app/Contents/Resources/bin/llama-server: 0
-dist/XeonLLM.app/Contents/Resources/bin/test-backend-ops: 0
-== llama-server version string ==
-XeonLLM engine %s (app %s)
-== DMG sha256 ==
-f574d1d768805639617dbb2356df4900c4a9c58a82e190ace88c69f8eb028994  dist/XeonLLM-v0.87.31-beta.8-noavx2.dmg

@@ -1,5 +1,0 @@
-Iloc entries (from Bud1 sub-directory):
-  Applications -> x=475 y=194  (u32 0x000001db, 0x000000c2)
-  XeonLLM.app  -> x=165 y=194  (u32 0x000000a5, 0x000000c2)
-Iloc at 7121: size 16, x=475 y=194
-Iloc at 7175: size 16, x=165 y=194

@@ -1,5 +1,0 @@
-launch flags from: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/applog-ctxfit-14b.log
-== Qwen3-14B-Q4_K_M.gguf [layer] port 57771
-== Qwen3-14B-Q4_K_M.gguf [tensor] port 58357
-results: /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/stress-14b-ctxfit/tables/stress.tsv
-logs:    /Users/sam/firellama/.scratch/firellama-maxperf/evidence/gates-beta6/out/stress-14b-ctxfit
