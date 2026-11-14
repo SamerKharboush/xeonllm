@@ -8,6 +8,10 @@ import SwiftUI
 //
 // No key or request until the user consents and reviews; history and any remote
 // read happen only on an explicit tap, never on appear.
+//
+// v0.1: online sharing is off (BenchmarkSharing.onlineSharingEnabled = false), so
+// this card renders nothing. The flow stays here, unreferenced by any tab, until
+// a benchmark API host exists.
 
 struct BenchmarkShareCard: View {
     let cfg: ServerSettings
@@ -42,6 +46,12 @@ struct BenchmarkShareCard: View {
     private var working: Bool { phase == .running || phase == .submitting }
 
     var body: some View {
+        if BenchmarkSharing.shareUIAvailable {
+            shareContent
+        }
+    }
+
+    private var shareContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             intro
             submissionContents

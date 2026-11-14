@@ -27,7 +27,6 @@ struct BenchmarksView: View {
     @State private var newProfileName = ""
     @State private var appliedToast: String?
     @State private var lastToast = UUID()
-    @State private var showShareSheet = false
     @State private var showAdvanced = false
     @State private var resultsLimit = 20
     @State private var historyLimit = 20
@@ -108,34 +107,6 @@ struct BenchmarksView: View {
         .onChange(of: busy) { _, running in
             if running { outputDismissed = false }
         }
-        .sheet(isPresented: $showShareSheet) {
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    SectionGlyph(systemName: "person.3")
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(AppInfo.branded("Share with the community"))
-                            .font(.title3.weight(.semibold))
-                        Text(AppInfo.branded("Publish a verifiable measurement on the XeonLLM site"))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button { showShareSheet = false } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .buttonStyle(GlassIconButtonStyle())
-                    .iconHelp(AppInfo.branded("Close"))
-                }
-                .padding(18)
-                Divider()
-                ScrollView {
-                    BenchmarkShareCard(cfg: cfg, inheritanceLabel: inheritanceLabel)
-                        .padding(18)
-                }
-            }
-            .background(WorkspaceStyle.canvas)
-            .frame(minWidth: 700, idealWidth: 780, maxWidth: 860,
-                   minHeight: 480, idealHeight: 520, maxHeight: 660)
-        }
     }
 
     // MARK: run card
@@ -173,13 +144,6 @@ struct BenchmarksView: View {
         benchLogButton
     }
 
-    private var inheritanceLabel: String {
-        if let id = selectedProfile, let p = profileStore.profiles.first(where: { $0.id == id }) {
-            return AppInfo.branded("Config from profile “\(p.name)”")
-        }
-        return AppInfo.branded("Config inherited from Settings")
-    }
-
     private var compactRunCard: some View {
         Card(title: AppInfo.branded("Benchmark configuration"),
              icon: "gearshape",
@@ -203,14 +167,6 @@ struct BenchmarksView: View {
                     .help(AppInfo.branded("Measures the real speed through the server, MTP included"))
                     .disabled(busy || cfg.modelPath.isEmpty
                               || server.state == .running || server.state == .starting)
-
-                    Button { showShareSheet = true } label: {
-                        Label(AppInfo.branded("Share"), systemImage: "person.3")
-                    }
-                    .glassButton().controlSize(.small)
-                    .labelStyle(CompactLabelStyle(compact: !configFieldsWide))
-                    .help(AppInfo.branded("Shares a result with the community"))
-                    .disabled(busy || cfg.modelPath.isEmpty)
 
                     if busy {
                         Button(AppInfo.branded("Cancel"), role: .destructive) {
@@ -1589,7 +1545,6 @@ private struct BenchmarkResultTableRow: View, Equatable {
         let value = result.ctv ?? "—"
         var values = ["KV \(key)/\(value)", "v\(result.appVersion ?? "—")"]
         if result.peer == true { values.append("IF Link") }
-        if result.shared == true { values.append(AppInfo.branded("Shared")) }
         return values.joined(separator: " · ")
     }
 
@@ -1709,11 +1664,6 @@ private struct BenchHistoryRow: View, Equatable {
                         Image(systemName: "memorychip")
                             .font(.system(size: 9)).foregroundStyle(Color.chartSecondary)
                             .help(AppInfo.branded("Measured with \(dmoe)"))
-                    }
-                    if r.shared == true {
-                        Image(systemName: "globe")
-                            .font(.system(size: 9)).foregroundStyle(Color.appAccent)
-                            .help(AppInfo.branded("Shared with the community"))
                     }
                 }
                 HStack(spacing: 5) {

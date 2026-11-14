@@ -9,15 +9,30 @@ import CryptoKit
 //
 // The key and every network call happen only inside an explicit user share, so
 // an install that never shares makes no request at all.
+//
+// v0.1 ships with online sharing OFF: the XeonLLM site is a static GitHub Pages
+// site with no benchmark API, so every entry point below returns/throws before
+// it builds a URL, mints a Keychain key, or opens a connection. Local
+// benchmarking, the result table and the benchmarks.txt log are unaffected.
 
 @MainActor
 final class BenchmarkSharing: ObservableObject {
     static let shared = BenchmarkSharing()
 
+    /// The one switch. `false` in v0.1; flip it when an API host exists.
+    static let onlineSharingEnabled = false
+
+    /// The share UI reads this so a build without sharing shows no entry point.
+    static var shareUIAvailable: Bool { onlineSharingEnabled }
+
     static let baseURL = "https://samerkharboush.github.io/xeonllm-site"
     static let consentVersion = "benchmark-share-v1"
     private static let bundleID = AppInfo.identifier
     private static let keyAccount = "benchmark-signing-key.v1"
+
+    /// Session used by `postJSON`; tests inject one with a URLProtocol stub to
+    /// prove a blocked call opens no connection.
+    static var sessionProvider: () -> URLSession = { .shared }
 
     // Public identity from the server; the private key never leaves the Keychain.
     @Published private(set) var installationId: String?
@@ -34,7 +49,7 @@ final class BenchmarkSharing: ObservableObject {
     /// The next share starts a fresh, unlinkable installation; past public
     /// submissions keep the old identity.
     func resetIdentity() {
-        guard !busy else { return }
+        guard Self.onlineSharingEnabled, !busy else { return }
         Keychain.delete(Self.keyAccount)
         installationId = nil
         keyFingerprint = nil
@@ -98,6 +113,7 @@ final class BenchmarkSharing: ObservableObject {
     // MARK: Errors
 
     enum ShareError: LocalizedError {
+        case disabled
         case network
         case badResponse
         case server(status: Int, code: String?)
@@ -109,6 +125,7 @@ final class BenchmarkSharing: ObservableObject {
 
         var errorDescription: String? {
             switch self {
+            case .disabled: return "online benchmark sharing is not available in this version"
             case .network: return "network error"
             case .badResponse: return "unexpected server response"
             case .server(let status, let code): return "server \(status)\(code.map { " (\($0))" } ?? "")"
@@ -144,6 +161,7 @@ final class BenchmarkSharing: ObservableObject {
     /// workload, builds the payload. Nothing is uploaded yet.
     func prepareShare(model: LocalModel, settings: ServerSettings,
                       contributorAlias: String?) async throws -> Prepared {
+        guard Self.onlineSharingEnabled else { throw ShareError.disabled }
         busy = true
         defer { busy = false }
 
@@ -165,6 +183,7 @@ final class BenchmarkSharing: ObservableObject {
 
     /// A fresh challenge here avoids the expiry race during the long workload run.
     func submitPrepared(_ prepared: Prepared) async throws -> Outcome {
+        guard Self.onlineSharingEnabled else { throw ShareError.disabled }
         busy = true
         defer { busy = false }
         guard installationId == prepared.installationId,
@@ -203,6 +222,7 @@ final class BenchmarkSharing: ObservableObject {
     }
 
     func fetchHistory(page: Int = 1, limit: Int = 20) async throws -> [HistoryItem] {
+        guard Self.onlineSharingEnabled else { throw ShareError.disabled }
         guard hasIdentity, let installationId else { return [] }
         busy = true
         defer { busy = false }
@@ -491,13 +511,15 @@ final class BenchmarkSharing: ObservableObject {
     }
 
     private func postJSON(_ path: String, _ body: [String: Any]) async throws -> [String: Any] {
+        // Last backstop: no URL is built and no connection is opened when sharing is off.
+        guard Self.onlineSharingEnabled else { throw ShareError.disabled }
         guard let url = URL(string: Self.baseURL + path) else { throw ShareError.network }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 60
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+        guard let (data, resp) = try? await Self.sessionProvider().data(for: req),
               let http = resp as? HTTPURLResponse else { throw ShareError.network }
         let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         guard (200..<300).contains(http.statusCode) else {

@@ -69,7 +69,7 @@ Each model's badge shows compatibility:
 
 **Models** — Local models detected in `~/models` (you can change the folder in Settings), curated catalog with memory estimates for your machine, Hugging Face search and downloads with progress. You can delete models (they go to Trash).
 
-**Benchmarks** — Measures real speed of the active model (prompt processing and generation) with your current settings. Keeps comparative history with a chart.
+**Benchmarks** — Measures real speed of the active model (prompt processing and generation) with your current settings. Keeps comparative history with a chart. Online benchmark sharing is not available in this version, so no results are uploaded.
 
 **Settings** — All engine parameters, savable profiles, language and app options. Every option has a tooltip on hover.
 """),
