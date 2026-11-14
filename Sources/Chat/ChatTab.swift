@@ -206,14 +206,13 @@ struct ChatMainView: View {
     /// Chat / Images switch, front and center in the title bar.
     private var modePicker: some View {
         HStack(spacing: 14) {
-            modeButton(.chat, title: loc.t("Chat", "Chat"), icon: "bubble.left.and.bubble.right")
-            modeButton(.images, title: loc.t("Imágenes", "Images"), icon: "photo.on.rectangle.angled")
-            modeButton(.video, title: loc.t("Vídeo", "Video"), icon: "play.circle")
+            modeButton(.chat, title: AppInfo.branded("Chat"), icon: "bubble.left.and.bubble.right")
+            modeButton(.images, title: AppInfo.branded("Images"), icon: "photo.on.rectangle.angled")
+            modeButton(.video, title: AppInfo.branded("Video"), icon: "play.circle")
             modeButton(.audio, title: "Audio", icon: "waveform")
         }
         .fixedSize()
-        .help(loc.t("Cambia entre chat, imágenes, vídeo y audio.",
-                    "Switch between chat, images, video, and audio."))
+        .help(AppInfo.branded("Switch between chat, images, video, and audio."))
     }
 
     private func modeButton(_ value: MainMode, title: String, icon: String) -> some View {
@@ -241,11 +240,10 @@ struct ChatMainView: View {
                 Button {
                     openControl(.dashboard)
                 } label: {
-                    Label(loc.t("Actualización", "Update"), systemImage: "arrow.down.app.fill")
+                    Label(AppInfo.branded("Update"), systemImage: "arrow.down.app.fill")
                         .foregroundStyle(Color.appAccent)
                 }
-                .help(loc.t("XeonLLM %@ disponible... instálala desde Configuración → Inicio.",
-                            "XeonLLM %@ available... install it from Configuration → Home.", version))
+                .help(AppInfo.branded("XeonLLM \(version) available... install it from Configuration → Home."))
             }
             ServerWebUIButton(server: server, presentation: .icon)
                 .buttonStyle(GlassIconButtonStyle())
@@ -253,14 +251,13 @@ struct ChatMainView: View {
             Button {
                 openControl()
             } label: {
-                Label(loc.t("Configuración", "Configuration"), systemImage: "gearshape")
+                Label(AppInfo.branded("Configuration"), systemImage: "gearshape")
                     .labelStyle(.iconOnly)
             }
                 .buttonStyle(GlassIconButtonStyle())
                 .keyboardShortcut(",", modifiers: .command)
-                .accessibilityLabel(loc.t("Configuración", "Configuration"))
-                .help(loc.t("Configuración: modelos, motor, benchmarks y ajustes (⌘,)",
-                            "Configuration: models, engine, benchmarks and settings (⌘,)"))
+                .accessibilityLabel(AppInfo.branded("Configuration"))
+                .help(AppInfo.branded("Configuration: models, engine, benchmarks and settings (⌘,)"))
         }
     }
 
@@ -272,9 +269,9 @@ struct ChatMainView: View {
     private var loadingView: some View {
         VStack(spacing: 14) {
             ProgressView().controlSize(.large)
-            Text(loc.t("Cargando modelo…", "Loading model…")).foregroundStyle(.secondary)
-            Button(loc.t("Cancelar", "Cancel")) { server.stop() }
-                .help(loc.t("Detiene la carga del modelo.", "Stops loading the model."))
+            Text(AppInfo.branded("Loading model…")).foregroundStyle(.secondary)
+            Button(AppInfo.branded("Cancel")) { server.stop() }
+                .help(AppInfo.branded("Stops loading the model."))
         }
     }
 
@@ -285,19 +282,17 @@ struct ChatMainView: View {
             Image(systemName: "cpu.fill")
                 .font(.system(size: 44)).foregroundStyle(Color.appAccent)
             Text(modelPath.isEmpty
-                 ? loc.t("Empieza descargando un modelo", "Start by downloading a model")
-                 : loc.t("Todo listo para conversar", "Ready to chat"))
+                 ? AppInfo.branded("Start by downloading a model")
+                 : AppInfo.branded("Ready to chat"))
                 .font(.title2.weight(.semibold))
             if case .failed(let msg) = server.state {
-                Label(loc.half(msg), systemImage: "exclamationmark.triangle")
+                Label(msg, systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.red)
                     .frame(maxWidth: 480)
             } else {
                 Text(modelPath.isEmpty
-                     ? loc.t("El catálogo te marca cuáles caben en tu equipo; con un clic quedan configurados.",
-                             "The catalog marks which models fit your machine; one click configures them.")
-                     : loc.t("Inicia el modelo configurado y escribe tu primer mensaje.",
-                             "Start the configured model and type your first message."))
+                     ? AppInfo.branded("The catalog marks which models fit your machine; one click configures them.")
+                     : AppInfo.branded("Start the configured model and type your first message."))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 420)
                     .multilineTextAlignment(.center)
@@ -308,39 +303,35 @@ struct ChatMainView: View {
                     Button {
                         openControl(.models)
                     } label: {
-                        Label(loc.t("Descargar un modelo", "Download a model"), systemImage: "shippingbox")
+                        Label(AppInfo.branded("Download a model"), systemImage: "shippingbox")
                     }
                     .controlSize(.large)
                     .buttonStyle(.borderedProminent)
-                    .help(loc.t("Abre el catálogo de modelos con estimaciones para tu hardware.",
-                                "Opens the model catalog with estimates for your hardware."))
+                    .help(AppInfo.branded("Opens the model catalog with estimates for your hardware."))
                 } else {
                     Button {
                         server.start(.fromDefaults())
                     } label: {
-                        Label(loc.t("Iniciar servidor", "Start server"), systemImage: "play.fill")
+                        Label(AppInfo.branded("Start server"), systemImage: "play.fill")
                     }
                     .controlSize(.large)
                     .buttonStyle(.borderedProminent)
-                    .help(loc.t("Carga el modelo configurado y deja el chat listo.",
-                                "Loads the configured model and gets the chat ready."))
+                    .help(AppInfo.branded("Loads the configured model and gets the chat ready."))
                     Button {
                         openControl(.models)
                     } label: {
-                        Label(loc.t("Modelos", "Models"), systemImage: "shippingbox")
+                        Label(AppInfo.branded("Models"), systemImage: "shippingbox")
                     }
                     .controlSize(.large)
-                    .help(loc.t("Cambiar de modelo o descargar otros.",
-                                "Switch models or download more."))
+                    .help(AppInfo.branded("Switch models or download more."))
                 }
                 Button {
                     openControl(.settings)
                 } label: {
-                    Label(loc.t("Ajustes", "Settings"), systemImage: "slider.horizontal.3")
+                    Label(AppInfo.branded("Settings"), systemImage: "slider.horizontal.3")
                 }
                 .controlSize(.large)
-                .help(loc.t("Parámetros del motor: contexto, memoria, GPU.",
-                            "Engine parameters: context, memory, GPU."))
+                .help(AppInfo.branded("Engine parameters: context, memory, GPU."))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -352,24 +343,24 @@ struct ChatMainView: View {
         if routerMode, server.state == .running {
             guard !chatSelectedModel.isEmpty,
                   let m = models.models.first(where: { ServerSettings.routerAlias(for: $0.url.path) == chatSelectedModel })
-            else { return loc.t("Router: elige un modelo", "Router: pick a model") }
+            else { return AppInfo.branded("Router: pick a model") }
             return URL(fileURLWithPath: m.url.path).deletingPathExtension().lastPathComponent
         }
         let model = URL(fileURLWithPath: modelPath).deletingPathExtension().lastPathComponent
         switch server.state {
-        case .running: return model.isEmpty ? loc.t("Activo", "Running") : model
-        case .starting: return loc.t("Cargando modelo…", "Loading model…")
-        case .failed: return loc.t("Error — revisa Configuración", "Error — see Configuration")
-        case .stopped: return loc.t("Servidor detenido", "Server stopped")
+        case .running: return model.isEmpty ? AppInfo.branded("Running") : model
+        case .starting: return AppInfo.branded("Loading model…")
+        case .failed: return AppInfo.branded("Error — see Configuration")
+        case .stopped: return AppInfo.branded("Server stopped")
         }
     }
 
     private var modeSubtitle: String {
         switch mode {
         case .chat: stateSubtitle
-        case .images: loc.t("Imágenes · Experimental", "Images · Experimental")
-        case .video: loc.t("Vídeo · Experimental", "Video · Experimental")
-        case .audio: loc.t("Audio · Whisper GPU", "Audio · Whisper GPU")
+        case .images: AppInfo.branded("Images · Experimental")
+        case .video: AppInfo.branded("Video · Experimental")
+        case .audio: AppInfo.branded("Audio · Whisper GPU")
         }
     }
 }

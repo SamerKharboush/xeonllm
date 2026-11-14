@@ -58,13 +58,12 @@ struct BenchmarkShareCard: View {
                 BenchmarkShareReviewSheet(prepared: prepared, onCancel: cancelReview, onSubmit: submit)
             }
         }
-        .alert(loc.t("Restablecer identidad de benchmark", "Reset benchmark identity"),
+        .alert(AppInfo.branded("Reset benchmark identity"),
                isPresented: $showResetConfirm) {
-            Button(loc.t("Restablecer", "Reset"), role: .destructive, action: resetIdentity)
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Reset"), role: .destructive, action: resetIdentity)
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("Se borra la clave de firma de este equipo. Los envíos futuros usarán una identidad nueva, no enlazable a los anteriores. Los benchmarks ya publicados conservan su identidad.",
-                       "Deletes this machine's signing key. Future submissions use a new identity, not linkable to previous ones. Already published benchmarks keep their identity."))
+            Text(AppInfo.branded("Deletes this machine's signing key. Future submissions use a new identity, not linkable to previous ones. Already published benchmarks keep their identity."))
         }
     }
 
@@ -72,17 +71,16 @@ struct BenchmarkShareCard: View {
         HStack(alignment: .top, spacing: 13) {
             SectionGlyph(systemName: "checkmark.shield")
             VStack(alignment: .leading, spacing: 4) {
-                Text(loc.t("Benchmark verificable", "Verifiable benchmark"))
+                Text(AppInfo.branded("Verifiable benchmark"))
                     .font(.headline)
-                Text(loc.t("Primero se mide en este Mac. Después revisarás exactamente qué se firmará y enviará.",
-                           "The measurement runs on this Mac first. You will then review exactly what will be signed and uploaded."))
+                Text(AppInfo.branded("The measurement runs on this Mac first. You will then review exactly what will be signed and uploaded."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 12)
             Text(sharing.hasIdentity
-                 ? loc.t("IDENTIDAD EXISTENTE", "EXISTING IDENTITY")
-                 : loc.t("NUEVA IDENTIDAD", "NEW IDENTITY"))
+                 ? AppInfo.branded("EXISTING IDENTITY")
+                 : AppInfo.branded("NEW IDENTITY"))
                 .font(.system(size: 10, weight: .semibold)).tracking(0.5)
                 .foregroundStyle(sharing.hasIdentity ? Color.green : Color.appAccent)
                 .padding(.horizontal, 9).padding(.vertical, 5)
@@ -92,18 +90,16 @@ struct BenchmarkShareCard: View {
 
     private var submissionContents: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(loc.t("Qué se comparte", "What is shared"), systemImage: "doc.text.magnifyingglass")
+            Label(AppInfo.branded("What is shared"), systemImage: "doc.text.magnifyingglass")
                 .font(.callout.weight(.semibold))
             HStack(alignment: .top, spacing: 20) {
                 BenchmarkConsentInfoRow(
-                    title: loc.t("Modelo y medición", "Model and measurement"),
-                    detail: loc.t("Nombre, cuantización, hashes, configuración y resultados. Los archivos no se suben.",
-                                  "Name, quantization, hashes, configuration, and results. Files are not uploaded."),
+                    title: AppInfo.branded("Model and measurement"),
+                    detail: AppInfo.branded("Name, quantization, hashes, configuration, and results. Files are not uploaded."),
                     systemImage: "gauge.with.dots.needle.67percent")
                 BenchmarkConsentInfoRow(
-                    title: loc.t("Tu contenido queda fuera", "Your content stays private"),
-                    detail: loc.t("Sin chats, prompts, cuenta, rutas locales ni contenido de archivos.",
-                                  "No chats, prompts, account name, local paths, or file contents."),
+                    title: AppInfo.branded("Your content stays private"),
+                    detail: AppInfo.branded("No chats, prompts, account name, local paths, or file contents."),
                     systemImage: "lock.shield", color: .green)
             }
         }
@@ -119,14 +115,12 @@ struct BenchmarkShareCard: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 3) {
                 Text(AppCodeSignature.hasStableDeveloperIdentity
-                     ? loc.t("Instalación firmada y notarizada", "Signed and notarized installation")
-                     : loc.t("Compilación local", "Local build"))
+                     ? AppInfo.branded("Signed and notarized installation")
+                     : AppInfo.branded("Local build"))
                     .font(.callout.weight(.semibold))
                 Text(AppCodeSignature.hasStableDeveloperIdentity
-                     ? loc.t("La identidad estable permite reutilizar la clave del Llavero sin volver a pedir la contraseña normalmente.",
-                             "The stable identity normally reuses the Keychain key without asking for your password again.")
-                     : loc.t("Al recompilar con una firma temporal, macOS podría pedir permiso para reutilizar la clave. XeonLLM nunca recibe tu contraseña.",
-                             "After rebuilding with a temporary signature, macOS may ask to reuse the key. XeonLLM never receives your password."))
+                     ? AppInfo.branded("The stable identity normally reuses the Keychain key without asking for your password again.")
+                     : AppInfo.branded("After rebuilding with a temporary signature, macOS may ask to reuse the key. XeonLLM never receives your password."))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -142,9 +136,9 @@ struct BenchmarkShareCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .bottom, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel(loc.t("MODELO", "MODEL"))
+                    fieldLabel(AppInfo.branded("MODEL"))
                     Text(cfg.modelPath.isEmpty
-                         ? loc.t("Elige un modelo en la configuración", "Choose a model in the configuration")
+                         ? AppInfo.branded("Choose a model in the configuration")
                          : ModelName.forPath(cfg.modelPath).display)
                         .font(.callout.weight(.medium))
                         .foregroundStyle(cfg.modelPath.isEmpty ? .secondary : .primary)
@@ -152,8 +146,8 @@ struct BenchmarkShareCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .leading, spacing: 4) {
-                    fieldLabel(loc.t("ALIAS PÚBLICO (OPCIONAL)", "PUBLIC ALIAS (OPTIONAL)"))
-                    TextField(loc.t("Anónimo", "Anonymous"), text: $alias)
+                    fieldLabel(AppInfo.branded("PUBLIC ALIAS (OPTIONAL)"))
+                    TextField(AppInfo.branded("Anonymous"), text: $alias)
                         .workspaceTextField().frame(width: 180).disabled(working)
                 }
                 shareButton
@@ -161,7 +155,7 @@ struct BenchmarkShareCard: View {
             HStack {
                 Label(inheritanceLabel, systemImage: "gearshape")
                 Spacer()
-                Label(loc.t("Nada se envía hasta la confirmación final", "Nothing uploads until final confirmation"),
+                Label(AppInfo.branded("Nothing uploads until final confirmation"),
                       systemImage: "lock")
             }
             .font(.caption).foregroundStyle(.secondary)
@@ -178,22 +172,20 @@ struct BenchmarkShareCard: View {
         if working {
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text(phase == .submitting ? loc.t("Enviando…", "Uploading…")
-                                          : loc.t("Midiendo…", "Measuring…"))
+                Text(phase == .submitting ? AppInfo.branded("Uploading…")
+                                          : AppInfo.branded("Measuring…"))
                     .font(.caption).foregroundStyle(.secondary)
             }
         } else {
             Button(action: beginOrRetryShare) {
-                Label(prepared == nil ? loc.t("Compartir", "Share") : loc.t("Reintentar envío", "Retry upload"),
+                Label(prepared == nil ? AppInfo.branded("Share") : AppInfo.branded("Retry upload"),
                       systemImage: prepared == nil ? "square.and.arrow.up" : "arrow.clockwise")
             }
             .glassButton(prominent: true)
             .disabled(cfg.modelPath.isEmpty || serverBusy)
             .help(serverBusy
-                  ? loc.t("Detén el servidor antes de medir: comparten la VRAM.",
-                          "Stop the server before benchmarking: they share VRAM.")
-                  : loc.t("Ejecuta la medición estándar y muestra un resumen completo antes de enviarlo.",
-                          "Runs the standard measurement and shows a complete summary before sending it."))
+                  ? AppInfo.branded("Stop the server before benchmarking: they share VRAM.")
+                  : AppInfo.branded("Runs the standard measurement and shows a complete summary before sending it."))
         }
     }
 
@@ -206,8 +198,7 @@ struct BenchmarkShareCard: View {
             Label(msg, systemImage: "exclamationmark.triangle.fill")
                 .font(.caption).foregroundStyle(.orange)
         case .running:
-            Text(loc.t("Ejecutando el benchmark estándar (pp512/tg128 ×3). Puede tardar varios minutos.",
-                       "Running the standard benchmark (pp512/tg128 ×3). May take several minutes."))
+            Text(AppInfo.branded("Running the standard benchmark (pp512/tg128 ×3). May take several minutes."))
                 .font(.caption).foregroundStyle(.secondary)
         default:
             EmptyView()
@@ -226,28 +217,27 @@ struct BenchmarkShareCard: View {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(fp, forType: .string)
                         } label: {
-                            Label(loc.t("Copiar la huella pública", "Copy the public fingerprint"),
+                            Label(AppInfo.branded("Copy the public fingerprint"),
                                   systemImage: "doc.on.doc")
                                       .labelStyle(.iconOnly)
                         }
                         .buttonStyle(.borderless)
-                        .help(loc.t("Copiar la huella pública", "Copy the public fingerprint"))
+                        .help(AppInfo.branded("Copy the public fingerprint"))
                         Spacer()
                         Button(role: .destructive) { showResetConfirm = true } label: {
-                            Label(loc.t("Restablecer", "Reset"), systemImage: "pin.slash")
+                            Label(AppInfo.branded("Reset"), systemImage: "pin.slash")
                         }
                         .buttonStyle(.borderless).font(.caption)
                         .disabled(sharing.busy || prepared != nil)
                     }
                     .padding(.top, 4)
                 } else {
-                    Text(loc.t("Aún no has compartido ningún benchmark. Tu identidad se crea la primera vez que compartes.",
-                               "You haven't shared any benchmark yet. Your identity is created the first time you share."))
+                    Text(AppInfo.branded("You haven't shared any benchmark yet. Your identity is created the first time you share."))
                         .font(.caption).foregroundStyle(.secondary).padding(.top, 4)
                 }
             }
         } label: {
-            Text(loc.t("Identidad de benchmark", "Benchmark identity"))
+            Text(AppInfo.branded("Benchmark identity"))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -261,7 +251,7 @@ struct BenchmarkShareCard: View {
                     Button {
                         loadHistory()
                     } label: {
-                        Label(loc.t("Actualizar", "Refresh"), systemImage: "arrow.clockwise").font(.caption)
+                        Label(AppInfo.branded("Refresh"), systemImage: "arrow.clockwise").font(.caption)
                     }
                     .buttonStyle(.borderless).disabled(!sharing.hasIdentity || sharing.busy)
                     if sharing.busy { ProgressView().controlSize(.small) }
@@ -270,11 +260,10 @@ struct BenchmarkShareCard: View {
                 if let historyError {
                     Text(historyError).font(.caption).foregroundStyle(.orange)
                 } else if !sharing.hasIdentity {
-                    Text(loc.t("Comparte un benchmark para ver tu historial.",
-                               "Share a benchmark to see your history."))
+                    Text(AppInfo.branded("Share a benchmark to see your history."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else if historyLoaded && history.isEmpty {
-                    Text(loc.t("Sin envíos todavía.", "No submissions yet.")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("No submissions yet.")).font(.caption).foregroundStyle(.secondary)
                 } else {
                     ForEach(history) { item in
                         HStack(spacing: 10) {
@@ -294,16 +283,16 @@ struct BenchmarkShareCard: View {
             }
             .padding(.top, 4)
         } label: {
-            Text(loc.t("Compartidos con la comunidad", "Shared with the community"))
+            Text(AppInfo.branded("Shared with the community"))
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
 
     private func moderationLabel(_ item: BenchmarkSharing.HistoryItem) -> String {
         switch item.moderation {
-        case "published", "approved": return loc.t("publicado", "published")
-        case "rejected": return loc.t("rechazado", "rejected")
-        default: return loc.t("en revisión", "in review")
+        case "published", "approved": return AppInfo.branded("published")
+        case "rejected": return AppInfo.branded("rejected")
+        default: return AppInfo.branded("in review")
         }
     }
 
@@ -318,8 +307,7 @@ struct BenchmarkShareCard: View {
     private func startPrepare() {
         guard let model = models.models.first(where: { $0.url.path == cfg.modelPath }) else { return }
         guard alias.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count <= 80 else {
-            phase = .failed(loc.t("El alias no puede superar 80 caracteres.",
-                                  "The alias cannot exceed 80 characters."))
+            phase = .failed(AppInfo.branded("The alias cannot exceed 80 characters."))
             return
         }
         phase = .running
@@ -345,12 +333,12 @@ struct BenchmarkShareCard: View {
             do {
                 let outcome = try await sharing.submitPrepared(p)
                 let trust = outcome.trust == "lab-signed"
-                    ? loc.t("verificado (Lab)", "verified (Lab)")
-                    : loc.t("registrado por la app", "app-recorded")
+                    ? AppInfo.branded("verified (Lab)")
+                    : AppInfo.branded("app-recorded")
                 let state = outcome.moderationStatus == "pending"
-                    ? loc.t("en revisión", "in review")
-                    : loc.t("aprobado", "approved")
-                phase = .done(loc.t("Enviado · %@ · %@", "Sent · %@ · %@", "\(trust)", "\(state)"))
+                    ? AppInfo.branded("in review")
+                    : AppInfo.branded("approved")
+                phase = .done(AppInfo.branded("Sent · \(trust) · \(state)"))
                 bench.recordShared(cfg: cfg, pp: p.pp, tg: p.tg)
                 prepared = nil
             } catch {

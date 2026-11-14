@@ -16,9 +16,9 @@ struct ServerModelPicker: View {
     var body: some View {
         let path = server.profile == nil ? globalModelPath : server.effectiveSettings().modelPath
         Menu {
-            Button(loc.t("Sin modelo", "No model")) { select("") }
+            Button(AppInfo.branded("No model")) { select("") }
             ForEach(models.modelGroups) { group in
-                Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                     ForEach(group.models) { model in
                         Button { select(model.url.path) } label: {
                             if model.url.path == path {
@@ -31,15 +31,14 @@ struct ServerModelPicker: View {
                 }
             }
         } label: {
-            Text(path.isEmpty ? loc.t("Elige un modelo", "Choose a model") : ModelName.forPath(path).title)
+            Text(path.isEmpty ? AppInfo.branded("Choose a model") : ModelName.forPath(path).title)
                 .font(prominent ? .system(size: 19, weight: .semibold) : .body)
                 .lineLimit(2)
         }
         .menuStyle(.borderlessButton)
         .disabled(server.state == .running || server.state == .starting)
-        .accessibilityLabel(loc.t("Modelo de esta instancia", "Model for this instance"))
-        .help(loc.t("Selecciona el modelo de este servidor. Detén esta instancia para cambiarlo.",
-                    "Select this server’s model. Stop this instance to change it."))
+        .accessibilityLabel(AppInfo.branded("Model for this instance"))
+        .help(AppInfo.branded("Select this server’s model. Stop this instance to change it."))
     }
 
     private func select(_ path: String) {

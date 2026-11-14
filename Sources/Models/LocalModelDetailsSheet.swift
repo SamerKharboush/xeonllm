@@ -51,57 +51,56 @@ struct LocalModelDetailsSheet: View {
             Spacer(minLength: 12)
             Button { dismiss() } label: { Image(systemName: "xmark") }
                 .buttonStyle(GlassIconButtonStyle())
-                .accessibilityLabel(loc.t("Cerrar", "Close"))
+                .accessibilityLabel(AppInfo.branded("Close"))
         }
         .padding(18)
     }
 
     private var informationCard: some View {
-        detailCard(title: loc.t("Información del modelo", "Model information"), icon: "info.circle") {
-            detailRow(loc.t("Nombre del GGUF", "GGUF name"),
+        detailCard(title: AppInfo.branded("Model information"), icon: "info.circle") {
+            detailRow(AppInfo.branded("GGUF name"),
                       metadata?.string(for: "general.name") ?? parsed.title)
-            detailRow(loc.t("Arquitectura", "Architecture"),
+            detailRow(AppInfo.branded("Architecture"),
                       metadata?.string(for: "general.architecture") ?? parsed.family)
-            detailRow(loc.t("Cuantización", "Quantization"),
-                      parsed.quant.isEmpty ? loc.t("No indicada", "Not reported") : parsed.quant)
+            detailRow(AppInfo.branded("Quantization"),
+                      parsed.quant.isEmpty ? AppInfo.branded("Not reported") : parsed.quant)
             if let sizeLabel = metadata?.string(for: "general.size_label"), !sizeLabel.isEmpty {
-                detailRow(loc.t("Parámetros", "Parameters"), sizeLabel)
+                detailRow(AppInfo.branded("Parameters"), sizeLabel)
             } else if let parameters = parsed.paramsB {
-                detailRow(loc.t("Parámetros", "Parameters"), String(format: "%.1fB", parameters))
+                detailRow(AppInfo.branded("Parameters"), String(format: "%.1fB", parameters))
             }
-            detailRow(loc.t("Tipo", "Type"), model.isMoE ? "MoE" : loc.t("Denso", "Dense"))
+            detailRow(AppInfo.branded("Type"), model.isMoE ? "MoE" : AppInfo.branded("Dense"))
             if let trained = metadata?.trainedContext {
-                detailRow(loc.t("Contexto máximo", "Maximum context"),
+                detailRow(AppInfo.branded("Maximum context"),
                           "\(ServerSettings.contextLabel(trained)) · \(trained.formatted()) tokens")
             }
         }
     }
 
     private var provenanceCard: some View {
-        detailCard(title: loc.t("Procedencia", "Provenance"), icon: "arrow.down.circle") {
+        detailCard(title: AppInfo.branded("Provenance"), icon: "arrow.down.circle") {
             if let source {
-                detailRow(loc.t("Registro", "Record"), source.isRecorded
-                          ? loc.t("Descargado con XeonLLM", "Downloaded with XeonLLM")
-                          : loc.t("Coincidencia del catálogo", "Catalog match"))
+                detailRow(AppInfo.branded("Record"), source.isRecorded
+                          ? AppInfo.branded("Downloaded with XeonLLM")
+                          : AppInfo.branded("Catalog match"))
                 if let repository = source.repository {
-                    detailRow(loc.t("Repositorio", "Repository"), repository)
+                    detailRow(AppInfo.branded("Repository"), repository)
                 }
                 if let author = source.author {
-                    detailRow(loc.t("Autor", "Author"), author)
+                    detailRow(AppInfo.branded("Author"), author)
                 }
                 if let revision = source.revision {
-                    detailRow(loc.t("Revisión", "Revision"), revision)
+                    detailRow(AppInfo.branded("Revision"), revision)
                 }
                 if let published {
-                    detailRow(loc.t("Publicado", "Published"),
+                    detailRow(AppInfo.branded("Published"),
                               published.date.formatted(date: .abbreviated, time: .omitted)
                               + (published.repository == source.repository ? "" : " · \(published.repository)"))
-                        .help(loc.t("Cuándo se publicó el modelo en Hugging Face; si este archivo es una cuantización, la fecha es la del modelo original. Lo que sabe suele terminar unos meses antes.",
-                                    "When the model was published on Hugging Face; if this file is a quantization, the date is the original model's. What it knows usually ends a few months earlier."))
+                        .help(AppInfo.branded("When the model was published on Hugging Face; if this file is a quantization, the date is the original model's. What it knows usually ends a few months earlier."))
                 }
-                detailRow(loc.t("Archivo de origen", "Source file"), source.fileName)
+                detailRow(AppInfo.branded("Source file"), source.fileName)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(loc.t("URL de descarga", "Download URL"))
+                    Text(AppInfo.branded("Download URL"))
                         .font(.caption).foregroundStyle(.secondary)
                     Text(source.url.absoluteString)
                         .font(.system(.caption, design: .monospaced))
@@ -112,37 +111,35 @@ struct LocalModelDetailsSheet: View {
                 }
                 HStack {
                     if let repositoryURL = source.repositoryURL {
-                        Button(loc.t("Abrir repositorio", "Open repository"), systemImage: "arrow.up.right.square") {
+                        Button(AppInfo.branded("Open repository"), systemImage: "arrow.up.right.square") {
                             NSWorkspace.shared.open(repositoryURL)
                         }
                         .glassButton()
                     }
-                    Button(loc.t("Copiar URL", "Copy URL"), systemImage: "doc.on.doc") {
+                    Button(AppInfo.branded("Copy URL"), systemImage: "doc.on.doc") {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(source.url.absoluteString, forType: .string)
                     }
                     .glassButton()
                 }
             } else {
-                Label(loc.t("No hay una fuente de descarga registrada para este archivo.",
-                            "No download source is recorded for this file."),
+                Label(AppInfo.branded("No download source is recorded for this file."),
                       systemImage: "questionmark.circle")
                     .font(.callout).foregroundStyle(.secondary)
-                Text(loc.t("Puede haberse copiado manualmente a la carpeta de modelos.",
-                           "It may have been copied into the models folder manually."))
+                Text(AppInfo.branded("It may have been copied into the models folder manually."))
                     .font(.caption).foregroundStyle(.tertiary)
             }
         }
     }
 
     private var localFilesCard: some View {
-        detailCard(title: loc.t("Archivos locales", "Local files"), icon: "internaldrive") {
-            detailRow(loc.t("Archivo principal", "Primary file"), model.name)
-            detailRow(loc.t("Tamaño total", "Total size"),
+        detailCard(title: AppInfo.branded("Local files"), icon: "internaldrive") {
+            detailRow(AppInfo.branded("Primary file"), model.name)
+            detailRow(AppInfo.branded("Total size"),
                       ByteCountFormatter.string(fromByteCount: model.sizeBytes, countStyle: .file))
-            detailRow(loc.t("Partes", "Parts"), "\(model.partURLs.count)")
+            detailRow(AppInfo.branded("Parts"), "\(model.partURLs.count)")
             VStack(alignment: .leading, spacing: 6) {
-                Text(loc.t("Ubicación", "Location")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("Location")).font(.caption).foregroundStyle(.secondary)
                 Text(model.url.path)
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
@@ -153,12 +150,12 @@ struct LocalModelDetailsSheet: View {
 
     private var footer: some View {
         HStack {
-            Button(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder") {
+            Button(AppInfo.branded("Reveal in Finder"), systemImage: "folder") {
                 NSWorkspace.shared.activateFileViewerSelecting([model.url])
             }
             .glassButton()
             Spacer()
-            Button(loc.t("Cerrar", "Close")) { dismiss() }
+            Button(AppInfo.branded("Close")) { dismiss() }
                 .glassButton(prominent: true)
                 .keyboardShortcut(.defaultAction)
         }

@@ -23,8 +23,8 @@ struct ServerOverviewView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(server.state == .running
-                     ? loc.t("SERVIDOR ACTIVO", "ACTIVE SERVER")
-                     : (server.profile == nil ? loc.t("SERVIDOR PRINCIPAL", "PRIMARY SERVER") : loc.t("SERVIDOR", "SERVER")))
+                     ? AppInfo.branded("ACTIVE SERVER")
+                     : (server.profile == nil ? AppInfo.branded("PRIMARY SERVER") : AppInfo.branded("SERVER")))
                     .font(.system(size: 10, weight: .semibold)).tracking(1.7)
                     .foregroundStyle(server.state == .running ? .green : .secondary)
                 Spacer()
@@ -43,31 +43,29 @@ struct ServerOverviewView: View {
             }
             Divider()
             HStack(spacing: 30) {
-                metric("bolt.fill", value: server.genSpeed.map { String(format: "%.1f tok/s", $0) } ?? "—", label: loc.t("Última generación", "Last generation"))
+                metric("bolt.fill", value: server.genSpeed.map { String(format: "%.1f tok/s", $0) } ?? "—", label: AppInfo.branded("Last generation"))
                 Spacer(minLength: 0)
-                metric("text.bubble", value: "\(server.requestCount)", label: loc.t("Peticiones", "Requests"))
+                metric("text.bubble", value: "\(server.requestCount)", label: AppInfo.branded("Requests"))
                 Spacer(minLength: 0)
-                metric("square.stack.3d.up", value: name.quant.isEmpty ? "—" : name.quant, label: loc.t("Cuantización", "Quantization"))
+                metric("square.stack.3d.up", value: name.quant.isEmpty ? "—" : name.quant, label: AppInfo.branded("Quantization"))
                 Spacer(minLength: 0)
-                metric("cpu", value: ServerSettings.engineKind == "bundled" ? "llama.cpp" : loc.t("Personalizado", "Custom"), label: loc.t("Motor configurado", "Configured engine"))
+                metric("cpu", value: ServerSettings.engineKind == "bundled" ? "llama.cpp" : AppInfo.branded("Custom"), label: AppInfo.branded("Configured engine"))
             }
             if let fit = server.fitNote {
                 Label(fit, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
-                    .help(loc.t("El motor no pudo ajustar la memoria y siguió con los parámetros dados.",
-                                "The engine could not fit memory and continued with the parameters as given."))
+                    .help(AppInfo.branded("The engine could not fit memory and continued with the parameters as given."))
             }
             if let note = server.ctxFitNote {
                 Label(note, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
-                    .help(loc.t("Con el contexto guardado, la caché KV no cabe en la memoria de las tarjetas y el controlador paginaría; el ajuste guardado no cambia.",
-                                "At the saved context the KV cache does not fit the cards' memory and the driver would page; the saved setting is unchanged."))
+                    .help(AppInfo.branded("At the saved context the KV cache does not fit the cards' memory and the driver would page; the saved setting is unchanged."))
             }
             if let plan = server.autoPlan {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(AutoMemoryText.summary(plan, runtime: server.autoRuntime), systemImage: "memorychip")
                         .font(.callout)
-                        .help(loc.t("Por qué este modo: %@", "Why this mode: %@", AutoMemoryText.reason(plan)))
+                        .help(AppInfo.branded("Why this mode: \(AutoMemoryText.reason(plan))"))
                     if let note = server.autoPlanNote {
                         Label(note, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption).foregroundStyle(.orange)
@@ -76,11 +74,10 @@ struct ServerOverviewView: View {
                     if server.state == .running, vram.totalMB > 0,
                        vram.freeMB < 256 || vram.memoryUsedMB > 0.95*vram.memoryTotalMB {
                         HStack(spacing: 8) {
-                            Label(loc.t("Otra aplicación está usando la memoria que reservó el plan; el rendimiento puede caer.",
-                                        "Another app is using the memory the plan set aside; performance may drop."),
+                            Label(AppInfo.branded("Another app is using the memory the plan set aside; performance may drop."),
                                   systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption).foregroundStyle(.orange)
-                            Button(loc.t("Replanificar", "Replan")) {
+                            Button(AppInfo.branded("Replan")) {
                                 server.stop()
                                 Task {
                                     for _ in 0..<40 where server.state != .stopped {
@@ -90,8 +87,7 @@ struct ServerOverviewView: View {
                                 }
                             }
                             .controlSize(.small)
-                            .help(loc.t("Reinicia el servidor y vuelve a repartir la memoria que hay libre ahora.",
-                                        "Restarts the server and budgets the memory free now."))
+                            .help(AppInfo.branded("Restarts the server and budgets the memory free now."))
                         }
                     }
                 }
@@ -108,17 +104,17 @@ struct ServerOverviewView: View {
                         ServerDeleteButton(presentation: .labeled, action: onDelete)
                     }
                     Button(action: configure) {
-                        Label(loc.t("Configurar", "Configure"), systemImage: "slider.horizontal.3")
+                        Label(AppInfo.branded("Configure"), systemImage: "slider.horizontal.3")
                     }
                     .glassButton().controlSize(.large)
                     if server.state == .running || server.state == .starting {
                         Button { server.stop() } label: {
-                            Label(loc.t("Detener servidor", "Stop server"), systemImage: "stop.circle")
+                            Label(AppInfo.branded("Stop server"), systemImage: "stop.circle")
                         }
                         .glassButton(prominent: true).controlSize(.large)
                     } else {
                         Button { server.start(server.effectiveSettings()) } label: {
-                            Label(loc.t("Iniciar servidor", "Start server"), systemImage: "play.fill")
+                            Label(AppInfo.branded("Start server"), systemImage: "play.fill")
                         }
                         .glassButton(prominent: true).controlSize(.large)
                         .disabled(settings.routerMode ? models.models.isEmpty : path.isEmpty)
@@ -135,13 +131,13 @@ struct ServerOverviewView: View {
             ModelBrandIcon(name: path, size: 46)
             VStack(alignment: .leading, spacing: 6) {
                 if router {
-                    Text(loc.t("Router de modelos", "Model router"))
+                    Text(AppInfo.branded("Model router"))
                         .font(.system(size: 19, weight: .semibold))
                 } else {
                     ServerModelPicker(server: server, prominent: true)
                         .frame(maxWidth: 360, alignment: .leading)
                 }
-                Text(path.isEmpty ? loc.t("Configura el servidor para empezar", "Configure your server to get started") : ([name.quant] + name.badges).filter { !$0.isEmpty }.joined(separator: "  ·  "))
+                Text(path.isEmpty ? AppInfo.branded("Configure your server to get started") : ([name.quant] + name.badges).filter { !$0.isEmpty }.joined(separator: "  ·  "))
                     .font(.system(size: 13)).foregroundStyle(.secondary)
             }
         }
@@ -151,9 +147,9 @@ struct ServerOverviewView: View {
         HStack(spacing: 18) {
             Label(String(server.profile == nil ? port : settings.port), systemImage: "network")
             Divider().frame(height: 24)
-            Text("\((server.profile == nil ? context : settings.ctx) / 1024)k " + loc.t("contexto", "context"))
+            Text("\((server.profile == nil ? context : settings.ctx) / 1024)k " + AppInfo.branded("context"))
             Divider().frame(height: 24)
-            Label((server.profile == nil ? discovery : settings.localNetworkDiscovery) ? loc.t("Red local", "Local network") : loc.t("Solo este Mac", "This Mac only"), systemImage: "wifi")
+            Label((server.profile == nil ? discovery : settings.localNetworkDiscovery) ? AppInfo.branded("Local network") : AppInfo.branded("This Mac only"), systemImage: "wifi")
         }
         .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize()
     }

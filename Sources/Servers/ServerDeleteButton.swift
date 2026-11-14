@@ -27,26 +27,25 @@ struct ServerDeleteButton: View {
                          ? (hovering ? Color.red : Color.secondary.opacity(0.65))
                          : Color.secondary)
         .fixedSize()
-        .iconHelp(loc.t("Eliminar este servidor", "Delete this server"))
+        .iconHelp(AppInfo.branded("Delete this server"))
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
         .confirmationDialog(
-            loc.t("¿Eliminar este servidor?", "Delete this server?"),
+            AppInfo.branded("Delete this server?"),
             isPresented: $confirming,
             titleVisibility: .visible
         ) {
-            Button(loc.t("Eliminar servidor", "Delete server"), role: .destructive, action: action)
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Delete server"), role: .destructive, action: action)
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("El servidor se detendrá y se eliminará su configuración. Los modelos descargados se conservarán.",
-                       "The server will stop and its configuration will be removed. Downloaded models will be kept."))
+            Text(AppInfo.branded("The server will stop and its configuration will be removed. Downloaded models will be kept."))
         }
     }
 
     private var deleteButton: some View {
         Button(role: .destructive) { confirming = true } label: {
             if presentation == .labeled {
-                Label(loc.t("Eliminar servidor", "Delete server"), systemImage: "trash")
+                Label(AppInfo.branded("Delete server"), systemImage: "trash")
             } else {
                 Image(systemName: "trash")
                     .symbolRenderingMode(.hierarchical)

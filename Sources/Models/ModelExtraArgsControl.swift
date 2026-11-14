@@ -9,16 +9,14 @@ struct ModelExtraArgsControl: View {
     @State private var text = ""
 
     var body: some View {
-        TextField(loc.t("Argumentos", "Arguments"),
+        TextField(AppInfo.branded("Arguments"),
                   text: $text,
                   prompt: Text(verbatim: "-md /path/head.gguf --spec-type draft-mtp"))
             .workspaceTextField()
             .font(.system(.body, design: .monospaced))
             .autocorrectionDisabled()
-            .accessibilityLabel(loc.t("Argumentos extra para este modelo",
-                                      "Extra arguments for this model"))
-            .help(loc.t("Se añaden a los argumentos extra de Ajustes, y ganan sobre ellos. Se aplican solo a este modelo.",
-                        "Added after the extra arguments in Settings, and win over them. They apply to this model only."))
+            .accessibilityLabel(AppInfo.branded("Extra arguments for this model"))
+            .help(AppInfo.branded("Added after the extra arguments in Settings, and win over them. They apply to this model only."))
             .task(id: modelPath) { text = ServerSettings.extraArgs(forModel: modelPath) }
             .onChange(of: text) { _, new in
                 ServerSettings.setExtraArgs(new, forModel: modelPath)

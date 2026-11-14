@@ -42,31 +42,31 @@ struct AudioMediaPreview: View {
             }
 
             HStack(spacing: 10) {
-                Button(loc.t("Retroceder 15 segundos", "Back 15 seconds"),
+                Button(AppInfo.branded("Back 15 seconds"),
                        systemImage: "gobackward.15") {
                     studio.seek(to: max(0, position - 15))
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Retroceder 15 segundos", "Back 15 seconds"))
+                .iconHelp(AppInfo.branded("Back 15 seconds"))
 
                 Button(action: studio.togglePlayback) {
-                    Label(studio.isPlaying ? loc.t("Pausar", "Pause") : loc.t("Reproducir", "Play"),
+                    Label(studio.isPlaying ? AppInfo.branded("Pause") : AppInfo.branded("Play"),
                           systemImage: studio.isPlaying ? "pause.fill" : "play.fill")
                         .labelStyle(.iconOnly)
                         .font(.system(size: 16, weight: .semibold))
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(GlassIconButtonStyle(active: true))
-                .iconHelp(studio.isPlaying ? loc.t("Pausar", "Pause") : loc.t("Reproducir", "Play"))
+                .iconHelp(studio.isPlaying ? AppInfo.branded("Pause") : AppInfo.branded("Play"))
 
-                Button(loc.t("Avanzar 15 segundos", "Forward 15 seconds"),
+                Button(AppInfo.branded("Forward 15 seconds"),
                        systemImage: "goforward.15") {
                     studio.seek(to: min(studio.duration, position + 15))
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Avanzar 15 segundos", "Forward 15 seconds"))
+                .iconHelp(AppInfo.branded("Forward 15 seconds"))
 
                 Text(MediaTime.compact(position))
                     .font(.caption.monospacedDigit())
@@ -77,8 +77,7 @@ struct AudioMediaPreview: View {
                     scrubbing = editing
                     if !editing { studio.seek(to: position) }
                 }
-                .help(loc.t("Busca una posición dentro del archivo.",
-                            "Seek to a position in the file."))
+                .help(AppInfo.branded("Seek to a position in the file."))
 
                 Text(MediaTime.compact(studio.duration))
                     .font(.caption.monospacedDigit())

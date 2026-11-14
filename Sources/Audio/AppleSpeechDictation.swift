@@ -28,16 +28,16 @@ final class AppleSpeechDictationController: ObservableObject {
 
     private func start(onText: @escaping (String) -> Void) async {
         guard await Self.requestAuthorization() else {
-            error = "El dictado de Apple está desactivado. Actívalo en Ajustes del Sistema → Teclado → Dictado y concede reconocimiento de voz / Apple Dictation is off. Enable it in System Settings → Keyboard → Dictation and grant speech recognition permission."
+            error = "Apple Dictation is off. Enable it in System Settings → Keyboard → Dictation and grant speech recognition permission."
             return
         }
         guard await AVCaptureDevice.requestAccess(for: .audio) else {
-            error = "El acceso al micrófono está denegado. Actívalo en Ajustes del Sistema → Privacidad y seguridad → Micrófono / microphone access was denied. Enable it in System Settings → Privacy & Security → Microphone."
+            error = "Microphone access was denied. Enable it in System Settings → Privacy & Security → Microphone."
             return
         }
         guard let recognizer = SFSpeechRecognizer(locale: .current) ?? SFSpeechRecognizer(),
               recognizer.isAvailable else {
-            error = "El dictado de Apple no está disponible para este idioma / Apple Dictation isn't available for this language."
+            error = "Apple Dictation isn't available for this language."
             return
         }
 

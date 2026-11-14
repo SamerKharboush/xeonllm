@@ -164,7 +164,7 @@ final class WhisperTranscriptTests: XCTestCase {
     func testSubtitleTranslationUsesAuthenticationAndStructuredJSON() throws {
         let cues = [SubtitleCue(id: 7, start: 1, end: 2, text: "Hello")]
         let request = try AudioStudioController.translationRequest(
-            cues: cues, targetLanguage: "Español", port: 9090,
+            cues: cues, targetLanguage: "Spanish", port: 9090,
             routerModel: "translator", apiKey: "secret",
             glossary: "Mac Pro = Mac Pro", context: "[6] Previous => Anterior"
         )
@@ -228,7 +228,7 @@ final class WhisperTranscriptTests: XCTestCase {
     func testAudioProjectRoundTripPreservesBothTracksAndTranslationSettings() throws {
         let document = AudioProjectDocument(
             version: 1, savedAt: .now, sourcePath: "/tmp/video.mp4",
-            detectedLanguage: "en", targetLanguage: "Español",
+            detectedLanguage: "en", targetLanguage: "Spanish",
             translationModel: "qwen", glossary: "XeonLLM = XeonLLM",
             originalCues: [SubtitleCue(id: 1, start: 0, end: 1, text: "Hello")],
             translatedCues: [SubtitleCue(id: 1, start: 0, end: 1, text: "Hola")]
@@ -267,7 +267,7 @@ final class WhisperTranscriptTests: XCTestCase {
         let data = try JSONSerialization.data(withJSONObject: response)
         XCTAssertThrowsError(try AudioStudioController.translations(from: data, expectedCues: cues)) {
             XCTAssertTrue($0 is AudioTranslationError)
-            XCTAssertTrue($0.localizedDescription.contains("subtítulos traducidos"))
+            XCTAssertTrue($0.localizedDescription.contains("translated subtitle"))
         }
     }
 
@@ -1403,7 +1403,7 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertTrue(args.contains("--jinja"))
         XCTAssertTrue(args.contains("--n-cpu-moe"))
         XCTAssertEqual(args[args.firstIndex(of: "--host")! + 1], "127.0.0.1")
-        XCTAssertFalse(args.contains("-ctk"), "f16 no debe emitir -ctk")
+        XCTAssertFalse(args.contains("-ctk"), "f16 must not emit -ctk")
         XCTAssertFalse(args.contains("--mlock"), "the deprecated pair let mlock decide mmap")
         // The engine's 8 GiB host prompt cache must always be capped.
         XCTAssertEqual(args[args.firstIndex(of: "--cache-ram")! + 1], "2048")
@@ -1756,7 +1756,7 @@ final class ServerSettingsTests: XCTestCase {
         s.mlock = true
         let args = s.benchmarkArguments
         XCTAssertEqual(args[args.firstIndex(of: "--load-mode")! + 1], "mlock",
-                       "medir sin bloquear el modelo no da los números que entrega la app")
+                       "measuring must not block the model or the numbers it returns are wrong")
         XCTAssertFalse(args.contains("--mmap"), "flag obsoleto en el motor nuevo")
         s.mlock = false
         XCTAssertEqual(s.benchmarkArguments[s.benchmarkArguments.firstIndex(of: "--load-mode")! + 1], "none")
@@ -1769,7 +1769,7 @@ final class ServerSettingsTests: XCTestCase {
         // one step from either end must not escape it
         XCTAssertEqual(ChatFont.clamp(ChatFont.range.upperBound + ChatFont.step), ChatFont.range.upperBound)
         XCTAssertEqual(ChatFont.clamp(ChatFont.range.lowerBound - ChatFont.step), ChatFont.range.lowerBound)
-        XCTAssertEqual(ChatFont.Base.body.points, 13, "el 100% debe seguir siendo el tamaño del sistema")
+        XCTAssertEqual(ChatFont.Base.body.points, 13, "100% must stay the system size")
     }
 
     func testMlockKeepsMmapWhenAsked() {
@@ -1779,7 +1779,7 @@ final class ServerSettingsTests: XCTestCase {
         let args = s.arguments
         XCTAssertEqual(args[args.firstIndex(of: "--load-mode")! + 1], "mmap+mlock")
         s.mlock = false
-        XCTAssertFalse(s.arguments.contains("--load-mode"), "sin ninguna opción, el motor decide")
+        XCTAssertFalse(s.arguments.contains("--load-mode"), "with no option, the engine decides")
     }
 
     func testKVQuantAndMlockArguments() {
@@ -1847,9 +1847,9 @@ final class ServerSettingsTests: XCTestCase {
     func testStabilityEnvironment() {
         let env = makeSettings().environment
         XCTAssertNil(env["GGML_METAL_CONCURRENCY_DISABLE"],
-                     "la concurrencia la decide el engine según el tipo de GPU, la app no la fija")
+                     "the engine decides concurrency from the GPU; the app does not set it")
         XCTAssertEqual(env["GGML_METAL_VRAM_RESERVE_MB"], "1024")
-        XCTAssertNil(env["GGML_METAL_DEVICE_INDEX"], "gpuIndex -1 no debe fijar índice")
+        XCTAssertNil(env["GGML_METAL_DEVICE_INDEX"], "gpuIndex -1 must not set an index")
         XCTAssertTrue(env["PATH"]?.contains("/usr/local/bin") == true)
         XCTAssertTrue(env["PATH"]?.contains("/opt/homebrew/bin") == true)
     }
@@ -1917,7 +1917,7 @@ final class ServerSettingsTests: XCTestCase {
 
         s.splitMode = "capas"
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "--split-mode")! + 1], "layer",
-                       "un valor guardado que el motor no acepta debe caer en layer")
+                       "a stored value the engine rejects must fall back to layer")
     }
 
     func testFastHandOffOnlyTravelsWithASplit() {
@@ -1951,8 +1951,8 @@ final class ServerSettingsTests: XCTestCase {
     func testMultiGPUDefaultsReachTheEngine() {
         // The picker shows both on; the server has to hand the engine the same thing.
         let defaults = ServerSettings.fromDefaults()
-        XCTAssertTrue(defaults.mgpuEvents, "el traspaso rápido es la mayor parte del tg por tensores")
-        XCTAssertTrue(defaults.mgpuPeer, "la casilla del puente aparece marcada, así que debe aplicarse")
+        XCTAssertTrue(defaults.mgpuEvents, "the fast path is most of the tensor-parallel tg")
+        XCTAssertTrue(defaults.mgpuPeer, "the bridge checkbox is on, so it must be applied")
 
         var s = makeSettings()
         s.multiGPU = true
@@ -1966,7 +1966,7 @@ final class ServerSettingsTests: XCTestCase {
         // A layer split never reduces across cards, so the bridge must stay out of the way.
         s.splitMode = "layer"
         XCTAssertNil(s.environment["XEON_MGPU_PEER"],
-                     "el puente no aporta nada por capas y ahí solo añade presión de memoria")
+                     "the bridge adds nothing by layers and there only adds memory pressure")
         // Events are off for a layer split too, and not for symmetry: the shared-event
         // hand-off deadlocked it at p >= 257 on a pair of D700s, and the generic host
         // staging path ran the same prompt at 23.1 t/s.
@@ -2759,7 +2759,7 @@ final class CompactionTests: XCTestCase {
     func testCutoffLandsOnUserMessageAndKeepsRecentTurns() {
         let messages = makeMessages(6)   // 12 messages
         let cutoff = ChatStore.compactionCutoff(messages: messages, alreadyCompacted: 0)
-        XCTAssertEqual(cutoff, 8, "debe conservar los 2 últimos intercambios completos")
+        XCTAssertEqual(cutoff, 8, "the last 2 exchanges must be kept whole")
         XCTAssertEqual(messages[cutoff!].role, "user")
     }
 
@@ -2774,7 +2774,7 @@ final class CompactionTests: XCTestCase {
                                                   keepTokens: 1_000)
         XCTAssertNotNil(byTokens)
         XCTAssertLessThan(byTokens!, byPosition!,
-                          "con un turno enorme al final hay que compactar más atrás")
+                          "a huge last turn must compact further back")
     }
 
     func testSummaryIsClampedWhenTheTranscriptShrinks() {
@@ -2784,7 +2784,7 @@ final class CompactionTests: XCTestCase {
         c.messages.removeLast(2)
         ChatStore.clampSummary(&c)
         XCTAssertEqual(c.summarizedCount, 6,
-                       "un resumen que cubre más mensajes de los que quedan silencia el resto")
+                       "a summary covering more messages than remain silences the rest")
         let history = ChatStore.requestHistory(system: "", summary: c.summary,
                                                messages: c.messages, from: c.summarizedCount ?? 0)
         XCTAssertEqual(history.count, 1, "solo el system con el resumen, sin mensajes perdidos")
@@ -2795,7 +2795,7 @@ final class CompactionTests: XCTestCase {
         c.archived = [ArchivedBlock(from: 2, to: 4, note: "tema cerrado")]
         let history = ChatStore.requestHistory(system: "", summary: nil,
                                                messages: c.messages, from: 0, archived: c.archived)
-        XCTAssertEqual(history.count, 8, "los dos archivados no se envían")
+        XCTAssertEqual(history.count, 8, "the two archived ones are not sent")
         XCTAssertFalse(history.contains { ($0["content"] as? String) == "pregunta 1" })
 
         c.messages.removeLast(7)   // leaves 3
@@ -2808,7 +2808,7 @@ final class CompactionTests: XCTestCase {
         // can be: the last exchange stays, so the reply in flight keeps its turn.
         let all = ChatMemoryService.validate(from: 0, to: 9, messageCount: 10, summarized: 0)
         XCTAssertEqual(all?.from, 0)
-        XCTAssertEqual(all?.to, 8, "el último intercambio se queda fuera")
+        XCTAssertEqual(all?.to, 8, "the last exchange is left out")
 
         let clipped = ChatMemoryService.validate(from: 0, to: 5, messageCount: 10, summarized: 4)
         XCTAssertEqual(clipped?.from, 4, "no toca lo que el resumen ya cubre")
@@ -2819,7 +2819,7 @@ final class CompactionTests: XCTestCase {
         XCTAssertNil(ChatMemoryService.validate(from: 8, to: 9, messageCount: 10, summarized: 0),
                      "solo el intercambio en curso: no queda nada que archivar")
         XCTAssertNil(ChatMemoryService.validate(from: 0, to: 1, messageCount: 2, summarized: 0),
-                     "una conversación de un solo intercambio")
+                     "a single-exchange conversation")
     }
 
     func testArchiveIsRefusedWhileTheContextHasRoom() {
@@ -2827,7 +2827,7 @@ final class CompactionTests: XCTestCase {
                        "un adjunto largo en un contexto a medias no se archiva")
         XCTAssertNil(ChatMemoryService.archiveRefusal(used: 21_000, limit: 32_768))
         XCTAssertNil(ChatMemoryService.archiveRefusal(used: 500, limit: 0),
-                     "sin límite conocido no se puede juzgar")
+                     "with no known limit there is nothing to judge")
     }
 
     func testRecallMatchesIgnoringCaseAndAccents() {
@@ -2938,7 +2938,7 @@ final class CompactionTests: XCTestCase {
         let quoted = #"{"error":{"code":500,"message":"Failed to parse tool call arguments as JSON: last read: 'raise the context size'"}}"#
         XCTAssertTrue(ChatStore.describeServerError(status: 500, body: quoted).hasPrefix("HTTP 500: Failed to parse"))
         let full = #"{"error":{"code":400,"message":"request (70000 tokens) exceeds the available context size (65536 tokens), try increasing it"}}"#
-        XCTAssertTrue(ChatStore.describeServerError(status: 400, body: full).hasPrefix("Contexto lleno"))
+        XCTAssertTrue(ChatStore.describeServerError(status: 400, body: full).hasPrefix("context full"))
         // a server error inside the stream ends the turn: the app does not try to resume it
         var accumulator = ChatStreamAccumulator()
         XCTAssertThrowsError(try accumulator.consume(#"data: {"error":{"message":"Compute error."}}"#)) { error in
@@ -2980,7 +2980,7 @@ final class CompactionTests: XCTestCase {
 
     func testReasoningOnlyLengthMessageExplainsTokenLimit() {
         let message = ChatStore.emptyResponseMessage(finishReason: "length")
-        XCTAssertTrue(message.contains("máximo de tokens") || message.contains("max tokens"), message)
+        XCTAssertTrue(message.contains("max tokens"), message)
         XCTAssertFalse(message.contains(" / "), "one language, not the pair")
     }
 }
@@ -3133,37 +3133,44 @@ final class BenchAndProfileTests: XCTestCase {
     }
 }
 
-// MARK: - Documentation and localization
+// MARK: - Documentation and language
 
 @MainActor
 final class LocalizationTests: XCTestCase {
-    func testDocsHaveSameSectionsInBothLanguages() {
-        XCTAssertEqual(DocsContent.es.count, DocsContent.en.count)
-        XCTAssertGreaterThanOrEqual(DocsContent.es.count, 10)
-        for (es, en) in zip(DocsContent.es, DocsContent.en) {
-            XCTAssertEqual(es.icon, en.icon, "iconos desalineados: \(es.title) / \(en.title)")
-            XCTAssertFalse(es.body.isEmpty)
-            XCTAssertFalse(en.body.isEmpty)
+    func testDocsAreCompleteAndEnglish() {
+        XCTAssertGreaterThanOrEqual(DocsContent.en.count, 10)
+        for section in DocsContent.en {
+            XCTAssertFalse(section.title.isEmpty)
+            XCTAssertFalse(section.icon.isEmpty)
+            XCTAssertFalse(section.body.isEmpty)
         }
+        XCTAssertEqual(DocsContent.en.first?.title, "What is XeonLLM")
     }
 
     func testDocsNeverMentionForbiddenNames() {
-        for section in DocsContent.es + DocsContent.en {
+        for section in DocsContent.en {
             XCTAssertFalse(section.body.localizedCaseInsensitiveContains("claude"),
-                           "la documentación no debe mencionar asistentes de IA")
+                           "the documentation must not mention AI assistants")
         }
     }
 
-    func testLocalizerSwitchesLanguage() {
-        let loc = Localizer()
-        loc.language = "es"
-        XCTAssertTrue(loc.isSpanish)
-        XCTAssertEqual(loc.t("hola", "hello"), "hola")
-        loc.language = "en"
-        XCTAssertFalse(loc.isSpanish)
-        XCTAssertEqual(loc.t("hola", "hello"), "hello")
-    }
+    /// Before the app went English-only the chosen language lived in `lang` and the
+    /// interface loaded `Assets/lang/<code>.json` at startup; a value left behind by an
+    /// older build (or a pack missing from the bundle) must not be able to break a launch.
+    /// Nothing reads the key any more, so the docs table below draws from the bundle alone.
+    func testAStoredLanguageCodeCannotBreakLaunch() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: "lang")
+        defaults.set("es", forKey: "lang")
+        defer {
+            if let previous { defaults.set(previous, forKey: "lang") }
+            else { defaults.removeObject(forKey: "lang") }
+        }
 
+        _ = Localizer()
+        XCTAssertEqual(DocsContent.en.first?.title, "What is XeonLLM")
+        XCTAssertFalse(DocsContent.en.isEmpty)
+    }
 }
 
 // MARK: - Shell-words parsing
@@ -3214,7 +3221,7 @@ final class CatalogTests: XCTestCase {
     func testCatalogURLsAreWellFormed() {
         for model in Catalog.models {
             let url = URL(string: model.urlString)
-            XCTAssertEqual(url?.scheme, "https", "URL inválida en \(model.name)")
+            XCTAssertEqual(url?.scheme, "https", "invalid URL for \(model.name)")
             XCTAssertEqual(url?.host, "huggingface.co")
             XCTAssertTrue(model.fileName.hasSuffix(".gguf"))
         }
@@ -3228,10 +3235,10 @@ final class CatalogTests: XCTestCase {
 
     func testRecommendationExistsForReferenceHardware() {
         let recs = Catalog.recommendations(for: referenceHW)
-        XCTAssertFalse(recs.isEmpty, "debe haber modelos recomendados para 12GB VRAM + 32GB RAM")
+        XCTAssertFalse(recs.isEmpty, "some models must be recommended for 12GB VRAM + 32GB RAM")
         for rec in recs {
             XCTAssertGreaterThanOrEqual(rec.est.level, .good,
-                                        "\(rec.model.name) no debería recomendarse si no corre bien")
+                                        "\(rec.model.name) must not be recommended when it does not run well")
         }
     }
 }
@@ -3252,7 +3259,7 @@ final class RouterModeTests: XCTestCase {
 
     func testRouterArgumentsHaveNoFixedModel() {
         let args = makeSettings().arguments
-        XCTAssertFalse(args.contains("-m"), "el router no fija un solo modelo")
+        XCTAssertFalse(args.contains("-m"), "the router does not pin a single model")
         XCTAssertTrue(args.contains("--models-preset"))
         XCTAssertTrue(args.contains("--models-autoload"))
         XCTAssertEqual(args[args.firstIndex(of: "--models-max")! + 1], "2")
@@ -3284,7 +3291,7 @@ final class RouterModeTests: XCTestCase {
         // Dense entry has no ncmoe line: no false n-cpu-moe on a model with no experts.
         let denseSection = ini.components(separatedBy: "\n\n").first { $0.contains("dense-4b") } ?? ""
         XCTAssertFalse(denseSection.contains("n-cpu-moe"))
-        XCTAssertTrue(ini.contains("--host") == false, "el router no repite --host/--port por modelo")
+        XCTAssertTrue(ini.contains("--host") == false, "the router does not repeat --host/--port per model")
     }
 
     func testRouterPresetPassesAutoGPULayersWithTheVRAMReserve() {
@@ -3512,7 +3519,7 @@ final class ModelNameTests: XCTestCase {
         let r = EngineCheck.parse(clean)
         XCTAssertTrue(r.ok)
         XCTAssertEqual(r.simdWidth, 32)
-        XCTAssertTrue(EngineCheck.report(r, localized: { _, en in en }).contains("no need to report"))
+        XCTAssertTrue(EngineCheck.report(r).contains("no need to report"))
     }
 
     func testEngineCheckBinarySitsNextToTheEngine() {
@@ -3524,7 +3531,6 @@ extension ServerSettingsTests {
     @MainActor func testDiagnoseExplainsAnArchitectureWithoutTensorSplit() {
         let log = "llama_model_load: error loading model: LLAMA_SPLIT_MODE_TENSOR not implemented for architecture 'deepseek4'"
         let hint = ServerController.diagnose(log, exitCode: 1)
-        XCTAssertTrue(hint.contains("por capas"), hint)
         XCTAssertTrue(hint.contains("by layers"), hint)
     }
 }

@@ -34,32 +34,31 @@ struct SubtitleCueEditorRow: View {
             }
             .buttonStyle(.borderless)
             .font(.caption.monospacedDigit())
-            .help(loc.t("Reproducir desde este subtítulo.", "Play from this subtitle."))
+            .help(AppInfo.branded("Play from this subtitle."))
 
             VStack(alignment: .leading, spacing: 6) {
                 if mode != .translated {
-                    cueText(originalDraft, translated: false, label: loc.t("Original", "Original"))
+                    cueText(originalDraft, translated: false, label: AppInfo.branded("Original"))
                 }
                 if mode != .original, translated != nil {
-                    cueText(translatedDraft, translated: true, label: loc.t("Traducción", "Translation"))
+                    cueText(translatedDraft, translated: true, label: AppInfo.branded("Translation"))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if editing {
-                Menu(loc.t("Editar segmento", "Edit segment"), systemImage: "ellipsis.circle") {
-                    Button(loc.t("Dividir", "Split"), systemImage: "rectangle.split.2x1",
+                Menu(AppInfo.branded("Edit segment"), systemImage: "ellipsis.circle") {
+                    Button(AppInfo.branded("Split"), systemImage: "rectangle.split.2x1",
                            action: { studio.splitCue(id: original.id) })
-                    Button(loc.t("Unir con el siguiente", "Merge with next"),
+                    Button(AppInfo.branded("Merge with next"),
                            systemImage: "rectangle.2.swap",
                            action: { studio.mergeCueWithNext(id: original.id) })
                     Divider()
-                    Button(loc.t("Eliminar", "Delete"), systemImage: "trash", role: .destructive,
+                    Button(AppInfo.branded("Delete"), systemImage: "trash", role: .destructive,
                            action: { studio.deleteCue(id: original.id) })
                 }
                 .menuStyle(.borderlessButton)
-                .help(loc.t("Divide, une o elimina este segmento.",
-                            "Splits, merges, or deletes this segment."))
+                .help(AppInfo.branded("Splits, merges, or deletes this segment."))
             } else {
                 Text("#\(original.id)")
                     .font(.caption.monospacedDigit())
@@ -96,8 +95,7 @@ struct SubtitleCueEditorRow: View {
                                      text: translated ? translatedDraft : originalDraft,
                                      translated: translated)
                 }
-                .help(loc.t("Edita el texto y pulsa Retorno para guardarlo.",
-                            "Edit the text and press Return to save it."))
+                .help(AppInfo.branded("Edit the text and press Return to save it."))
         } else {
             if mode == .bilingual {
                 Text(label.uppercased())

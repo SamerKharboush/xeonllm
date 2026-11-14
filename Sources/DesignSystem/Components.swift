@@ -31,13 +31,13 @@ struct EstimateLine: View {
         let (text, color): (String, Color) = {
             // A model on the host is not "slow" because it is on the CPU: the card
             // path is the slow one for a model that does not fit.
-            if est.placement == .host { return (loc.t("Solo CPU", "CPU only"), .orange) }
-            if est.placement == .expertTier { return (loc.t("GPU + expertos en RAM", "GPU + experts in RAM"), .blue) }
+            if est.placement == .host { return (AppInfo.branded("CPU only"), .orange) }
+            if est.placement == .expertTier { return (AppInfo.branded("GPU + experts in RAM"), .blue) }
             switch est.level {
-            case .ideal: return (loc.t("GPU completa", "Full GPU"), .green)
-            case .good: return (loc.t("Híbrido GPU+CPU", "GPU+CPU hybrid"), .blue)
-            case .slow: return (loc.t("Lento", "Slow"), .orange)
-            case .no: return (loc.t("No cabe", "Won't fit"), .red)
+            case .ideal: return (AppInfo.branded("Full GPU"), .green)
+            case .good: return (AppInfo.branded("GPU+CPU hybrid"), .blue)
+            case .slow: return (AppInfo.branded("Slow"), .orange)
+            case .no: return (AppInfo.branded("Won't fit"), .red)
             }
         }()
         return Text(text)
@@ -62,7 +62,7 @@ struct UseModelButton: View {
     @State private var confirmRestart = false
 
     var body: some View {
-        Button(loc.t("Usar", "Use")) {
+        Button(AppInfo.branded("Use")) {
             if server.state == .running || server.state == .starting {
                 confirmRestart = true
             } else {
@@ -70,17 +70,16 @@ struct UseModelButton: View {
             }
         }
         .glassButton(prominent: true)
-        .help(loc.t("Usa este modelo en el servidor principal; si está corriendo, pedirá confirmación para reiniciarlo.",
-                    "Use this model on the main server; if it's running, you'll be asked to confirm a restart."))
-        .alert(loc.t("¿Reiniciar el servidor principal?", "Restart the main server?"),
+        .help(AppInfo.branded("Use this model on the main server; if it's running, you'll be asked to confirm a restart."))
+        .alert(AppInfo.branded("Restart the main server?"),
                isPresented: $confirmRestart) {
-            Button(loc.t("Reiniciar", "Restart")) {
+            Button(AppInfo.branded("Restart")) {
                 apply()
                 server.restart(.fromDefaults())
             }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("El servidor principal se reiniciará para usar «%@».", "The main server will restart to use “%@”.", "\(modelName)"))
+            Text(AppInfo.branded("The main server will restart to use “\(modelName)”."))
         }
     }
 
@@ -115,13 +114,13 @@ private enum GPUPickerLayout {
             let gb = members.reduce(0) { $0 + $1.vramGB }
             let id = members.first?.peerGroupID ?? 0
             return GPUPickerSection(id: id,
-                                    title: loc.t("Fabric %@ · %@ GB", "Fabric %@ · %@ GB", group.label, "\(gb)"),
+                                    title: AppInfo.branded("Fabric \(group.label) · \(gb) GB"),
                                     color: colors[id], gpus: members)
         }
         let loose = gpus.filter { colors[$0.peerGroupID] == nil }
         guard !loose.isEmpty else { return linked }
         return linked + [GPUPickerSection(id: 0,
-                                          title: linked.isEmpty ? nil : loc.t("Sin enlace", "No link"),
+                                          title: linked.isEmpty ? nil : AppInfo.branded("No link"),
                                           color: nil, gpus: loose)]
     }
 }
@@ -232,13 +231,13 @@ private struct GPUPickerPanel: View {
         HStack(spacing: 6) {
             GPUPickerChip(title: defaultTitle, color: nil, action: onDefault)
             if splitEligible.count > 1 {
-                if defaultTitle != loc.t("Todas", "All") {
-                    GPUPickerChip(title: loc.t("Todas", "All"), color: nil) {
+                if defaultTitle != AppInfo.branded("All") {
+                    GPUPickerChip(title: AppInfo.branded("All"), color: nil) {
                         onSelect(splitEligible.map(\.index))
                     }
                 }
                 ForEach(sections.filter { $0.color != nil }) { section in
-                    GPUPickerChip(title: loc.t("Fabric %@", "Fabric %@", letter(section)),
+                    GPUPickerChip(title: AppInfo.branded("Fabric \(letter(section))"),
                                   color: section.color) { onSelect(section.gpus.map(\.index)) }
                 }
             }
@@ -258,7 +257,7 @@ private struct GPUPickerPanel: View {
             Image(systemName: chosen.count >= 2 ? "square.split.2x1" : "cpu")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             Text(chosen.count >= 2
-                    ? loc.t("%@ GPUs · %@ GB de reparto", "%@ GPUs · %@ GB split", "\(chosen.count)", "\(gb)")
+                    ? AppInfo.branded("\(chosen.count) GPUs · \(gb) GB split")
                     : (chosen.first.map { "\($0.name) · \($0.vramGB) GB" } ?? defaultTitle))
                 .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
             Spacer(minLength: 0)
@@ -326,18 +325,17 @@ struct GPUSelectionMenu: View {
 
     var body: some View {
         GPUMultiPicker(label: label, selection: selection,
-                       defaultTitle: loc.t("Predeterminada", "Default"),
-                       help: loc.t("GPU(s) que usa este servidor: una fija esa GPU; varias reparten las capas del modelo entre ellas (experimental); ninguna deja elegir a macOS. Los atajos eligen todas de golpe o un enlace Infinity Fabric entero.",
-                                   "GPU(s) this server uses: one pins that GPU; several split the model's layers across them (experimental); none lets macOS choose. The shortcuts pick every card at once, or one whole Infinity Fabric link."),
+                       defaultTitle: AppInfo.branded("Default"),
+                       help: AppInfo.branded("GPU(s) this server uses: one pins that GPU; several split the model's layers across them (experimental); none lets macOS choose. The shortcuts pick every card at once, or one whole Infinity Fabric link."),
                        onDefault: { gpuIndex = -1; gpuList = [] },
                        onSelect: select, onToggle: toggle)
     }
 
     private var label: String {
         let sel = selection
-        if sel.count >= 2 { return loc.t("Reparto · %@ GPUs", "Split · %@ GPUs", "\(sel.count)") }
+        if sel.count >= 2 { return AppInfo.branded("Split · \(sel.count) GPUs") }
         if let i = sel.first, let g = hardware.gpus.first(where: { $0.index == i }) { return g.name }
-        return loc.t("GPU predeterminada", "Default GPU")
+        return AppInfo.branded("Default GPU")
     }
 
     private func select(_ indices: [Int]) {
@@ -362,7 +360,7 @@ struct CatalogActionButton: View {
     var body: some View {
         if let local = models.localModel(fileName: model.fileName) {
             if modelPath == local.url.path {
-                Label(loc.t("Activo", "Active"), systemImage: "checkmark.circle.fill")
+                Label(AppInfo.branded("Active"), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green).font(.callout)
             } else {
                 UseModelButton(path: local.url.path, modelName: model.name)
@@ -370,9 +368,9 @@ struct CatalogActionButton: View {
         } else if let item = models.downloadItem(fileName: model.fileName) {
             InlineDownloadProgress(item: item)
         } else if est.level == .no {
-            Text(loc.t("No compatible", "Not compatible")).font(.caption).foregroundStyle(.secondary)
+            Text(AppInfo.branded("Not compatible")).font(.caption).foregroundStyle(.secondary)
         } else {
-            Button(loc.t("Descargar", "Download"), systemImage: "arrow.down.circle") {
+            Button(AppInfo.branded("Download"), systemImage: "arrow.down.circle") {
                 models.download(urlString: model.urlString)
             }
             .glassButton(prominent: true)
@@ -392,12 +390,12 @@ struct InlineDownloadProgress: View {
         case .preparing:
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text(loc.t("Preparando…", "Preparing…")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("Preparing…")).font(.caption).foregroundStyle(.secondary)
             }
         case .verifying:
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text(loc.t("Verificando…", "Verifying…")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("Verifying…")).font(.caption).foregroundStyle(.secondary)
             }
         case .downloading, .paused:
             HStack(spacing: 7) {
@@ -412,25 +410,25 @@ struct InlineDownloadProgress: View {
                     Image(systemName: item.phase == .paused ? "play.circle" : "pause.circle")
                 }
                 .buttonStyle(.borderless)
-                .iconHelp(item.phase == .paused ? loc.t("Reanudar", "Resume") : loc.t("Pausar", "Pause"))
-                Button { item.cancel() } label: { Label(loc.t("Quitar", "Clear"), systemImage: "xmark.circle") }
+                .iconHelp(item.phase == .paused ? AppInfo.branded("Resume") : AppInfo.branded("Pause"))
+                Button { item.cancel() } label: { Label(AppInfo.branded("Clear"), systemImage: "xmark.circle") }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless).foregroundStyle(.secondary)
-                    .iconHelp(loc.t("Cancelar", "Cancel"))
+                    .iconHelp(AppInfo.branded("Cancel"))
             }
         case .finished:
-            Label(loc.t("Listo", "Done"), systemImage: "checkmark.seal.fill")
+            Label(AppInfo.branded("Done"), systemImage: "checkmark.seal.fill")
                 .foregroundStyle(.green).font(.caption)
         case .failed(let message):
             HStack(spacing: 7) {
-                Label(loc.t("Error", "Failed"), systemImage: "exclamationmark.triangle")
+                Label(AppInfo.branded("Failed"), systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.red).font(.caption).help(message)
                 Button { models.retry(item) } label: {
                     Image(systemName: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless)
-                .accessibilityLabel(loc.t("Reintentar la descarga", "Retry the download"))
-                .help(loc.t("Reintentar la descarga desde cero.", "Retry the download from scratch."))
+                .accessibilityLabel(AppInfo.branded("Retry the download"))
+                .help(AppInfo.branded("Retry the download from scratch."))
             }
         }
     }

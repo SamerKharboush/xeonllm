@@ -25,7 +25,7 @@ struct DonateToolbarButton: View {
             } label: {
                 HStack(spacing: 6) {
                     if expanded {
-                        Text(loc.t("Donar", "Donate"))
+                        Text(AppInfo.branded("Donate"))
                             .font(.system(size: 12, weight: .semibold))
                             .fixedSize()
                             .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -40,8 +40,8 @@ struct DonateToolbarButton: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(loc.t("Donar", "Donate"))
-            .help(loc.t("Abrir el repositorio del proyecto", "Open the project repository"))
+            .accessibilityLabel(AppInfo.branded("Donate"))
+            .help(AppInfo.branded("Open the project repository"))
             .onHover { inside in animate { hovering = inside } }
         }
         .frame(width: 96, height: 28)

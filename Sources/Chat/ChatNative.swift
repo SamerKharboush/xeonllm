@@ -544,7 +544,7 @@ final class ChatStore: ObservableObject {
             if let label = event["label"] as? String, !label.isEmpty { live.setStatus(String(label.prefix(120))) }
         case "pass":
             if event["state"] as? String == "start", let n = event["n"] as? Int {
-                live.setStatus(Localizer().t("El modelo está pensando (pasada %@)", "The model is thinking (pass %@)", String(n)))
+                live.setStatus(AppInfo.branded("The model is thinking (pass \(String(n)))"))
             }
         case "tool_call":
             guard let call = event["call"] as? [String: Any],
@@ -1207,8 +1207,8 @@ final class ChatStore: ObservableObject {
                 }
                 if agentTurn {
                     body["messages"] = clientToolsAgent ? history : agentHistory
-                    // the agent writes its progress in the app's language; its answer follows the user's
-                    var xeon: [String: Any] = ["max_rounds": agentTurnLimit, "locale": Localizer().language]
+                    // the agent writes its progress in English; its answer follows the user's language
+                    var xeon: [String: Any] = ["max_rounds": agentTurnLimit, "locale": "en"]
                     if !clientToolsAgent && Self.hasOwnTools(availableTools) { xeon["client_tools"] = true }
                     body["xeon"] = xeon
                 } else if let request, availableTools.contains(where: { MathTranscriptionService.isMathTool($0.name) }) {
@@ -1351,7 +1351,7 @@ final class ChatStore: ObservableObject {
                     if drafted { accumulator.visible = "" }
                     contextNeeded = stream?.contextTokens
                     let message = rejected
-                        ? "Este modelo escribe mal las llamadas a herramientas y el motor cortó la respuesta; se le han desactivado, vuelve a enviar / this model writes tool calls in the wrong shape and the engine stopped the answer; they are now off for it, send again"
+                        ? "this model writes tool calls in the wrong shape and the engine stopped the answer; they are now off for it, send again"
                         : gpu ? Self.gpuFailureMessage(told: stream?.gpu == true ? raw : nil,
                                                        outlook: stream?.gpu == true ? GPURecovery.shared.outlook(port: port) : .restarting)
                         : stream?.cut == true ? Self.cutConnectionMessage()
@@ -1929,8 +1929,8 @@ final class ChatStore: ObservableObject {
 
     nonisolated static func stallMessage(moe: Bool) -> String {
         moe
-            ? "El motor dejó de responder y se detuvo para liberar memoria. Suele pasar con modelos MoE grandes en GPU AMD: usa un modelo denso (8B) o sube 'Expertos MoE en CPU'. / The engine stopped responding and was stopped to free memory. This happens with large MoE models on AMD GPUs: use a dense model (8B) or raise 'MoE experts on CPU'."
-            : "El motor dejó de responder y se detuvo para liberar memoria. / The engine stopped responding and was stopped to free memory."
+            ? "The engine stopped responding and was stopped to free memory. This happens with large MoE models on AMD GPUs: use a dense model (8B) or raise 'MoE experts on CPU'."
+            : "The engine stopped responding and was stopped to free memory."
     }
 
     /// Tools the chat runs itself, beyond the math ones the agent covers; the map tools never count, so turning
@@ -2385,17 +2385,17 @@ final class ChatStore: ObservableObject {
         }
         if message.lowercased().contains("reasoning effort")
             || message.lowercased().contains("reasoning_effort") {
-            return "El modelo no acepta ese esfuerzo de razonamiento; elige otro o «Predeterminado del modelo» en los ajustes del chat. El motor respondió: \(message.prefix(200)) / the model does not accept that reasoning effort; pick another one or “Model default” in the chat settings. The engine answered: \(message.prefix(200))"
+            return "the model does not accept that reasoning effort; pick another one or “Model default” in the chat settings. The engine answered: \(message.prefix(200))"
         }
         // only the engine's own wording: other errors may quote the model's text, which can say anything
         if message.range(of: #"(?i)^(the )?(request|input) .{0,40}(exceeds the available|is larger than the max) context size|^context size has been exceeded"#,
                          options: .regularExpression) != nil {
-            return "Contexto lleno: el mensaje, los archivos adjuntos y el historial juntos superan el contexto. Sube el contexto en Ajustes, adjunta menos o inicia un chat nuevo / context full: your message, attached files and history together exceed the context. Raise the context size in Settings, attach less, or start a new chat"
+            return "context full: your message, attached files and history together exceed the context. Raise the context size in Settings, attach less, or start a new chat"
         }
         // std::bad_function_call comes from both a context overflow on a tool turn
         // and a missing ffmpeg/ffprobe on video; name both, not just video.
         if message.contains("bad_function_call") {
-            return "La solicitud falló. Con herramientas activas suele ser que el archivo o la conversación superan el contexto: súbelo en Ajustes o usa un archivo más pequeño. Si adjuntaste un video, verifica que ffmpeg y ffprobe estén disponibles / the request failed. With tools enabled this is usually the file or conversation exceeding the context: raise it in Settings or use a smaller file. If you attached a video, make sure ffmpeg and ffprobe are available"
+            return "the request failed. With tools enabled this is usually the file or conversation exceeding the context: raise it in Settings or use a smaller file. If you attached a video, make sure ffmpeg and ffprobe are available"
         }
         return "HTTP \(status): \(message.prefix(300))"
     }
@@ -2415,20 +2415,15 @@ final class ChatStore: ObservableObject {
 
     /// What the user is told after a GPU failure: whether the server restarts, or already did so too recently to again.
     nonisolated static func gpuFailureMessage(told: String?, outlook: GPURecovery.Outlook) -> String {
-        let loc = Localizer()
-        let failure = told ?? loc.t("El motor falló en la GPU mientras procesaba la petición, así que no terminó.",
-                                    "The engine failed on the GPU while processing the request, so it did not finish.")
+        let failure = told ?? AppInfo.branded("The engine failed on the GPU while processing the request, so it did not finish.")
         let next = outlook == .restarting
-            ? loc.t("El servidor se reinicia solo; vuelve a enviar el mensaje cuando esté listo.",
-                    "The server restarts by itself; send the message again once it is ready.")
-            : loc.t("El servidor ya se reinició solo por un fallo de la GPU hace menos de 10 minutos, así que esta vez no: reinícialo desde el panel del servidor y vuelve a enviar el mensaje.",
-                    "The server already restarted by itself after a GPU failure less than 10 minutes ago, so it does not this time: restart it from the server panel and send the message again.")
+            ? AppInfo.branded("The server restarts by itself; send the message again once it is ready.")
+            : AppInfo.branded("The server already restarted by itself after a GPU failure less than 10 minutes ago, so it does not this time: restart it from the server panel and send the message again.")
         return failure + " " + next
     }
 
     nonisolated static func cutConnectionMessage() -> String {
-        Localizer().t("La conexión con el servidor se cortó antes de que terminara la respuesta, así que está incompleta. Vuelve a enviar el mensaje.",
-                      "The connection to the server was cut before the answer ended, so it is incomplete. Send the message again.")
+        AppInfo.branded("The connection to the server was cut before the answer ended, so it is incomplete. Send the message again.")
     }
 
     nonisolated static func streamedError(from object: [String: Any]) -> String? {
@@ -2438,26 +2433,22 @@ final class ChatStore: ObservableObject {
             return failureMessage(details) ?? message
         }
         if let message = error as? String, !message.isEmpty { return message }
-        return "El motor interrumpió la respuesta / the engine interrupted the response"
+        return "the engine interrupted the response"
     }
 
     /// The engine's own failures, by the type the server or its agent gives them: a request too large for the
     /// context and a GPU that failed while working. An agent's message already says it; the engine's raw one does not.
     nonisolated static func failureMessage(_ error: [String: Any]) -> String? {
-        let loc = Localizer()
         let type = error["type"] as? String ?? ""
         let message = error["message"] as? String ?? ""
         // whether the server restarts is told where the failure reaches the chat, which knows the server
         if isGPUFailure(error) {
             return type == "engine_gpu_error" ? message
-                : loc.t("El motor falló en la GPU mientras procesaba la petición, así que no terminó.",
-                        "The engine failed on the GPU while processing the request, so it did not finish.")
+                : AppInfo.branded("The engine failed on the GPU while processing the request, so it did not finish.")
         }
         if type == "exceed_context_size_error",
            let tokens = (error["n_prompt_tokens"] as? NSNumber)?.intValue, let context = (error["n_ctx"] as? NSNumber)?.intValue {
-            return loc.t("La petición necesita %@ tokens pero el contexto admite %@: el mensaje, los adjuntos y el historial no caben. Si hay mensajes antiguos, la app los resume ahora y puedes volver a enviar el mensaje; si no, sube el contexto en Ajustes, adjunta menos o inicia un chat nuevo.",
-                         "The request needs %@ tokens but the context holds %@: the message, attachments and history do not fit. If there are older messages, the app summarizes them now and the message can be sent again; otherwise raise the context size in Settings, attach less, or start a new chat.",
-                         String(tokens), String(context))
+            return AppInfo.branded("The request needs \(String(tokens)) tokens but the context holds \(String(context)): the message, attachments and history do not fit. If there are older messages, the app summarizes them now and the message can be sent again; otherwise raise the context size in Settings, attach less, or start a new chat.")
         }
         return nil
     }
@@ -2481,31 +2472,22 @@ final class ChatStore: ObservableObject {
     }
 
     nonisolated static func contextCutMessage() -> String {
-        let loc = Localizer()
-        return loc.t("La respuesta se cortó porque la conversación llenó el contexto del modelo, así que está incompleta. La app resume los mensajes antiguos si puede; Continuar no cabría hasta entonces.",
-                     "The answer was cut because the conversation filled the model's context, so it is incomplete. The app summarizes older messages if it can; Continue would not fit until then.")
+        return AppInfo.branded("The answer was cut because the conversation filled the model's context, so it is incomplete. The app summarizes older messages if it can; Continue would not fit until then.")
     }
 
     nonisolated static func noAnswerMessage() -> String {
-        let loc = Localizer()
-        return loc.t("El servidor terminó el turno sin respuesta; vuelve a enviar el mensaje.",
-                     "The server ended the turn without an answer; send the message again.")
+        return AppInfo.branded("The server ended the turn without an answer; send the message again.")
     }
 
     nonisolated static func cutAnswerMessage() -> String {
-        let loc = Localizer()
-        return loc.t("La respuesta se cortó al llegar al máximo de tokens, así que está incompleta. Sube Máx. tokens o pulsa Continuar.",
-                     "The answer was cut at the max tokens limit, so it is incomplete. Raise Max tokens or press Continue.")
+        return AppInfo.branded("The answer was cut at the max tokens limit, so it is incomplete. Raise Max tokens or press Continue.")
     }
 
     nonisolated static func emptyResponseMessage(finishReason: String?) -> String {
-        let loc = Localizer()
         if finishReason == "length" {
-            return loc.t("El modelo agotó el máximo de tokens durante el razonamiento; aumenta Máx. o desactiva Razonamiento.",
-                         "The model used all max tokens while reasoning; raise Max or turn Reasoning off.")
+            return AppInfo.branded("The model used all max tokens while reasoning; raise Max or turn Reasoning off.")
         }
-        return loc.t("El modelo terminó el razonamiento sin producir una respuesta visible; intenta regenerar o desactiva Razonamiento.",
-                     "The model finished reasoning without a visible answer; regenerate or turn Reasoning off.")
+        return AppInfo.branded("The model finished reasoning without a visible answer; regenerate or turn Reasoning off.")
     }
 
     func stop() {
@@ -2683,8 +2665,8 @@ final class ChatStore: ObservableObject {
     }
 
     func exportText(_ c: Conversation, _ loc: Localizer) -> String {
-        let user = loc.t("Tú", "You")
-        let assistant = loc.t("Asistente", "Assistant")
+        let user = AppInfo.branded("You")
+        let assistant = AppInfo.branded("Assistant")
         return c.messages.map { m in
             let who = m.role == "user" ? user : assistant
             return "## \(who)\n\n\(m.role == "assistant" ? m.parts.body : m.content)"
@@ -3009,20 +2991,20 @@ struct NativeChatView: View {
     private var effectiveReasoningEffort: String { supportedReasoningEffort(reasoningEffort) }
 
     private var modelDefaultEffortLabel: String {
-        let label = loc.t("Predeterminado del modelo", "Model default")
+        let label = AppInfo.branded("Model default")
         guard let value = modelModalities?.reasoning?.modelDefault, !value.isEmpty else { return label }
         return label + " · " + value
     }
 
     private func reasoningEffortLabel(_ level: String) -> String {
         switch level {
-        case "none", "no_think": loc.t("Sin razonamiento", "No reasoning")
-        case "minimal": loc.t("Mínimo · sin presupuesto", "Minimal · no budget")
-        case "low": loc.t("Bajo · 512 tokens", "Low · 512 tokens")
-        case "medium": loc.t("Medio · 2.048 tokens", "Medium · 2,048 tokens")
-        case "high": loc.t("Alto · 8.192 tokens", "High · 8,192 tokens")
-        case "xhigh": loc.t("Muy alto · sin presupuesto", "Very high · no budget")
-        case "max": loc.t("Máximo · sin presupuesto", "Maximum · no budget")
+        case "none", "no_think": AppInfo.branded("No reasoning")
+        case "minimal": AppInfo.branded("Minimal · no budget")
+        case "low": AppInfo.branded("Low · 512 tokens")
+        case "medium": AppInfo.branded("Medium · 2,048 tokens")
+        case "high": AppInfo.branded("High · 8,192 tokens")
+        case "xhigh": AppInfo.branded("Very high · no budget")
+        case "max": AppInfo.branded("Maximum · no budget")
         default: level
         }
     }
@@ -3101,17 +3083,15 @@ struct NativeChatView: View {
             }
             .sheet(item: $promptConversation) { c in
                 PromptEditorSheet(
-                    title: loc.t("Prompt de esta conversación", "This conversation's prompt"),
-                    hint: loc.t("Sustituye al prompt del proyecto y al global solo en esta conversación. Vacío = heredar.",
-                                "Overrides the project and global prompts for this conversation only. Empty = inherit."),
+                    title: AppInfo.branded("This conversation's prompt"),
+                    hint: AppInfo.branded("Overrides the project and global prompts for this conversation only. Empty = inherit."),
                     initial: c.systemPrompt ?? ""
                 ) { chat.setConversationPrompt(c, $0) }
             }
             .sheet(item: $promptProject) { p in
                 PromptEditorSheet(
-                    title: loc.t("Prompt del proyecto \"%@\"", "Project prompt for \"%@\"", "\(p.name)"),
-                    hint: loc.t("Lo heredan todas las conversaciones del proyecto que no tengan prompt propio.",
-                                "Inherited by every conversation in the project without its own prompt."),
+                    title: AppInfo.branded("Project prompt for \"\(p.name)\""),
+                    hint: AppInfo.branded("Inherited by every conversation in the project without its own prompt."),
                     initial: p.systemPrompt
                 ) { chat.setProjectPrompt(p, $0) }
             }
@@ -3167,7 +3147,7 @@ struct NativeChatView: View {
                     .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
                     .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
                     .overlay {
-                        Label(loc.t("Suelta para adjuntar", "Drop to attach"), systemImage: "paperclip")
+                        Label(AppInfo.branded("Drop to attach"), systemImage: "paperclip")
                             .font(.headline)
                             .padding(.horizontal, 14).padding(.vertical, 8)
                             .background(.regularMaterial, in: Capsule())
@@ -3196,11 +3176,11 @@ struct NativeChatView: View {
                 if let active {
                     Text(active)
                     if missing {
-                        Text(loc.t("La carpeta ya no existe", "That folder no longer exists"))
+                        Text(AppInfo.branded("That folder no longer exists"))
                     }
                     Divider()
                 }
-                Button(loc.t("Elegir carpeta de este chat…", "Pick this chat's folder…")) {
+                Button(AppInfo.branded("Pick this chat's folder…")) {
                     guard let c = chat.current else { return }
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
@@ -3212,8 +3192,8 @@ struct NativeChatView: View {
                 }
                 if own != nil {
                     Button(inherited == nil
-                           ? loc.t("Quitar carpeta", "Clear folder")
-                           : loc.t("Heredar la del proyecto", "Inherit the project's")) {
+                           ? AppInfo.branded("Clear folder")
+                           : AppInfo.branded("Inherit the project's")) {
                         if let c = chat.current { chat.setConversationWorkingDirectory(c, nil) }
                     }
                 }
@@ -3223,7 +3203,7 @@ struct NativeChatView: View {
                           : active == nil ? "folder.badge.questionmark" : "folder.fill")
                         .font(.system(size: 10, weight: .medium))
                     Text(active.map { URL(fileURLWithPath: $0).lastPathComponent }
-                         ?? loc.t("Sin carpeta", "No folder"))
+                         ?? AppInfo.branded("No folder"))
                         .lineLimit(1)
                 }
                 .font(.caption.weight(.medium))
@@ -3239,16 +3219,12 @@ struct NativeChatView: View {
             .menuIndicator(.hidden).fixedSize()
             .tint(.secondary)
             .help(missing
-                  ? loc.t("La carpeta ya no existe: las herramientas fallarán hasta que elijas otra.",
-                          "That folder no longer exists: the tools will fail until you pick another.")
+                  ? AppInfo.branded("That folder no longer exists: the tools will fail until you pick another.")
                   : own != nil
-                  ? loc.t("Carpeta de esta conversación para las herramientas.",
-                          "This conversation's folder for the tools.")
+                  ? AppInfo.branded("This conversation's folder for the tools.")
                   : active != nil
-                    ? loc.t("Carpeta heredada del proyecto. Haz clic para fijar una propia.",
-                            "Folder inherited from the project. Click to pin its own.")
-                    : loc.t("Sin carpeta para las herramientas. Haz clic para elegir una.",
-                            "No folder for the tools. Click to pick one."))
+                    ? AppInfo.branded("Folder inherited from the project. Click to pin its own.")
+                    : AppInfo.branded("No folder for the tools. Click to pick one."))
         }
     }
 
@@ -3256,17 +3232,17 @@ struct NativeChatView: View {
         HStack(spacing: 8) {
             if let p = chat.project(id: chat.current?.projectID) {
                 Menu {
-                    Button(loc.t("Quitar del proyecto", "Remove from project")) {
+                    Button(AppInfo.branded("Remove from project")) {
                         if let c = chat.current { chat.move(c, toProject: nil) }
                     }
-                    Button(loc.t("Prompt del proyecto…", "Project prompt…")) { promptProject = p }
+                    Button(AppInfo.branded("Project prompt…")) { promptProject = p }
                     Button(p.workingDirectory == nil
-                           ? loc.t("Carpeta del proyecto…", "Project folder…")
-                           : loc.t("Cambiar carpeta del proyecto…", "Change project folder…")) {
+                           ? AppInfo.branded("Project folder…")
+                           : AppInfo.branded("Change project folder…")) {
                         chat.pickProjectWorkingDirectory(p)
                     }
                     if p.workingDirectory != nil {
-                        Button(loc.t("Quitar carpeta del proyecto", "Clear project folder")) {
+                        Button(AppInfo.branded("Clear project folder")) {
                             chat.setProjectWorkingDirectory(p, nil)
                         }
                     }
@@ -3289,9 +3265,9 @@ struct NativeChatView: View {
                 .menuStyle(.button).buttonStyle(.plain)
                 .menuIndicator(.hidden).fixedSize()
                 .tint(.secondary)
-                .help(loc.t("Proyecto de esta conversación.", "This conversation's project."))
+                .help(AppInfo.branded("This conversation's project."))
             }
-            TextField(loc.t("Título de la conversación", "Conversation title"),
+            TextField(AppInfo.branded("Conversation title"),
                       text: $headerTitle)
                 .textFieldStyle(.plain)
                 .font(.callout.weight(.medium))
@@ -3300,8 +3276,7 @@ struct NativeChatView: View {
                 }
                 .task(id: chat.currentID) { syncHeaderTitle() }
                 .onChange(of: chat.current?.title) { syncHeaderTitle() }
-                .help(loc.t("Haz clic para renombrar la conversación (Enter guarda).",
-                            "Click to rename the conversation (Enter saves)."))
+                .help(AppInfo.branded("Click to rename the conversation (Enter saves)."))
             Spacer()
             workingDirectoryChip
             if let branches = chat.current?.branches, branches.count > 1,
@@ -3312,10 +3287,10 @@ struct NativeChatView: View {
                             chat.switchBranch(branch.id)
                         } label: {
                             if branch.id == chat.current?.activeBranchID {
-                                Label(loc.t("Rama %@", "Branch %@", "\(index + 1)"),
+                                Label(AppInfo.branded("Branch \(index + 1)"),
                                       systemImage: "checkmark")
                             } else {
-                                Text(loc.t("Rama %@", "Branch %@", "\(index + 1)"))
+                                Text(AppInfo.branded("Branch \(index + 1)"))
                             }
                         }
                     }
@@ -3324,8 +3299,7 @@ struct NativeChatView: View {
                         .font(.caption)
                 }
                 .menuStyle(.button)
-                .help(loc.t("Cambiar entre respuestas y ediciones alternativas sin salir del chat.",
-                            "Switch between alternate responses and edits without leaving the chat."))
+                .help(AppInfo.branded("Switch between alternate responses and edits without leaving the chat."))
             }
             if !(chat.current?.systemPrompt ?? "").isEmpty {
                 Button {
@@ -3334,9 +3308,8 @@ struct NativeChatView: View {
                     Image(systemName: "text.bubble.fill").font(.caption)
                 }
                 .buttonStyle(.borderless).foregroundStyle(.secondary)
-                .accessibilityLabel(loc.t("Prompt de esta conversación", "This conversation's prompt"))
-                .help(loc.t("Esta conversación tiene prompt propio; clic para editarlo.",
-                            "This conversation has its own prompt; click to edit it."))
+                .accessibilityLabel(AppInfo.branded("This conversation's prompt"))
+                .help(AppInfo.branded("This conversation has its own prompt; click to edit it."))
             }
         }
         .padding(.horizontal, 14)
@@ -3493,12 +3466,10 @@ struct NativeChatView: View {
     private func toolsRow(_ rounds: [ChatMessage]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             if let boundary = compactionBoundaryID, rounds.contains(where: { $0.id == boundary }) {
-                Label(loc.t("Mensajes anteriores resumidos para liberar contexto",
-                            "Earlier messages summarized to free context"),
+                Label(AppInfo.branded("Earlier messages summarized to free context"),
                       systemImage: "archivebox")
                     .font(.caption2).foregroundStyle(.secondary)
-                    .help(loc.t("Lo anterior a esta marca se envía al modelo como un resumen automático; aquí sigue visible íntegro.",
-                                "History above this mark is sent to the model as an automatic summary; it remains fully visible here."))
+                    .help(AppInfo.branded("History above this mark is sent to the model as an automatic summary; it remains fully visible here."))
             }
             ToolRoundsGroup(rounds: rounds).equatable()
         }
@@ -3510,12 +3481,10 @@ struct NativeChatView: View {
             && msg.id == chat.current?.messages.last(where: { $0.role == "user" })?.id
         VStack(alignment: .leading, spacing: 14) {
             if msg.id == compactionBoundaryID {
-                Label(loc.t("Mensajes anteriores resumidos para liberar contexto",
-                            "Earlier messages summarized to free context"),
+                Label(AppInfo.branded("Earlier messages summarized to free context"),
                       systemImage: "archivebox")
                     .font(.caption2).foregroundStyle(.secondary)
-                    .help(loc.t("Lo anterior a esta marca se envía al modelo como un resumen automático; aquí sigue visible íntegro.",
-                                "History above this mark is sent to the model as an automatic summary; it remains fully visible here."))
+                    .help(AppInfo.branded("History above this mark is sent to the model as an automatic summary; it remains fully visible here."))
             }
             if chat.generating && chat.current?.id == chat.generatingConvID
                 && isNewest && msg.role == "assistant" {
@@ -3591,26 +3560,23 @@ struct NativeChatView: View {
         .buttonStyle(.plain)
         .padding(14)
         .help(writingBehind
-              ? loc.t("La respuesta sigue escribiéndose fuera de pantalla; ir al final y volver a seguirla.",
-                      "The answer is still being written off screen; jump to the end and follow it again.")
-              : loc.t("Ir al final de la conversación y seguir la respuesta.",
-                      "Jump to the end of the conversation and follow the response."))
+              ? AppInfo.branded("The answer is still being written off screen; jump to the end and follow it again.")
+              : AppInfo.branded("Jump to the end of the conversation and follow the response."))
     }
 
     private var emptyChatState: some View {
         ChatEmptyState { action in
             switch action {
             case .ask:
-                draft = loc.t("Ayúdame a explorar una idea.", "Help me explore an idea.")
+                draft = AppInfo.branded("Help me explore an idea.")
                 inputFocused = true
             case .code:
-                draft = loc.t("Ayúdame a escribir y mejorar este código:", "Help me write and improve this code:")
+                draft = AppInfo.branded("Help me write and improve this code:")
                 inputFocused = true
             case .files:
                 showAttachments = true
             case .summarize:
-                draft = loc.t("Resume este contenido y destaca las ideas principales:",
-                              "Summarize this content and highlight the main ideas:")
+                draft = AppInfo.branded("Summarize this content and highlight the main ideas:")
                 inputFocused = true
             case .explore:
                 control.openSettings(.chat)
@@ -3632,8 +3598,7 @@ struct NativeChatView: View {
             if ocrPending > 0 {
                 HStack(spacing: 5) {
                     ProgressView().controlSize(.mini)
-                    Text(loc.t("Procesando PDF en el dispositivo…",
-                               "Processing PDF on device…"))
+                    Text(AppInfo.branded("Processing PDF on device…"))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -3659,7 +3624,7 @@ struct NativeChatView: View {
         .padding(.bottom, 16)
         .onChange(of: attachments) { scheduleDraftSave() }
         .onChange(of: images) { scheduleDraftSave() }
-            .alert(loc.t("Problema con la voz", "Voice problem"),
+            .alert(AppInfo.branded("Voice problem"),
                isPresented: Binding(
                    get: { audioRecorder.error != nil || dictation.error != nil || appleDictation.error != nil },
                    set: {
@@ -3698,15 +3663,14 @@ struct NativeChatView: View {
             switch server.state {
             case .starting:
                 ProgressView().controlSize(.small)
-                Text(loc.t("Iniciando el servidor… Puedes seguir consultando tus chats.",
-                           "Starting the server… You can keep browsing your chats."))
+                Text(AppInfo.branded("Starting the server… You can keep browsing your chats."))
                     .foregroundStyle(.secondary)
             case .failed(let error):
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
-                Text(loc.half(error)).lineLimit(2)
+                Text(error).lineLimit(2)
                 Spacer(minLength: 8)
-                Button(loc.t("Reintentar", "Try again")) { server.start(.fromDefaults()) }
+                Button(AppInfo.branded("Try again")) { server.start(.fromDefaults()) }
                     .buttonStyle(.borderedProminent)
                     .disabled(modelPath.isEmpty)
             case .stopped:
@@ -3714,20 +3678,18 @@ struct NativeChatView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Text(modelPath.isEmpty
-                     ? loc.t("Elige un modelo para poder enviar mensajes.",
-                             "Choose a model before sending messages.")
-                     : loc.t("El servidor está detenido. Puedes consultar y organizar tus chats.",
-                             "The server is stopped. You can browse and organize your chats."))
+                     ? AppInfo.branded("Choose a model before sending messages.")
+                     : AppInfo.branded("The server is stopped. You can browse and organize your chats."))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 if modelPath.isEmpty {
-                    Button(loc.t("Elegir modelo", "Choose model")) {
+                    Button(AppInfo.branded("Choose model")) {
                         control.section = .models
                         openWindow(id: "control")
                     }
                     .buttonStyle(.borderedProminent)
                 } else {
-                    Button(loc.t("Iniciar servidor", "Start server"), systemImage: "play.fill") {
+                    Button(AppInfo.branded("Start server"), systemImage: "play.fill") {
                         server.start(.fromDefaults())
                     }
                     .buttonStyle(.borderedProminent)
@@ -3760,7 +3722,7 @@ struct NativeChatView: View {
     private var messageField: some View {
         ZStack(alignment: .topLeading) {
             if draft.isEmpty {
-                Text(loc.t("Escribe tu mensaje…", "Type your message…"))
+                Text(AppInfo.branded("Type your message…"))
                     .chatFont(.body)
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 5)
@@ -3783,14 +3745,13 @@ struct NativeChatView: View {
             .onPasteCommand(of: [.image, .png, .tiff, .fileURL]) { _ in
                 pasteFromClipboard()
             }
-            .help(loc.t("Intro envía; Mayús+Intro inserta un salto de línea. Los textos pegados grandes se convierten en un adjunto; pegar una imagen (captura) la adjunta si el modelo tiene visión.",
-                        "Return sends; Shift+Return inserts a line break. Large pasted text becomes an attachment; pasting an image (screenshot) attaches it if the model has vision."))
+            .help(AppInfo.branded("Return sends; Shift+Return inserts a line break. Large pasted text becomes an attachment; pasting an image (screenshot) attaches it if the model has vision."))
     }
 
     @ViewBuilder
     private var sendControls: some View {
         if chat.generating {
-            Button(loc.t("Intervenir", "Steer"), systemImage: "arrow.up.circle.fill",
+            Button(AppInfo.branded("Steer"), systemImage: "arrow.up.circle.fill",
                    action: send)
                        .labelStyle(.iconOnly)
                 .font(.system(size: 26))
@@ -3799,18 +3760,17 @@ struct NativeChatView: View {
                 .buttonStyle(.borderless)
                 .padding(.bottom, 2)
                 .disabled(!canSend)
-                .help(loc.t("Enviar una intervención: se aplicará al terminar el turno actual del agente.",
-                            "Send a steering message after the agent's current turn."))
-            Button(loc.t("Detener", "Stop"), systemImage: "stop.circle.fill",
+                .help(AppInfo.branded("Send a steering message after the agent's current turn."))
+            Button(AppInfo.branded("Stop"), systemImage: "stop.circle.fill",
                    action: chat.stop)
                        .labelStyle(.iconOnly)
                 .font(.system(size: 26))
                 .foregroundStyle(.red)
                 .buttonStyle(.borderless)
                 .padding(.bottom, 2)
-                .help(loc.t("Detener la generación.", "Stop generation."))
+                .help(AppInfo.branded("Stop generation."))
         } else {
-            Button(loc.t("Enviar", "Send"), systemImage: "arrow.up.circle.fill", action: send)
+            Button(AppInfo.branded("Send"), systemImage: "arrow.up.circle.fill", action: send)
                 .labelStyle(.iconOnly)
                 .font(.system(size: 26))
                 .symbolRenderingMode(.palette)
@@ -3818,7 +3778,7 @@ struct NativeChatView: View {
                 .buttonStyle(.borderless)
                 .padding(.bottom, 2)
                 .disabled(!canSend)
-                .help(loc.t("Enviar mensaje (Intro).", "Send message (Return)."))
+                .help(AppInfo.branded("Send message (Return)."))
         }
     }
 
@@ -3863,14 +3823,13 @@ struct NativeChatView: View {
             showSystem.toggle()
         } label: {
             ComposerCircleLabel(
-                title: loc.t("Parámetros del chat", "Chat parameters"),
+                title: AppInfo.branded("Chat parameters"),
                 systemImage: "slider.horizontal.3",
                 active: showSystem)
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showSystem, arrowEdge: .top) { paramsPopover }
-        .help(loc.t("Parámetros del chat: razonamiento, creatividad, longitud de respuesta y prompt de sistema.",
-                    "Chat parameters: reasoning, creativity, response length and system prompt."))
+        .help(AppInfo.branded("Chat parameters: reasoning, creativity, response length and system prompt."))
     }
 
     /// Folder the server tools run in. Shown here because it is per chat and the
@@ -3879,27 +3838,26 @@ struct NativeChatView: View {
         let own = chat.current?.workingDirectory
         let inherited = chat.current.flatMap { chat.project(id: $0.projectID)?.workingDirectory }
         VStack(alignment: .leading, spacing: 6) {
-            Label(loc.t("Directorio de trabajo", "Working directory"), systemImage: "folder")
+            Label(AppInfo.branded("Working directory"), systemImage: "folder")
                 .font(.subheadline.weight(.medium))
-                .infoTip(loc.t("Carpeta en la que se ejecutan las herramientas del servidor en esta conversación. Si no fijas una, hereda la del proyecto.",
-                               "Folder the server tools run in for this conversation. With none set, it inherits the project's."))
+                .infoTip(AppInfo.branded("Folder the server tools run in for this conversation. With none set, it inherits the project's."))
             HStack(spacing: 8) {
                 if directoryIsMissing(own ?? inherited) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10)).foregroundStyle(.red)
-                        .help(loc.t("La carpeta ya no existe.", "That folder no longer exists."))
+                        .help(AppInfo.branded("That folder no longer exists."))
                 }
-                Text(own ?? inherited ?? loc.t("Sin carpeta", "None"))
+                Text(own ?? inherited ?? AppInfo.branded("None"))
                     .font(.system(size: 11, design: .monospaced))
                     .lineLimit(1).truncationMode(.head)
                     .foregroundStyle(directoryIsMissing(own ?? inherited) ? AnyShapeStyle(.red)
                                      : own == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                 Spacer()
                 if own == nil, inherited != nil {
-                    Text(loc.t("del proyecto", "from project"))
+                    Text(AppInfo.branded("from project"))
                         .font(.caption2).foregroundStyle(.tertiary)
                 }
-                Button(loc.t("Elegir…", "Choose…")) {
+                Button(AppInfo.branded("Choose…")) {
                     guard let c = chat.current else { return }
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
@@ -3909,36 +3867,35 @@ struct NativeChatView: View {
                         chat.setConversationWorkingDirectory(c, path)
                     }
                 }
-                .help(loc.t("Elegir la carpeta de esta conversación.", "Pick this conversation's folder."))
-                Button(loc.t("Quitar", "Clear")) {
+                .help(AppInfo.branded("Pick this conversation's folder."))
+                Button(AppInfo.branded("Clear")) {
                     if let c = chat.current { chat.setConversationWorkingDirectory(c, nil) }
                 }
                 .disabled(own == nil)
-                .help(loc.t("Vuelve a heredar la carpeta del proyecto.", "Go back to inheriting the project's folder."))
+                .help(AppInfo.branded("Go back to inheriting the project's folder."))
             }
         }
     }
 
     private var paramsPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(loc.t("Parámetros del chat", "Chat parameters")).font(.headline)
+            Text(AppInfo.branded("Chat parameters")).font(.headline)
 
             if routerMode {
                 Picker(selection: $chatSelectedModel) {
                     ForEach(ModelFamilyGroup.grouped(models.models)) { group in
-                        Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                        Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                             ForEach(group.models) { m in
                                 Text(ModelName.forPath(m.url.path).display
-                                     + (ModelTraitsCache.cached(for: m.url.path)?.pickerSuffix(spanish: loc.isSpanish) ?? ""))
+                                     + (ModelTraitsCache.cached(for: m.url.path)?.pickerSuffix ?? ""))
                                     .tag(ServerSettings.routerAlias(for: m.url.path))
                             }
                         }
                     }
                 } label: {
-                    Label(loc.t("Modelo", "Model"), systemImage: "shippingbox")
+                    Label(AppInfo.branded("Model"), systemImage: "shippingbox")
                 }
-                .infoTip(loc.t("Modelo para el próximo mensaje. El router lo carga solo (y descarga el anterior si hace falta), sin reiniciar el servidor.",
-                            "Model for the next message. The router loads it on demand (unloading the previous one if needed), no server restart."))
+                .infoTip(AppInfo.branded("Model for the next message. The router loads it on demand (unloading the previous one if needed), no server restart."))
                 .task(id: models.models.map(\.url.path)) {
                     guard chatSelectedModel.isEmpty || !models.models.contains(where: {
                         ServerSettings.routerAlias(for: $0.url.path) == chatSelectedModel
@@ -3958,13 +3915,13 @@ struct NativeChatView: View {
             Divider()
 
             Picker(selection: $reasoningEffort) {
-                Text(loc.t("Desactivado", "Off")).tag("off")
+                Text(AppInfo.branded("Off")).tag("off")
                 Text(modelDefaultEffortLabel).tag("default")
                 ForEach(reasoningEffortLevels, id: \.self) { level in
                     Text(reasoningEffortLabel(level)).tag(level)
                 }
             } label: {
-                Label(loc.t("Esfuerzo de razonamiento", "Reasoning effort"), systemImage: "brain")
+                Label(AppInfo.branded("Reasoning effort"), systemImage: "brain")
             }
             .disabled(modelModalities?.thinking == false)
             .onChange(of: reasoningEffort) { _, value in thinkingEnabled = value != "off" }
@@ -3972,123 +3929,115 @@ struct NativeChatView: View {
                 let supported = supportedReasoningEffort(reasoningEffort)
                 if supported != reasoningEffort { reasoningEffort = supported }
             }
-            .infoTip(loc.t("Los modelos razonadores piensan antes de responder (esos tokens cuentan dentro del límite de respuesta). La lista muestra los niveles que acepta la plantilla del modelo cargado, y «Predeterminado del modelo» deja que la elija él. Al desactivarlo se envía enable_thinking:false y /no_think; algunos modelos entrenados solo para razonar (p. ej. R1) pueden seguir pensando de todos modos.",
-                        "Reasoning models think before answering (those tokens count toward the response limit). The list shows the levels the loaded model's template accepts, and “Model default” lets the model choose. Turning it off sends enable_thinking:false and /no_think; some reasoning-only models (e.g. R1) may still think regardless."))
+            .infoTip(AppInfo.branded("Reasoning models think before answering (those tokens count toward the response limit). The list shows the levels the loaded model's template accepts, and “Model default” lets the model choose. Turning it off sends enable_thinking:false and /no_think; some reasoning-only models (e.g. R1) may still think regardless."))
 
             Toggle(isOn: $showSystemMessage) {
-                Label(loc.t("Mostrar prompt de sistema", "Show system prompt"),
+                Label(AppInfo.branded("Show system prompt"),
                       systemImage: "text.bubble")
             }
 
             HStack(spacing: 8) {
-                Label(loc.t("Creatividad", "Creativity"), systemImage: "dial.medium")
+                Label(AppInfo.branded("Creativity"), systemImage: "dial.medium")
                 Slider(value: $temperature, in: 0...1.5)
                 Text(String(format: "%.2f", temperature))
                     .font(.system(.caption, design: .monospaced))
                     .frame(width: 34)
             }
-            .infoTip(loc.t("Temperatura: 0 = más determinista; valores altos = respuestas más variadas.",
-                        "Temperature: 0 = more deterministic; higher values = more varied responses."))
+            .infoTip(AppInfo.branded("Temperature: 0 = more deterministic; higher values = more varied responses."))
 
             Picker(selection: $maxTokens) {
                 ForEach(maxTokenOptions, id: \.self) { Text($0.formatted()).tag($0) }
             } label: {
-                Label(loc.t("Tokens de respuesta", "Response tokens"),
+                Label(AppInfo.branded("Response tokens"),
                       systemImage: "text.line.last.and.arrowtriangle.forward")
             }
-            .infoTip(loc.t("Máximo de tokens que el modelo puede generar en este turno, incluyendo razonamiento y respuesta visible. No aumenta el contexto. Recomendado: 2.048–4.096.",
-                        "Maximum tokens the model may generate this turn, including reasoning and visible answer. It does not increase context. Recommended: 2,048–4,096."))
+            .infoTip(AppInfo.branded("Maximum tokens the model may generate this turn, including reasoning and visible answer. It does not increase context. Recommended: 2,048–4,096."))
             if maxTokensIsLarge {
-                Label(loc.t("Este límite reserva más de la mitad del contexto para una sola respuesta.",
-                            "This limit reserves more than half the context for a single response."),
+                Label(AppInfo.branded("This limit reserves more than half the context for a single response."),
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
             }
 
             if false { DisclosureGroup {
                 VStack(alignment: .leading, spacing: 10) {
-                    samplingSlider(loc.t("Top P", "Top P"), value: $topP, range: 0...1)
-                    samplingSlider(loc.t("Min P", "Min P"), value: $minP, range: 0...1)
-                    samplingSlider(loc.t("Typical P", "Typical P"), value: $typicalP, range: 0...1)
+                    samplingSlider(AppInfo.branded("Top P"), value: $topP, range: 0...1)
+                    samplingSlider(AppInfo.branded("Min P"), value: $minP, range: 0...1)
+                    samplingSlider(AppInfo.branded("Typical P"), value: $typicalP, range: 0...1)
                     Stepper(value: $topK, in: 0...200) {
-                        parameterValue(loc.t("Top K", "Top K"), value: topK.formatted())
+                        parameterValue(AppInfo.branded("Top K"), value: topK.formatted())
                     }
-                    samplingSlider(loc.t("Penalización de repetición", "Repeat penalty"),
+                    samplingSlider(AppInfo.branded("Repeat penalty"),
                                    value: $repeatPenalty, range: 0.5...2)
-                    samplingSlider(loc.t("Penalización de presencia", "Presence penalty"),
+                    samplingSlider(AppInfo.branded("Presence penalty"),
                                    value: $presencePenalty, range: -2...2)
-                    samplingSlider(loc.t("Penalización de frecuencia", "Frequency penalty"),
+                    samplingSlider(AppInfo.branded("Frequency penalty"),
                                    value: $frequencyPenalty, range: -2...2)
                     Stepper(value: $repeatLastN, in: 0...4096, step: 16) {
-                        parameterValue(loc.t("Ventana de repetición", "Repeat window"),
+                        parameterValue(AppInfo.branded("Repeat window"),
                                        value: repeatLastN.formatted())
                     }
                     HStack {
-                        Text(loc.t("Semilla", "Seed"))
+                        Text(AppInfo.branded("Seed"))
                         Spacer()
                         DeferredNumberField("-1", value: $seed, width: 90)
                     }
-                    GroupBox(loc.t("Temperatura dinámica y XTC", "Dynamic temperature and XTC")) {
+                    GroupBox(AppInfo.branded("Dynamic temperature and XTC")) {
                         VStack(alignment: .leading, spacing: 8) {
-                            samplingSlider(loc.t("Rango dinámico", "Dynamic range"),
+                            samplingSlider(AppInfo.branded("Dynamic range"),
                                            value: $dynatempRange, range: 0...2)
-                            samplingSlider(loc.t("Exponente dinámico", "Dynamic exponent"),
+                            samplingSlider(AppInfo.branded("Dynamic exponent"),
                                            value: $dynatempExponent, range: 0.1...4)
-                            samplingSlider(loc.t("Probabilidad XTC", "XTC probability"),
+                            samplingSlider(AppInfo.branded("XTC probability"),
                                            value: $xtcProbability, range: 0...1)
-                            samplingSlider(loc.t("Umbral XTC", "XTC threshold"),
+                            samplingSlider(AppInfo.branded("XTC threshold"),
                                            value: $xtcThreshold, range: 0...1)
                         }
                     }
                     GroupBox("DRY") {
                         VStack(alignment: .leading, spacing: 8) {
-                            samplingSlider(loc.t("Multiplicador", "Multiplier"),
+                            samplingSlider(AppInfo.branded("Multiplier"),
                                            value: $dryMultiplier, range: 0...2)
-                            samplingSlider(loc.t("Base", "Base"), value: $dryBase, range: 1...3)
+                            samplingSlider(AppInfo.branded("Base"), value: $dryBase, range: 1...3)
                             Stepper(value: $dryAllowedLength, in: 0...32) {
-                                parameterValue(loc.t("Longitud permitida", "Allowed length"),
+                                parameterValue(AppInfo.branded("Allowed length"),
                                                value: dryAllowedLength.formatted())
                             }
                             Stepper(value: $dryPenaltyLastN, in: 0...32768, step: 64) {
-                                parameterValue(loc.t("Ventana DRY", "DRY window"),
+                                parameterValue(AppInfo.branded("DRY window"),
                                                value: dryPenaltyLastN.formatted())
                             }
                         }
                     }
-                    TextField(loc.t("Orden: top_k;typ_p;top_p;min_p;temperature",
-                                    "Order: top_k;typ_p;top_p;min_p;temperature"),
+                    TextField(AppInfo.branded("Order: top_k;typ_p;top_p;min_p;temperature"),
                               text: $samplers)
                         .workspaceTextField()
-                    Toggle(loc.t("Muestreo en backend", "Backend sampling"),
+                    Toggle(AppInfo.branded("Backend sampling"),
                            isOn: $backendSampling)
                     Stepper(value: $agenticMaxTurns, in: 1...100) {
-                        parameterValue(loc.t("Turnos máximos del agente", "Maximum agent turns"),
+                        parameterValue(AppInfo.branded("Maximum agent turns"),
                                        value: agenticMaxTurns.formatted())
                     }
                     Stepper(value: $pasteLongTextLength, in: 0...100_000, step: 500) {
-                        parameterValue(loc.t("Texto pegado a archivo", "Paste text to file"),
+                        parameterValue(AppInfo.branded("Paste text to file"),
                                        value: pasteLongTextLength == 0
-                                           ? loc.t("Desactivado", "Off")
+                                           ? AppInfo.branded("Off")
                                            : pasteLongTextLength.formatted())
                     }
                     HStack {
-                        Text(loc.t("Máximo de imagen (MP)", "Maximum image size (MP)"))
+                        Text(AppInfo.branded("Maximum image size (MP)"))
                         Spacer()
                         DeferredNumberField("0", value: $maxImageMegapixels, width: 80)
                     }
-                    Toggle(loc.t("PDF como imágenes para modelos con visión",
-                                 "PDF as images for vision models"), isOn: $pdfAsImages)
-                    DisclosureGroup(loc.t("JSON personalizado de la petición",
-                                          "Custom request JSON")) {
+                    Toggle(AppInfo.branded("PDF as images for vision models"), isOn: $pdfAsImages)
+                    DisclosureGroup(AppInfo.branded("Custom request JSON")) {
                         TextEditor(text: $customJSON)
                             .font(.system(.caption, design: .monospaced))
                             .frame(minHeight: 80)
                             .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
-                        Text(loc.t("Las claves válidas reemplazan los parámetros anteriores para esta petición.",
-                                   "Valid keys override the parameters above for this request."))
+                        Text(AppInfo.branded("Valid keys override the parameters above for this request."))
                             .font(.caption2).foregroundStyle(.secondary)
                     }
-                    Button(loc.t("Restaurar muestreo", "Reset sampling"),
+                    Button(AppInfo.branded("Reset sampling"),
                            systemImage: "arrow.counterclockwise") {
                         topP = 0.95
                         minP = 0.05
@@ -4120,16 +4069,15 @@ struct NativeChatView: View {
                 }
                 .padding(.top, 8)
             } label: {
-                Label(loc.t("Muestreo avanzado", "Advanced sampling"),
+                Label(AppInfo.branded("Advanced sampling"),
                       systemImage: "slider.horizontal.2.square")
             }
 
             Divider()
 
-            Label(loc.t("Prompt de sistema global", "Global system prompt"), systemImage: "gearshape")
+            Label(AppInfo.branded("Global system prompt"), systemImage: "gearshape")
                 .font(.subheadline.weight(.medium))
-                .infoTip(loc.t("Instrucciones permanentes para el modelo. Prioridad: prompt de la conversación, luego el del proyecto, luego este global.",
-                               "Permanent instructions for the model. Priority: the conversation's prompt, then the project's, then this global one."))
+                .infoTip(AppInfo.branded("Permanent instructions for the model. Priority: the conversation's prompt, then the project's, then this global one."))
             TextEditor(text: $systemPrompt)
                 .font(.system(size: 12))
                 .frame(height: 90)
@@ -4143,7 +4091,7 @@ struct NativeChatView: View {
                 control.openSettings(.chat)
                 openWindow(id: "control")
             } label: {
-                Label(loc.t("Abrir ajustes avanzados del chat…", "Open advanced chat settings…"),
+                Label(AppInfo.branded("Open advanced chat settings…"),
                       systemImage: "gearshape.2")
             }
             .glassButton()
@@ -4153,23 +4101,21 @@ struct NativeChatView: View {
                     showSystem = false
                     promptConversation = chat.current
                 } label: {
-                    Label(loc.t("De esta conversación…", "This conversation's…"),
+                    Label(AppInfo.branded("This conversation's…"),
                           systemImage: (chat.current?.systemPrompt ?? "").isEmpty ? "text.bubble" : "text.bubble.fill")
                 }
                 .buttonStyle(.link).font(.caption)
-                .help(loc.t("Prompt propio de esta conversación; sustituye al del proyecto y al global.",
-                            "This conversation's own prompt; overrides the project and global ones."))
+                .help(AppInfo.branded("This conversation's own prompt; overrides the project and global ones."))
                 if let p = chat.project(id: chat.current?.projectID) {
                     Button {
                         showSystem = false
                         promptProject = p
                     } label: {
-                        Label(loc.t("Del proyecto…", "Project's…"),
+                        Label(AppInfo.branded("Project's…"),
                               systemImage: p.systemPrompt.isEmpty ? "folder" : "folder.fill")
                     }
                     .buttonStyle(.link).font(.caption)
-                    .help(loc.t("Prompt compartido por las conversaciones del proyecto \"%@\".",
-                                "Prompt shared by the conversations in project \"%@\".", p.name))
+                    .help(AppInfo.branded("Prompt shared by the conversations in project \"\(p.name)\"."))
                 }
             }
             Text(activePromptCaption)
@@ -4201,15 +4147,15 @@ struct NativeChatView: View {
     /// Which system prompt actually applies to the open conversation.
     private var activePromptCaption: String {
         if !(chat.current?.systemPrompt ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return loc.t("Activo: el prompt de esta conversación.", "Active: this conversation's prompt.")
+            return AppInfo.branded("Active: this conversation's prompt.")
         }
         if let p = chat.project(id: chat.current?.projectID),
            !p.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return loc.t("Activo: el prompt del proyecto \"%@\".", "Active: project \"%@\"'s prompt.", "\(p.name)")
+            return AppInfo.branded("Active: project \"\(p.name)\"'s prompt.")
         }
         return systemPrompt.isEmpty
-            ? loc.t("Sin prompt de sistema.", "No system prompt.")
-            : loc.t("Activo: el prompt global.", "Active: the global prompt.")
+            ? AppInfo.branded("No system prompt.")
+            : AppInfo.branded("Active: the global prompt.")
     }
 
     private var attachButton: some View {
@@ -4217,20 +4163,19 @@ struct NativeChatView: View {
             showAttachments.toggle()
         } label: {
             ComposerCircleLabel(
-                title: loc.t("Adjuntar", "Attach"),
+                title: AppInfo.branded("Attach"),
                 systemImage: "paperclip",
                 active: showAttachments || !attachments.isEmpty || !images.isEmpty)
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showAttachments, arrowEdge: .top) { attachmentsPopover }
-        .help(loc.t("Adjuntar archivos: texto, código y PDF (se extrae su texto; los PDF escaneados por OCR); de otros binarios se extraen las cadenas legibles. Imágenes solo si el modelo tiene visión (su mmproj). También puedes arrastrarlos al área de escritura.",
-                    "Attach files: text, code and PDF (text is extracted; scanned PDFs via OCR); other binaries contribute their readable strings. Images only if the model has vision (its mmproj). You can also drag them onto the input area."))
+        .help(AppInfo.branded("Attach files: text, code and PDF (text is extracted; scanned PDFs via OCR); other binaries contribute their readable strings. Images only if the model has vision (its mmproj). You can also drag them onto the input area."))
     }
 
     private var attachmentsPopover: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(loc.t("Adjuntar", "Attach")).font(.headline)
-            Button(loc.t("Archivos del Mac…", "Files from Mac…"), systemImage: "doc.badge.plus") {
+            Text(AppInfo.branded("Attach")).font(.headline)
+            Button(AppInfo.branded("Files from Mac…"), systemImage: "doc.badge.plus") {
                 showAttachments = false
                 pickAttachments()
             }
@@ -4238,7 +4183,7 @@ struct NativeChatView: View {
             .padding(.vertical, 6)
             if MCPServerStore.load().contains(where: \.enabled) {
                 Divider()
-                Button(loc.t("Recursos MCP…", "MCP resources…"),
+                Button(AppInfo.branded("MCP resources…"),
                        systemImage: "point.3.connected.trianglepath.dotted") {
                     showAttachments = false
                     showMCPBrowser = true
@@ -4278,28 +4223,28 @@ struct NativeChatView: View {
 
     @ViewBuilder
     private var voiceContextMenu: some View {
-        Picker(loc.t("Método del micrófono", "Microphone method"), selection: $speechInputMethodRaw) {
-            Text(loc.t("Dictado de Apple", "Apple Dictation")).tag(SpeechInputMethod.apple.rawValue)
+        Picker(AppInfo.branded("Microphone method"), selection: $speechInputMethodRaw) {
+            Text(AppInfo.branded("Apple Dictation")).tag(SpeechInputMethod.apple.rawValue)
             Text("Whisper.cpp · GPU").tag(SpeechInputMethod.whisper.rawValue)
         }
 
         if speechInputMethodRaw == SpeechInputMethod.whisper.rawValue {
             let selected = WhisperModel.model(id: whisperModelID)
-            Picker(loc.t("Carga de Whisper", "Whisper loading"), selection: $whisperLoadPolicyRaw) {
-                Text(loc.t("Bajo demanda", "On demand")).tag(WhisperLoadPolicy.onDemand.rawValue)
-                Text(loc.t("Siempre cargado", "Always loaded")).tag(WhisperLoadPolicy.alwaysLoaded.rawValue)
+            Picker(AppInfo.branded("Whisper loading"), selection: $whisperLoadPolicyRaw) {
+                Text(AppInfo.branded("On demand")).tag(WhisperLoadPolicy.onDemand.rawValue)
+                Text(AppInfo.branded("Always loaded")).tag(WhisperLoadPolicy.alwaysLoaded.rawValue)
             }
-            Menu(loc.t("Modelo Whisper", "Whisper model"), systemImage: "waveform.badge.magnifyingglass") {
-                Picker(loc.t("Modelo Whisper", "Whisper model"), selection: $whisperModelID) {
+            Menu(AppInfo.branded("Whisper model"), systemImage: "waveform.badge.magnifyingglass") {
+                Picker(AppInfo.branded("Whisper model"), selection: $whisperModelID) {
                     ForEach(WhisperModel.catalog) { model in
                         Text("\(model.name) · \(model.sizeMB) MB").tag(model.id)
                     }
                 }
             }
             if dictation.isModelKeptLoaded {
-                Label(loc.t("Modelo listo en la GPU", "Model ready on the GPU"),
+                Label(AppInfo.branded("Model ready on the GPU"),
                       systemImage: "memorychip.fill")
-                Button(loc.t("Detener y liberar Whisper", "Stop and unload Whisper"),
+                Button(AppInfo.branded("Stop and unload Whisper"),
                        systemImage: "stop.circle") {
                     dictation.shutdown()
                 }
@@ -4307,19 +4252,19 @@ struct NativeChatView: View {
             if !models.whisperModelInstalled(selected) {
                 if let download = models.whisperDownload(selected) {
                     if download.error != nil {
-                        Button(loc.t("Reintentar descarga", "Retry download"),
+                        Button(AppInfo.branded("Retry download"),
                                systemImage: "arrow.clockwise") {
                             models.retryWhisperDownload(download)
                         }
                     } else if download.phase == .paused {
-                        Button(loc.t("Reanudar descarga", "Resume download"),
+                        Button(AppInfo.branded("Resume download"),
                                systemImage: "arrow.down.circle", action: download.resume)
                     } else {
-                        Label(loc.t("Descargando %@…", "Downloading %@…", "\(selected.name)"),
+                        Label(AppInfo.branded("Downloading \(selected.name)…"),
                               systemImage: "arrow.down.circle")
                     }
                 } else {
-                    Button(loc.t("Descargar %@", "Download %@", "\(selected.name)"),
+                    Button(AppInfo.branded("Download \(selected.name)"),
                            systemImage: "arrow.down.circle") {
                         models.downloadWhisperModel(selected)
                     }
@@ -4328,43 +4273,38 @@ struct NativeChatView: View {
         }
 
         Divider()
-        Button(loc.t("Mostrar opciones de voz…", "Show voice options…"),
+        Button(AppInfo.branded("Show voice options…"),
                systemImage: "slider.horizontal.3") {
             showVoiceOptions = true
         }
         if audioAvailable {
-            Button(loc.t("Grabar para el modelo", "Record for the model"),
+            Button(AppInfo.branded("Record for the model"),
                    systemImage: "waveform", action: startRecording)
         }
     }
 
     private var voiceButtonTitle: String {
-        if dictation.isTranscribing { return loc.t("Cancelar transcripción", "Cancel transcription") }
-        if dictation.isDictating { return loc.t("Transcribir", "Transcribe") }
-        if appleDictation.isDictating { return loc.t("Detener dictado", "Stop dictation") }
-        if audioRecorder.isRecording { return loc.t("Detener grabación", "Stop recording") }
-        return loc.t("Voz", "Voice")
+        if dictation.isTranscribing { return AppInfo.branded("Cancel transcription") }
+        if dictation.isDictating { return AppInfo.branded("Transcribe") }
+        if appleDictation.isDictating { return AppInfo.branded("Stop dictation") }
+        if audioRecorder.isRecording { return AppInfo.branded("Stop recording") }
+        return AppInfo.branded("Voice")
     }
 
     private var voiceButtonHelp: String {
         if dictation.isTranscribing {
-            return loc.t("Whisper.cpp está transcribiendo en la GPU; clic para cancelar.",
-                         "Whisper.cpp is transcribing on the GPU; click to cancel.")
+            return AppInfo.branded("Whisper.cpp is transcribing on the GPU; click to cancel.")
         }
         if dictation.isDictating {
-            return loc.t("Escuchando con Whisper… clic para transcribir.",
-                         "Listening with Whisper… click to transcribe.")
+            return AppInfo.branded("Listening with Whisper… click to transcribe.")
         }
         if appleDictation.isDictating {
-            return loc.t("Dictado de Apple activo; clic para detener.",
-                         "Apple Dictation is active; click to stop.")
+            return AppInfo.branded("Apple Dictation is active; click to stop.")
         }
         if speechInputMethodRaw.isEmpty {
-            return loc.t("Configura la entrada de voz. Después: clic para dictar, clic derecho para cambiar.",
-                         "Set up voice input. Then: click to dictate, right-click to change it.")
+            return AppInfo.branded("Set up voice input. Then: click to dictate, right-click to change it.")
         }
-        return loc.t("Clic para dictar; clic derecho para método, modelo y carga.",
-                     "Click to dictate; right-click for method, model, and loading.")
+        return AppInfo.branded("Click to dictate; right-click for method, model, and loading.")
     }
 
     private func primaryVoiceAction() {
@@ -4460,15 +4400,14 @@ struct NativeChatView: View {
             showTools.toggle()
         } label: {
             ComposerCircleLabel(
-                title: loc.t("Herramientas", "Tools"),
+                title: AppInfo.branded("Tools"),
                 systemImage: "wrench.and.screwdriver",
                 active: showTools)
         }
         .buttonStyle(.plain)
         .disabled(chat.generating)
         .popover(isPresented: $showTools, arrowEdge: .top) { toolsPopover }
-        .help(loc.t("Herramientas disponibles para esta conversación",
-                    "Tools available to this conversation"))
+        .help(AppInfo.branded("Tools available to this conversation"))
     }
 
     private var toolsPopover: some View {
@@ -4476,25 +4415,23 @@ struct NativeChatView: View {
         let enabledCount = selected.map { s in availableTools.filter { s.contains($0.name) }.count }
             ?? availableTools.count
         return VStack(alignment: .leading, spacing: 10) {
-            Label(loc.t("Herramientas del chat", "Chat tools"),
+            Label(AppInfo.branded("Chat tools"),
                   systemImage: "wrench.and.screwdriver")
                 .font(.headline)
             if !availableTools.isEmpty {
                 HStack(spacing: 12) {
-                    Button(loc.t("Activar todas", "Enable all"), systemImage: "checkmark.circle") {
+                    Button(AppInfo.branded("Enable all"), systemImage: "checkmark.circle") {
                         chat.enableAllTools()
                     }
                     .disabled(enabledCount == availableTools.count)
-                    .help(loc.t("Marca todas las herramientas para esta conversación",
-                                "Checks every tool for this conversation"))
-                    Button(loc.t("Desactivar todas", "Disable all"), systemImage: "circle") {
+                    .help(AppInfo.branded("Checks every tool for this conversation"))
+                    Button(AppInfo.branded("Disable all"), systemImage: "circle") {
                         chat.disableAllTools()
                     }
                     .disabled(enabledCount == 0)
-                    .help(loc.t("Desmarca todas las herramientas para elegir solo las que necesites",
-                                "Unchecks every tool so you can pick only the ones you need"))
+                    .help(AppInfo.branded("Unchecks every tool so you can pick only the ones you need"))
                     Spacer()
-                    Text(loc.t("%@ de %@", "%@ of %@", "\(enabledCount)", "\(availableTools.count)"))
+                    Text(AppInfo.branded("\(enabledCount) of \(availableTools.count)"))
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -4503,9 +4440,7 @@ struct NativeChatView: View {
                 .controlSize(.small)
             }
             if let agent = EngineExtensions.active().first(where: \.hasAgent) {
-                Label(loc.t("%@ recibe cada mensaje primero; los que no son de lo suyo pueden volver a estas herramientas.",
-                            "%@ gets every message first; the ones outside its own field can come back to these tools.",
-                            agent.manifest.name.pick(spanish: loc.isSpanish)),
+                Label(AppInfo.branded("\(agent.manifest.name.value) gets every message first; the ones outside its own field can come back to these tools."),
                       systemImage: "puzzlepiece.extension")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -4581,21 +4516,21 @@ struct NativeChatView: View {
         HStack(spacing: 6) {
             if loadingModalities {
                 ProgressView().controlSize(.small)
-                Text(loc.t("Detectando capacidades…", "Detecting capabilities…"))
+                Text(AppInfo.branded("Detecting capabilities…"))
                     .font(.caption).foregroundStyle(.secondary)
             } else if let modelModalities {
-                modalityBadge(loc.t("Texto", "Text"), icon: "text.alignleft", enabled: true)
-                modalityBadge(loc.t("Visión", "Vision"), icon: "eye", enabled: modelModalities.vision)
+                modalityBadge(AppInfo.branded("Text"), icon: "text.alignleft", enabled: true)
+                modalityBadge(AppInfo.branded("Vision"), icon: "eye", enabled: modelModalities.vision)
                 if capabilitiesAreComplete {
-                    modalityBadge(loc.t("Audio", "Audio"), icon: "waveform", enabled: modelModalities.audio)
-                    modalityBadge(loc.t("Video", "Video"), icon: "film", enabled: modelModalities.video)
+                    modalityBadge(AppInfo.branded("Audio"), icon: "waveform", enabled: modelModalities.audio)
+                    modalityBadge(AppInfo.branded("Video"), icon: "film", enabled: modelModalities.video)
                 } else {
-                    Label(loc.t("Se completan al cargar", "Complete after loading"),
+                    Label(AppInfo.branded("Complete after loading"),
                           systemImage: "clock.arrow.circlepath")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } else {
-                Label(loc.t("Capacidades no disponibles", "Capabilities unavailable"),
+                Label(AppInfo.branded("Capabilities unavailable"),
                       systemImage: "questionmark.circle")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -4611,8 +4546,8 @@ struct NativeChatView: View {
             .background((enabled ? Color.accentColor : Color.secondary).opacity(enabled ? 0.14 : 0.07),
                         in: Capsule())
             .help(enabled
-                  ? loc.t("Compatible", "Supported")
-                  : loc.t("No compatible con el modelo seleccionado", "Not supported by the selected model"))
+                  ? AppInfo.branded("Supported")
+                  : AppInfo.branded("Not supported by the selected model"))
     }
 
     static func nsImage(fromDataURI uri: String) -> NSImage? {
@@ -4636,7 +4571,7 @@ struct NativeChatView: View {
                                 .foregroundStyle(.white, .black.opacity(0.55))
                         }
                         .buttonStyle(.plain).padding(2)
-                        .iconHelp(loc.t("Quitar esta imagen", "Remove this image"))
+                        .iconHelp(AppInfo.branded("Remove this image"))
                     }
                 }
             }
@@ -4657,7 +4592,7 @@ struct NativeChatView: View {
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         } else {
-                            Button(loc.t("Vista previa", "Preview"), systemImage: "play.circle") {
+                            Button(AppInfo.branded("Preview"), systemImage: "play.circle") {
                                 previewAttachment = a
                             }
                             .labelStyle(.iconOnly).buttonStyle(.borderless)
@@ -4668,27 +4603,23 @@ struct NativeChatView: View {
                             Image(systemName: "xmark.circle.fill").font(.system(size: 10))
                         }
                         .buttonStyle(.borderless)
-                        .iconHelp(loc.t("Quitar este archivo.", "Remove this file."))
+                        .iconHelp(AppInfo.branded("Remove this file."))
                     }
                     .font(.caption)
                     .padding(.horizontal, 9).padding(.vertical, 5)
                     .background(.quaternary.opacity(0.5), in: Capsule())
-                    .help(loc.t("Se enviará al modelo junto con tu mensaje (~%@ tokens).",
-                                "Sent to the model along with your message (~%@ tokens).",
-                                String(a.estimatedTokens)))
+                    .help(AppInfo.branded("Sent to the model along with your message (~\(String(a.estimatedTokens)) tokens)."))
                 }
                 if attachmentsExceedContext {
-                    Label(loc.t("Adjuntos ~%@k tokens > contexto %@k: sube el contexto en Ajustes o quita archivos", "Attachments ~%@k tokens > context %@k: raise the context in Settings or remove files", "\(attachmentTokens / 1000)", "\(contextLimit / 1000)"),
+                    Label(AppInfo.branded("Attachments ~\(attachmentTokens / 1000)k tokens > context \(contextLimit / 1000)k: raise the context in Settings or remove files"),
                           systemImage: "exclamationmark.octagon.fill")
                         .font(.caption2).foregroundStyle(.red)
-                        .help(loc.t("Lo adjunto no cabe en el contexto configurado, así que el envío fallará con 'contexto lleno'. Sube el contexto en Ajustes, quita archivos o inicia un chat nuevo.",
-                                    "The attachments don't fit the configured context, so sending will fail with 'context full'. Raise the context in Settings, remove files or start a new chat."))
+                        .help(AppInfo.branded("The attachments don't fit the configured context, so sending will fail with 'context full'. Raise the context in Settings, remove files or start a new chat."))
                 } else if attachmentsTooLarge {
-                    Label(loc.t("Adjuntos ~%@k tokens: pueden llenar el contexto (%@k)", "Attachments ~%@k tokens: may fill the context (%@k)", "\(attachmentTokens / 1000)", "\(contextLimit / 1000)"),
+                    Label(AppInfo.branded("Attachments ~\(attachmentTokens / 1000)k tokens: may fill the context (\(contextLimit / 1000)k)"),
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2).foregroundStyle(.orange)
-                        .help(loc.t("El total estimado supera la mitad del contexto configurado en Ajustes; con el historial podría llenarlo.",
-                                    "The estimated total exceeds half the context configured in Settings; with the history it could fill it."))
+                        .help(AppInfo.branded("The estimated total exceeds half the context configured in Settings; with the history it could fill it."))
                 }
             }
         }
@@ -4711,7 +4642,7 @@ struct NativeChatView: View {
 
     private func absorbLargeDraft(_ value: String) {
         guard pasteLongTextLength > 0, value.count > pasteLongTextLength else { return }
-        let base = loc.t("Texto pegado", "Pasted text")
+        let base = AppInfo.branded("Pasted text")
         let existing = attachments.filter { $0.name.hasPrefix(base) }.count
         let name = existing == 0 ? base + ".txt" : "\(base) \(existing + 1).txt"
         attachments.append(ChatAttachment(name: name, content: value))
@@ -4737,12 +4668,11 @@ struct NativeChatView: View {
         }
         guard let img = NSImage(pasteboard: pb), let data = img.tiffRepresentation else { return }
         guard visionAvailable else {
-            attachError = loc.t("Imagen pegada: el modelo actual no admite imágenes (carga un modelo con visión y su mmproj)",
-                                "Pasted image: the current model can't read images (load a vision model with its mmproj)")
+            attachError = AppInfo.branded("Pasted image: the current model can't read images (load a vision model with its mmproj)")
             return
         }
         guard let uri = Self.imageDataURI(from: data, maxMegapixels: maxImageMegapixels) else {
-            attachError = loc.t("No se pudo procesar la imagen pegada", "Couldn't process the pasted image")
+            attachError = AppInfo.branded("Couldn't process the pasted image")
             return
         }
         attachError = nil
@@ -4799,20 +4729,19 @@ struct NativeChatView: View {
                 // Microphone dictation cannot advance the file queue.
                 if (dictation.isDictating || dictation.isTranscribing || appleDictation.isDictating),
                    transcriptionPending == 0 {
-                    errors.append(loc.t("%@: termina primero el dictado del micrófono", "%@: finish microphone dictation first", "\(name)"))
+                    errors.append(AppInfo.branded("\(name): finish microphone dictation first"))
                     continue
                 }
                 let model = WhisperModel.model(id: whisperModelID)
                 guard models.whisperModelInstalled(model) else {
                     models.downloadWhisperModel(model)
-                    errors.append(loc.t("%@: descarga primero %@ para transcribirlo", "%@: download %@ first to transcribe it", "\(name)", "\(model.name)"))
+                    errors.append(AppInfo.branded("\(name): download \(model.name) first to transcribe it"))
                     continue
                 }
                 let pendingID = UUID()
                 attachments.append(ChatAttachment(
                     id: pendingID, name: name,
-                    content: loc.t("(transcribiendo localmente con Whisper.cpp…)",
-                                   "(transcribing locally with Whisper.cpp…)")))
+                    content: AppInfo.branded("(transcribing locally with Whisper.cpp…)")))
                 transcriptionQueue.append(PendingSpeechTranscription(
                     id: UUID(), fileURL: url, modelURL: model.url(in: models.whisperDirectory),
                     attachmentID: pendingID, name: name))
@@ -4822,19 +4751,19 @@ struct NativeChatView: View {
             }
 
             guard let data = try? Data(contentsOf: url) else {
-                errors.append(loc.t("%@: no se pudo leer", "%@: couldn't read it", "\(name)")); continue
+                errors.append(AppInfo.branded("\(name): couldn't read it")); continue
             }
             guard data.count <= Self.maxAttachBytes else {
-                errors.append(loc.t("%@: demasiado grande (máx 40 MB)", "%@: too large (max 40 MB)", "\(name)")); continue
+                errors.append(AppInfo.branded("\(name): too large (max 40 MB)")); continue
             }
 
             // Images → vision (only if the loaded model has a multimodal projector).
             if ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "tif", "webp"].contains(ext) {
                 guard visionAvailable else {
-                    errors.append(loc.t("%@: el modelo actual no admite imágenes (carga un modelo con visión y su mmproj)", "%@: the current model can't read images (load a vision model with its mmproj)", "\(name)")); continue
+                    errors.append(AppInfo.branded("\(name): the current model can't read images (load a vision model with its mmproj)")); continue
                 }
                 guard let uri = Self.imageDataURI(from: data, maxMegapixels: maxImageMegapixels) else {
-                    errors.append(loc.t("%@: no se pudo procesar la imagen", "%@: couldn't process the image", "\(name)")); continue
+                    errors.append(AppInfo.branded("\(name): couldn't process the image")); continue
                 }
                 // the same file dropped or picked again is already attached
                 if !images.contains(uri) { images.append(uri) }
@@ -4844,7 +4773,7 @@ struct NativeChatView: View {
             var text: String
             if ext == "pdf" || data.prefix(5) == Data("%PDF-".utf8) {
                 guard let pdf = PDFDocument(data: data) else {
-                    errors.append(loc.t("%@: no se pudo abrir el PDF", "%@: couldn't open the PDF", "\(name)")); continue
+                    errors.append(AppInfo.branded("\(name): couldn't open the PDF")); continue
                 }
                 if pdfAsImages && visionAvailable {
                     // the PDF's own text goes with its pages: what an image blurs, the text layer still says
@@ -4862,7 +4791,7 @@ struct NativeChatView: View {
                         ocrPending -= 1
                         if pages.isEmpty {
                             attachError = (attachError.map { $0 + "\n" } ?? "")
-                                + loc.t("%@: no se pudieron renderizar sus páginas", "%@: its pages couldn't be rendered", "\(name)")
+                                + AppInfo.branded("\(name): its pages couldn't be rendered")
                         }
                     }
                     continue
@@ -4876,7 +4805,7 @@ struct NativeChatView: View {
                     guard !attachments.contains(where: { $0.digest == digest }) else { continue }
                     let pendingID = UUID()
                     attachments.append(ChatAttachment(id: pendingID, name: name,
-                        content: loc.t("(extrayendo texto por OCR…)", "(extracting text via OCR…)"), digest: digest))
+                        content: AppInfo.branded("(extracting text via OCR…)"), digest: digest))
                     ocrPending += 1
                     Task { @MainActor in
                         let ocr = await Self.ocrPDF(data: data, maxPages: 20, maxChars: Self.maxAttachChars)
@@ -4885,9 +4814,9 @@ struct NativeChatView: View {
                         if ocr.isEmpty {
                             attachments.remove(at: idx)
                             attachError = (attachError.map { $0 + "\n" } ?? "")
-                                + loc.t("%@: el OCR no encontró texto", "%@: OCR found no text", "\(name)")
+                                + AppInfo.branded("\(name): OCR found no text")
                         } else {
-                            attachments[idx].content = loc.t("[Texto extraído por OCR — %@]\n\n", "[Text extracted via OCR — %@]\n\n", "\(name)") + ocr
+                            attachments[idx].content = AppInfo.branded("[Text extracted via OCR — \(name)]\n\n") + ocr
                         }
                     }
                     continue
@@ -4899,14 +4828,14 @@ struct NativeChatView: View {
                 // printable strings (symbols, embedded text) instead.
                 let s = Self.printableStrings(from: data, limit: Self.maxAttachChars)
                 guard !s.isEmpty else {
-                    errors.append(loc.t("%@: binario sin texto legible", "%@: binary with no readable text", "\(name)")); continue
+                    errors.append(AppInfo.branded("\(name): binary with no readable text")); continue
                 }
-                text = loc.t("[Cadenas extraídas de un binario — %@]\n\n", "[Strings extracted from a binary — %@]\n\n", "\(name)") + s
+                text = AppInfo.branded("[Strings extracted from a binary — \(name)]\n\n") + s
             }
 
             if text.count > Self.maxAttachChars {
                 text = String(text.prefix(Self.maxAttachChars))
-                    + loc.t("\n\n[…contenido truncado…]", "\n\n[…content truncated…]")
+                    + AppInfo.branded("\n\n[…content truncated…]")
             }
             guard !attachments.contains(where: { $0.name == name && $0.content == text }) else { continue }
             attachments.append(ChatAttachment(name: name, content: text))
@@ -4934,9 +4863,9 @@ struct NativeChatView: View {
         if let idx = attachments.firstIndex(where: { $0.id == pending.attachmentID }) {
             let clipped = transcript.count > Self.maxAttachChars
                 ? String(transcript.prefix(Self.maxAttachChars))
-                    + loc.t("\n\n[…transcripción truncada…]", "\n\n[…transcript truncated…]")
+                    + AppInfo.branded("\n\n[…transcript truncated…]")
                 : transcript
-            attachments[idx].content = loc.t("[Transcripción local — %@]\n\n", "[Local transcript — %@]\n\n", "\(pending.name)") + clipped
+            attachments[idx].content = AppInfo.branded("[Local transcript — \(pending.name)]\n\n") + clipped
         }
         startNextFileTranscription()
     }
@@ -5084,11 +5013,10 @@ struct NativeChatView: View {
                 if chat.compacting {
                     HStack(spacing: 5) {
                         ProgressView().controlSize(.mini)
-                        Text(loc.t("Compactando…", "Compacting…"))
+                        Text(AppInfo.branded("Compacting…"))
                             .foregroundStyle(.secondary)
                     }
-                    .help(loc.t("Resumiendo los mensajes antiguos con el modelo para liberar contexto.",
-                                "Summarizing older messages with the model to free context."))
+                    .help(AppInfo.branded("Summarizing older messages with the model to free context."))
                 }
 
                 if server.state == .running && contextLimit > 0 {
@@ -5096,7 +5024,7 @@ struct NativeChatView: View {
                     let used = reading.tokens
                     let fraction = Double(used) / Double(contextLimit)
                     HStack(spacing: 5) {
-                        Label(loc.t("Contexto", "Context"), systemImage: "memorychip")
+                        Label(AppInfo.branded("Context"), systemImage: "memorychip")
                             .foregroundStyle(.secondary)
                         ProgressView(value: min(fraction, 1))
                             .frame(width: 76)
@@ -5105,16 +5033,12 @@ struct NativeChatView: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(fraction > 0.8 ? .orange : .secondary)
                     }
-                    .help(loc.t("Tokens usados por el historial y la última respuesta. Al superar 70%, la app intenta resumir los turnos antiguos.",
-                                "Tokens used by history and the latest response. Past 70%, the app attempts to summarize older turns.")
+                    .help(AppInfo.branded("Tokens used by history and the latest response. Past 70%, the app attempts to summarize older turns.")
                           + (reading.estimated
-                             ? " " + loc.t("≈: estimado a partir del texto y los adjuntos, porque el servidor no contó este turno; el próximo turno da la cifra exacta.",
-                                           "≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.")
+                             ? " " + AppInfo.branded("≈: estimated from the text and attachments, as the server did not count this turn; the next turn gives the exact figure.")
                              : "")
                           + (chat.toolTokens >= 1000
-                             ? " " + loc.t("Las definiciones de las herramientas activas ocupan unos %@k.",
-                                           "The definitions of the active tools take about %@k of it.",
-                                           "\(chat.toolTokens / 1000)")
+                             ? " " + AppInfo.branded("The definitions of the active tools take about \(chat.toolTokens / 1000)k of it.")
                              : ""))
                 }
 
@@ -5122,13 +5046,12 @@ struct NativeChatView: View {
                     Button {
                         chat.compactCurrent(port: port)
                     } label: {
-                        Label(loc.t("Recuperar velocidad", "Recover speed"),
+                        Label(AppInfo.branded("Recover speed"),
                               systemImage: "archivebox")
                             .foregroundStyle(.orange)
                     }
                     .buttonStyle(.borderless)
-                    .help(loc.t("Resume el historial completado para que el próximo turno procese menos contexto. El chat completo sigue visible y guardado.",
-                                "Summarizes completed history so the next turn processes less context. The full chat remains visible and saved."))
+                    .help(AppInfo.branded("Summarizes completed history so the next turn processes less context. The full chat remains visible and saved."))
                 }
 
                 Spacer(minLength: 0)
@@ -5167,9 +5090,9 @@ enum ConversationSortOrder: String, CaseIterable {
 
     func label(_ loc: Localizer) -> String {
         switch self {
-        case .lastUsed: return loc.t("Uso reciente", "Recently used")
-        case .created: return loc.t("Fecha de creación", "Date created")
-        case .title: return loc.t("Título (A-Z)", "Title (A-Z)")
+        case .lastUsed: return AppInfo.branded("Recently used")
+        case .created: return AppInfo.branded("Date created")
+        case .title: return AppInfo.branded("Title (A-Z)")
         }
     }
 }
@@ -5233,12 +5156,12 @@ struct ConversationListView: View {
         }
     }
 
-    /// Relative timestamp in the app's language, not the system locale — the
-    /// default `.formatted(.relative…)` ignores the in-app language toggle.
+    /// Relative timestamp in English, not the system locale — the default
+    /// `.formatted(.relative…)` follows the Mac's own language.
     private func relativeDate(_ date: Date) -> String {
         date.formatted(Date.RelativeFormatStyle(
             presentation: .named,
-            locale: Locale(identifier: loc.isSpanish ? "es" : "en")))
+            locale: Locale(identifier: "en")))
     }
 
     var body: some View {
@@ -5247,7 +5170,7 @@ struct ConversationListView: View {
                 chat.newConversation(in: chat.current?.projectID)
             } label: {
                 HStack(spacing: 8) {
-                    Label(loc.t("Nueva conversación", "New chat"), systemImage: "plus")
+                    Label(AppInfo.branded("New chat"), systemImage: "plus")
                     Spacer(minLength: 8)
                     Text("⌘ N")
                         .font(.caption.weight(.semibold))
@@ -5261,11 +5184,10 @@ struct ConversationListView: View {
             .padding(.horizontal, 12)
             .padding(.top, 12)
             .padding(.bottom, 10)
-            .help(loc.t("Empieza una conversación nueva en el proyecto actual (⌘N).",
-                        "Start a new conversation in the current project (⌘N)."))
+            .help(AppInfo.branded("Start a new conversation in the current project (⌘N)."))
 
             HStack(spacing: 8) {
-                GlassSearchField(placeholder: loc.t("Buscar conversaciones…", "Search conversations…"), text: $searchText)
+                GlassSearchField(placeholder: AppInfo.branded("Search conversations…"), text: $searchText)
 
                 Menu {
                     ForEach(ConversationSortOrder.allCases, id: \.self) { order in
@@ -5280,14 +5202,14 @@ struct ConversationListView: View {
                         }
                     }
                     Divider()
-                    Button(loc.t("Importar archivo…", "Import archive…"),
+                    Button(AppInfo.branded("Import archive…"),
                            systemImage: "square.and.arrow.down") { importArchive() }
-                    Button(loc.t("Exportar todo…", "Export all…"),
+                    Button(AppInfo.branded("Export all…"),
                            systemImage: "square.and.arrow.up") { exportArchive() }
-                    Button(loc.t("Exportar JSONL para llama.cpp…", "Export JSONL for llama.cpp…"),
+                    Button(AppInfo.branded("Export JSONL for llama.cpp…"),
                            systemImage: "doc.text") { exportJSONL() }
                     Divider()
-                    Button(loc.t("Borrar todas las conversaciones…", "Delete all conversations…"),
+                    Button(AppInfo.branded("Delete all conversations…"),
                            systemImage: "trash", role: .destructive) { confirmDeleteAll = true }
                 } label: {
                     Image(systemName: "slider.horizontal.3")
@@ -5299,9 +5221,8 @@ struct ConversationListView: View {
                 .frame(width: 28, height: 28)
                 .glassSurface(in: Circle(), interactive: true)
                 .overlay(Circle().strokeBorder(.primary.opacity(0.07)))
-                .accessibilityLabel(loc.t("Acciones de conversaciones", "Conversation actions"))
-                .help(loc.t("Ordenar, importar, exportar y borrar conversaciones",
-                            "Sort, import, export and delete conversations"))
+                .accessibilityLabel(AppInfo.branded("Conversation actions"))
+                .help(AppInfo.branded("Sort, import, export and delete conversations"))
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
@@ -5314,7 +5235,7 @@ struct ConversationListView: View {
                         Section {
                             ForEach(pinnedChats) { chatRow($0, showsProject: true) }
                         } header: {
-                            sidebarHeader(loc.t("Fijados", "Pinned"))
+                            sidebarHeader(AppInfo.branded("Pinned"))
                         }
                     }
                     if !chat.projects.isEmpty {
@@ -5323,7 +5244,7 @@ struct ConversationListView: View {
                                 DisclosureGroup(isExpanded: expandBinding(p)) {
                                     let rows = projectChats(p)
                                     if rows.isEmpty {
-                                        Text(loc.t("Sin conversaciones", "No conversations"))
+                                        Text(AppInfo.branded("No conversations"))
                                             .font(.caption).foregroundStyle(.tertiary)
                                     } else {
                                         ForEach(rows) { chatRow($0, showsProject: false) }
@@ -5333,7 +5254,7 @@ struct ConversationListView: View {
                                 }
                             }
                         } header: {
-                            sidebarHeader(loc.t("Proyectos", "Projects"), actionIcon: "plus") {
+                            sidebarHeader(AppInfo.branded("Projects"), actionIcon: "plus") {
                                 newProjectName = ""
                                 creatingProject = true
                             }
@@ -5342,7 +5263,7 @@ struct ConversationListView: View {
                         Section {
                             EmptyView()
                         } header: {
-                            sidebarHeader(loc.t("Proyectos", "Projects"), actionIcon: "plus") {
+                            sidebarHeader(AppInfo.branded("Projects"), actionIcon: "plus") {
                                 newProjectName = ""
                                 creatingProject = true
                             }
@@ -5377,28 +5298,27 @@ struct ConversationListView: View {
             guard !Task.isCancelled else { return }
             debouncedSearchText = value
         }
-        .alert(loc.t("Renombrar conversación", "Rename conversation"),
+        .alert(AppInfo.branded("Rename conversation"),
                isPresented: Binding(get: { renaming != nil },
                                     set: { if !$0 { renaming = nil } })) {
-            TextField(loc.t("Título", "Title"), text: $renameText)
-            Button(loc.t("Guardar", "Save")) {
+            TextField(AppInfo.branded("Title"), text: $renameText)
+            Button(AppInfo.branded("Save")) {
                 if let c = renaming { chat.rename(c, to: renameText) }
                 renaming = nil
             }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) { renaming = nil }
+            Button(AppInfo.branded("Cancel"), role: .cancel) { renaming = nil }
         }
-        .alert(loc.t("Nuevo proyecto", "New project"), isPresented: $creatingProject) {
-            TextField(loc.t("Nombre", "Name"), text: $newProjectName)
-            Button(loc.t("Crear", "Create")) {
+        .alert(AppInfo.branded("New project"), isPresented: $creatingProject) {
+            TextField(AppInfo.branded("Name"), text: $newProjectName)
+            Button(AppInfo.branded("Create")) {
                 let name = newProjectName.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { return }
                 let p = chat.newProject(name: name)
                 chat.newConversation(in: p.id)
             }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("Una carpeta para tus conversaciones. Si le defines un prompt de sistema al proyecto, todas las conversaciones dentro lo heredan.",
-                       "A folder for your conversations. If you set a system prompt on the project, every conversation inside inherits it."))
+            Text(AppInfo.branded("A folder for your conversations. If you set a system prompt on the project, every conversation inside inherits it."))
         }
         .sheet(item: $renamingProject) { project in
             ProjectRenameSheet(initial: project.name) { name in
@@ -5408,36 +5328,33 @@ struct ConversationListView: View {
         }
         .sheet(item: $promptProject) { p in
             PromptEditorSheet(
-                title: loc.t("Prompt del proyecto \"%@\"", "Project prompt for \"%@\"", "\(p.name)"),
-                hint: loc.t("Lo heredan todas las conversaciones del proyecto que no tengan prompt propio.",
-                            "Inherited by every conversation in the project without its own prompt."),
+                title: AppInfo.branded("Project prompt for \"\(p.name)\""),
+                hint: AppInfo.branded("Inherited by every conversation in the project without its own prompt."),
                 initial: p.systemPrompt
             ) { chat.setProjectPrompt(p, $0) }
         }
         .sheet(item: $promptConversation) { c in
             PromptEditorSheet(
-                title: loc.t("Prompt de esta conversación", "This conversation's prompt"),
-                hint: loc.t("Sustituye al prompt del proyecto y al global solo en esta conversación. Vacío = heredar.",
-                            "Overrides the project and global prompts for this conversation only. Empty = inherit."),
+                title: AppInfo.branded("This conversation's prompt"),
+                hint: AppInfo.branded("Overrides the project and global prompts for this conversation only. Empty = inherit."),
                 initial: c.systemPrompt ?? ""
             ) { chat.setConversationPrompt(c, $0) }
         }
-        .alert(loc.t("Conversaciones", "Conversations"),
+        .alert(AppInfo.branded("Conversations"),
                isPresented: Binding(get: { archiveMessage != nil },
                                     set: { if !$0 { archiveMessage = nil } })) {
-            Button(loc.t("Aceptar", "OK")) { archiveMessage = nil }
+            Button(AppInfo.branded("OK")) { archiveMessage = nil }
         } message: {
             Text(archiveMessage ?? "")
         }
         .confirmationDialog(
-            loc.t("¿Borrar las %@ conversaciones?", "Delete all %@ conversations?", "\(chat.conversations.count)"),
+            AppInfo.branded("Delete all \(chat.conversations.count) conversations?"),
             isPresented: $confirmDeleteAll, titleVisibility: .visible
         ) {
-            Button(loc.t("Borrar todas", "Delete all"), role: .destructive) { chat.deleteAll() }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Delete all"), role: .destructive) { chat.deleteAll() }
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("No se puede deshacer. Tus proyectos y sus prompts se conservan; exporta antes si quieres una copia.",
-                       "This cannot be undone. Your projects and their prompts are kept; export first if you want a copy."))
+            Text(AppInfo.branded("This cannot be undone. Your projects and their prompts are kept; export first if you want a copy."))
         }
     }
 
@@ -5463,20 +5380,20 @@ struct ConversationListView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(loc.t("Nuevo proyecto", "New project"))
+                .accessibilityLabel(AppInfo.branded("New project"))
             }
         }
     }
 
     private var chatsHeader: some View {
         HStack {
-            Text(loc.t("Conversaciones", "Chats"))
+            Text(AppInfo.branded("Chats"))
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(.primary)
                 .textCase(nil)
             Spacer()
             Text(ungroupedDropIsTargeted
-                 ? loc.t("Soltar aquí", "Drop here")
+                 ? AppInfo.branded("Drop here")
                  : sortOrder.label(loc))
                 .font(.caption)
                 .foregroundStyle(ungroupedDropIsTargeted
@@ -5500,7 +5417,7 @@ struct ConversationListView: View {
 
     private func conversationTitle(_ conversation: Conversation) -> String {
         if conversation.title.isEmpty && conversation.messages.isEmpty {
-            return loc.t("Nueva conversación", "New chat")
+            return AppInfo.branded("New chat")
         }
         return chat.displayTitle(conversation)
     }
@@ -5514,7 +5431,7 @@ struct ConversationListView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let count = try chat.importArchiveData(Data(contentsOf: url))
-            archiveMessage = loc.t("Se importaron %@ conversaciones nuevas.", "Imported %@ new conversations.", "\(count)")
+            archiveMessage = AppInfo.branded("Imported \(count) new conversations.")
         } catch {
             archiveMessage = error.localizedDescription
         }
@@ -5527,8 +5444,7 @@ struct ConversationListView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try chat.exportArchiveData().write(to: url, options: .atomic)
-            archiveMessage = loc.t("Historial exportado correctamente.",
-                                   "Conversation history exported successfully.")
+            archiveMessage = AppInfo.branded("Conversation history exported successfully.")
         } catch {
             archiveMessage = error.localizedDescription
         }
@@ -5541,8 +5457,7 @@ struct ConversationListView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try chat.exportJSONLData().write(to: url, options: .atomic)
-            archiveMessage = loc.t("Historial JSONL compatible con llama.cpp exportado correctamente.",
-                                   "llama.cpp-compatible JSONL history exported successfully.")
+            archiveMessage = AppInfo.branded("llama.cpp-compatible JSONL history exported successfully.")
         } catch {
             archiveMessage = error.localizedDescription
         }
@@ -5567,8 +5482,7 @@ struct ConversationListView: View {
             if !p.systemPrompt.trimmingCharacters(in: .whitespaces).isEmpty {
                 Image(systemName: "text.bubble")
                     .font(.caption2).foregroundStyle(.tertiary)
-                    .help(loc.t("Este proyecto tiene prompt de sistema propio.",
-                                "This project has its own system prompt."))
+                    .help(AppInfo.branded("This project has its own system prompt."))
             }
             Spacer(minLength: 4)
             Text("\(chat.conversations.filter { $0.projectID == p.id }.count)")
@@ -5594,30 +5508,30 @@ struct ConversationListView: View {
             dropTargetProjectID = targeted ? p.id : (dropTargetProjectID == p.id ? nil : dropTargetProjectID)
         }
         .contextMenu {
-            Button(loc.t("Nueva conversación aquí", "New chat here")) {
+            Button(AppInfo.branded("New chat here")) {
                 chat.setProjectCollapsed(p, false)
                 chat.newConversation(in: p.id)
             }
-            Button(loc.t("Prompt del proyecto…", "Project prompt…")) { promptProject = p }
+            Button(AppInfo.branded("Project prompt…")) { promptProject = p }
             Button(p.workingDirectory == nil
-                   ? loc.t("Carpeta del proyecto…", "Project folder…")
-                   : loc.t("Cambiar carpeta del proyecto…", "Change project folder…")) {
+                   ? AppInfo.branded("Project folder…")
+                   : AppInfo.branded("Change project folder…")) {
                 chat.pickProjectWorkingDirectory(p)
             }
             if p.workingDirectory != nil {
-                Button(loc.t("Quitar carpeta del proyecto", "Clear project folder")) {
+                Button(AppInfo.branded("Clear project folder")) {
                     chat.setProjectWorkingDirectory(p, nil)
                 }
             }
-            Button(loc.t("Renombrar…", "Rename…")) {
+            Button(AppInfo.branded("Rename…")) {
                 renamingProject = p
             }
-            Button((p.pinned ?? false) ? loc.t("Desfijar proyecto", "Unpin project")
-                                       : loc.t("Fijar proyecto", "Pin project")) {
+            Button((p.pinned ?? false) ? AppInfo.branded("Unpin project")
+                                       : AppInfo.branded("Pin project")) {
                 chat.togglePinProject(p)
             }
             Divider()
-            Button(loc.t("Eliminar proyecto", "Delete project"), role: .destructive) {
+            Button(AppInfo.branded("Delete project"), role: .destructive) {
                 chat.deleteProject(p)
             }
         }
@@ -5651,8 +5565,7 @@ struct ConversationListView: View {
             if !(c.systemPrompt ?? "").isEmpty {
                 Image(systemName: "text.bubble")
                     .font(.caption2).foregroundStyle(.tertiary)
-                    .help(loc.t("Esta conversación tiene prompt propio.",
-                                "This conversation has its own prompt."))
+                    .help(AppInfo.branded("This conversation has its own prompt."))
             }
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 11, weight: .semibold))
@@ -5660,21 +5573,20 @@ struct ConversationListView: View {
                                  ? AnyShapeStyle(Color.appAccent)
                                  : AnyShapeStyle(.quaternary))
                 .frame(width: 18, height: 26)
-                .help(loc.t("Puedes arrastrar toda la fila a un proyecto.",
-                            "You can drag the entire row into a project."))
+                .help(AppInfo.branded("You can drag the entire row into a project."))
             Menu {
-                Button((c.pinned ?? false) ? loc.t("Desfijar", "Unpin") : loc.t("Fijar", "Pin")) {
+                Button((c.pinned ?? false) ? AppInfo.branded("Unpin") : AppInfo.branded("Pin")) {
                     chat.togglePin(c)
                 }
-                Button(loc.t("Renombrar…", "Rename…")) {
+                Button(AppInfo.branded("Rename…")) {
                     renameText = conversationTitle(c)
                     renaming = c
                 }
-                Button(loc.t("Prompt de esta conversación…", "This conversation's prompt…")) {
+                Button(AppInfo.branded("This conversation's prompt…")) {
                     promptConversation = c
                 }
                 Divider()
-                Button(loc.t("Eliminar", "Delete"), role: .destructive) { chat.delete(c) }
+                Button(AppInfo.branded("Delete"), role: .destructive) { chat.delete(c) }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 12, weight: .medium))
@@ -5684,7 +5596,7 @@ struct ConversationListView: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .opacity(hoveredConversationID == c.id || chat.currentID == c.id ? 1 : 0)
-            .accessibilityLabel(loc.t("Acciones de la conversación", "Conversation actions"))
+            .accessibilityLabel(AppInfo.branded("Conversation actions"))
         }
         .padding(.leading, 0)
         .padding(.trailing, 6)
@@ -5720,18 +5632,18 @@ struct ConversationListView: View {
                       ? AppTheme.accent(accentRaw).opacity(0.26) : Color.clear)
                 .padding(.horizontal, 13))
         .contextMenu {
-            Button((c.pinned ?? false) ? loc.t("Desfijar", "Unpin") : loc.t("Fijar", "Pin")) {
+            Button((c.pinned ?? false) ? AppInfo.branded("Unpin") : AppInfo.branded("Pin")) {
                 chat.togglePin(c)
             }
-            Button(loc.t("Renombrar…", "Rename…")) {
+            Button(AppInfo.branded("Rename…")) {
                 renameText = conversationTitle(c)
                 renaming = c
             }
-            Button(loc.t("Prompt de esta conversación…", "This conversation's prompt…")) {
+            Button(AppInfo.branded("This conversation's prompt…")) {
                 promptConversation = c
             }
-            Menu(loc.t("Mover a proyecto", "Move to project")) {
-                Button(loc.t("Ninguno", "None")) { chat.move(c, toProject: nil) }
+            Menu(AppInfo.branded("Move to project")) {
+                Button(AppInfo.branded("None")) { chat.move(c, toProject: nil) }
                 ForEach(sortedProjects) { p in
                     Button(p.name + (c.projectID == p.id ? " ✓" : "")) {
                         chat.move(c, toProject: p.id)
@@ -5739,11 +5651,11 @@ struct ConversationListView: View {
                 }
             }
             Divider()
-            Button(loc.t("Copiar conversación", "Copy conversation")) {
+            Button(AppInfo.branded("Copy conversation")) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(chat.exportText(c, loc), forType: .string)
             }
-            Button(loc.t("Exportar a Markdown…", "Export to Markdown…")) {
+            Button(AppInfo.branded("Export to Markdown…")) {
                 let panel = NSSavePanel()
                 panel.nameFieldStringValue = chat.displayTitle(c)
                     .replacingOccurrences(of: "/", with: "-") + ".md"
@@ -5751,7 +5663,7 @@ struct ConversationListView: View {
                     try? chat.exportText(c, loc).write(to: url, atomically: true, encoding: .utf8)
                 }
             }
-            Button(loc.t("Eliminar", "Delete"), role: .destructive) { chat.delete(c) }
+            Button(AppInfo.branded("Delete"), role: .destructive) { chat.delete(c) }
         }
     }
 }
@@ -5775,8 +5687,7 @@ struct PromptEditorSheet: View {
                     Text(title)
                         .font(.title3.weight(.semibold))
                         .lineLimit(2)
-                    Text(loc.t("Instrucciones para esta parte del chat.",
-                               "Instructions for this part of Chat."))
+                    Text(AppInfo.branded("Instructions for this part of Chat."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -5808,10 +5719,10 @@ struct PromptEditorSheet: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
                     .glassButton()
                     .keyboardShortcut(.cancelAction)
-                Button(loc.t("Guardar", "Save"), systemImage: "checkmark") {
+                Button(AppInfo.branded("Save"), systemImage: "checkmark") {
                     onSave(text)
                     dismiss()
                 }
@@ -5852,10 +5763,9 @@ private struct ProjectRenameSheet: View {
             HStack(spacing: 13) {
                 SectionGlyph(systemName: "folder")
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(loc.t("Renombrar proyecto", "Rename project"))
+                    Text(AppInfo.branded("Rename project"))
                         .font(.title3.weight(.semibold))
-                    Text(loc.t("El nuevo nombre aparecerá en la barra lateral.",
-                               "The new name will appear in the sidebar."))
+                    Text(AppInfo.branded("The new name will appear in the sidebar."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -5866,8 +5776,8 @@ private struct ProjectRenameSheet: View {
             Divider()
 
             SettingsRowGroup {
-                SettingsRow(icon: "tag", title: loc.t("Nombre", "Name")) {
-                    TextField(loc.t("Nombre del proyecto", "Project name"), text: $name)
+                SettingsRow(icon: "tag", title: AppInfo.branded("Name")) {
+                    TextField(AppInfo.branded("Project name"), text: $name)
                         .focused($focused)
                         .workspaceTextField(width: 280)
                 }
@@ -5878,10 +5788,10 @@ private struct ProjectRenameSheet: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
                     .glassButton()
                     .keyboardShortcut(.cancelAction)
-                Button(loc.t("Guardar", "Save"), systemImage: "checkmark", action: saveName)
+                Button(AppInfo.branded("Save"), systemImage: "checkmark", action: saveName)
                     .glassButton(prominent: true)
                     .keyboardShortcut(.defaultAction)
                     .disabled(trimmedName.isEmpty)

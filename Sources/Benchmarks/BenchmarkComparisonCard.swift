@@ -26,15 +26,14 @@ struct BenchmarkComparisonCard: View, Equatable {
 
     var body: some View {
         if history.count < 2 {
-            Card(title: loc.t("Comparación", "Comparison"), icon: "arrow.left.arrow.right") {
-                ContentUnavailableView(loc.t("Se necesitan dos resultados", "Two results are required"),
+            Card(title: AppInfo.branded("Comparison"), icon: "arrow.left.arrow.right") {
+                ContentUnavailableView(AppInfo.branded("Two results are required"),
                                        systemImage: "chart.bar.xaxis",
-                                       description: Text(loc.t("Ejecuta otro benchmark para comparar.",
-                                                               "Run another benchmark to compare.")))
+                                       description: Text(AppInfo.branded("Run another benchmark to compare.")))
                     .frame(height: 150)
             }
         } else if let first, let second {
-            Card(title: loc.t("Comparar ejecuciones", "Compare runs"), icon: "arrow.left.arrow.right") {
+            Card(title: AppInfo.branded("Compare runs"), icon: "arrow.left.arrow.right") {
                 VStack(spacing: 16) {
                     let options = history.map { result in
                         XeonDropdown<UUID?>.Option(value: result.id,
@@ -42,15 +41,15 @@ struct BenchmarkComparisonCard: View, Equatable {
                                                    subtitle: result.date.formatted(date: .abbreviated, time: .shortened))
                     }
                     HStack(spacing: 12) {
-                        ComparisonRunPicker(title: loc.t("Ejecución A", "Run A"), selection: $runA, options: options)
+                        ComparisonRunPicker(title: AppInfo.branded("Run A"), selection: $runA, options: options)
                         Image(systemName: "arrow.left.arrow.right")
                             .foregroundStyle(.secondary).accessibilityHidden(true)
-                        ComparisonRunPicker(title: loc.t("Ejecución B", "Run B"), selection: $runB, options: options)
+                        ComparisonRunPicker(title: AppInfo.branded("Run B"), selection: $runB, options: options)
                     }
                     HStack(spacing: 12) {
                         ComparisonMetric(title: "Prompt", first: first.pp, second: second.pp,
                                          color: Color.chartSecondary)
-                        ComparisonMetric(title: loc.t("Generación", "Generation"),
+                        ComparisonMetric(title: AppInfo.branded("Generation"),
                                          first: first.tg, second: second.tg, color: Color.appAccent)
                     }
                     HStack(alignment: .top, spacing: 12) {
@@ -81,7 +80,7 @@ private struct ComparisonRunPicker: View {
             Text(title.uppercased()).font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
             // Not a Picker: a native pop-up is as wide as its longest item, and this one lists the whole history.
             XeonDropdown(selection: $selection, options: options, width: nil, listWidth: 420)
-                .help(loc.t("Elige la ejecución a comparar", "Choose the run to compare"))
+                .help(AppInfo.branded("Choose the run to compare"))
         }
         .frame(maxWidth: .infinity)
     }
@@ -136,7 +135,7 @@ private struct ComparisonRunDetails: View {
                     .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Text(result.gpu ?? loc.t("GPU predeterminada", "Default GPU"))
+            Text(result.gpu ?? AppInfo.branded("Default GPU"))
                 .font(.caption).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(10).frame(maxWidth: .infinity)

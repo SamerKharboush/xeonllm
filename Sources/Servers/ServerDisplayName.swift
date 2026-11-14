@@ -10,7 +10,7 @@ extension ServerManager {
             return server.name
         }
         if index == 0 {
-            return loc.t("Servidor principal", "Primary server")
+            return AppInfo.branded("Primary server")
         }
 
         let stored = server.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -19,8 +19,8 @@ extension ServerManager {
             guard let expression = try? NSRegularExpression(pattern: pattern),
                   let match = expression.firstMatch(in: stored, range: NSRange(stored.startIndex..., in: stored)),
                   let range = Range(match.range(at: 1), in: stored) else { continue }
-            return loc.t("Servidor %@", "Server %@", String(stored[range]))
+            return AppInfo.branded("Server \(String(stored[range]))")
         }
-        return stored.isEmpty ? loc.t("Servidor %@", "Server %@", String(index + 1)) : stored
+        return stored.isEmpty ? AppInfo.branded("Server \(String(index + 1))") : stored
     }
 }

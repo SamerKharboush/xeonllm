@@ -39,15 +39,15 @@ struct ImageGenComponent: Identifiable {
         }
     }
 
-    func label(_ spanish: Bool) -> String {
+    var label: String {
         switch kind {
-        case .checkpoint:  return spanish ? "Modelo" : "Model"
-        case .diffusion:   return spanish ? "Modelo de difusión" : "Diffusion model"
+        case .checkpoint:  return "Model"
+        case .diffusion:   return "Diffusion model"
         case .vae:         return "VAE"
-        case .audioVAE:    return spanish ? "VAE de audio" : "Audio VAE"
-        case .connectors:  return spanish ? "Conectores" : "Connectors"
-        case .llmVision:   return spanish ? "Proyector de visión" : "Vision projector"
-        case .textEncoder, .t5, .clipL: return spanish ? "Codificador de texto" : "Text encoder"
+        case .audioVAE:    return "Audio VAE"
+        case .connectors:  return "Connectors"
+        case .llmVision:   return "Vision projector"
+        case .textEncoder, .t5, .clipL: return "Text encoder"
         }
     }
 
@@ -60,8 +60,8 @@ struct ImageGenComponent: Identifiable {
 /// An image-generation model the app can install and run.
 struct ImageGenModel: Identifiable {
     let name: String
-    let detailES: String
-    let detailEN: String
+    /// One-line description shown under the model name.
+    let detail: String
     let components: [ImageGenComponent]
     /// Steps the model is tuned for (Turbo/distilled models need very few).
     let defaultSteps: Int
@@ -159,7 +159,6 @@ struct ImageGenModel: Identifiable {
             .map(\.sizeGB).max() ?? totalGB
     }
 
-    func detail(_ spanish: Bool) -> String { spanish ? detailES : detailEN }
 }
 
 enum ImageGenCatalog {
@@ -174,8 +173,7 @@ enum ImageGenCatalog {
     /// Stable Diffusion 1.5 (0.9B, single checkpoint). Tiny and fast for small GPUs.
     static let sd15 = ImageGenModel(
         name: "SD 1.5",
-        detailES: "Diminuto y veloz. Para GPUs pequeñas; enorme ecosistema de estilos.",
-        detailEN: "Tiny and fast. For small GPUs; huge ecosystem of styles.",
+        detail: "Tiny and fast. For small GPUs; huge ecosystem of styles.",
         components: [ImageGenComponent(kind: .checkpoint,
             urlString: "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/main/stable-diffusion-v1-5-pruned-emaonly-Q8_0.gguf",
             fileName: "sd-v1-5-Q8_0.gguf", sizeGB: 1.68)],
@@ -187,8 +185,7 @@ enum ImageGenCatalog {
     /// SDXL Turbo (3.5B, single checkpoint). Few steps, opens the LoRA/style world.
     static let sdxlTurbo = ImageGenModel(
         name: "SDXL Turbo",
-        detailES: "3.5B, pocos pasos. Buena calidad y compatible con LoRAs/estilos SDXL.",
-        detailEN: "3.5B, few steps. Strong quality and compatible with SDXL LoRAs/styles.",
+        detail: "3.5B, few steps. Strong quality and compatible with SDXL LoRAs/styles.",
         components: [ImageGenComponent(kind: .checkpoint,
             urlString: "https://huggingface.co/stabilityai/sdxl-turbo/resolve/main/sd_xl_turbo_1.0_fp16.safetensors",
             fileName: "sd_xl_turbo_1.0_fp16.safetensors", sizeGB: 6.6)],
@@ -200,8 +197,7 @@ enum ImageGenCatalog {
     /// Z-Image Turbo (6B DiT, 8 steps, Apache). Diffusion + VAE + Qwen3-4B encoder.
     static let zImageTurbo = ImageGenModel(
         name: "Z-Image Turbo",
-        detailES: "6B, 8 pasos, Apache. Rápido y fotorrealista; el mejor equilibrio en tarjetas AMD.",
-        detailEN: "6B, 8 steps, Apache. Fast and photorealistic; the best balance on AMD cards.",
+        detail: "6B, 8 steps, Apache. Fast and photorealistic; the best balance on AMD cards.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/leejet/Z-Image-Turbo-GGUF/resolve/main/z_image_turbo-Q4_0.gguf",
@@ -218,8 +214,7 @@ enum ImageGenCatalog {
     /// Flux.1 schnell (12B, 4 steps, Apache). Top prompt adherence for large GPUs.
     static let fluxSchnell = ImageGenModel(
         name: "Flux.1 schnell",
-        detailES: "12B, 4 pasos, Apache. Máxima adherencia al prompt.",
-        detailEN: "12B, 4 steps, Apache. Top prompt adherence.",
+        detail: "12B, 4 steps, Apache. Top prompt adherence.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/city96/FLUX.1-schnell-gguf/resolve/main/flux1-schnell-Q4_0.gguf",
@@ -244,8 +239,7 @@ enum ImageGenCatalog {
     /// Flux.2 klein 4B: the lightest Flux 2 (4 steps). `recommendable:false` keeps Z-Image the curated AMD pick.
     static let flux2Klein4B = ImageGenModel(
         name: "Flux.2 klein 4B",
-        detailES: "4B, 4 pasos, Apache. El Flux 2 más ligero: rápido y deja más VRAM para imágenes grandes.",
-        detailEN: "4B, 4 steps, Apache. The lightest Flux 2: fast, and leaves more VRAM for larger images.",
+        detail: "4B, 4 steps, Apache. The lightest Flux 2: fast, and leaves more VRAM for larger images.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/leejet/FLUX.2-klein-4B-GGUF/resolve/main/flux-2-klein-4b-Q4_0.gguf",
@@ -261,8 +255,7 @@ enum ImageGenCatalog {
     /// Flux.2 klein 9B (step-distilled, Apache). Flux 2 quality for 16 GB GPUs.
     static let flux2Klein9B = ImageGenModel(
         name: "Flux.2 klein 9B",
-        detailES: "9B, 4 pasos, Apache. La calidad de Flux 2 sin la descarga de 30 GB.",
-        detailEN: "9B, 4 steps, Apache. Flux 2 quality without the 30 GB download.",
+        detail: "9B, 4 steps, Apache. Flux 2 quality without the 30 GB download.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/leejet/FLUX.2-klein-9B-GGUF/resolve/main/flux-2-klein-9b-Q4_0.gguf",
@@ -280,8 +273,7 @@ enum ImageGenCatalog {
     /// holds VRAM at a time.
     static let flux2Dev = ImageGenModel(
         name: "Flux.2 dev",
-        detailES: "32B, la referencia de calidad. Muy pesado (34 GB de descarga). Licencia no comercial.",
-        detailEN: "32B, the quality reference. Very heavy (34 GB download). Non-commercial license.",
+        detail: "32B, the quality reference. Very heavy (34 GB download). Non-commercial license.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/city96/FLUX.2-dev-gguf/resolve/main/flux2-dev-Q4_K_S.gguf",
@@ -298,8 +290,7 @@ enum ImageGenCatalog {
     /// Heavy: for 24 GB+ GPUs. Text encoder is Qwen2.5-VL.
     static let qwenImage = ImageGenModel(
         name: "Qwen-Image",
-        detailES: "20B. Escribe texto legible dentro de la imagen. Muy pesado y lento.",
-        detailEN: "20B. Renders legible text inside images. Heavy and slow.",
+        detail: "20B. Renders legible text inside images. Heavy and slow.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/city96/Qwen-Image-gguf/resolve/main/qwen-image-Q4_0.gguf",
@@ -322,12 +313,12 @@ enum ImageGenCatalog {
 
     /// Qwen-Image 2.1 (7B MMDiT, non-commercial license). Writes legible text and edits from
     /// reference images; Turbo shares its VAE and the Qwen3-VL-8B encoder, which runs off the card.
-    static func qwenImage21(_ name: String, detailES: String, detailEN: String,
+    static func qwenImage21(_ name: String, detail: String,
                             repo: String = "leejet/Qwen-Image-2.1-GGUF", revision: String = "main",
                             file: String, formerFile: String? = nil, sizeGB: Double, minVRAMGB: Double,
                             recommendable: Bool, turbo: Bool = false) -> ImageGenModel {
         ImageGenModel(
-            name: name, detailES: detailES, detailEN: detailEN,
+            name: name, detail: detail,
             components: [
                 ImageGenComponent(kind: .diffusion,
                     urlString: "https://huggingface.co/\(repo)/resolve/\(revision)/\(file)",
@@ -358,26 +349,22 @@ enum ImageGenCatalog {
 
     static let qwenImage21Q3 = qwenImage21(
         "Qwen-Image 2.1 (Q3)",
-        detailES: "7B. Escribe texto legible y edita desde imágenes de referencia. Versión ligera para 8 GB. Licencia no comercial.",
-        detailEN: "7B. Writes legible text and edits from reference images. Light build for 8 GB cards. Non-commercial license.",
+        detail: "7B. Writes legible text and edits from reference images. Light build for 8 GB cards. Non-commercial license.",
         file: "qwen_image_2.1-Q3_K.gguf", sizeGB: 3.27, minVRAMGB: 8, recommendable: false)
 
     static let qwenImage21Q4 = qwenImage21(
         "Qwen-Image 2.1",
-        detailES: "7B. Escribe texto legible dentro de la imagen y edita desde imágenes de referencia. Licencia no comercial.",
-        detailEN: "7B. Writes legible text inside the image and edits from reference images. Non-commercial license.",
+        detail: "7B. Writes legible text inside the image and edits from reference images. Non-commercial license.",
         file: "qwen_image_2.1-Q4_K.gguf", sizeGB: 4.20, minVRAMGB: 12, recommendable: false)
 
     static let qwenImage21Q6 = qwenImage21(
         "Qwen-Image 2.1 (Q6)",
-        detailES: "7B con más precisión. Mismo ritmo que la Q4. Licencia no comercial.",
-        detailEN: "7B at higher precision, at the same pace as the Q4 build. Non-commercial license.",
+        detail: "7B at higher precision, at the same pace as the Q4 build. Non-commercial license.",
         file: "qwen_image_2.1-Q6_K.gguf", sizeGB: 6.00, minVRAMGB: 12, recommendable: false)
 
     static let qwenImage21Q8 = qwenImage21(
         "Qwen-Image 2.1 (Q8)",
-        detailES: "7B casi sin pérdida, para tarjetas de 16 GB en adelante. Licencia no comercial.",
-        detailEN: "7B at near-lossless precision, for 16 GB cards and up. Non-commercial license.",
+        detail: "7B at near-lossless precision, for 16 GB cards and up. Non-commercial license.",
         file: "qwen_image_2.1-Q8_0.gguf", sizeGB: 7.69, minVRAMGB: 16, recommendable: false)
 
     /// Pinned to the commit that was measured, so the URL keeps serving those files. The AtomicChat
@@ -387,32 +374,28 @@ enum ImageGenCatalog {
 
     static let qwenImage21TurboQ3 = qwenImage21(
         "Qwen-Image 2.1 Turbo (Q3)",
-        detailES: "7B en 8 pasos en vez de 25. Texto legible y edición desde referencias. Versión ligera para 8 GB. Licencia no comercial.",
-        detailEN: "7B in 8 steps instead of 25. Legible text and edits from references. Light build for 8 GB cards. Non-commercial license.",
+        detail: "7B in 8 steps instead of 25. Legible text and edits from references. Light build for 8 GB cards. Non-commercial license.",
         repo: qwenImage21TurboRepo, revision: qwenImage21TurboRevision,
         file: "qwen-image-2.1-turbo-Q3_K_XL.gguf", formerFile: "Qwen-Image-2.1-Turbo-AD-Q3_K.gguf",
         sizeGB: 3.61, minVRAMGB: 8, recommendable: false, turbo: true)
 
     static let qwenImage21TurboQ4 = qwenImage21(
         "Qwen-Image 2.1 Turbo",
-        detailES: "7B en 8 pasos en vez de 25. Escribe texto legible y edita desde imágenes de referencia. Licencia no comercial.",
-        detailEN: "7B in 8 steps instead of 25. Writes legible text and edits from reference images. Non-commercial license.",
+        detail: "7B in 8 steps instead of 25. Writes legible text and edits from reference images. Non-commercial license.",
         repo: qwenImage21TurboRepo, revision: qwenImage21TurboRevision,
         file: "qwen-image-2.1-turbo-Q4_K_M.gguf", formerFile: "Qwen-Image-2.1-Turbo-AD-Q4_K.gguf",
         sizeGB: 4.20, minVRAMGB: 12, recommendable: false, turbo: true)
 
     static let qwenImage21TurboQ6 = qwenImage21(
         "Qwen-Image 2.1 Turbo (Q6)",
-        detailES: "7B en 8 pasos, con más precisión. Licencia no comercial.",
-        detailEN: "7B in 8 steps, at higher precision. Non-commercial license.",
+        detail: "7B in 8 steps, at higher precision. Non-commercial license.",
         repo: qwenImage21TurboRepo, revision: qwenImage21TurboRevision,
         file: "qwen-image-2.1-turbo-Q6_K_XL.gguf", formerFile: "Qwen-Image-2.1-Turbo-AD-Q6_K.gguf",
         sizeGB: 6.72, minVRAMGB: 12, recommendable: false, turbo: true)
 
     static let qwenImage21TurboQ8 = qwenImage21(
         "Qwen-Image 2.1 Turbo (Q8)",
-        detailES: "7B en 8 pasos, casi sin pérdida, para tarjetas de 16 GB en adelante. Licencia no comercial.",
-        detailEN: "7B in 8 steps at near-lossless precision, for 16 GB cards and up. Non-commercial license.",
+        detail: "7B in 8 steps at near-lossless precision, for 16 GB cards and up. Non-commercial license.",
         repo: qwenImage21TurboRepo, revision: qwenImage21TurboRevision,
         file: "qwen-image-2.1-turbo-Q8_0.gguf", formerFile: "Qwen-Image-2.1-Turbo-Q8_0.gguf",
         sizeGB: 7.64, minVRAMGB: 16, recommendable: false, turbo: true)
@@ -458,8 +441,7 @@ enum ImageGenCatalog {
         }
         // Assume the SD/SDXL UNet family (the common custom case) for the VRAM cap.
         return ImageGenModel(name: "Custom",
-            detailES: "Tu propio modelo. Ajusta pasos y CFG según su ficha.",
-            detailEN: "Your own model. Set steps and CFG to match its card.",
+            detail: "Your own model. Set steps and CFG to match its card.",
             components: comps, defaultSteps: steps, cfgScale: cfg, minVRAMGB: 0,
             attnVRAMSq: 3.4e-12)
     }
@@ -1453,22 +1435,19 @@ final class ImageUpscaler: ObservableObject {
             }
         }
 
-        func label(_ spanish: Bool) -> String {
+        var label: String {
             switch self {
-            case .photo:  return spanish ? "Fotos" : "Photos"
-            case .art:    return spanish ? "Generada" : "Generated"
-            case .custom: return spanish ? "Otro" : "Custom"
+            case .photo:  return "Photos"
+            case .art:    return "Generated"
+            case .custom: return "Custom"
             }
         }
 
-        func detail(_ spanish: Bool) -> String {
+        var detail: String {
             switch self {
-            case .photo:  return spanish ? "4xNomosWebPhoto. Entrenado con ruido, desenfoque y recompresión reales."
-                                         : "4xNomosWebPhoto. Trained on real noise, lens blur and re-compression."
-            case .art:    return spanish ? "4x-UltraSharp. Más contraste y detalle fino; luce en arte generado."
-                                         : "4x-UltraSharp. More contrast and fine detail; shines on generated art."
-            case .custom: return spanish ? "Tu propio modelo ESRGAN ×4 (.pth o .safetensors)."
-                                         : "Your own 4x ESRGAN model (.pth or .safetensors)."
+            case .photo:  return "4xNomosWebPhoto. Trained on real noise, lens blur and re-compression."
+            case .art:    return "4x-UltraSharp. More contrast and fine detail; shines on generated art."
+            case .custom: return "Your own 4x ESRGAN model (.pth or .safetensors)."
             }
         }
     }

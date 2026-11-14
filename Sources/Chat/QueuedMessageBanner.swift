@@ -14,12 +14,12 @@ struct QueuedMessageBanner: View {
             Image(systemName: "arrow.turn.down.right")
                 .foregroundStyle(Color.appAccent)
             VStack(alignment: .leading, spacing: 2) {
-                Text(loc.t("Intervención en cola", "Steering message queued"))
+                Text(AppInfo.branded("Steering message queued"))
                     .font(.caption.weight(.semibold))
                 Text(summary).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer()
-            Button(loc.t("Cancelar intervención", "Cancel steering message"),
+            Button(AppInfo.branded("Cancel steering message"),
                    systemImage: "xmark", action: cancel)
                        .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -32,7 +32,7 @@ struct QueuedMessageBanner: View {
     private var summary: String {
         let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
         let files = message.attachments.count + message.imageURIs.count
-        if text.isEmpty { return loc.t("%@ adjunto(s)", "%@ attachment(s)", "\(files)") }
-        return files == 0 ? text : loc.t("%@ · %@ adjunto(s)", "%@ · %@ attachment(s)", "\(text)", "\(files)")
+        if text.isEmpty { return AppInfo.branded("\(files) attachment(s)") }
+        return files == 0 ? text : AppInfo.branded("\(text) · \(files) attachment(s)")
     }
 }

@@ -20,16 +20,14 @@ struct ToolPermissionCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(request.displayName).font(.callout.weight(.semibold))
                     Text(usesInternet
-                         ? loc.t("Envía los puntos a Apple Maps por internet para trazar la ruta por carretera. Si lo deniegas, se dibuja una línea recta.",
-                                 "Sends the points to Apple Maps over the internet to find the road route. If you deny it, a straight line is drawn.")
+                         ? AppInfo.branded("Sends the points to Apple Maps over the internet to find the road route. If you deny it, a straight line is drawn.")
                          : request.writesData
-                         ? loc.t("Puede modificar archivos o ejecutar acciones.",
-                                 "Can modify files or run actions.")
-                         : loc.t("Solicita acceso de lectura.", "Requests read access."))
+                         ? AppInfo.branded("Can modify files or run actions.")
+                         : AppInfo.branded("Requests read access."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(loc.t("Ver argumentos", "Show arguments"), systemImage: "chevron.down") {
+                Button(AppInfo.branded("Show arguments"), systemImage: "chevron.down") {
                     showingArguments.toggle()
                 }
                     .labelStyle(.iconOnly)
@@ -44,13 +42,13 @@ struct ToolPermissionCard: View {
                     .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 7))
             }
             HStack {
-                Button(loc.t("Denegar", "Deny"), role: .destructive) { decide(.deny) }
+                Button(AppInfo.branded("Deny"), role: .destructive) { decide(.deny) }
                 Spacer()
                 if request.serverID != nil {
-                    Button(loc.t("Siempre este servidor", "Always this server")) { decide(.alwaysServer) }
+                    Button(AppInfo.branded("Always this server")) { decide(.alwaysServer) }
                 }
-                Button(loc.t("Permitir siempre", "Always allow")) { decide(.always) }
-                Button(loc.t("Permitir una vez", "Allow once")) { decide(.once) }
+                Button(AppInfo.branded("Always allow")) { decide(.always) }
+                Button(AppInfo.branded("Allow once")) { decide(.once) }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }

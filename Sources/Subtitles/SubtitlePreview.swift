@@ -81,7 +81,7 @@ struct SubtitlePreview: View {
     }
 
     private var emptyTitle: String {
-        studio.isBusy ? loc.t("Procesando", "Processing") : loc.t("Sin subtítulos todavía", "No subtitles yet")
+        studio.isBusy ? AppInfo.branded("Processing") : AppInfo.branded("No subtitles yet")
     }
 
     private var emptyIcon: String {
@@ -90,9 +90,7 @@ struct SubtitlePreview: View {
 
     private var emptyDescription: String {
         studio.isBusy
-            ? loc.t("Los segmentos aparecerán cuando Whisper termine.",
-                    "Segments will appear when Whisper finishes.")
-            : loc.t("Configura el resultado y pulsa Crear subtítulos.",
-                    "Configure the result and press Create subtitles.")
+            ? AppInfo.branded("Segments will appear when Whisper finishes.")
+            : AppInfo.branded("Configure the result and press Create subtitles.")
     }
 }

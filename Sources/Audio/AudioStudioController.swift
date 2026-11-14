@@ -146,19 +146,19 @@ final class AudioStudioController: ObservableObject {
         guard !SpeechDictationController.shared.isDictating,
               !SpeechDictationController.shared.isTranscribing,
               !AppleSpeechDictationController.shared.isDictating else {
-            fail("Termina primero el dictado del micrófono o la transcripción adjunta / finish microphone dictation or the attached transcription first.")
+            fail("Finish microphone dictation or the attached transcription first.")
             return
         }
         guard FileManager.default.isExecutableFile(atPath: SpeechDictationController.binary) else {
-            fail("No se encontró Whisper.cpp / Whisper.cpp is missing.")
+            fail("Whisper.cpp is missing.")
             return
         }
         guard !vadConfiguration.isEnabled || FileManager.default.fileExists(atPath: vadModelURL.path) else {
-            fail("No se encontró el detector de voz Silero / the Silero voice detector is missing.")
+            fail("the Silero voice detector is missing.")
             return
         }
         if operation == .translateLocal && targetLanguage.trimmingCharacters(in: .whitespaces).isEmpty {
-            fail("Elige un idioma de destino / choose a target language.")
+            fail("Choose a target language.")
             return
         }
 
@@ -222,7 +222,7 @@ final class AudioStudioController: ObservableObject {
         guard let sourceURL, !isBusy, vadConfiguration.isEnabled else { return }
         guard FileManager.default.isExecutableFile(atPath: SpeechDictationController.binary),
               FileManager.default.fileExists(atPath: vadModelURL.path) else {
-            vadPreviewState = .failed("Falta Whisper o Silero VAD / Whisper or Silero VAD is missing.")
+            vadPreviewState = .failed("Whisper or Silero VAD is missing.")
             return
         }
         let id = UUID()
@@ -249,7 +249,7 @@ final class AudioStudioController: ObservableObject {
             Task { @MainActor in
                 guard let self, self.runID == id else { return }
                 guard completed.terminationStatus == 0 else {
-                    self.finishVADPreview(.failed("No se pudo preparar la muestra / the sample could not be prepared."))
+                    self.finishVADPreview(.failed("The sample could not be prepared."))
                     return
                 }
                 self.runVADPreview(audioURL: audioURL, modelURL: modelURL,
@@ -286,7 +286,7 @@ final class AudioStudioController: ObservableObject {
             Task { @MainActor in
                 guard let self, self.runID == id else { return }
                 guard completed.terminationStatus == 0 else {
-                    self.finishVADPreview(.failed("VAD no pudo analizar la muestra / VAD could not analyze the sample."))
+                    self.finishVADPreview(.failed("VAD could not analyze the sample."))
                     return
                 }
                 let raw = (try? String(contentsOf: base.appendingPathExtension("srt"), encoding: .utf8)) ?? ""
@@ -412,7 +412,7 @@ final class AudioStudioController: ObservableObject {
                 self.stderrPipe = nil
                 self.process = nil
                 guard completed.terminationStatus == 0 else {
-                    self.fail(self.stderrBuffer.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Whisper.cpp no pudo completar la transcripción / could not complete the transcription.")
+                    self.fail(self.stderrBuffer.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Whisper.cpp could not complete the transcription.")
                     return
                 }
                 self.loadWhisperResult(operation: operation, targetLanguage: targetLanguage,
@@ -480,7 +480,7 @@ final class AudioStudioController: ObservableObject {
         let raw = (try? String(contentsOf: srtURL, encoding: .utf8)) ?? ""
         let parsed = SubtitleCue.parseSRT(raw)
         guard !parsed.isEmpty else {
-            fail("No se detectó voz / no speech was detected.")
+            fail("No speech was detected.")
             return
         }
         originalCues = parsed
@@ -901,7 +901,7 @@ final class AudioStudioController: ObservableObject {
         let mediaURL = URL(fileURLWithPath: document.sourcePath)
         guard FileManager.default.fileExists(atPath: mediaURL.path) else {
             throw CocoaError(.fileNoSuchFile,
-                             userInfo: [NSLocalizedDescriptionKey: "No se encontró el audio o vídeo original / the original audio or video could not be found."])
+                             userInfo: [NSLocalizedDescriptionKey: "The original audio or video could not be found."])
         }
         select(mediaURL)
         originalCues = document.originalCues

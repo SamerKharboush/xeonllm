@@ -95,7 +95,7 @@ enum EngineCheck {
     }
 
     /// Plain-text section for the diagnostics file.
-    static func report(_ r: EngineCheckResult, localized loc: (String, String) -> String) -> String {
+    static func report(_ r: EngineCheckResult) -> String {
         var out: [String] = ["## Engine check (test-backend-ops)"]
         if r.cancelled { out.append("CANCELLED by the user, the results below are incomplete") }
         if !r.device.isEmpty { out.append("GPU: \(r.device)") }
@@ -122,17 +122,15 @@ enum EngineCheck {
     }
 
     /// One-line verdict for the UI.
-    static func verdict(_ r: EngineCheckResult, localized loc: (String, String) -> String) -> String {
-        if r.cancelled { return loc("Comprobación cancelada", "Check cancelled") }
-        if r.backends.isEmpty { return loc("El motor no completó la comprobación", "The engine did not finish the check") }
+    static func verdict(_ r: EngineCheckResult) -> String {
+        if r.cancelled { return "Check cancelled" }
+        if r.backends.isEmpty { return "The engine did not finish the check" }
         let total = r.backends.reduce(0) { $0 + $1.total }
         let passed = r.backends.reduce(0) { $0 + $1.passed }
         if r.failures.isEmpty {
-            return loc("Motor correcto: \(passed) de \(total) operaciones",
-                       "Engine is correct: \(passed) of \(total) operations")
+            return "Engine is correct: \(passed) of \(total) operations"
         }
-        return loc("\(r.failures.count) operación(es) con resultado incorrecto de \(total)",
-                   "\(r.failures.count) operation(s) returned wrong results out of \(total)")
+        return "\(r.failures.count) operation(s) returned wrong results out of \(total)"
     }
 }
 

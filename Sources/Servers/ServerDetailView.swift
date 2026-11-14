@@ -37,16 +37,16 @@ struct ServerDetailView: View {
 
     private var configurationModeBar: some View {
         HStack(spacing: 12) {
-            Label(loc.t("Nivel de configuración", "Configuration level"),
+            Label(AppInfo.branded("Configuration level"),
                   systemImage: showAdvanced ? "slider.horizontal.3" : "person.fill")
                 .font(.system(size: 13, weight: .semibold))
-            Text(showAdvanced ? loc.t("Avanzado", "Advanced") : loc.t("Básico", "Basic"))
+            Text(showAdvanced ? AppInfo.branded("Advanced") : AppInfo.branded("Basic"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(showAdvanced ? Color.appAccent : .secondary)
                 .padding(.horizontal, 9).padding(.vertical, 4)
                 .background((showAdvanced ? Color.appAccent : Color.secondary).opacity(0.10), in: Capsule())
             Spacer()
-            Toggle(loc.t("Mostrar opciones avanzadas", "Show advanced options"), isOn: $showAdvanced)
+            Toggle(AppInfo.branded("Show advanced options"), isOn: $showAdvanced)
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .font(.system(size: 12, weight: .medium))
@@ -55,8 +55,7 @@ struct ServerDetailView: View {
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(WorkspaceStyle.inset, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(WorkspaceStyle.border))
-        .help(loc.t("Activa la configuración técnica del servidor.",
-                    "Enables the server's technical configuration."))
+        .help(AppInfo.branded("Enables the server's technical configuration."))
     }
 
     @ViewBuilder private var tabContent: some View {
@@ -96,25 +95,25 @@ private struct ServerMetricStrip: View {
         let settings = server.effectiveSettings()
         let estimate = estimatedMemory(for: settings)
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
-            DashboardMetric(title: loc.t("Última generación", "Last generation"), icon: "bolt.fill",
+            DashboardMetric(title: AppInfo.branded("Last generation"), icon: "bolt.fill",
                             value: server.genSpeed.map { String(format: "%.1f t/s", $0) } ?? "—",
-                            detail: loc.t("Velocidad de la petición más reciente", "Most recent request speed"),
+                            detail: AppInfo.branded("Most recent request speed"),
                             history: Array(server.genHistory.suffix(28)))
-            DashboardMetric(title: loc.t("Peticiones", "Requests"), icon: "bubble.left.and.text.bubble.right",
+            DashboardMetric(title: AppInfo.branded("Requests"), icon: "bubble.left.and.text.bubble.right",
                             value: "\(server.requestCount)",
-                            detail: loc.t("Completadas en esta sesión", "Completed this session"), tint: .chartSecondary)
-            DashboardMetric(title: loc.t("Uso de VRAM", "VRAM usage"), icon: "memorychip",
+                            detail: AppInfo.branded("Completed this session"), tint: .chartSecondary)
+            DashboardMetric(title: AppInfo.branded("VRAM usage"), icon: "memorychip",
                             value: vram.gpus.isEmpty ? "—" : String(format: "%.1f / %.0f GB", vram.usedMB / 1024, vram.totalMB / 1024),
                             detail: String(format: "%.0f%%", vram.fraction * 100), progress: vram.fraction)
-            DashboardMetric(title: loc.t("Memoria estimada", "Estimated memory"), icon: "gauge.with.needle",
+            DashboardMetric(title: AppInfo.branded("Estimated memory"), icon: "gauge.with.needle",
                             value: estimate.map { String(format: "%.1f GB VRAM", $0.vramGB) } ?? "—",
                             detail: estimate.map { String(format: "%.1f GB RAM", $0.ramGB) }
-                                ?? loc.t("Selecciona un modelo", "Choose a model"), tint: .chartSecondary)
-            DashboardMetric(title: loc.t("Longitud de contexto", "Context length"), icon: "doc.plaintext",
-                            value: settings.contextAutomatic ? loc.t("Auto · 16k", "Auto · 16k") : ServerSettings.contextLabel(settings.ctx),
+                                ?? AppInfo.branded("Choose a model"), tint: .chartSecondary)
+            DashboardMetric(title: AppInfo.branded("Context length"), icon: "doc.plaintext",
+                            value: settings.contextAutomatic ? AppInfo.branded("Auto · 16k") : ServerSettings.contextLabel(settings.ctx),
                             detail: settings.contextAutomatic
-                                ? loc.t("Seleccionado por la app", "Selected by the app")
-                                : loc.t("Máximo configurado", "Configured maximum"),
+                                ? AppInfo.branded("Selected by the app")
+                                : AppInfo.branded("Configured maximum"),
                             progress: min(Double(settings.ctx) / 262_144, 1), tint: .chartSecondary)
         }
     }
@@ -165,11 +164,11 @@ private struct ServerDetailHero: View {
             ModelBrandIcon(name: settings.modelPath, size: 54)
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 8) {
-                    Text(settings.modelPath.isEmpty ? loc.t("Sin modelo", "No model") : model.title)
+                    Text(settings.modelPath.isEmpty ? AppInfo.branded("No model") : model.title)
                         .font(.system(size: 23, weight: .bold))
                     modelMenu
                 }
-                Text(model.quant.isEmpty ? loc.t("Configura un modelo para esta instancia", "Configure a model for this instance") : model.quant)
+                Text(model.quant.isEmpty ? AppInfo.branded("Configure a model for this instance") : model.quant)
                     .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary)
                 WrappingFilterLayout(spacing: 7) {
                     if let params = model.paramsB { chip(String(format: "%.1fB params", params), "atom") }
@@ -180,7 +179,7 @@ private struct ServerDetailHero: View {
                 Text(description(for: model))
                     .font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(2)
                 if let local = localModel(at: settings.modelPath) {
-                    Button(loc.t("Ver detalles del modelo", "View model details") + "  →") {
+                    Button(AppInfo.branded("View model details") + "  →") {
                         inspectedModel = local
                     }
                     .buttonStyle(.plain).foregroundStyle(Color.appAccent).font(.system(size: 13, weight: .medium))
@@ -201,12 +200,12 @@ private struct ServerDetailHero: View {
 
     private func description(for model: ModelName) -> String {
         if model.badges.contains("Coder") {
-            return loc.t("Modelo local especializado en programación y tareas con herramientas.", "Local model specialized in coding and tool-driven work.")
+            return AppInfo.branded("Local model specialized in coding and tool-driven work.")
         }
         if model.badges.contains("Vision") {
-            return loc.t("Modelo multimodal local para texto, imágenes y conversación.", "Local multimodal model for text, images and conversation.")
+            return AppInfo.branded("Local multimodal model for text, images and conversation.")
         }
-        return loc.t("Modelo local para conversación, escritura y tareas cotidianas.", "Local model for chat, writing and everyday tasks.")
+        return AppInfo.branded("Local model for chat, writing and everyday tasks.")
     }
 
     private func localModel(at path: String) -> LocalModel? {
@@ -242,7 +241,7 @@ private struct ServerDetailHero: View {
                     }
                     .help("\(phase.title(loc)): \(phase.help(loc))")
                 } else if let started = server.startedAt {
-                    Text(loc.t("Activo durante %@", "Uptime %@", duration(from: started, to: context.date)))
+                    Text(AppInfo.branded("Uptime \(duration(from: started, to: context.date))"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -257,28 +256,28 @@ private struct ServerDetailHero: View {
             ServerWebUIButton(server: server)
                 .glassButton()
             Button { server.restart(server.effectiveSettings()) } label: {
-                Label(loc.t("Reiniciar", "Restart"), systemImage: "arrow.clockwise")
+                Label(AppInfo.branded("Restart"), systemImage: "arrow.clockwise")
             }
             .glassButton()
             .disabled(server.state != .running)
             .opacity(server.state == .running ? 1 : 0.48)
             .help(server.state == .running
-                  ? loc.t("Reiniciar este servidor", "Restart this server")
-                  : loc.t("Disponible cuando el servidor está activo", "Available while the server is running"))
+                  ? AppInfo.branded("Restart this server")
+                  : AppInfo.branded("Available while the server is running"))
             if server.state == .running || server.state == .starting {
                 Button { server.stop() } label: {
-                    Label(loc.t("Detener servidor", "Stop server"), systemImage: "stop.fill")
+                    Label(AppInfo.branded("Stop server"), systemImage: "stop.fill")
                 }.glassButton(prominent: true)
             } else {
                 // read at the click: `settings` is this view's last render, which a global KV change does not redraw
                 Button { server.start(server.effectiveSettings()) } label: {
-                    Label(loc.t("Iniciar servidor", "Start server"), systemImage: "play.fill")
+                    Label(AppInfo.branded("Start server"), systemImage: "play.fill")
                 }.glassButton(prominent: true)
                     .disabled(settings.routerMode ? models.models.isEmpty : settings.modelPath.isEmpty)
             }
             if server.profile != nil {
                 Menu {
-                    Button(loc.t("Eliminar servidor", "Delete server"), systemImage: "trash", role: .destructive) {
+                    Button(AppInfo.branded("Delete server"), systemImage: "trash", role: .destructive) {
                         manager.removeServer(server.id)
                         control.serverAnchor = nil
                     }
@@ -293,10 +292,10 @@ private struct ServerDetailHero: View {
         let current = server.effectiveSettings().modelPath
         return Menu {
             if models.models.isEmpty {
-                Text(loc.t("No hay modelos descargados", "No downloaded models"))
+                Text(AppInfo.branded("No downloaded models"))
             } else {
                 ForEach(ModelFamilyGroup.grouped(models.models)) { group in
-                    Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                    Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                         ForEach(group.models) { local in
                             Button {
                                 selectModel(local.url.path)
@@ -316,7 +315,7 @@ private struct ServerDetailHero: View {
         }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .disabled(server.state == .running || server.state == .starting)
-        .help(loc.t("Cambiar el modelo de este servidor", "Change this server's model"))
+        .help(AppInfo.branded("Change this server's model"))
     }
 
     private func selectModel(_ path: String) {
@@ -342,11 +341,11 @@ private struct ServerDetailTabs: View {
 
     var body: some View {
         GlassSegmentedControl(selection: $selection, segments: [
-            .init(value: .configuration, title: loc.t("Configuración", "Configuration"), systemImage: "slider.horizontal.3"),
-            .init(value: .performance, title: loc.t("Rendimiento", "Performance"), systemImage: "chart.xyaxis.line"),
+            .init(value: .configuration, title: AppInfo.branded("Configuration"), systemImage: "slider.horizontal.3"),
+            .init(value: .performance, title: AppInfo.branded("Performance"), systemImage: "chart.xyaxis.line"),
             .init(value: .logs, title: "Logs", systemImage: "doc.text"),
             .init(value: .api, title: "API", systemImage: "chevron.left.forwardslash.chevron.right"),
-            .init(value: .integrations, title: loc.t("Integraciones", "Integrations"), systemImage: "point.3.connected.trianglepath.dotted")
+            .init(value: .integrations, title: AppInfo.branded("Integrations"), systemImage: "point.3.connected.trianglepath.dotted")
         ])
         .fixedSize(horizontal: true, vertical: false)
     }
@@ -415,10 +414,10 @@ private struct ServerConfigurationWorkspace: View {
                     }
                     Spacer()
                     Button { resetOverrides() } label: {
-                        Label(loc.t("Restablecer valores", "Reset to defaults"), systemImage: "arrow.counterclockwise")
+                        Label(AppInfo.branded("Reset to defaults"), systemImage: "arrow.counterclockwise")
                     }.glassButton()
                     Button { manager.persist() } label: {
-                        Label(loc.t("Guardar cambios", "Save changes"), systemImage: "checkmark")
+                        Label(AppInfo.branded("Save changes"), systemImage: "checkmark")
                     }.glassButton(prominent: true)
                 }
             }
@@ -429,25 +428,25 @@ private struct ServerConfigurationWorkspace: View {
     }
 
     private func serverSettingsCard(_ settings: ServerSettings, _ facts: ServerModelFacts) -> some View {
-        DetailPanel(title: loc.t("Ajustes del servidor", "Server settings"),
-                    subtitle: loc.t("Opciones principales de esta instancia.", "Core settings for this server instance."), icon: "server.rack", fill: true) {
+        DetailPanel(title: AppInfo.branded("Server settings"),
+                    subtitle: AppInfo.branded("Core settings for this server instance."), icon: "server.rack", fill: true) {
             if showAdvanced {
-                ServerSettingRow(icon: "number.square", title: loc.t("Puerto", "Port")) {
+                ServerSettingRow(icon: "number.square", title: AppInfo.branded("Port")) {
                     TextField("", value: port(settings), format: .number.grouping(.never))
                         .multilineTextAlignment(.trailing).workspaceTextField(width: 126)
-                        .accessibilityLabel(loc.t("Puerto", "Port"))
+                        .accessibilityLabel(AppInfo.branded("Port"))
                 }
             }
-            ServerSettingRow(icon: "doc.plaintext", title: loc.t("Longitud de contexto", "Context length")) {
+            ServerSettingRow(icon: "doc.plaintext", title: AppInfo.branded("Context length")) {
                 XeonDropdown(selection: contextChoice(settings), options: contextOptions(settings, facts), width: 180)
             }
-            ServerSettingRow(icon: "wifi", title: loc.t("Descubrible en red local", "Discoverable on local network")) {
-                Toggle(loc.t("Descubrible en red local", "Discoverable on local network"),
+            ServerSettingRow(icon: "wifi", title: AppInfo.branded("Discoverable on local network")) {
+                Toggle(AppInfo.branded("Discoverable on local network"),
                        isOn: discovery(settings)).labelsHidden().toggleStyle(.switch)
             }
             if showAdvanced {
-                ServerSettingRow(icon: "number", title: loc.t("Límite de peticiones", "Request limit"),
-                                 detail: loc.t("Solicitudes procesadas en paralelo", "Requests processed in parallel")) {
+                ServerSettingRow(icon: "number", title: AppInfo.branded("Request limit"),
+                                 detail: AppInfo.branded("Requests processed in parallel")) {
                     requestLimitMenu(settings)
                 }
             }
@@ -456,41 +455,41 @@ private struct ServerConfigurationWorkspace: View {
     }
 
     private func engineCard(_ settings: ServerSettings) -> some View {
-        DetailPanel(title: loc.t("Motor y hardware", "Engine and hardware"),
-                    subtitle: loc.t("Perfil de ejecución y aceleración.", "Execution profile and acceleration."), icon: "gearshape", fill: true) {
+        DetailPanel(title: AppInfo.branded("Engine and hardware"),
+                    subtitle: AppInfo.branded("Execution profile and acceleration."), icon: "gearshape", fill: true) {
             if showAdvanced {
-                ServerSettingRow(icon: "slider.horizontal.3", title: loc.t("Perfil del motor", "Engine profile")) {
+                ServerSettingRow(icon: "slider.horizontal.3", title: AppInfo.branded("Engine profile")) {
                     profileMenu
                 }
             }
             ServerSettingRow(icon: "cpu", title: "GPU") {
                 GPUSelectionMenu(gpuIndex: gpu(settings), gpuList: gpuList(settings))
             }
-            ServerSettingRow(icon: "arrow.triangle.2.circlepath", title: loc.t("Router (multi-modelo)", "Router (multi-model)"),
-                             detail: loc.t("Enruta peticiones entre modelos locales", "Routes requests across local models")) {
-                Toggle(loc.t("Router multi-modelo", "Multi-model router"),
+            ServerSettingRow(icon: "arrow.triangle.2.circlepath", title: AppInfo.branded("Router (multi-model)"),
+                             detail: AppInfo.branded("Routes requests across local models")) {
+                Toggle(AppInfo.branded("Multi-model router"),
                        isOn: router(settings)).labelsHidden().toggleStyle(.switch)
             }
             if router(settings).wrappedValue {
-                ServerSettingRow(icon: "square.stack.3d.up", title: loc.t("Modelos simultáneos", "Models loaded at once")) {
+                ServerSettingRow(icon: "square.stack.3d.up", title: AppInfo.branded("Models loaded at once")) {
                     Stepper("\(routerMax(settings).wrappedValue)", value: routerMax(settings), in: 1...4).fixedSize()
                 }
             }
             if showAdvanced {
                 Divider().padding(.vertical, 3)
-                Label(loc.t("Servicios y opciones avanzadas", "Services and advanced options"), systemImage: "slider.horizontal.3")
+                Label(AppInfo.branded("Services and advanced options"), systemImage: "slider.horizontal.3")
                     .font(.system(size: 14, weight: .semibold))
-                ServerSettingRow(icon: "point.3.connected.trianglepath.dotted", title: loc.t("Servidor de embeddings", "Embeddings server"),
-                                 detail: loc.t("Expone un endpoint compatible con OpenAI", "Exposes an OpenAI-compatible endpoint")) {
-                    Toggle(loc.t("Servidor de embeddings", "Embeddings server"),
+                ServerSettingRow(icon: "point.3.connected.trianglepath.dotted", title: AppInfo.branded("Embeddings server"),
+                                 detail: AppInfo.branded("Exposes an OpenAI-compatible endpoint")) {
+                    Toggle(AppInfo.branded("Embeddings server"),
                            isOn: embeddings(settings)).labelsHidden().toggleStyle(.switch)
                 }
-                ServerSettingRow(icon: "network", title: loc.t("Proxy MCP para la interfaz web", "MCP proxy for the web interface"),
-                                 detail: loc.t("Permite usar MCP mediante la interfaz web", "Allows MCP through the web interface")) {
-                    Toggle(loc.t("Proxy MCP para la interfaz web", "MCP proxy for the web interface"),
+                ServerSettingRow(icon: "network", title: AppInfo.branded("MCP proxy for the web interface"),
+                                 detail: AppInfo.branded("Allows MCP through the web interface")) {
+                    Toggle(AppInfo.branded("MCP proxy for the web interface"),
                            isOn: mcpProxy(settings)).labelsHidden().toggleStyle(.switch)
                 }
-                ServerSettingRow(icon: "terminal", title: loc.t("Argumentos extra", "Extra arguments")) {
+                ServerSettingRow(icon: "terminal", title: AppInfo.branded("Extra arguments")) {
                     TextField("--no-warmup -np 2", text: extraArgs(settings))
                         .font(.system(.callout, design: .monospaced))
                         .workspaceTextField(width: 330)
@@ -501,8 +500,8 @@ private struct ServerConfigurationWorkspace: View {
     }
 
     private func modelConfigurationCard(_ settings: ServerSettings, _ facts: ServerModelFacts) -> some View {
-        DetailPanel(title: loc.t("Configuración del modelo", "Model configuration"),
-                    subtitle: loc.t("Parámetros específicos del modelo seleccionado.", "Model-specific parameters for the selected model."), icon: "cube") {
+        DetailPanel(title: AppInfo.branded("Model configuration"),
+                    subtitle: AppInfo.branded("Model-specific parameters for the selected model."), icon: "cube") {
             if showAdvanced || facts.isMoE {
                 AdaptiveTwoUp(threshold: 820, spacing: 12) {
                     modelRuntimeGroup(settings, facts)
@@ -514,7 +513,7 @@ private struct ServerConfigurationWorkspace: View {
             }
             if !settings.modelPath.isEmpty {
                 HStack(spacing: 10) {
-                    Label(loc.t("Detectado", "Detected"), systemImage: "checkmark.seal")
+                    Label(AppInfo.branded("Detected"), systemImage: "checkmark.seal")
                         .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
@@ -523,7 +522,7 @@ private struct ServerConfigurationWorkspace: View {
                             if facts.isMoE { TagBadge(text: "MoE", icon: "square.stack.3d.up", color: .purple) }
                             if settings.usesAutoPlan { TagBadge(text: "Dynamic MoE", icon: "wand.and.stars", color: .orange) }
                             if let trained = facts.trainedContext {
-                                TagBadge(text: loc.t("Contexto %@", "Context %@", ServerSettings.contextLabel(trained)), icon: "doc.plaintext", color: .secondary)
+                                TagBadge(text: AppInfo.branded("Context \(ServerSettings.contextLabel(trained))"), icon: "doc.plaintext", color: .secondary)
                             }
                             if facts.supportsVision { TagBadge(text: "Vision", icon: "eye", color: .purple) }
                             if showAdvanced && facts.usesMTP { TagBadge(text: "MTP", icon: "hare.fill", color: .green) }
@@ -532,10 +531,10 @@ private struct ServerConfigurationWorkspace: View {
                     }
                     Spacer(minLength: 8)
                     Label(settings.usesAutoPlan
-                          ? (server.autoPlan.map { AutoMemoryText.modeLabel($0.mode) } ?? loc.t("Plan del motor", "Engine plan"))
+                          ? (server.autoPlan.map { AutoMemoryText.modeLabel($0.mode) } ?? AppInfo.branded("Engine plan"))
                           : settings.ncmoe > 0 && facts.isMoE
-                          ? loc.t("Limitado por RAM", "RAM limited")
-                          : loc.t("Limitado por VRAM", "VRAM limited"),
+                          ? AppInfo.branded("RAM limited")
+                          : AppInfo.branded("VRAM limited"),
                           systemImage: "gauge.with.needle")
                         .font(.caption).foregroundStyle(.secondary).fixedSize()
                 }
@@ -548,25 +547,24 @@ private struct ServerConfigurationWorkspace: View {
     }
 
     private func modelRuntimeGroup(_ settings: ServerSettings, _ facts: ServerModelFacts) -> some View {
-        ModelConfigurationGroup(title: loc.t("Ejecución", "Runtime"), icon: "memorychip") {
+        ModelConfigurationGroup(title: AppInfo.branded("Runtime"), icon: "memorychip") {
             if settings.usesAutoPlan {
                 ServerSettingRow(icon: "wand.and.stars", title: "Dynamic MoE",
                                  detail: server.autoPlan.map { AutoMemoryText.summary($0, runtime: server.autoRuntime) }
-                                    ?? loc.t("Activado: el motor decide expertos, lote y KV al arrancar",
-                                             "On: the engine picks experts, batch and KV when it starts")) {
-                    Text(loc.t("Activado", "On")).font(.callout.weight(.medium)).foregroundStyle(.orange)
-                        .help(loc.t("Se cambia en Ajustes → Rendimiento y memoria.", "Change it in Settings → Performance & Memory."))
+                                    ?? AppInfo.branded("On: the engine picks experts, batch and KV when it starts")) {
+                    Text(AppInfo.branded("On")).font(.callout.weight(.medium)).foregroundStyle(.orange)
+                        .help(AppInfo.branded("Change it in Settings → Performance & Memory."))
                 }
             } else if showAdvanced {
-                ServerSettingRow(icon: "square.stack.3d.down.right", title: loc.t("Micro-lote", "Micro-batch"),
-                                 detail: loc.t("Equilibra velocidad y memoria", "Balances throughput and memory")) {
+                ServerSettingRow(icon: "square.stack.3d.down.right", title: AppInfo.branded("Micro-batch"),
+                                 detail: AppInfo.branded("Balances throughput and memory")) {
                     XeonDropdown(selection: ubatch(settings), options: ubatchOptions, width: 184, listWidth: 250)
                 }
             }
             if facts.isMoE && !settings.usesAutoPlan {
                 if showAdvanced { Divider() }
-                ServerSettingRow(icon: "cpu", title: loc.t("Expertos MoE en CPU", "MoE experts on CPU"),
-                                 detail: loc.t("Reduce VRAM usando memoria del sistema", "Trades system memory for lower VRAM use")) {
+                ServerSettingRow(icon: "cpu", title: AppInfo.branded("MoE experts on CPU"),
+                                 detail: AppInfo.branded("Trades system memory for lower VRAM use")) {
                     CompactIntegerStepper(value: ncmoe(settings), range: 0...99)
                 }
             }
@@ -574,10 +572,10 @@ private struct ServerConfigurationWorkspace: View {
     }
 
     private func modelAccelerationGroup(_ settings: ServerSettings, _ facts: ServerModelFacts) -> some View {
-        ModelConfigurationGroup(title: loc.t("Capacidades y aceleración", "Capabilities and acceleration"), icon: "bolt.horizontal") {
+        ModelConfigurationGroup(title: AppInfo.branded("Capabilities and acceleration"), icon: "bolt.horizontal") {
             if facts.supportsVision {
-                ServerSettingRow(icon: "photo", title: loc.t("Modelo de visión", "Vision model"),
-                                 detail: loc.t("Proyector visual para imágenes", "Visual projector used for images")) {
+                ServerSettingRow(icon: "photo", title: AppInfo.branded("Vision model"),
+                                 detail: AppInfo.branded("Visual projector used for images")) {
                     VisionProjectorControl(modelPath: settings.modelPath, layout: .detail,
                                            loadEnabled: vision(settings))
                 }
@@ -585,60 +583,57 @@ private struct ServerConfigurationWorkspace: View {
             if settings.serverBinary == ServerSettings.defaultBinary {
                 if facts.supportsVision { Divider() }
                 ServerSettingRow(icon: "bolt.horizontal.fill", title: "Flash Attention",
-                                 detail: loc.t("Aceleración AMD mediante Metal", "AMD acceleration through Metal")) {
+                                 detail: AppInfo.branded("AMD acceleration through Metal")) {
                     Toggle("Flash Attention", isOn: amdFlashAttention(settings))
                         .labelsHidden().toggleStyle(.switch)
                 }
             } else {
                 if facts.supportsVision { Divider() }
                 ServerSettingRow(icon: "bolt.horizontal.fill", title: "Flash Attention",
-                                 detail: loc.t("Configuración del motor externo", "External engine configuration")) {
+                                 detail: AppInfo.branded("External engine configuration")) {
                     XeonDropdown(selection: flashAttention(settings), options: flashAttentionOptions, width: 150)
                 }
             }
             // Under Dynamic MoE the engine's plan sets the KV type, so the choice goes to it.
             if settings.usesAutoPlan {
                 Divider()
-                ServerSettingRow(icon: "key", title: loc.t("Caché KV", "KV cache"),
-                                 detail: loc.t("Para el plan de Dynamic MoE", "For the Dynamic MoE plan")) {
+                ServerSettingRow(icon: "key", title: AppInfo.branded("KV cache"),
+                                 detail: AppInfo.branded("For the Dynamic MoE plan")) {
                     XeonDropdown(selection: autoKV(settings), options: autoKVOptions(settings, facts), width: 200)
-                        .help(loc.t("Auto usa F16 y pasa a Q8 solo cuando libera memoria que de verdad importa. Turbo4 ahorra más memoria a cambio de algo de calidad: Auto solo lo elige, si el modelo lo admite, cuando ni F16 ni Q8 dejan los expertos en la GPU, y en ese caso puede ir bastante más rápido. Elige F16 o Q8 para no usarlo nunca.",
-                                    "Auto uses F16 and moves to Q8 only when that frees memory that really matters. Turbo4 saves more memory at some quality cost: Auto picks it, when the model supports it, only if neither F16 nor Q8 keeps the experts on the GPU, and then it can be much faster. Pick F16 or Q8 to never use it."))
+                        .help(AppInfo.branded("Auto uses F16 and moves to Q8 only when that frees memory that really matters. Turbo4 saves more memory at some quality cost: Auto picks it, when the model supports it, only if neither F16 nor Q8 keeps the experts on the GPU, and then it can be much faster. Pick F16 or Q8 to never use it."))
                 }
             } else {
                 let kvTypes = ServerSettings.kvTypeChoices(supportsTurbo: facts.supportsTurboKV,
                                                            selected: [settings.cacheTypeK, settings.cacheTypeV])
                 Divider()
-                ServerSettingRow(icon: "key", title: loc.t("Caché KV: claves", "KV cache: keys"),
-                                 detail: loc.t("q8_0 la reduce a la mitad casi sin coste", "q8_0 halves it at almost no cost")) {
+                ServerSettingRow(icon: "key", title: AppInfo.branded("KV cache: keys"),
+                                 detail: AppInfo.branded("q8_0 halves it at almost no cost")) {
                     XeonDropdown(selection: cacheTypeK(settings), options: kvTypes.map { .init(value: $0, title: $0) }, width: 120)
-                        .help(loc.t("Tipo de las claves del KV cache (-ctk). Cuantizarlas deja más contexto en la misma memoria.",
-                                    "Type of the KV cache keys (-ctk). Quantizing them fits more context in the same memory."))
+                        .help(AppInfo.branded("Type of the KV cache keys (-ctk). Quantizing them fits more context in the same memory."))
                 }
-                ServerSettingRow(icon: "number.square", title: loc.t("Caché KV: valores", "KV cache: values"),
-                                 detail: loc.t("Cuantizarlos ahorra más memoria", "Quantizing them saves more memory")) {
+                ServerSettingRow(icon: "number.square", title: AppInfo.branded("KV cache: values"),
+                                 detail: AppInfo.branded("Quantizing them saves more memory")) {
                     XeonDropdown(selection: cacheTypeV(settings), options: kvTypes.map { .init(value: $0, title: $0) }, width: 120)
-                        .help(loc.t("Tipo de los valores del KV cache (-ctv). Sin el kernel Flash Attention AMD, cuantizarlos lleva la atención a la CPU y la generación baja mucho.",
-                                    "Type of the KV cache values (-ctv). Without the AMD Flash Attention kernel, quantizing them moves attention to the CPU and generation slows a lot."))
+                        .help(AppInfo.branded("Type of the KV cache values (-ctv). Without the AMD Flash Attention kernel, quantizing them moves attention to the CPU and generation slows a lot."))
                 }
             }
             if showAdvanced && facts.usesMTP {
                 Divider()
                 ServerSettingRow(icon: "hare.fill", title: "MTP",
-                                 detail: loc.t("Predicción de múltiples tokens", "Multi-token prediction")) {
+                                 detail: AppInfo.branded("Multi-token prediction")) {
                     MTPControl(modelPath: settings.modelPath)
                 }
             }
             if showAdvanced && facts.hasDflashDraft {
                 Divider()
                 ServerSettingRow(icon: "bolt.fill", title: "DFlash",
-                                 detail: loc.t("Decodificación con borrador especulativo", "Speculative draft decoding")) {
+                                 detail: AppInfo.branded("Speculative draft decoding")) {
                     DflashControl(modelPath: settings.modelPath, layout: .detail)
                         .environmentObject(server)
                 }
             }
             if showAdvanced && !facts.supportsVision && !facts.usesMTP && !facts.hasDflashDraft {
-                Label(loc.t("Este modelo no declara aceleradores opcionales.", "This model does not declare optional accelerators."),
+                Label(AppInfo.branded("This model does not declare optional accelerators."),
                       systemImage: "info.circle")
                     .font(.caption).foregroundStyle(.secondary).padding(.vertical, 9)
             }
@@ -647,12 +642,12 @@ private struct ServerConfigurationWorkspace: View {
 
     private func autoKVOptions(_ settings: ServerSettings, _ facts: ServerModelFacts) -> [XeonDropdown<String>.Option] {
         var options: [XeonDropdown<String>.Option] = [
-            .init(value: "auto", title: loc.t("Auto", "Auto")),
+            .init(value: "auto", title: AppInfo.branded("Auto")),
             .init(value: "f16", title: "F16"),
             .init(value: "q8_0", title: "Q8")
         ]
         if facts.supportsTurboKV || settings.autoKVMode == "turbo4" {
-            options.append(.init(value: "turbo4", title: loc.t("Turbo4 (ahorro de memoria)", "Turbo4 (memory saver)")))
+            options.append(.init(value: "turbo4", title: AppInfo.branded("Turbo4 (memory saver)")))
         }
         return options
     }
@@ -672,18 +667,18 @@ private struct ServerConfigurationWorkspace: View {
 
 
     private var profileOptions: [XeonDropdown<String>.Option] {
-        [.init(value: "current", title: loc.t("Ajustes actuales", "Current settings"), systemImage: "slider.horizontal.3")] +
+        [.init(value: "current", title: AppInfo.branded("Current settings"), systemImage: "slider.horizontal.3")] +
         profileStore.profiles.map { .init(value: $0.id.uuidString, title: $0.name, systemImage: "person.crop.circle") }
     }
 
     private func contextOptions(_ settings: ServerSettings, _ facts: ServerModelFacts) -> [XeonDropdown<String>.Option] {
         let choices = facts.contextChoices
         let trained = facts.trainedContext
-        var options: [XeonDropdown<String>.Option] = [.init(value: "automatic", title: loc.t("Automático", "Automatic"),
-               subtitle: loc.t("Recomendado · 16k", "Recommended · 16k"), systemImage: "wand.and.stars")]
+        var options: [XeonDropdown<String>.Option] = [.init(value: "automatic", title: AppInfo.branded("Automatic"),
+               subtitle: AppInfo.branded("Recommended · 16k"), systemImage: "wand.and.stars")]
         options += choices.map {
             .init(value: String($0), title: ServerSettings.contextLabel($0),
-                  subtitle: $0 == trained ? loc.t("Máximo del modelo", "Model maximum") : nil, systemImage: "doc.plaintext")
+                  subtitle: $0 == trained ? AppInfo.branded("Model maximum") : nil, systemImage: "doc.plaintext")
         }
         // a size saved before, or set elsewhere, stays selectable
         if !settings.contextAutomatic && !choices.contains(settings.ctx) {
@@ -694,15 +689,15 @@ private struct ServerConfigurationWorkspace: View {
 
     private var flashAttentionOptions: [XeonDropdown<String>.Option] {
         [
-            .init(value: "auto", title: loc.t("Automático", "Automatic")),
-            .init(value: "on", title: loc.t("Activado", "On")),
-            .init(value: "off", title: loc.t("Desactivado", "Off"))
+            .init(value: "auto", title: AppInfo.branded("Automatic")),
+            .init(value: "on", title: AppInfo.branded("On")),
+            .init(value: "off", title: AppInfo.branded("Off"))
         ]
     }
 
     private var requestLimitOptions: [XeonDropdown<Int>.Option] {
-        [.init(value: 0, title: loc.t("Sin límite", "Unlimited"))] + (1...8).map { value in
-            .init(value: value, title: value == 1 ? loc.t("1 petición", "1 request") : loc.t("%@ peticiones", "%@ requests", "\(value)"))
+        [.init(value: 0, title: AppInfo.branded("Unlimited"))] + (1...8).map { value in
+            .init(value: value, title: value == 1 ? AppInfo.branded("1 request") : AppInfo.branded("\(value) requests"))
         }
     }
 
@@ -881,8 +876,7 @@ private struct DetailPanel<Content: View>: View {
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
             // a panel is only locked while its server runs: say so, or its controls look broken
             if !isEnabled {
-                Label(loc.t("Detén el servidor para cambiar esto: se aplica al arrancar.",
-                            "Stop the server to change these: they apply when it starts."), systemImage: "lock")
+                Label(AppInfo.branded("Stop the server to change these: they apply when it starts."), systemImage: "lock")
                     .font(.caption).foregroundStyle(.orange)
             }
             Divider()
@@ -953,38 +947,38 @@ private struct ServerPerformanceWorkspace: View {
     }
 
     private var throughput: some View {
-        DetailPanel(title: loc.t("Rendimiento de inferencia", "Inference performance"),
-                    subtitle: loc.t("Mediciones de la sesión actual.", "Measurements from the current session."), icon: "chart.xyaxis.line") {
-            ServerSettingRow(icon: "text.alignleft", title: loc.t("Procesamiento de prompt", "Prompt processing")) {
+        DetailPanel(title: AppInfo.branded("Inference performance"),
+                    subtitle: AppInfo.branded("Measurements from the current session."), icon: "chart.xyaxis.line") {
+            ServerSettingRow(icon: "text.alignleft", title: AppInfo.branded("Prompt processing")) {
                 Text(server.promptSpeed.map { String(format: "%.1f t/s", $0) } ?? "—").monospacedDigit()
             }
-            ServerSettingRow(icon: "bolt.fill", title: loc.t("Generación", "Generation")) {
+            ServerSettingRow(icon: "bolt.fill", title: AppInfo.branded("Generation")) {
                 Text(server.genSpeed.map { String(format: "%.1f t/s", $0) } ?? "—").monospacedDigit()
             }
-            ServerSettingRow(icon: "checkmark.circle", title: loc.t("Peticiones completadas", "Completed requests")) {
+            ServerSettingRow(icon: "checkmark.circle", title: AppInfo.branded("Completed requests")) {
                 Text("\(server.requestCount)").monospacedDigit()
             }
             if server.genHistory.count > 1 {
-                DashboardMetric(title: loc.t("Historial de generación", "Generation history"), icon: "waveform.path.ecg",
+                DashboardMetric(title: AppInfo.branded("Generation history"), icon: "waveform.path.ecg",
                                 value: server.genSpeed.map { String(format: "%.1f t/s", $0) } ?? "—",
-                                detail: loc.t("Últimas mediciones", "Latest measurements"),
+                                detail: AppInfo.branded("Latest measurements"),
                                 history: Array(server.genHistory.suffix(28)))
             }
         }
     }
 
     private var resources: some View {
-        DetailPanel(title: loc.t("Recursos", "Resources"),
-                    subtitle: loc.t("Datos ligeros obtenidos del sistema.", "Lightweight telemetry reported by the system."), icon: "gauge.with.needle") {
+        DetailPanel(title: AppInfo.branded("Resources"),
+                    subtitle: AppInfo.branded("Lightweight telemetry reported by the system."), icon: "gauge.with.needle") {
             ServerSettingRow(icon: "memorychip", title: "VRAM") {
                 Text(String(format: "%.1f / %.0f GB", vram.usedMB / 1024, vram.totalMB / 1024)).monospacedDigit()
             }
             ProgressView(value: vram.fraction).tint(Color.appAccent)
-            ServerSettingRow(icon: "cpu", title: loc.t("Actividad GPU", "GPU activity")) {
-                Text(vram.activityPercent.map { String(format: "%.0f%%", $0) } ?? loc.t("No disponible", "Unavailable"))
+            ServerSettingRow(icon: "cpu", title: AppInfo.branded("GPU activity")) {
+                Text(vram.activityPercent.map { String(format: "%.0f%%", $0) } ?? AppInfo.branded("Unavailable"))
                     .monospacedDigit()
             }
-            ServerSettingRow(icon: "internaldrive", title: loc.t("Memoria del sistema", "System memory")) {
+            ServerSettingRow(icon: "internaldrive", title: AppInfo.branded("System memory")) {
                 Text(String(format: "%.1f / %.0f GB", vram.memoryUsedMB / 1024, vram.memoryTotalMB / 1024)).monospacedDigit()
             }
             ProgressView(value: vram.memoryFraction).tint(Color.chartSecondary)
@@ -1002,19 +996,19 @@ private struct ServerAPIWorkspace: View {
     }
 
     private func endpointCard(_ settings: ServerSettings) -> some View {
-        DetailPanel(title: loc.t("Conexión API", "API connection"),
-                    subtitle: loc.t("Compatible con clientes OpenAI.", "Compatible with OpenAI clients."), icon: "network") {
-            ServerSettingRow(icon: "link", title: loc.t("URL base", "Base URL")) {
+        DetailPanel(title: AppInfo.branded("API connection"),
+                    subtitle: AppInfo.branded("Compatible with OpenAI clients."), icon: "network") {
+            ServerSettingRow(icon: "link", title: AppInfo.branded("Base URL")) {
                 Text(verbatim: "http://127.0.0.1:\(settings.port)/v1")
                     .font(.system(.callout, design: .monospaced)).textSelection(.enabled)
             }
-            ServerSettingRow(icon: "wifi", title: loc.t("Acceso", "Access")) {
-                Text(settings.localNetworkDiscovery ? loc.t("Red local", "Local network") : loc.t("Solo este Mac", "This Mac only"))
+            ServerSettingRow(icon: "wifi", title: AppInfo.branded("Access")) {
+                Text(settings.localNetworkDiscovery ? AppInfo.branded("Local network") : AppInfo.branded("This Mac only"))
                     .foregroundStyle(.secondary)
             }
             HStack {
                 Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("http://127.0.0.1:\(settings.port)/v1", forType: .string) } label: {
-                    Label(loc.t("Copiar URL", "Copy URL"), systemImage: "doc.on.doc")
+                    Label(AppInfo.branded("Copy URL"), systemImage: "doc.on.doc")
                 }.glassButton()
                 ServerWebUIButton(server: server)
                     .glassButton(prominent: true)
@@ -1023,12 +1017,12 @@ private struct ServerAPIWorkspace: View {
     }
 
     private var routesCard: some View {
-        DetailPanel(title: loc.t("Rutas disponibles", "Available routes"),
-                    subtitle: loc.t("Endpoints expuestos por llama.cpp.", "Endpoints exposed by llama.cpp."), icon: "chevron.left.forwardslash.chevron.right") {
-            apiRoute("POST", "/v1/chat/completions", loc.t("Chat y generación", "Chat and generation"))
-            apiRoute("GET", "/v1/models", loc.t("Modelos disponibles", "Available models"))
-            apiRoute("POST", "/v1/embeddings", loc.t("Vectores de embeddings", "Embedding vectors"))
-            apiRoute("GET", "/health", loc.t("Estado del servidor", "Server health"))
+        DetailPanel(title: AppInfo.branded("Available routes"),
+                    subtitle: AppInfo.branded("Endpoints exposed by llama.cpp."), icon: "chevron.left.forwardslash.chevron.right") {
+            apiRoute("POST", "/v1/chat/completions", AppInfo.branded("Chat and generation"))
+            apiRoute("GET", "/v1/models", AppInfo.branded("Available models"))
+            apiRoute("POST", "/v1/embeddings", AppInfo.branded("Embedding vectors"))
+            apiRoute("GET", "/health", AppInfo.branded("Server health"))
         }
     }
 
@@ -1050,25 +1044,25 @@ private struct ServerIntegrationsWorkspace: View {
     var body: some View {
         let settings = server.effectiveSettings()
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 14)], spacing: 14) {
-            integration("point.3.connected.trianglepath.dotted", loc.t("Embeddings", "Embeddings"),
-                        loc.t("Búsqueda semántica y aplicaciones RAG.", "Semantic search and RAG applications."), settings.embeddings,
-                        rows: [(loc.t("Endpoint", "Endpoint"), "POST /v1/embeddings"),
-                               (loc.t("Modelo", "Model"), ModelName.forPath(settings.modelPath).title),
-                               (loc.t("Formato", "Format"), "OpenAI compatible")])
-            integration("network", "MCP", loc.t("Puente de herramientas para la interfaz web.", "Tool bridge for the engine web interface."), settings.uiMcpProxy,
-                        rows: [(loc.t("Transporte", "Transport"), "HTTP / SSE"),
-                               (loc.t("Alcance", "Scope"), settings.localNetworkDiscovery ? loc.t("Red local", "Local network") : loc.t("Solo este Mac", "This Mac only")),
-                               (loc.t("Cliente", "Client"), loc.t("Interfaz web del motor", "Engine web interface"))])
-            integration("arrow.triangle.2.circlepath", loc.t("Router de modelos", "Model router"),
-                        loc.t("Selección del modelo en cada petición.", "Model selection on each request."), settings.routerMode,
-                        rows: [(loc.t("Modelos locales", "Local models"), "\(models.models.count)"),
-                               (loc.t("Cargados a la vez", "Loaded at once"), "\(settings.routerModelsMax)"),
-                               (loc.t("Descubrimiento", "Discovery"), "GET /v1/models")])
-            integration("safari", loc.t("Interfaz web", "Web interface"),
-                        loc.t("Chat web incluido con el motor.", "Web chat bundled with the engine."), server.state == .running,
+            integration("point.3.connected.trianglepath.dotted", AppInfo.branded("Embeddings"),
+                        AppInfo.branded("Semantic search and RAG applications."), settings.embeddings,
+                        rows: [(AppInfo.branded("Endpoint"), "POST /v1/embeddings"),
+                               (AppInfo.branded("Model"), ModelName.forPath(settings.modelPath).title),
+                               (AppInfo.branded("Format"), "OpenAI compatible")])
+            integration("network", "MCP", AppInfo.branded("Tool bridge for the engine web interface."), settings.uiMcpProxy,
+                        rows: [(AppInfo.branded("Transport"), "HTTP / SSE"),
+                               (AppInfo.branded("Scope"), settings.localNetworkDiscovery ? AppInfo.branded("Local network") : AppInfo.branded("This Mac only")),
+                               (AppInfo.branded("Client"), AppInfo.branded("Engine web interface"))])
+            integration("arrow.triangle.2.circlepath", AppInfo.branded("Model router"),
+                        AppInfo.branded("Model selection on each request."), settings.routerMode,
+                        rows: [(AppInfo.branded("Local models"), "\(models.models.count)"),
+                               (AppInfo.branded("Loaded at once"), "\(settings.routerModelsMax)"),
+                               (AppInfo.branded("Discovery"), "GET /v1/models")])
+            integration("safari", AppInfo.branded("Web interface"),
+                        AppInfo.branded("Web chat bundled with the engine."), server.state == .running,
                         rows: [("URL", "http://127.0.0.1:\(settings.port)"),
-                               (loc.t("Estado", "Status"), server.state == .running ? loc.t("Disponible", "Available") : loc.t("Requiere iniciar el servidor", "Start the server to use")),
-                               (loc.t("Acceso", "Access"), settings.localNetworkDiscovery ? loc.t("Red local", "Local network") : loc.t("Solo este Mac", "This Mac only"))],
+                               (AppInfo.branded("Status"), server.state == .running ? AppInfo.branded("Available") : AppInfo.branded("Start the server to use")),
+                               (AppInfo.branded("Access"), settings.localNetworkDiscovery ? AppInfo.branded("Local network") : AppInfo.branded("This Mac only"))],
                         openWeb: true)
         }
     }
@@ -1079,7 +1073,7 @@ private struct ServerIntegrationsWorkspace: View {
             HStack {
                 Image(systemName: icon).font(.title2).foregroundStyle(Color.appAccent)
                 Spacer()
-                Label(enabled ? loc.t("Activo", "Enabled") : loc.t("Inactivo", "Disabled"),
+                Label(enabled ? AppInfo.branded("Enabled") : AppInfo.branded("Disabled"),
                       systemImage: enabled ? "checkmark.circle.fill" : "circle")
                     .font(.caption.weight(.medium)).foregroundStyle(enabled ? .green : .secondary)
             }

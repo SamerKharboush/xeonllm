@@ -66,8 +66,8 @@ struct ImageControls: View {
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $studioModeRaw) {
-                Text(loc.t("Crear", "Create")).tag(ImageStudioMode.create.rawValue)
-                Text(loc.t("Escalar", "Upscale")).tag(ImageStudioMode.upscale.rawValue)
+                Text(AppInfo.branded("Create")).tag(ImageStudioMode.create.rawValue)
+                Text(AppInfo.branded("Upscale")).tag(ImageStudioMode.upscale.rawValue)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -106,64 +106,61 @@ struct ImageControls: View {
     /// Upscaling is a one-shot job on a file: model choice, the file, and the result.
     private var upscalePanel: some View {
         VStack(alignment: .leading, spacing: 18) {
-            upscaleSection(title: loc.t("Modelo", "Model"), icon: "wand.and.stars") {
+            upscaleSection(title: AppInfo.branded("Model"), icon: "wand.and.stars") {
                 Picker("", selection: $upscalerFlavor) {
                     ForEach(ImageUpscaler.Flavor.allCases) { f in
-                        Text(f.label(loc.isSpanish)).tag(f.rawValue)
+                        Text(f.label).tag(f.rawValue)
                     }
                 }
                 .pickerStyle(.segmented).labelsHidden()
-                Text(flavor.detail(loc.isSpanish))
+                Text(flavor.detail)
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if flavor == .custom {
                     HStack(spacing: 6) {
                         Button(upscalerCustom.isEmpty
-                               ? loc.t("Elegir modelo…", "Choose model…")
+                               ? AppInfo.branded("Choose model…")
                                : (upscalerCustom as NSString).lastPathComponent) { pickCustomModel() }
                             .font(.caption).lineLimit(1).truncationMode(.middle)
                         if !upscalerCustom.isEmpty {
                             Button { upscalerCustom = "" } label: {
-                                Label(loc.t("Quitar", "Clear"), systemImage: "xmark.circle")
+                                Label(AppInfo.branded("Clear"), systemImage: "xmark.circle")
                             }
                             .labelStyle(.iconOnly)
                             .buttonStyle(GlassIconButtonStyle())
-                            .iconHelp(loc.t("Quitar modelo personalizado", "Remove custom model"))
+                            .iconHelp(AppInfo.branded("Remove custom model"))
                         }
                     }
-                    Text(loc.t("Debe ser ESRGAN ×4. Los modelos DAT y SwinIR no son compatibles con este motor.",
-                               "Must be a 4x ESRGAN. DAT and SwinIR models are not compatible with this engine."))
+                    Text(AppInfo.branded("Must be a 4x ESRGAN. DAT and SwinIR models are not compatible with this engine."))
                         .font(.caption2).foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if let component = flavor.component(customPath: upscalerCustom),
                           !ImageUpscaler.installed(flavor, customPath: upscalerCustom, in: models) {
-                    Label(loc.t("Se descargan %@ MB la primera vez", "Downloads %@ MB on first use",
-                                "\(Int(component.sizeGB * 1000))"),
+                    Label(AppInfo.branded("Downloads \(Int(component.sizeGB * 1000)) MB on first use"),
                           systemImage: "arrow.down.circle")
                         .font(.caption).foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(loc.t("Escala", "Scale")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Scale")).font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $upscalerScale) {
                         ForEach(ImageUpscaler.Scale.allCases) { scale in
                             Text(scale.label).tag(scale.rawValue)
                         }
                     }
                     .pickerStyle(.segmented).labelsHidden()
-                    .help(loc.t("El motor solo carga modelos ×4, así que el ×2 escala y remuestrea a la mitad.",
-                                "The engine only loads 4x models, so x2 upscales and resamples to half."))
+                    .help(AppInfo.branded("The engine only loads 4x models, so x2 upscales and resamples to half."))
                 }
             }
 
             Divider()
 
-            upscaleSection(title: loc.t("Imágenes", "Images"), icon: "photo.on.rectangle.angled") {
+            upscaleSection(title: AppInfo.branded("Images"), icon: "photo.on.rectangle.angled") {
                 Button {
                     pickImages()
                 } label: {
-                    Label(loc.t("Elegir imágenes…", "Choose images…"), systemImage: "folder")
+                    Label(AppInfo.branded("Choose images…"), systemImage: "folder")
                         .frame(maxWidth: .infinity)
                 }
                 .disabled(upscaler.isBusy)
@@ -171,8 +168,7 @@ struct ImageControls: View {
                 if !upscaler.queued.isEmpty {
                     Label(upscaler.queued.count == 1
                           ? upscaler.queued[0].lastPathComponent
-                          : loc.t("%@ imágenes seleccionadas", "%@ images selected",
-                                  "\(upscaler.queued.count)"),
+                          : AppInfo.branded("\(upscaler.queued.count) images selected"),
                           systemImage: upscaler.queued.count == 1 ? "photo" : "photo.stack")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -194,8 +190,7 @@ struct ImageControls: View {
     private var createFooter: some View {
         VStack(alignment: .leading, spacing: 9) {
             generateButton
-            Text(loc.t("La generación se ejecuta localmente. El tiempo depende del hardware.",
-                       "Generation runs locally. Time depends on your hardware."))
+            Text(AppInfo.branded("Generation runs locally. Time depends on your hardware."))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -208,37 +203,34 @@ struct ImageControls: View {
                 ProgressView(value: upscaler.progress)
                 HStack {
                     Text(upscaler.total > 1
-                         ? loc.t("Imagen %@ de %@", "Image %@ of %@",
-                                 "\(upscaler.index)", "\(upscaler.total)")
-                         : loc.t("Escalando…", "Upscaling…"))
+                         ? AppInfo.branded("Image \(upscaler.index) of \(upscaler.total)")
+                         : AppInfo.branded("Upscaling…"))
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     Text("\(upscaler.elapsed)s")
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
                 Button(role: .cancel) { upscaler.cancel() } label: {
-                    Label(loc.t("Cancelar", "Cancel"), systemImage: "stop.circle")
+                    Label(AppInfo.branded("Cancel"), systemImage: "stop.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .controlSize(.large)
             } else {
                 Button { startUpscale(upscaler.queued) } label: {
-                    Label(loc.t("Escalar %@", "Upscale %@", "\(scale.label)"),
+                    Label(AppInfo.branded("Upscale \(scale.label)"),
                           systemImage: "arrow.up.left.and.arrow.down.right")
                         .frame(maxWidth: .infinity)
                 }
                 .glassButton(prominent: true)
                 .controlSize(.large)
                 .disabled(upscaler.queued.isEmpty || flavor.component(customPath: upscalerCustom) == nil)
-                .help(loc.t("Escala todas las imágenes seleccionadas en orden.",
-                            "Upscales every selected image in order."))
+                .help(AppInfo.branded("Upscales every selected image in order."))
             }
             if case .failed(let reason) = upscaler.state, !reason.isEmpty {
                 Label(reason, systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.red)
             }
-            Text(loc.t("El proceso se ejecuta localmente. Para imágenes grandes puede convenir recortar primero.",
-                       "Processing runs locally. Cropping first can help with very large images."))
+            Text(AppInfo.branded("Processing runs locally. Cropping first can help with very large images."))
                 .font(.caption2).foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -247,7 +239,7 @@ struct ImageControls: View {
     private var createPanel: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 10) {
-                Label(loc.t("Instancia", "Instance"), systemImage: "cube")
+                Label(AppInfo.branded("Instance"), systemImage: "cube")
                     .font(.headline)
                 Spacer()
                 experimentalBadge
@@ -256,7 +248,7 @@ struct ImageControls: View {
                 }
                 .buttonStyle(GlassIconButtonStyle())
                 .disabled(pool.anyBusy)
-                .iconHelp(loc.t("Añadir instancia", "Add instance"))
+                .iconHelp(AppInfo.branded("Add instance"))
             }
 
             if server.state == .running && serverGPUOverlap { serverBusyWarning }
@@ -274,29 +266,27 @@ struct ImageControls: View {
             }
 
             if duplicatedGPU {
-                Label(loc.t("Dos instancias comparten GPU: en Macs AMD puede colgar la tarjeta.",
-                            "Two instances share a GPU: on AMD Macs this can hang the card."),
+                Label(AppInfo.branded("Two instances share a GPU: on AMD Macs this can hang the card."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption2).foregroundStyle(.orange)
             }
 
-            DisclosureGroup(loc.t("Avanzado", "Advanced")) {
+            DisclosureGroup(AppInfo.branded("Advanced")) {
                 Toggle(isOn: $cleanupOnClose) {
-                    Text(loc.t("Borrar imágenes al cerrar la app", "Delete images on app close"))
+                    Text(AppInfo.branded("Delete images on app close"))
                         .font(.caption)
                 }
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .padding(.top, 8)
-                .help(loc.t("Al salir de la app borra las imágenes generadas (xeonllm_*) de la carpeta de salida, para no acumular cientos con los nombres por fecha.",
-                            "On quitting the app, deletes the generated images (xeonllm_*) from the output folder, so the date-named files don't pile up."))
+                .help(AppInfo.branded("On quitting the app, deletes the generated images (xeonllm_*) from the output folder, so the date-named files don't pile up."))
             }
             .font(.callout)
         }
     }
 
     private var experimentalBadge: some View {
-        Text(loc.t("Experimental", "Experimental"))
+        Text(AppInfo.branded("Experimental"))
             .font(.caption2.bold())
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(.orange.opacity(0.18), in: Capsule())
@@ -305,18 +295,16 @@ struct ImageControls: View {
 
     private var serverBusyWarning: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(loc.t("El chat comparte GPU con una instancia", "Chat shares a GPU with an instance"),
+            Label(AppInfo.branded("Chat shares a GPU with an instance"),
                   systemImage: "exclamationmark.triangle.fill")
                 .font(.callout.weight(.medium)).foregroundStyle(.orange)
-            Text(loc.t("Generar mientras el chat usa la misma GPU puede colgar la tarjeta en Macs AMD.",
-                       "Generating while chat uses the same GPU can hang the card on AMD Macs."))
+            Text(AppInfo.branded("Generating while chat uses the same GPU can hang the card on AMD Macs."))
                 .font(.caption).foregroundStyle(.secondary)
             Button { server.stop() } label: {
-                Label(loc.t("Detener el chat", "Stop chat"), systemImage: "stop.circle")
+                Label(AppInfo.branded("Stop chat"), systemImage: "stop.circle")
             }
             .controlSize(.small)
-            .help(loc.t("Libera la GPU deteniendo el servidor de chat.",
-                        "Frees the GPU by stopping the chat server."))
+            .help(AppInfo.branded("Frees the GPU by stopping the chat server."))
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
@@ -358,7 +346,7 @@ struct ImageControls: View {
                 .padding(.top, 10)
         } label: {
             HStack(spacing: 6) {
-                Text(loc.t("Instancia %@", "Instance %@", "\(n)")).font(.callout.weight(.medium))
+                Text(AppInfo.branded("Instance \(n)")).font(.callout.weight(.medium))
                 Text(model.name).font(.caption).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
                 if hardware.gpus.count > 1, c.gpuIndex < hardware.gpus.count {
@@ -397,10 +385,10 @@ struct ImageControls: View {
     @ViewBuilder private var generateButton: some View {
         if pool.anyBusy {
             Button(role: .cancel) { pool.cancelAll() } label: {
-                Label(loc.t("Cancelar", "Cancel"), systemImage: "stop.circle").frame(maxWidth: .infinity)
+                Label(AppInfo.branded("Cancel"), systemImage: "stop.circle").frame(maxWidth: .infinity)
             }
             .controlSize(.large)
-            .help(loc.t("Detiene las generaciones en curso.", "Stops the current runs."))
+            .help(AppInfo.branded("Stops the current runs."))
         } else {
             Button {
                 for c in pool.configs where runnable(c) {
@@ -418,12 +406,11 @@ struct ImageControls: View {
                         fastMode: c.fastModeValue)
                 }
             } label: {
-                Label(loc.t("Generar", "Generate"), systemImage: "sparkles").frame(maxWidth: .infinity)
+                Label(AppInfo.branded("Generate"), systemImage: "sparkles").frame(maxWidth: .infinity)
             }
             .glassButton(prominent: true).controlSize(.large)
             .disabled(!pool.configs.contains { runnable($0) })
-            .help(loc.t("Genera una imagen por instancia lista (modelo instalado y descripción escrita).",
-                        "Generates one image per ready instance (model installed and prompt written)."))
+            .help(AppInfo.branded("Generates one image per ready instance (model installed and prompt written)."))
         }
     }
 }
@@ -458,7 +445,7 @@ struct QueueFeedView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         if !pool.queue.isEmpty {
-                            queueSectionTitle(loc.t("Pendientes", "Pending"),
+                            queueSectionTitle(AppInfo.branded("Pending"),
                                               count: pool.queue.count,
                                               icon: "clock")
                             ForEach(pool.queue) { pendingRow($0) }
@@ -466,7 +453,7 @@ struct QueueFeedView: View {
 
                         let running = pool.configs.filter { pool.generator(for: $0.id).isBusy }
                         if !running.isEmpty {
-                            queueSectionTitle(loc.t("En curso", "In progress"),
+                            queueSectionTitle(AppInfo.branded("In progress"),
                                               count: running.count,
                                               icon: "gearshape.2")
                             ForEach(running) { c in
@@ -476,7 +463,7 @@ struct QueueFeedView: View {
                         }
 
                         if !pool.gallery.isEmpty {
-                            queueSectionTitle(loc.t("Resultados", "Results"),
+                            queueSectionTitle(AppInfo.branded("Results"),
                                               count: pool.gallery.count,
                                               icon: "photo.stack")
                             if grid {
@@ -500,10 +487,10 @@ struct QueueFeedView: View {
     private var composer: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(loc.t("Añadir a la cola", "Add to queue"), systemImage: "text.badge.plus")
+                Label(AppInfo.branded("Add to queue"), systemImage: "text.badge.plus")
                     .font(.headline)
                 Spacer()
-                Text(loc.t("⌘↩ para añadir", "⌘↩ to add"))
+                Text(AppInfo.branded("⌘↩ to add"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -525,7 +512,7 @@ struct QueueFeedView: View {
                 }
                 .overlay(alignment: .topLeading) {
                     if draft.isEmpty {
-                        Text(loc.t("Prompt para la cola…", "Prompt for the queue…"))
+                        Text(AppInfo.branded("Prompt for the queue…"))
                             .font(.body).foregroundStyle(.tertiary)
                             .padding(.horizontal, 9).padding(.vertical, 8)
                             .allowsHitTesting(false)
@@ -536,50 +523,48 @@ struct QueueFeedView: View {
                 ImageLoraMenu(prompt: $draft)
                     .fixedSize()
                 HStack(spacing: 4) {
-                    Text(loc.t("Destino", "Target")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Target")).font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $draftTarget) {
-                        Text(loc.t("Cualquiera", "Any")).tag(nil as UUID?)
+                        Text(AppInfo.branded("Any")).tag(nil as UUID?)
                         ForEach(pool.configs) { c in
                             Text(pool.instanceLabel(for: c.id) ?? "").tag(c.id as UUID?)
                         }
                     }
                     .labelsHidden().fixedSize()
-                    .help(loc.t("Instancia que debe generar este prompt. \"Cualquiera\" toma la siguiente libre; si eliges una y está ocupada, el prompt espera por ella sin bloquear a los demás.",
-                                "Instance that must render this prompt. \"Any\" takes the next free one; if you pick one and it's busy, this prompt waits for it without blocking the others."))
+                    .help(AppInfo.branded("Instance that must render this prompt. \"Any\" takes the next free one; if you pick one and it's busy, this prompt waits for it without blocking the others."))
                     .onChange(of: pool.configs.map(\.id)) {
                         if let t = draftTarget, !pool.configs.contains(where: { $0.id == t }) { draftTarget = nil }
                     }
                 }
                 HStack(spacing: 4) {
-                    Text(loc.t("Semilla", "Seed")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Seed")).font(.caption).foregroundStyle(.secondary)
                     TextField("-1", value: $draftSeed, format: .number.grouping(.never))
                         .workspaceTextField().frame(width: 68)
                 }
                 initImageChip
                 Spacer()
-                Button(action: add) { Label(loc.t("Añadir", "Add"), systemImage: "plus") }
+                Button(action: add) { Label(AppInfo.branded("Add"), systemImage: "plus") }
                     .glassButton(prominent: true)
                     .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(14)
         .cardSurface()
-        .help(loc.t("Cada prompt (con su semilla) lo genera la siguiente instancia libre, una generación por GPU. Los resultados se acumulan abajo con nombre único.",
-                    "Each prompt (with its seed) is rendered by the next free instance, one run per GPU. Results accumulate below, each with a unique name."))
+        .help(AppInfo.branded("Each prompt (with its seed) is rendered by the next free instance, one run per GPU. Results accumulate below, each with a unique name."))
     }
 
     private var queueToolbar: some View {
         HStack(spacing: 10) {
             if !pool.queue.isEmpty {
-                Label(loc.t("%@ pendientes", "%@ pending", "\(pool.queue.count)"), systemImage: "clock")
+                Label(AppInfo.branded("\(pool.queue.count) pending"), systemImage: "clock")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             } else if pool.anyBusy {
-                Label(loc.t("Procesando", "Processing"), systemImage: "gearshape.2")
+                Label(AppInfo.branded("Processing"), systemImage: "gearshape.2")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.appAccent)
             } else {
-                Label(loc.t("%@ resultados", "%@ results", "\(pool.gallery.count)"), systemImage: "photo.stack")
+                Label(AppInfo.branded("\(pool.gallery.count) results"), systemImage: "photo.stack")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -587,15 +572,14 @@ struct QueueFeedView: View {
             FeedLayoutPicker(grid: $grid)
             if pool.gallery.count > 1 {
                 Button { saveImagesToFolder(pool.gallery.map(\.url), loc: loc) } label: {
-                    Label(loc.t("Guardar todas", "Save all"), systemImage: "square.and.arrow.down.on.square")
+                    Label(AppInfo.branded("Save all"), systemImage: "square.and.arrow.down.on.square")
                 }
                 .glassButton()
-                .help(loc.t("Copia todas las imágenes generadas a una carpeta que elijas.",
-                            "Copies every generated image into a folder you choose."))
+                .help(AppInfo.branded("Copies every generated image into a folder you choose."))
             }
             if !pool.queue.isEmpty || pool.queueActive {
                 Button(action: toggle) {
-                    Label(pool.queueActive ? loc.t("Detener", "Stop") : loc.t("Procesar", "Process"),
+                    Label(pool.queueActive ? AppInfo.branded("Stop") : AppInfo.branded("Process"),
                           systemImage: pool.queueActive ? "stop.fill" : "play.fill")
                 }
                 .glassButton(prominent: true)
@@ -627,10 +611,9 @@ struct QueueFeedView: View {
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.tertiary)
             VStack(spacing: 5) {
-                Text(loc.t("La cola está vacía", "The queue is empty"))
+                Text(AppInfo.branded("The queue is empty"))
                     .font(.headline)
-                Text(loc.t("Escribe una descripción arriba para preparar varias imágenes.",
-                           "Type a prompt above to prepare several images."))
+                Text(AppInfo.branded("Type a prompt above to prepare several images."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -660,11 +643,11 @@ struct QueueFeedView: View {
             if let target = q.targetInstanceID, let label = pool.instanceLabel(for: target) {
                 instanceBadge(label)
             }
-            Text(loc.t("En cola", "Queued")).font(.caption).foregroundStyle(.secondary)
-            Button { pool.removeFromQueue(q.id) } label: { Label(loc.t("Quitar", "Clear"), systemImage: "xmark.circle") }
+            Text(AppInfo.branded("Queued")).font(.caption).foregroundStyle(.secondary)
+            Button { pool.removeFromQueue(q.id) } label: { Label(AppInfo.branded("Clear"), systemImage: "xmark.circle") }
                 .labelStyle(.iconOnly)
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Quitar de la cola", "Remove from the queue"))
+                .iconHelp(AppInfo.branded("Remove from the queue"))
         }
         .padding(12)
         .cardSurface()
@@ -675,7 +658,7 @@ struct QueueFeedView: View {
             ProgressView().controlSize(.small)
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(gen.lastPrompt.isEmpty ? loc.t("Generando…", "Generating…") : gen.lastPrompt)
+                    Text(gen.lastPrompt.isEmpty ? AppInfo.branded("Generating…") : gen.lastPrompt)
                         .font(.callout).lineLimit(2)
                     if let instanceLabel { instanceBadge(instanceLabel) }
                 }
@@ -685,7 +668,7 @@ struct QueueFeedView: View {
                     }
                     Text("\(gen.elapsed)s").font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                     if let eta = gen.etaSeconds {
-                        Text(loc.t("~%@s", "~%@s", "\(eta)")).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                        Text(AppInfo.branded("~\(eta)s")).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                     }
                 }
                 ProgressView(value: gen.progress > 0 ? gen.progress : nil)
@@ -705,21 +688,21 @@ struct QueueFeedView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text(g.prompt.isEmpty ? loc.t("(sin prompt)", "(no prompt)") : g.prompt)
+                    Text(g.prompt.isEmpty ? AppInfo.branded("(no prompt)") : g.prompt)
                         .font(.callout).lineLimit(3)
                     if let label = g.instanceLabel { instanceBadge(label) }
                 }
                 Text("\(g.width)×\(g.height) · \(g.duration)s" + (g.seed >= 0 ? " · #\(g.seed)" : ""))
                     .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 HStack(spacing: 10) {
-                    Button { save(g) } label: { Label(loc.t("Guardar…", "Save…"), systemImage: "square.and.arrow.down") }
+                    Button { save(g) } label: { Label(AppInfo.branded("Save…"), systemImage: "square.and.arrow.down") }
                         .glassButton()
-                        .help(loc.t("Guarda una copia donde elijas.", "Save a copy wherever you choose."))
+                        .help(AppInfo.branded("Save a copy wherever you choose."))
                     Button { NSWorkspace.shared.activateFileViewerSelecting([g.url]) } label: {
-                        Label(loc.t("Finder", "Finder"), systemImage: "folder")
+                        Label(AppInfo.branded("Finder"), systemImage: "folder")
                     }
                     .glassButton()
-                    .help(loc.t("Abre el archivo en el Finder.", "Reveal the file in Finder."))
+                    .help(AppInfo.branded("Reveal the file in Finder."))
                 }
                 .controlSize(.small)
             }
@@ -735,7 +718,7 @@ struct QueueFeedView: View {
             Image(nsImage: g.image).resizable().scaledToFit()
                 .frame(maxWidth: .infinity, maxHeight: 280)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-            Text(g.prompt.isEmpty ? loc.t("(sin prompt)", "(no prompt)") : g.prompt)
+            Text(g.prompt.isEmpty ? AppInfo.branded("(no prompt)") : g.prompt)
                 .font(.caption).lineLimit(2)
                 .help(g.prompt)
             HStack(spacing: 6) {
@@ -745,14 +728,14 @@ struct QueueFeedView: View {
                 if let label = g.instanceLabel { instanceBadge(label) }
             }
             HStack(spacing: 10) {
-                Button { save(g) } label: { Label(loc.t("Guardar…", "Save…"), systemImage: "square.and.arrow.down") }
+                Button { save(g) } label: { Label(AppInfo.branded("Save…"), systemImage: "square.and.arrow.down") }
                     .glassButton()
-                    .help(loc.t("Guarda una copia donde elijas.", "Save a copy wherever you choose."))
+                    .help(AppInfo.branded("Save a copy wherever you choose."))
                 Button { NSWorkspace.shared.activateFileViewerSelecting([g.url]) } label: {
-                    Label(loc.t("Finder", "Finder"), systemImage: "folder")
+                    Label(AppInfo.branded("Finder"), systemImage: "folder")
                 }
                 .glassButton()
-                .help(loc.t("Abre el archivo en el Finder.", "Reveal the file in Finder."))
+                .help(AppInfo.branded("Reveal the file in Finder."))
             }
             .controlSize(.small)
         }
@@ -764,10 +747,10 @@ struct QueueFeedView: View {
     /// seed and the target.
     @ViewBuilder private var initImageChip: some View {
         HStack(spacing: 4) {
-            Text(loc.t("Imagen", "Image")).font(.caption).foregroundStyle(.secondary)
+            Text(AppInfo.branded("Image")).font(.caption).foregroundStyle(.secondary)
             Button(action: pickDraftImage) {
                 Label(draftInitImage.isEmpty
-                          ? loc.t("Elegir…", "Choose…")
+                          ? AppInfo.branded("Choose…")
                           : (draftInitImage as NSString).lastPathComponent,
                       systemImage: "photo")
             }
@@ -775,16 +758,14 @@ struct QueueFeedView: View {
             .font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 160)
             if !draftInitImage.isEmpty {
                 Button { draftInitImage = "" } label: {
-                    Label(loc.t("Quitar imagen", "Clear image"), systemImage: "xmark.circle")
+                    Label(AppInfo.branded("Clear image"), systemImage: "xmark.circle")
                         .labelStyle(.iconOnly)
                 }
                 .buttonStyle(GlassIconButtonStyle())
-                .help(loc.t("Quita la imagen; los siguientes prompts vuelven a usar la de cada instancia.",
-                            "Clears the image; following prompts use each instance's own again."))
+                .help(AppInfo.branded("Clears the image; following prompts use each instance's own again."))
             }
         }
-        .help(loc.t("Imagen inicial (img2img) solo para los prompts que añadas con ella; sin imagen se usa la de la instancia que lo genere, y la intensidad siempre es la de la instancia.",
-                    "Init image (img2img) only for the prompts you add with it; without one, the rendering instance's own image applies, and strength always comes from the instance."))
+        .help(AppInfo.branded("Init image (img2img) only for the prompts you add with it; without one, the rendering instance's own image applies, and strength always comes from the instance."))
     }
 
     private func pickDraftImage() {
@@ -807,9 +788,9 @@ struct QueueFeedView: View {
                 .frame(width: 28, height: 28)
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .help((path as NSString).lastPathComponent)
-                .accessibilityLabel(loc.t("Imagen inicial", "Init image"))
+                .accessibilityLabel(AppInfo.branded("Init image"))
         } else {
-            Label(loc.t("Imagen inicial", "Init image"), systemImage: "photo")
+            Label(AppInfo.branded("Init image"), systemImage: "photo")
                 .labelStyle(.iconOnly).foregroundStyle(.secondary)
                 .help((path as NSString).lastPathComponent)
         }
@@ -848,15 +829,15 @@ struct FeedLayoutPicker: View {
                 Image(systemName: "list.bullet")
             }
             .buttonStyle(GlassIconButtonStyle(active: !grid))
-            .iconHelp(loc.t("Lista", "List"))
+            .iconHelp(AppInfo.branded("List"))
 
             Button { grid = true } label: {
                 Image(systemName: "square.grid.2x2")
             }
             .buttonStyle(GlassIconButtonStyle(active: grid))
-            .iconHelp(loc.t("Cuadrícula", "Grid"))
+            .iconHelp(AppInfo.branded("Grid"))
         }
-        .help(loc.t("Resultados en lista o en cuadrícula.", "Results as a list or a grid."))
+        .help(AppInfo.branded("Results as a list or a grid."))
     }
 }
 
@@ -905,9 +886,9 @@ struct ImageInstanceForm: View {
 
     private var nativeSizeMessage: String {
         if model.trainedSquareOnly && cfg.dimensions.0 != cfg.dimensions.1 {
-            return loc.t("Este modelo se entrenó solo en cuadrado (%@x%@): en otros formatos saca manchas de color por muchos pasos que le des. Es límite del modelo, no de la app.", "This model was trained on square frames only (%@x%@): any other shape comes back with colour blotches however many steps you give it. That is the model's limit, not the app's.", "\(model.nativeLongEdge)", "\(model.nativeLongEdge)")
+            return AppInfo.branded("This model was trained on square frames only (\(model.nativeLongEdge)x\(model.nativeLongEdge)): any other shape comes back with colour blotches however many steps you give it. That is the model's limit, not the app's.")
         }
-        return loc.t("Por encima de los %@ px con los que se entrenó este modelo: puede repetir la composición (dos horizontes, sujetos duplicados). Es límite del modelo, no de la app.", "Above the %@ px this model was trained at: it may repeat the composition (two horizons, duplicated subjects). That is the model's limit, not the app's.", "\(model.nativeLongEdge)")
+        return AppInfo.branded("Above the \(model.nativeLongEdge) px this model was trained at: it may repeat the composition (two horizons, duplicated subjects). That is the model's limit, not the app's.")
     }
 
     private var nativeSizeNote: some View {
@@ -932,7 +913,7 @@ struct ImageInstanceForm: View {
             if !cfg.isCustom && !installed {
                 installBox
             } else {
-                Text(loc.t("Descripción", "Prompt")).font(.headline)
+                Text(AppInfo.branded("Prompt")).font(.headline)
                 promptEditor
                 negativePromptSection
                 if model.maxReferenceImages > 0 { referenceImagesSection }
@@ -945,12 +926,12 @@ struct ImageInstanceForm: View {
             }
             if canRemove {
                 Button(role: .destructive, action: onRemove) {
-                    Label(loc.t("Quitar instancia", "Remove instance"), systemImage: "trash")
+                    Label(AppInfo.branded("Remove instance"), systemImage: "trash")
                 }
                 .glassButton().controlSize(.small)
                 .foregroundStyle(.red)
                 .disabled(busy)
-                .help(loc.t("Elimina esta instancia.", "Removes this instance."))
+                .help(AppInfo.branded("Removes this instance."))
             }
         }
     }
@@ -961,14 +942,14 @@ struct ImageInstanceForm: View {
     /// GPU. Switching resets the step count to the new model's tuned default.
     private var modelPicker: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(loc.t("Modelo", "Model")).font(.caption).foregroundStyle(.secondary)
+            Text(AppInfo.branded("Model")).font(.caption).foregroundStyle(.secondary)
             Picker("", selection: $cfg.modelID) {
                 ForEach(ImageGenCatalog.models) { m in
                     let fits = m.fitsVRAMClass(targetVRAM)
                     Text(fits ? m.name : "\(m.name) · \(Int(m.minVRAMGB)) GB+").tag(m.id)
                 }
                 Divider()
-                Text(loc.t("Personalizado…", "Custom…")).tag(ImageGenCatalog.customID)
+                Text(AppInfo.branded("Custom…")).tag(ImageGenCatalog.customID)
             }
             .labelsHidden()
             .onChange(of: cfg.modelID) {
@@ -991,7 +972,7 @@ struct ImageInstanceForm: View {
                 }
                 clampBaseSize()
             }
-            Text(model.detail(loc.isSpanish)).font(.caption2).foregroundStyle(.secondary)
+            Text(model.detail).font(.caption2).foregroundStyle(.secondary)
         }
     }
 
@@ -1012,13 +993,13 @@ struct ImageInstanceForm: View {
                                                   formerFileNames: comp.formerFileNames)
                 }
             } label: {
-                Label(loc.t("Descargar todo (%.1f GB)", "Download all (%.1f GB)")
+                Label(AppInfo.branded("Download all (%.1f GB)")
                         .replacingOccurrences(of: "%.1f", with: String(format: "%.1f", model.totalGB)),
                       systemImage: "arrow.down.circle.fill")
                     .frame(maxWidth: .infinity)
             }
             .glassButton(prominent: true)
-            .help(loc.t("Descarga los componentes del modelo.", "Download the model's components."))
+            .help(AppInfo.branded("Download the model's components."))
         }
         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
         .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 10))
@@ -1030,7 +1011,7 @@ struct ImageInstanceForm: View {
             Image(systemName: present ? "checkmark.circle.fill" : "circle.dashed")
                 .foregroundStyle(present ? .green : .secondary)
             VStack(alignment: .leading, spacing: 1) {
-                Text(comp.label(loc.isSpanish)).font(.caption)
+                Text(comp.label).font(.caption)
                 Text(comp.fileName).font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
@@ -1046,23 +1027,21 @@ struct ImageInstanceForm: View {
 
     private var customSetup: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker(loc.t("Tipo", "Kind"), selection: $cfg.customIsDiffusion) {
-                Text(loc.t("Checkpoint completo", "Full checkpoint")).tag(false)
-                Text(loc.t("Modelo de difusión", "Diffusion model")).tag(true)
+            Picker(AppInfo.branded("Kind"), selection: $cfg.customIsDiffusion) {
+                Text(AppInfo.branded("Full checkpoint")).tag(false)
+                Text(AppInfo.branded("Diffusion model")).tag(true)
             }
             .pickerStyle(.segmented).labelsHidden()
-            .help(loc.t("Un checkpoint (SD, SDXL) lleva dentro el VAE y el codificador. Un modelo de difusión suelto (Z-Image, Flux 2, Qwen-Image) necesita además su VAE y su codificador de texto.",
-                        "A checkpoint (SD, SDXL) bundles its VAE and encoder. A bare diffusion model (Z-Image, Flux 2, Qwen-Image) also needs its VAE and text encoder."))
-            filePickRow(loc.t("Archivo del modelo", "Model file"), path: $cfg.customModelPath,
+            .help(AppInfo.branded("A checkpoint (SD, SDXL) bundles its VAE and encoder. A bare diffusion model (Z-Image, Flux 2, Qwen-Image) also needs its VAE and text encoder."))
+            filePickRow(AppInfo.branded("Model file"), path: $cfg.customModelPath,
                         types: ["safetensors", "gguf", "ckpt"])
-            filePickRow(cfg.customIsDiffusion ? "VAE" : loc.t("VAE (opcional)", "VAE (optional)"),
+            filePickRow(cfg.customIsDiffusion ? "VAE" : AppInfo.branded("VAE (optional)"),
                         path: $cfg.customVAEPath, types: ["safetensors", "gguf"])
             if cfg.customIsDiffusion {
-                filePickRow(loc.t("Codificador de texto", "Text encoder"),
+                filePickRow(AppInfo.branded("Text encoder"),
                             path: $cfg.customTextEncoderPath, types: ["safetensors", "gguf"])
                 if cfg.customVAEPath.isEmpty || cfg.customTextEncoderPath.isEmpty {
-                    Label(loc.t("Un modelo de difusión no genera nada sin su VAE y su codificador de texto.",
-                                "A diffusion model renders nothing without its VAE and text encoder."),
+                    Label(AppInfo.branded("A diffusion model renders nothing without its VAE and text encoder."),
                           systemImage: "exclamationmark.triangle")
                         .font(.caption).foregroundStyle(.orange)
                 }
@@ -1072,11 +1051,9 @@ struct ImageInstanceForm: View {
                 Spacer(minLength: 8)
                 TextField("", value: $cfg.customCfg, format: .number)
                     .workspaceTextField().frame(width: 70)
-                    .help(loc.t("Guía. Modelos turbo ~1, normales ~7. Según la ficha del modelo.",
-                                "Guidance. Turbo models ~1, normal ~7. Per the model's card."))
+                    .help(AppInfo.branded("Guidance. Turbo models ~1, normal ~7. Per the model's card."))
             }
-            Text(loc.t("Formatos: .safetensors / .gguf. Ajusta pasos y CFG según tu modelo (los turbo suelen querer CFG 1).",
-                       "Formats: .safetensors / .gguf. Set steps and CFG to match your model (turbo ones usually want CFG 1)."))
+            Text(AppInfo.branded("Formats: .safetensors / .gguf. Set steps and CFG to match your model (turbo ones usually want CFG 1)."))
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
@@ -1094,10 +1071,8 @@ struct ImageInstanceForm: View {
             .overlay(alignment: .topLeading) {
                 if cfg.prompt.isEmpty {
                     Text(isPrimary
-                         ? loc.t("Un zorro fotorrealista en un bosque nevado al atardecer…",
-                                 "A photorealistic fox in a snowy forest at golden hour…")
-                         : loc.t("Vacío: usa la descripción de la Instancia 1. Escribe aquí para personalizarla…",
-                                 "Empty: uses Instance 1's prompt. Type here to customize it…"))
+                         ? AppInfo.branded("A photorealistic fox in a snowy forest at golden hour…")
+                         : AppInfo.branded("Empty: uses Instance 1's prompt. Type here to customize it…"))
                         .font(.body).foregroundStyle(.tertiary)
                         .padding(.horizontal, 13).padding(.vertical, 16).allowsHitTesting(false)
                 }
@@ -1107,10 +1082,9 @@ struct ImageInstanceForm: View {
     /// img2img: optionally seed generation from an existing image. Strength shows
     /// only once an image is chosen (how much to transform it).
     private var negativePromptSection: some View {
-        let tip = loc.t("Lo que NO debe aparecer. Solo surte efecto por encima de CFG 1: a CFG 1 el motor no calcula esa rama.",
-                        "What must NOT appear. It only takes effect above CFG 1: at CFG 1 the engine does not compute that branch.")
+        let tip = AppInfo.branded("What must NOT appear. It only takes effect above CFG 1: at CFG 1 the engine does not compute that branch.")
         return VStack(alignment: .leading, spacing: 6) {
-            Text(loc.t("Prompt negativo", "Negative prompt")).font(.subheadline).help(tip)
+            Text(AppInfo.branded("Negative prompt")).font(.subheadline).help(tip)
             TextEditor(text: $cfg.negativePrompt)
                 .font(.callout).frame(minHeight: 44)
                 .scrollContentBackground(.hidden)
@@ -1118,15 +1092,14 @@ struct ImageInstanceForm: View {
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                 .overlay(alignment: .topLeading) {
                     if cfg.negativePrompt.isEmpty {
-                        Text(loc.t("borroso, deforme, marca de agua, texto…",
-                                   "blurry, deformed, watermark, text…"))
+                        Text(AppInfo.branded("blurry, deformed, watermark, text…"))
                             .font(.callout).foregroundStyle(.tertiary)
                             .padding(.horizontal, 13).padding(.vertical, 15).allowsHitTesting(false)
                     }
                 }
                 .help(tip)
             if model.cfgScale <= 1, !cfg.negativePrompt.isEmpty {
-                Label(loc.t("Este modelo va a CFG %@ y no usa el prompt negativo. Necesita un modelo con CFG mayor que 1 (SD 1.5, Qwen-Image) o subir el CFG en un modelo propio.", "This model runs at CFG %@ and ignores the negative prompt. It needs a model with CFG above 1 (SD 1.5, Qwen-Image), or a higher CFG on your own model.", "\(String(format: "%.1f", model.cfgScale))"),
+                Label(AppInfo.branded("This model runs at CFG \("\(String(format: "%.1f", model.cfgScale))") and ignores the negative prompt. It needs a model with CFG above 1 (SD 1.5, Qwen-Image), or a higher CFG on your own model."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption2).foregroundStyle(.yellow)
             }
@@ -1136,11 +1109,10 @@ struct ImageInstanceForm: View {
     /// Reference images (edit mode): the model reads them and keeps what they show,
     /// which is a different thing from img2img seeding the noise with one.
     private var referenceImagesSection: some View {
-        let tip = loc.t("Imágenes que el modelo mira para editar: describe el cambio en la descripción y menciona cada una como <image1>, <image2>… El motor las escala a \(model.referenceResolution) px de lado.",
-                        "Images the model looks at to edit: describe the change in the prompt and refer to each one as <image1>, <image2>… The engine scales them to \(model.referenceResolution) px a side.")
+        let tip = AppInfo.branded("Images the model looks at to edit: describe the change in the prompt and refer to each one as <image1>, <image2>… The engine scales them to \(model.referenceResolution) px a side.")
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text(loc.t("Imágenes de referencia", "Reference images")).font(.subheadline).help(tip)
+                Text(AppInfo.branded("Reference images")).font(.subheadline).help(tip)
                 Spacer(minLength: 6)
                 Text("\(cfg.referenceImagePaths.count)/\(model.maxReferenceImages)")
                     .font(.caption).foregroundStyle(.secondary).help(tip)
@@ -1154,16 +1126,16 @@ struct ImageInstanceForm: View {
                     Spacer(minLength: 6)
                     Button {
                         cfg.referenceImagePaths.remove(at: index)
-                    } label: { Label(loc.t("Quitar", "Remove"), systemImage: "xmark.circle") }
+                    } label: { Label(AppInfo.branded("Remove"), systemImage: "xmark.circle") }
                         .labelStyle(.iconOnly)
                         .buttonStyle(GlassIconButtonStyle())
-                        .iconHelp(loc.t("Quitar esta referencia", "Remove this reference"))
+                        .iconHelp(AppInfo.branded("Remove this reference"))
                 }
             }
             if cfg.referenceImagePaths.count < model.maxReferenceImages {
                 Button {
                     pickFile(types: ["png", "jpg", "jpeg", "webp"]) { cfg.referenceImagePaths.append($0) }
-                } label: { Label(loc.t("Añadir referencia…", "Add reference…"), systemImage: "photo.badge.plus") }
+                } label: { Label(AppInfo.branded("Add reference…"), systemImage: "photo.badge.plus") }
                     .font(.caption).help(tip)
             }
         }
@@ -1171,20 +1143,18 @@ struct ImageInstanceForm: View {
 
     private var img2imgSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            filePickRow(loc.t("Imagen inicial (img2img)", "Init image (img2img)"),
+            filePickRow(AppInfo.branded("Init image (img2img)"),
                         path: $cfg.initImagePath, types: ["png", "jpg", "jpeg", "webp"])
             if !cfg.initImagePath.isEmpty {
-                let strengthTip = loc.t("Cuánto cambia la imagen inicial. Bajo (~0.3) conserva la composición; alto (~0.8) la reinventa.",
-                                        "How much the init image changes. Low (~0.3) keeps the composition; high (~0.8) reinvents it.")
+                let strengthTip = AppInfo.branded("How much the init image changes. Low (~0.3) keeps the composition; high (~0.8) reinvents it.")
                 HStack(spacing: 6) {
-                    Text(loc.t("Intensidad", "Strength")).font(.caption).help(strengthTip)
+                    Text(AppInfo.branded("Strength")).font(.caption).help(strengthTip)
                     Slider(value: $cfg.strength, in: 0.1...1.0).help(strengthTip)
                     Text(String(format: "%.2f", cfg.strength))
                         .font(.system(size: 11, design: .monospaced)).frame(width: 34).help(strengthTip)
                 }
                 if initImageRatioMismatch {
-                    Label(loc.t("La imagen inicial tiene otra proporción que el marco elegido; puede recortar o deformar (p. ej. cabezas cortadas). Usa una referencia con la misma proporción.",
-                                "The init image has a different ratio than the chosen frame; it may crop or distort (e.g. cut-off heads). Use a reference with the same ratio."),
+                    Label(AppInfo.branded("The init image has a different ratio than the chosen frame; it may crop or distort (e.g. cut-off heads). Use a reference with the same ratio."),
                           systemImage: "aspectratio")
                         .font(.caption2).foregroundStyle(.yellow)
                 }
@@ -1194,23 +1164,21 @@ struct ImageInstanceForm: View {
     }
 
     private var maskRow: some View {
-        let tip = loc.t("Retoca solo una zona (inpainting). Blanco = repinta, negro = conserva. Del tamaño de la imagen inicial. Sin máscara se repinta todo.",
-                        "Repaints one area only (inpainting). White = repaint, black = keep. Same size as the init image. Without one, everything is repainted.")
+        let tip = AppInfo.branded("Repaints one area only (inpainting). White = repaint, black = keep. Same size as the init image. Without one, everything is repainted.")
         return VStack(alignment: .leading, spacing: 4) {
-            filePickRow(loc.t("Máscara (inpainting, opcional)", "Mask (inpainting, optional)"),
+            filePickRow(AppInfo.branded("Mask (inpainting, optional)"),
                         path: $cfg.maskPath, types: ["png", "jpg", "jpeg", "webp"])
                 .help(tip)
             Button { paintingMask = true } label: {
                 Label(cfg.maskPath.isEmpty
-                      ? loc.t("Pintar la zona", "Paint the area")
-                      : loc.t("Volver a pintarla", "Paint it again"),
+                      ? AppInfo.branded("Paint the area")
+                      : AppInfo.branded("Paint it again"),
                       systemImage: "paintbrush.pointed")
                     .frame(maxWidth: .infinity)
             }
             .glassButton().controlSize(.small)
             .disabled(cfg.initImagePath.isEmpty)
-            .help(loc.t("Pinta la máscara sobre la imagen inicial en vez de preparar un PNG aparte.",
-                        "Paint the mask over the init image instead of preparing a separate PNG."))
+            .help(AppInfo.branded("Paint the mask over the init image instead of preparing a separate PNG."))
             .sheet(isPresented: $paintingMask) {
                 MaskEditorView(initImagePath: cfg.initImagePath,
                                outputDirectory: models.imagenDirectory,
@@ -1220,8 +1188,7 @@ struct ImageInstanceForm: View {
             if !cfg.maskPath.isEmpty {
                 Text(tip).font(.caption2).foregroundStyle(.secondary)
                 if maskSizeMismatch {
-                    Label(loc.t("La máscara no tiene el mismo tamaño en píxeles que la imagen inicial; la zona retocada saldrá desplazada.",
-                                "The mask is not the same pixel size as the init image; the repainted area will land off-target."),
+                    Label(AppInfo.branded("The mask is not the same pixel size as the init image; the repainted area will land off-target."),
                           systemImage: "exclamationmark.triangle")
                         .font(.caption2).foregroundStyle(.yellow)
                 }
@@ -1266,34 +1233,30 @@ struct ImageInstanceForm: View {
 
     private var settingsGrid: some View {
         VStack(spacing: 12) {
-            row(loc.t("Proporción", "Aspect ratio"),
-                loc.t("Marco de la imagen. Se ajusta a múltiplos de 64 px.",
-                      "Image framing. Snapped to multiples of 64 px.")) {
+            row(AppInfo.branded("Aspect ratio"),
+                AppInfo.branded("Image framing. Snapped to multiples of 64 px.")) {
                 Picker("", selection: $cfg.aspect) {
                     ForEach(offeredAspects) { a in
-                        Text(a == .custom ? loc.t("Personalizado", "Custom") : a.rawValue).tag(a.rawValue)
+                        Text(a == .custom ? AppInfo.branded("Custom") : a.rawValue).tag(a.rawValue)
                     }
                 }.labelsHidden().frame(width: 96, alignment: .trailing)
             }
             if cfg.aspectValue == .custom {
-                row(loc.t("Proporción W:H", "Ratio W:H"),
-                    loc.t("Proporción libre como 21:9 (cine) o 3:2. El lado largo respeta el Tamaño base y la VRAM: no fija píxeles arbitrarios, así no cuelga la GPU.",
-                          "Free ratio like 21:9 (cinema) or 3:2. The long edge respects the Base size and VRAM: it sets no arbitrary pixel count, so the GPU can't hang.")) {
+                row(AppInfo.branded("Ratio W:H"),
+                    AppInfo.branded("Free ratio like 21:9 (cinema) or 3:2. The long edge respects the Base size and VRAM: it sets no arbitrary pixel count, so the GPU can't hang.")) {
                     TextField("21:9", text: $cfg.customAspect)
                         .workspaceTextField().frame(width: 96)
                 }
             }
-            row(loc.t("Tamaño base", "Base size"),
-                loc.t("Lado largo en píxeles. El máximo se ajusta a la VRAM de la GPU.",
-                      "Long edge in pixels. The maximum adapts to the GPU's VRAM.")) {
+            row(AppInfo.branded("Base size"),
+                AppInfo.branded("Long edge in pixels. The maximum adapts to the GPU's VRAM.")) {
                 Picker("", selection: $cfg.baseSize) {
                     ForEach(baseSizes, id: \.self) { Text("\($0) px").tag($0) }
                 }.labelsHidden().frame(width: 96, alignment: .trailing)
             }
             if !hardware.gpus.isEmpty {
                 row("GPU",
-                    loc.t("GPU que hará la generación de esta instancia.",
-                          "GPU that runs this instance's generation.")) {
+                    AppInfo.branded("GPU that runs this instance's generation.")) {
                     if hardware.gpus.count > 1 {
                         Picker("", selection: $cfg.gpuIndex) {
                             ForEach(Array(hardware.gpus.enumerated()), id: \.offset) { i, g in
@@ -1309,11 +1272,10 @@ struct ImageInstanceForm: View {
                 }
             }
             if hardware.gpus.count > 1 {
-                row(loc.t("Encoder/VAE en GPU", "Encoder/VAE on GPU"),
-                    loc.t("Manda el text-encoder y el VAE a otra GPU y deja esta libre para el modelo de difusión: caben modelos más grandes o imágenes mayores.",
-                          "Moves the text encoder and VAE to another GPU, leaving this one to the diffusion model: bigger models or larger frames fit.")) {
+                row(AppInfo.branded("Encoder/VAE on GPU"),
+                    AppInfo.branded("Moves the text encoder and VAE to another GPU, leaving this one to the diffusion model: bigger models or larger frames fit.")) {
                     Picker("", selection: $cfg.auxGPUIndex) {
-                        Text(loc.t("Misma GPU", "Same GPU")).tag(-1)
+                        Text(AppInfo.branded("Same GPU")).tag(-1)
                         ForEach(Array(hardware.gpus.enumerated()), id: \.offset) { i, g in
                             if i != cfg.gpuIndex { Text(g.name).tag(i) }
                         }
@@ -1323,31 +1285,25 @@ struct ImageInstanceForm: View {
                     }
                 }
             }
-            row(loc.t("Pasos", "Steps"),
+            row(AppInfo.branded("Steps"),
                 model.sigmas.isEmpty
-                    ? loc.t("Iteraciones de muestreo. Los modelos turbo/distilled están afinados para pocos pasos.",
-                            "Sampling iterations. Turbo/distilled models are tuned for few steps.")
-                    : loc.t("Este modelo va a %@ pasos fijos: trae su propio calendario de ruido y con otro la imagen sale mal.",
-                            "This model runs a fixed %@ steps: it ships its own noise schedule, and any other one spoils the image.",
-                            "\(model.steps(cfg.steps))")) {
+                    ? AppInfo.branded("Sampling iterations. Turbo/distilled models are tuned for few steps.")
+                    : AppInfo.branded("This model runs a fixed \(model.steps(cfg.steps)) steps: it ships its own noise schedule, and any other one spoils the image.")) {
                 Stepper(value: $cfg.steps, in: 4...30) { Text("\(model.steps(cfg.steps))").monospacedDigit() }.frame(width: 96, alignment: .trailing)
                     .disabled(!model.sigmas.isEmpty)
             }
-            row(loc.t("Semilla", "Seed"),
-                loc.t("-1 = aleatoria. Fija un número para reproducir la misma imagen; distinta semilla = variación.",
-                      "-1 = random. Set a number to reproduce the same image; a different seed = a variation.")) {
+            row(AppInfo.branded("Seed"),
+                AppInfo.branded("-1 = random. Set a number to reproduce the same image; a different seed = a variation.")) {
                 TextField("", value: $cfg.seed, format: .number).workspaceTextField().frame(width: 96)
             }
-            row(loc.t("Formato", "Format"),
-                loc.t("JPG pesa mucho menos; PNG es sin pérdida.",
-                      "JPG is far lighter; PNG is lossless.")) {
+            row(AppInfo.branded("Format"),
+                AppInfo.branded("JPG is far lighter; PNG is lossless.")) {
                 Picker("", selection: $cfg.format) {
                     ForEach(ImageFormat.allCases) { Text($0.rawValue.uppercased()).tag($0.rawValue) }
                 }.labelsHidden().frame(width: 96, alignment: .trailing)
             }
-            row(loc.t("Modo rápido", "Fast mode"),
-                loc.t("Reutiliza pasos del muestreo en vez de recalcularlos. Más rápido, pero cambia el detalle de la imagen. En Qwen-Image 2.1 a 25 pasos, aproximadamente: cache-dit 1.46x, spectrum 1.91x, easycache 2.06x.",
-                      "Reuses sampling steps instead of computing them again. Faster, but it changes the image's detail. On Qwen-Image 2.1 at 25 steps, roughly: cache-dit 1.46x, spectrum 1.91x, easycache 2.06x.")) {
+            row(AppInfo.branded("Fast mode"),
+                AppInfo.branded("Reuses sampling steps instead of computing them again. Faster, but it changes the image's detail. On Qwen-Image 2.1 at 25 steps, roughly: cache-dit 1.46x, spectrum 1.91x, easycache 2.06x.")) {
                 Picker("", selection: $cfg.fastMode) {
                     ForEach(ImageFastMode.allCases.filter { $0.supports(model) }) { mode in
                         Text(fastModeLabel(mode)).tag(mode.rawValue)
@@ -1355,9 +1311,8 @@ struct ImageInstanceForm: View {
                     }
                 }.labelsHidden().frame(width: 150, alignment: .trailing)
             }
-            row(loc.t("Descargar a CPU", "Offload to CPU"),
-                loc.t("Mantiene los pesos en RAM y los sube a VRAM por etapas. Más lento; solo si falta VRAM.",
-                      "Keeps weights in RAM and streams them to VRAM per stage. Slower; only if VRAM is tight.")) {
+            row(AppInfo.branded("Offload to CPU"),
+                AppInfo.branded("Keeps weights in RAM and streams them to VRAM per stage. Slower; only if VRAM is tight.")) {
                 Toggle("", isOn: $cfg.offloadCPU).labelsHidden().toggleStyle(.switch)
             }
         }
@@ -1366,8 +1321,7 @@ struct ImageInstanceForm: View {
     /// The frame fits but sits near the VRAM ceiling; nudge the user to step down
     /// if the GPU freezes or the run crashes.
     private var nearLimitNote: some View {
-        Label(loc.t("Cerca del límite de VRAM. Si hay tirones o un crash, baja el tamaño.",
-                    "Near the VRAM limit. If it freezes or crashes, lower the size."),
+        Label(AppInfo.branded("Near the VRAM limit. If it freezes or crashes, lower the size."),
               systemImage: "gauge.with.dots.needle.67percent")
             .font(.caption).foregroundStyle(.yellow)
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
@@ -1376,17 +1330,14 @@ struct ImageInstanceForm: View {
 
     /// The catalog class keeps headroom; what blocks a run is the frame estimate.
     private var vramClassNote: some View {
-        Label(loc.t("Pensado para %@ GB de VRAM; esta GPU tiene %@ GB. Puede ir justo: si se cuelga o falla, baja el tamaño.",
-                    "Sized for %@ GB of VRAM; this GPU has %@ GB. It may be tight: if it freezes or fails, lower the size.",
-                    "\(Int(model.minVRAMGB))", "\(Int(targetVRAM.rounded()))"),
+        Label(AppInfo.branded("Sized for \(Int(model.minVRAMGB)) GB of VRAM; this GPU has \(Int(targetVRAM.rounded())) GB. It may be tight: if it freezes or fails, lower the size."),
               systemImage: "exclamationmark.triangle")
             .font(.caption).foregroundStyle(.orange)
     }
 
     /// A square at a large base can exceed VRAM even when the engine is ready.
     private var vramWarning: some View {
-        Label(loc.t("Ese tamaño no cabe en la VRAM de esta GPU. Usa un formato no cuadrado o un tamaño menor.",
-                    "That size does not fit this GPU's VRAM. Use a non-square ratio or a smaller size."),
+        Label(AppInfo.branded("That size does not fit this GPU's VRAM. Use a non-square ratio or a smaller size."),
               systemImage: "exclamationmark.triangle.fill")
             .font(.caption).foregroundStyle(.orange)
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
@@ -1411,7 +1362,7 @@ struct ImageInstanceForm: View {
 
     private func fastModeLabel(_ mode: ImageFastMode) -> String {
         switch mode {
-        case .off:       return loc.t("Apagado", "Off")
+        case .off:       return AppInfo.branded("Off")
         case .cacheDit:  return "cache-dit"
         case .spectrum:  return "spectrum"
         case .easycache: return "easycache"
@@ -1421,17 +1372,13 @@ struct ImageInstanceForm: View {
     private func fastModeHelp(_ mode: ImageFastMode) -> String {
         switch mode {
         case .off:
-            return loc.t("Calcula todos los pasos: la imagen de referencia.",
-                         "Computes every step: the reference image.")
+            return AppInfo.branded("Computes every step: the reference image.")
         case .cacheDit:
-            return loc.t("El que menos acelera (alrededor de 1.46x en Qwen-Image 2.1).",
-                         "The smallest speedup (about 1.46x on Qwen-Image 2.1).")
+            return AppInfo.branded("The smallest speedup (about 1.46x on Qwen-Image 2.1).")
         case .spectrum:
-            return loc.t("Equilibrio: alrededor de 1.91x en Qwen-Image 2.1, misma composición con cambios de detalle.",
-                         "Balanced: about 1.91x on Qwen-Image 2.1, same composition with changes in detail.")
+            return AppInfo.branded("Balanced: about 1.91x on Qwen-Image 2.1, same composition with changes in detail.")
         case .easycache:
-            return loc.t("El más rápido (alrededor de 2.06x en Qwen-Image 2.1), con la imagen algo más suave.",
-                         "The fastest (about 2.06x on Qwen-Image 2.1), with a slightly softer image.")
+            return AppInfo.branded("The fastest (about 2.06x on Qwen-Image 2.1), with a slightly softer image.")
         }
     }
 
@@ -1440,16 +1387,16 @@ struct ImageInstanceForm: View {
             Text(title).font(.caption)
             Spacer(minLength: 6)
             Button(path.wrappedValue.isEmpty
-                   ? loc.t("Elegir…", "Choose…")
+                   ? AppInfo.branded("Choose…")
                    : (path.wrappedValue as NSString).lastPathComponent) {
                 pickFile(types: types) { path.wrappedValue = $0 }
             }
             .font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 150, alignment: .trailing)
             if !path.wrappedValue.isEmpty {
-                Button { path.wrappedValue = "" } label: { Label(loc.t("Quitar", "Clear"), systemImage: "xmark.circle") }
+                Button { path.wrappedValue = "" } label: { Label(AppInfo.branded("Clear"), systemImage: "xmark.circle") }
                     .labelStyle(.iconOnly)
                     .buttonStyle(GlassIconButtonStyle())
-                    .iconHelp(loc.t("Quitar el archivo", "Clear the file"))
+                    .iconHelp(AppInfo.branded("Clear the file"))
             }
         }
     }
@@ -1469,7 +1416,7 @@ struct ImageInstanceForm: View {
     panel.canChooseDirectories = true
     panel.canChooseFiles = false
     panel.allowsMultipleSelection = false
-    panel.prompt = loc.t("Guardar aquí", "Save here")
+    panel.prompt = AppInfo.branded("Save here")
     guard panel.runModal() == .OK, let dir = panel.url else { return }
     for src in urls {
         try? FileManager.default.copyItem(at: src, to: dir.appendingPathComponent(src.lastPathComponent))
@@ -1480,16 +1427,13 @@ struct ImageInstanceForm: View {
 private func imageFailureText(_ raw: String, _ loc: Localizer) -> String {
     switch raw {
     case "OOM":
-        return loc.t("No hay VRAM suficiente para ese tamaño. Usa un formato no cuadrado o un tamaño menor.",
-                     "Not enough VRAM for that size. Use a non-square ratio or a smaller size.")
+        return AppInfo.branded("Not enough VRAM for that size. Use a non-square ratio or a smaller size.")
     case "TIMEOUT":
-        return loc.t("La GPU agotó el tiempo: la imagen es muy grande. Reduce el tamaño base.",
-                     "The GPU timed out: the image is too large. Lower the base size.")
+        return AppInfo.branded("The GPU timed out: the image is too large. Lower the base size.")
     case "MISSING_REF":
-        return loc.t("Falta una imagen de referencia (se movió o se borró). Quítala o vuelve a elegirla.",
-                     "A reference image is missing (moved or deleted). Remove it or pick it again.")
+        return AppInfo.branded("A reference image is missing (moved or deleted). Remove it or pick it again.")
     default:
-        return loc.t("La generación falló (%@).", "Generation failed (%@).", "\(raw)")
+        return AppInfo.branded("Generation failed (\(raw)).")
     }
 }
 
@@ -1549,14 +1493,14 @@ private struct ImageGenerationThumbnail: View {
         .overlay(RoundedRectangle(cornerRadius: 10)
             .stroke(Color.appAccent.opacity(0.8), lineWidth: 1.5))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(loc.t("Generación en curso", "Generation in progress"))
+        .accessibilityLabel(AppInfo.branded("Generation in progress"))
     }
 
     private var stageTitle: String {
         switch generator.stage {
-        case .loading:  return loc.t("Cargando modelos…", "Loading models…")
-        case .sampling: return loc.t("Generando · paso %@", "Sampling · step %@", generator.stepText)
-        case .decoding: return loc.t("Decodificando…", "Decoding…")
+        case .loading:  return AppInfo.branded("Loading models…")
+        case .sampling: return AppInfo.branded("Sampling · step \(generator.stepText)")
+        case .decoding: return AppInfo.branded("Decoding…")
         }
     }
 }
@@ -1623,7 +1567,7 @@ struct ImageCanvas: View {
             }
             .buttonStyle(GlassIconButtonStyle())
             .keyboardShortcut(.cancelAction)
-            .iconHelp(loc.t("Cerrar", "Close"))
+            .iconHelp(AppInfo.branded("Close"))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             .padding(18)
         }
@@ -1637,8 +1581,8 @@ struct ImageCanvas: View {
                 Spacer()
                 if detailTab == .instances, !pool.gallery.isEmpty {
                     Picker("", selection: $galleryOrder) {
-                        Text(loc.t("Recientes", "Recent")).tag(ImageGalleryOrder.recent)
-                        Text(loc.t("Más antiguas", "Oldest")).tag(ImageGalleryOrder.oldest)
+                        Text(AppInfo.branded("Recent")).tag(ImageGalleryOrder.recent)
+                        Text(AppInfo.branded("Oldest")).tag(ImageGalleryOrder.oldest)
                     }
                     .labelsHidden()
                     .frame(width: 150)
@@ -1659,12 +1603,12 @@ struct ImageCanvas: View {
     private var detailTabPicker: some View {
         HStack(spacing: 3) {
             detailTabButton(.instances,
-                            title: loc.t("Instancias", "Instances"),
+                            title: AppInfo.branded("Instances"),
                             systemImage: "square.stack.3d.up")
             detailTabButton(.queue,
                             title: pool.queue.isEmpty
-                                ? loc.t("Cola", "Queue")
-                                : loc.t("Cola %@", "Queue %@", "\(pool.queue.count)"),
+                                ? AppInfo.branded("Queue")
+                                : AppInfo.branded("Queue \(pool.queue.count)"),
                             systemImage: "list.bullet.rectangle")
         }
         .padding(3)
@@ -1743,20 +1687,20 @@ struct ImageCanvas: View {
                         Button { presentsFullscreenImage = true } label: {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                         }
-                        .iconHelp(loc.t("Ver a pantalla completa", "View fullscreen"))
+                        .iconHelp(AppInfo.branded("View fullscreen"))
                         Menu {
                             Button { save(result) } label: {
-                                Label(loc.t("Guardar como…", "Save as…"), systemImage: "square.and.arrow.down")
+                                Label(AppInfo.branded("Save as…"), systemImage: "square.and.arrow.down")
                             }
                             Button { NSWorkspace.shared.activateFileViewerSelecting([result.url]) } label: {
-                                Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder")
+                                Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
                             }
                         } label: {
                             Image(systemName: "ellipsis")
                         }
                         .menuStyle(.borderlessButton)
                         .menuIndicator(.hidden)
-                        .iconHelp(loc.t("Más acciones", "More actions"))
+                        .iconHelp(AppInfo.branded("More actions"))
                     }
                     .buttonStyle(GlassIconButtonStyle())
                     .controlSize(.large)
@@ -1787,7 +1731,7 @@ struct ImageCanvas: View {
             let generator = pool.generator(for: config.id)
             guard generator.isBusy else { return nil }
             return (config.id,
-                    pool.instanceLabel(for: config.id) ?? loc.t("Instancia", "Instance"),
+                    pool.instanceLabel(for: config.id) ?? AppInfo.branded("Instance"),
                     generator)
         }
     }
@@ -1797,8 +1741,8 @@ struct ImageCanvas: View {
             generationStatus(active.generator,
                              label: active.label,
                              title: busyGenerators.count > 1
-                                ? loc.t("Generando %@ imágenes", "Generating %@ images", "\(busyGenerators.count)")
-                                : loc.t("Generando otra imagen", "Generating another image"),
+                                ? AppInfo.branded("Generating \(busyGenerators.count) images")
+                                : AppInfo.branded("Generating another image"),
                              width: 230)
         }
     }
@@ -1835,7 +1779,7 @@ struct ImageCanvas: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.22)))
         .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(loc.t("Generación en curso", "Generation in progress"))
+        .accessibilityLabel(AppInfo.branded("Generation in progress"))
     }
 
     private var generationCardColor: Color {
@@ -1874,7 +1818,7 @@ struct ImageCanvas: View {
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(result.instanceLabel ?? loc.t("Imagen generada", "Generated image"))
+                        Text(result.instanceLabel ?? AppInfo.branded("Generated image"))
                             .font(.system(size: 10, weight: .semibold))
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -1916,8 +1860,8 @@ struct ImageCanvas: View {
         .buttonStyle(GlassIconButtonStyle())
         .controlSize(.large)
         .disabled(orderedGallery.count < 2)
-        .iconHelp(delta < 0 ? loc.t("Imagen anterior", "Previous image")
-                            : loc.t("Imagen siguiente", "Next image"))
+        .iconHelp(delta < 0 ? AppInfo.branded("Previous image")
+                            : AppInfo.branded("Next image"))
     }
 
     private func moveSelection(_ delta: Int) {
@@ -1930,7 +1874,7 @@ struct ImageCanvas: View {
     private func resultFooter(_ result: GeneratedImage) -> some View {
         HStack(spacing: 12) {
             Circle().fill(.green).frame(width: 9, height: 9)
-            Text(loc.t("Generada en %@s", "Generated in %@s", "\(result.duration)"))
+            Text(AppInfo.branded("Generated in \(result.duration)s"))
                 .font(.caption.weight(.medium)).foregroundStyle(.green)
             Text("\(result.width) × \(result.height) · \(result.url.pathExtension.uppercased())"
                  + (result.seed >= 0 ? " · #\(result.seed)" : ""))
@@ -1938,13 +1882,13 @@ struct ImageCanvas: View {
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             Button { reusePrompt(result) } label: {
-                Label(loc.t("Reutilizar prompt", "Reuse prompt"), systemImage: "arrow.triangle.2.circlepath")
+                Label(AppInfo.branded("Reuse prompt"), systemImage: "arrow.triangle.2.circlepath")
             }
             Button { save(result) } label: {
-                Label(loc.t("Guardar", "Save"), systemImage: "square.and.arrow.down")
+                Label(AppInfo.branded("Save"), systemImage: "square.and.arrow.down")
             }
             Button { NSWorkspace.shared.activateFileViewerSelecting([result.url]) } label: {
-                Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder")
+                Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
             }
         }
         .controlSize(.small)
@@ -1981,10 +1925,9 @@ struct ImageCanvas: View {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 42, weight: .light)).foregroundStyle(.tertiary)
             VStack(spacing: 5) {
-                Text(loc.t("Crea tu primera imagen", "Create your first image"))
+                Text(AppInfo.branded("Create your first image"))
                     .font(.title3.weight(.semibold))
-                Text(loc.t("Elige un modelo, escribe una descripción y pulsa Generar.",
-                           "Choose a model, write a prompt, and press Generate."))
+                Text(AppInfo.branded("Choose a model, write a prompt, and press Generate."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -2014,7 +1957,7 @@ struct ImageCanvas: View {
                     Image(systemName: "photo.badge.clock")
                         .font(.system(size: 42, weight: .light))
                         .foregroundStyle(.tertiary)
-                    Text(loc.t("Preparando el lienzo…", "Preparing the canvas…"))
+                    Text(AppInfo.branded("Preparing the canvas…"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -2035,16 +1978,16 @@ struct ImageCanvas: View {
 
     private func progressDetail(_ gen: ImageGenerator) -> String {
         if let eta = gen.etaSeconds {
-            return loc.t("%@s · ~%@s restantes", "%@s · ~%@s left", "\(gen.elapsed)", "\(eta)")
+            return AppInfo.branded("\(gen.elapsed)s · ~\(eta)s left")
         }
-        return loc.t("%@s transcurridos", "%@s elapsed", "\(gen.elapsed)")
+        return AppInfo.branded("\(gen.elapsed)s elapsed")
     }
 
     private func stageLabel(_ gen: ImageGenerator) -> String {
         switch gen.stage {
-        case .loading:  return loc.t("Cargando modelos…", "Loading models…")
-        case .sampling: return loc.t("Generando · paso %@", "Sampling · step %@", "\(gen.stepText)")
-        case .decoding: return loc.t("Decodificando imagen…", "Decoding image…")
+        case .loading:  return AppInfo.branded("Loading models…")
+        case .sampling: return AppInfo.branded("Sampling · step \(gen.stepText)")
+        case .decoding: return AppInfo.branded("Decoding image…")
         }
     }
 
@@ -2063,7 +2006,7 @@ struct ImageCanvas: View {
                 }
                 HStack(spacing: 14) {
                     if gen.lastDuration > 0 {
-                        Label(loc.t("Generado en %@s", "Generated in %@s", "\(gen.lastDuration)"),
+                        Label(AppInfo.branded("Generated in \(gen.lastDuration)s"),
                               systemImage: "checkmark.seal.fill").font(.caption).foregroundStyle(.green)
                     }
                     Text("\(gen.lastWidth) × \(gen.lastHeight) · \(format.rawValue.uppercased())"
@@ -2071,14 +2014,14 @@ struct ImageCanvas: View {
                         .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                     Spacer()
                     Button { if let url = gen.resultURL { saveAs(url, format: format) } } label: {
-                        Label(loc.t("Guardar como…", "Save as…"), systemImage: "square.and.arrow.down")
+                        Label(AppInfo.branded("Save as…"), systemImage: "square.and.arrow.down")
                     }
-                    .help(loc.t("Guarda una copia donde elijas.", "Save a copy wherever you choose."))
+                    .help(AppInfo.branded("Save a copy wherever you choose."))
                     if let url = gen.resultURL {
                         Button { NSWorkspace.shared.activateFileViewerSelecting([url]) } label: {
-                            Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder")
+                            Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
                         }
-                        .help(loc.t("Abre el archivo en el Finder.", "Reveal the file in Finder."))
+                        .help(AppInfo.branded("Reveal the file in Finder."))
                     }
                 }
             }
@@ -2098,10 +2041,9 @@ struct ImageCanvas: View {
                 FeedLayoutPicker(grid: $canvasGrid)
                 if savable.count > 1 {
                     Button { saveImagesToFolder(savable, loc: loc) } label: {
-                        Label(loc.t("Guardar todas…", "Save all…"), systemImage: "square.and.arrow.down.on.square")
+                        Label(AppInfo.branded("Save all…"), systemImage: "square.and.arrow.down.on.square")
                     }
-                    .help(loc.t("Copia todas las imágenes generadas a una carpeta que elijas.",
-                                "Copies every generated image into a folder you choose."))
+                    .help(AppInfo.branded("Copies every generated image into a folder you choose."))
                 }
             }
             ScrollView {
@@ -2141,11 +2083,9 @@ struct ImageCanvas: View {
 
     private var engineMissingCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(loc.t("Motor de imagen no incluido en esta build",
-                        "Image engine not in this build"), systemImage: "exclamationmark.triangle")
+            Label(AppInfo.branded("Image engine not in this build"), systemImage: "exclamationmark.triangle")
                 .font(.headline).foregroundStyle(.orange)
-            Text(loc.t("Compila los motores (`./scripts/build-engines.sh`) para incluir la generación de imágenes.",
-                       "Build the engines (`./scripts/build-engines.sh`) to include image generation."))
+            Text(AppInfo.branded("Build the engines (`./scripts/build-engines.sh`) to include image generation."))
                 .font(.callout).foregroundStyle(.secondary)
         }
         .padding(20).frame(maxWidth: .infinity, alignment: .leading)
@@ -2178,7 +2118,7 @@ struct ImageCanvas: View {
                 UpscaleCompare(pair: entry)
                     .id(entry.id)
                 HStack(spacing: 12) {
-                    Text(loc.t("Arrastra la línea para comparar", "Drag the line to compare"))
+                    Text(AppInfo.branded("Drag the line to compare"))
                         .font(.caption).foregroundStyle(.secondary)
                     if let a = Self.pixelSize(entry.source), let b = Self.pixelSize(entry.output) {
                         Text("\(Int(a.width))×\(Int(a.height))  →  \(Int(b.width))×\(Int(b.height))")
@@ -2188,7 +2128,7 @@ struct ImageCanvas: View {
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting([entry.output])
                     } label: {
-                        Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder")
+                        Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
                     }
                 }
                 .frame(maxWidth: 700)
@@ -2201,15 +2141,14 @@ struct ImageCanvas: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(.quaternary))
                     ProgressView().controlSize(.small)
-                    Text(loc.t("Escalando ×4…", "Upscaling x4…"))
+                    Text(AppInfo.branded("Upscaling x4…"))
                         .font(.callout).foregroundStyle(.secondary)
                 }
             } else {
                 VStack(spacing: 10) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 42)).foregroundStyle(.tertiary)
-                    Text(loc.t("Elige una imagen para ampliarla ×4.",
-                               "Pick an image to enlarge it 4x."))
+                    Text(AppInfo.branded("Pick an image to enlarge it 4x."))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -2331,7 +2270,7 @@ struct ImageInstanceRow: View {
             Label("\(gen.elapsed)s", systemImage: "clock")
                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
             if let eta = gen.etaSeconds {
-                Label(loc.t("~%@s restantes", "~%@s left", "\(eta)"), systemImage: "hourglass")
+                Label(AppInfo.branded("~\(eta)s left"), systemImage: "hourglass")
                     .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
             }
         } else if let url = gen.resultURL, gen.resultImage != nil {
@@ -2344,7 +2283,7 @@ struct ImageInstanceRow: View {
             Text(metaLine)
                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
             if gen.lastDuration > 0 {
-                Label(loc.t("Generado en %@s", "Generated in %@s", "\(gen.lastDuration)"),
+                Label(AppInfo.branded("Generated in \(gen.lastDuration)s"),
                       systemImage: "checkmark.seal.fill").font(.caption).foregroundStyle(.green)
             }
             if grid {
@@ -2360,7 +2299,7 @@ struct ImageInstanceRow: View {
         } else if case .failed = gen.state {
             EmptyView()
         } else {
-            Text(loc.t("En espera", "Idle")).font(.caption).foregroundStyle(.tertiary)
+            Text(AppInfo.branded("Idle")).font(.caption).foregroundStyle(.tertiary)
         }
     }
 
@@ -2375,16 +2314,16 @@ struct ImageInstanceRow: View {
 
     private func saveButton(_ url: URL) -> some View {
         Button { onSave(url) } label: {
-            Label(loc.t("Guardar como…", "Save as…"), systemImage: "square.and.arrow.down")
+            Label(AppInfo.branded("Save as…"), systemImage: "square.and.arrow.down")
         }
-        .help(loc.t("Guarda una copia donde elijas.", "Save a copy wherever you choose."))
+        .help(AppInfo.branded("Save a copy wherever you choose."))
     }
 
     private func revealButton(_ url: URL) -> some View {
         Button { NSWorkspace.shared.activateFileViewerSelecting([url]) } label: {
-            Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder")
+            Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
         }
-        .help(loc.t("Abre el archivo en el Finder.", "Reveal the file in Finder."))
+        .help(AppInfo.branded("Reveal the file in Finder."))
     }
 }
 

@@ -25,10 +25,10 @@ struct MenuBarLabel: View {
 
     private var stateLabel: String {
         switch server.state {
-        case .running:  return loc.t("XeonLLM: servidor activo", "XeonLLM: server running")
-        case .starting: return loc.t("XeonLLM: iniciando", "XeonLLM: starting")
-        case .failed:   return loc.t("XeonLLM: el motor falló", "XeonLLM: the engine failed")
-        case .stopped:  return loc.t("XeonLLM: servidor parado", "XeonLLM: server stopped")
+        case .running:  return AppInfo.branded("XeonLLM: server running")
+        case .starting: return AppInfo.branded("XeonLLM: starting")
+        case .failed:   return AppInfo.branded("XeonLLM: the engine failed")
+        case .stopped:  return AppInfo.branded("XeonLLM: server stopped")
         }
     }
 

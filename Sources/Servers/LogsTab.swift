@@ -21,7 +21,7 @@ struct LogsView: View {
         VStack(spacing: 0) {
             if manager.servers.count > 1 {
                 HStack {
-                    Label(loc.t("Instancia", "Instance"), systemImage: "server.rack")
+                    Label(AppInfo.branded("Instance"), systemImage: "server.rack")
                         .font(.callout.bold())
                     XeonDropdown(selection: serverSelection,
                                  options: manager.servers.map {
@@ -95,9 +95,9 @@ struct ServerLogView: View {
         .task(id: logSource) { await pollExternalLog() }
         .task(id: parseToken) { await parseCurrentLog() }
         .sheet(isPresented: .constant(checker.running)) { engineCheckSheet }
-        .alert(loc.t("Comprobación del motor", "Engine check"),
+        .alert(AppInfo.branded("Engine check"),
                isPresented: Binding(get: { checkVerdict != nil }, set: { if !$0 { checkVerdict = nil } })) {
-            Button(loc.t("Aceptar", "OK"), role: .cancel) {}
+            Button(AppInfo.branded("OK"), role: .cancel) {}
         } message: { Text(checkVerdict ?? "") }
     }
 
@@ -135,10 +135,10 @@ struct ServerLogView: View {
         HStack(spacing: 0) {
             summaryValue(modelName.quant.isEmpty ? "GGUF" : modelName.quant)
             if full { summaryValue("\(hardware.bestGPU?.vramGB ?? 0) GB VRAM") }
-            summaryValue("\(loc.t("Puerto", "Port")) \(settings.port)")
-            summaryValue(loc.t("%@ de contexto", "%@ context", compactContext(settings.ctx)), last: !full)
+            summaryValue("\(AppInfo.branded("Port")) \(settings.port)")
+            summaryValue(AppInfo.branded("\(compactContext(settings.ctx)) context"), last: !full)
             if full {
-                summaryValue(settings.serverBinary == ServerSettings.defaultBinary ? "llama.cpp" : loc.t("Motor externo", "External engine"), last: true)
+                summaryValue(settings.serverBinary == ServerSettings.defaultBinary ? "llama.cpp" : AppInfo.branded("External engine"), last: true)
             }
         }
     }
@@ -162,20 +162,20 @@ struct ServerLogView: View {
     @ViewBuilder private var serverAction: some View {
         switch server.state {
         case .running, .starting:
-            Button(loc.t("Detener servidor", "Stop server"), systemImage: "stop.fill", role: .destructive) { server.stop() }
+            Button(AppInfo.branded("Stop server"), systemImage: "stop.fill", role: .destructive) { server.stop() }
                 .glassButton(prominent: true)
         default:
-            Button(loc.t("Iniciar servidor", "Start server"), systemImage: "play.fill") { server.start(settings) }
+            Button(AppInfo.branded("Start server"), systemImage: "play.fill") { server.start(settings) }
                 .glassButton(prominent: true).disabled(settings.modelPath.isEmpty)
         }
     }
 
     private var statePresentation: (title: String, icon: String, color: Color) {
         switch server.state {
-        case .running: (loc.t("Ejecutándose", "Running"), "checkmark.circle.fill", .green)
-        case .starting: (loc.t("Iniciando", "Starting"), "clock.fill", .orange)
-        case .failed: (loc.t("Error", "Failed"), "xmark.circle.fill", .red)
-        case .stopped: (loc.t("Detenido", "Stopped"), "circle", .secondary)
+        case .running: (AppInfo.branded("Running"), "checkmark.circle.fill", .green)
+        case .starting: (AppInfo.branded("Starting"), "clock.fill", .orange)
+        case .failed: (AppInfo.branded("Failed"), "xmark.circle.fill", .red)
+        case .stopped: (AppInfo.branded("Stopped"), "circle", .secondary)
         }
     }
     private func compactContext(_ value: Int) -> String {
@@ -185,12 +185,12 @@ struct ServerLogView: View {
     private var sourceSwitcher: some View {
         HStack {
             GlassSegmentedControl(selection: $logSource, segments: [
-                .init(value: "server", title: loc.t("Servidor", "Server"), systemImage: "server.rack"),
-                .init(value: "images", title: loc.t("Imágenes", "Images"), systemImage: "photo"),
-                .init(value: "video", title: loc.t("Vídeo", "Video"), systemImage: "film"),
+                .init(value: "server", title: AppInfo.branded("Server"), systemImage: "server.rack"),
+                .init(value: "images", title: AppInfo.branded("Images"), systemImage: "photo"),
+                .init(value: "video", title: AppInfo.branded("Video"), systemImage: "film"),
             ])
             Spacer()
-            Button(loc.t("Logs en Finder", "Logs in Finder"), systemImage: "folder") { revealCurrentLog() }
+            Button(AppInfo.branded("Logs in Finder"), systemImage: "folder") { revealCurrentLog() }
                 .glassButton().controlSize(.small)
         }
     }
@@ -199,14 +199,14 @@ struct ServerLogView: View {
         AdaptiveTwoUp(threshold: 640, spacing: 10) {
             HStack(spacing: 10) {
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    statisticCard(icon: "bolt.fill", title: loc.t("Tiempo activo", "Uptime"), value: uptime, tint: Color.appAccent)
+                    statisticCard(icon: "bolt.fill", title: AppInfo.branded("Uptime"), value: uptime, tint: Color.appAccent)
                 }
-                statisticCard(icon: "doc.text.fill", title: loc.t("Total de líneas", "Total lines"), value: lines.count.formatted(), tint: .secondary)
+                statisticCard(icon: "doc.text.fill", title: AppInfo.branded("Total lines"), value: lines.count.formatted(), tint: .secondary)
             }
         } second: {
             HStack(spacing: 10) {
-                statisticCard(icon: "exclamationmark.triangle.fill", title: loc.t("Avisos", "Warnings"), value: warningCount.formatted(), tint: .orange)
-                statisticCard(icon: "xmark.octagon.fill", title: loc.t("Errores", "Errors"), value: errorCount.formatted(), tint: .red)
+                statisticCard(icon: "exclamationmark.triangle.fill", title: AppInfo.branded("Warnings"), value: warningCount.formatted(), tint: .orange)
+                statisticCard(icon: "xmark.octagon.fill", title: AppInfo.branded("Errors"), value: errorCount.formatted(), tint: .red)
             }
         }
     }
@@ -245,7 +245,7 @@ struct ServerLogView: View {
             logTable(matches: matches, visible: visible)
             Divider()
             HStack {
-                Text(loc.t("Mostrando %@ de %@ líneas", "Showing %@ of %@ lines", visible.count.formatted(), matches.count.formatted()))
+                Text(AppInfo.branded("Showing \(visible.count.formatted()) of \(matches.count.formatted()) lines"))
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 Spacer()
                 Label(footerStatus.title, systemImage: "circle.fill")
@@ -276,16 +276,16 @@ struct ServerLogView: View {
     }
 
     private var searchField: some View {
-        GlassSearchField(placeholder: loc.t("Buscar en los logs…", "Search logs…"), text: $query)
+        GlassSearchField(placeholder: AppInfo.branded("Search logs…"), text: $query)
             .frame(minWidth: 220, idealWidth: 320, maxWidth: 360)
     }
 
     private var levelFilter: some View {
         GlassSegmentedControl(selection: $selectedLevel, segments: [
-            .init(value: "all", title: loc.t("Todos", "All")),
+            .init(value: "all", title: AppInfo.branded("All")),
             .init(value: "info", title: "Info", systemImage: "info.circle.fill"),
-            .init(value: "warning", title: loc.t("Avisos", "Warnings"), systemImage: "exclamationmark.triangle.fill"),
-            .init(value: "error", title: loc.t("Errores", "Errors"), systemImage: "xmark.octagon.fill"),
+            .init(value: "warning", title: AppInfo.branded("Warnings"), systemImage: "exclamationmark.triangle.fill"),
+            .init(value: "error", title: AppInfo.branded("Errors"), systemImage: "xmark.octagon.fill"),
         ])
     }
 
@@ -294,40 +294,40 @@ struct ServerLogView: View {
     }
 
     private var footerStatus: (title: String, color: Color) {
-        guard logSource == "server" else { return (loc.t("Actualización automática", "Auto refresh"), .green) }
+        guard logSource == "server" else { return (AppInfo.branded("Auto refresh"), .green) }
         switch server.state {
-        case .running, .starting: return (loc.t("En vivo", "Live"), .green)
-        case .failed: return (loc.t("Error", "Failed"), .red)
-        case .stopped: return (loc.t("Detenido", "Stopped"), .secondary)
+        case .running, .starting: return (AppInfo.branded("Live"), .green)
+        case .failed: return (AppInfo.branded("Failed"), .red)
+        case .stopped: return (AppInfo.branded("Stopped"), .secondary)
         }
     }
 
     private var consoleActions: some View {
         HStack(spacing: 10) {
-            Toggle(loc.t("Seguir", "Follow"), isOn: $autoFollow).toggleStyle(.switch).controlSize(.small)
-            Button(loc.t("Limpiar", "Clear"), systemImage: "trash") { clearVisibleLog() }.glassButton().controlSize(.small)
-            Button(loc.t("Exportar", "Export"), systemImage: "square.and.arrow.up") { exportDiagnostics() }.glassButton().controlSize(.small)
+            Toggle(AppInfo.branded("Follow"), isOn: $autoFollow).toggleStyle(.switch).controlSize(.small)
+            Button(AppInfo.branded("Clear"), systemImage: "trash") { clearVisibleLog() }.glassButton().controlSize(.small)
+            Button(AppInfo.branded("Export"), systemImage: "square.and.arrow.up") { exportDiagnostics() }.glassButton().controlSize(.small)
             moreMenu
         }
     }
 
     private var compactConsoleActions: some View {
         HStack(spacing: 10) {
-            Toggle(loc.t("Seguir", "Follow"), isOn: $autoFollow).toggleStyle(.switch).controlSize(.small)
-            Button(loc.t("Limpiar", "Clear"), systemImage: "trash") { clearVisibleLog() }.glassButton().controlSize(.small)
-            Button(loc.t("Exportar", "Export"), systemImage: "square.and.arrow.up") { exportDiagnostics() }.glassButton().controlSize(.small)
+            Toggle(AppInfo.branded("Follow"), isOn: $autoFollow).toggleStyle(.switch).controlSize(.small)
+            Button(AppInfo.branded("Clear"), systemImage: "trash") { clearVisibleLog() }.glassButton().controlSize(.small)
+            Button(AppInfo.branded("Export"), systemImage: "square.and.arrow.up") { exportDiagnostics() }.glassButton().controlSize(.small)
         }
     }
 
     private var moreMenu: some View {
         Menu {
-            Button(copied ? loc.t("Copiado", "Copied") : loc.t("Copiar líneas visibles", "Copy visible lines"),
+            Button(copied ? AppInfo.branded("Copied") : AppInfo.branded("Copy visible lines"),
                    systemImage: copied ? "checkmark" : "doc.on.doc") { copy() }
-            Button(loc.t("Comprobar motor y exportar…", "Check engine and export…"), systemImage: "checkmark.seal") { startEngineCheck() }
+            Button(AppInfo.branded("Check engine and export…"), systemImage: "checkmark.seal") { startEngineCheck() }
                 .disabled(!engineCheckReady).help(engineCheckHelp)
-            Button(loc.t("Logs en Finder", "Logs in Finder"), systemImage: "folder") { revealCurrentLog() }
+            Button(AppInfo.branded("Logs in Finder"), systemImage: "folder") { revealCurrentLog() }
         } label: { Image(systemName: "ellipsis") }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(loc.t("Más acciones", "More actions"))
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help(AppInfo.branded("More actions"))
     }
 
     @ViewBuilder private func logTable(matches: [PresentedLogLine],
@@ -342,8 +342,7 @@ struct ServerLogView: View {
                         LazyVStack(spacing: 0) {
                             if matches.count > displayLimit {
                                 Button { displayLimit += 400 } label: {
-                                    Label(loc.t("Cargar %@ líneas anteriores", "Load %@ earlier lines",
-                                                min(400, matches.count - displayLimit).formatted()), systemImage: "arrow.up.circle")
+                                    Label(AppInfo.branded("Load \(min(400, matches.count - displayLimit).formatted()) earlier lines"), systemImage: "arrow.up.circle")
                                         .frame(maxWidth: .infinity)
                                 }
                                 .buttonStyle(.plain).foregroundStyle(Color.appAccent).padding(12)
@@ -363,11 +362,11 @@ struct ServerLogView: View {
 
     private var logHeader: some View {
         HStack(spacing: 12) {
-            Text(loc.t("Tiempo", "Time")).frame(width: 106, alignment: .leading)
-            Text(loc.t("Nivel", "Level")).frame(width: 74, alignment: .leading)
-            Text(loc.t("Fuente", "Source")).frame(width: 90, alignment: .leading)
+            Text(AppInfo.branded("Time")).frame(width: 106, alignment: .leading)
+            Text(AppInfo.branded("Level")).frame(width: 74, alignment: .leading)
+            Text(AppInfo.branded("Source")).frame(width: 90, alignment: .leading)
             Divider().frame(height: 18)
-            Text(loc.t("Mensaje", "Message")); Spacer()
+            Text(AppInfo.branded("Message")); Spacer()
         }
         .font(.caption.bold()).foregroundStyle(.secondary)
         .padding(.horizontal, 14).padding(.vertical, 9)
@@ -376,12 +375,12 @@ struct ServerLogView: View {
 
     @ViewBuilder private var emptyState: some View {
         if rawLog.isEmpty {
-            ContentUnavailableView(loc.t("Sin actividad todavía", "No activity yet"), systemImage: "text.alignleft",
-                                   description: Text(loc.t("La salida del motor aparecerá aquí cuando se ejecute.", "Engine output will appear here when it runs.")))
+            ContentUnavailableView(AppInfo.branded("No activity yet"), systemImage: "text.alignleft",
+                                   description: Text(AppInfo.branded("Engine output will appear here when it runs.")))
         } else if !query.trimmingCharacters(in: .whitespaces).isEmpty {
             ContentUnavailableView.search(text: query)
         } else {
-            ContentUnavailableView(loc.t("No hay líneas en este nivel", "No lines at this level"), systemImage: "line.3.horizontal.decrease.circle")
+            ContentUnavailableView(AppInfo.branded("No lines at this level"), systemImage: "line.3.horizontal.decrease.circle")
         }
     }
 
@@ -437,29 +436,28 @@ struct ServerLogView: View {
     }
     private var engineCheckHelp: String {
         if server.state == .running || server.state == .starting {
-            return loc.t("Detén el servidor antes de comprobar: la prueba ocupa la GPU entera.", "Stop the server before checking: the test uses the whole GPU.")
+            return AppInfo.branded("Stop the server before checking: the test uses the whole GPU.")
         }
         if !engineCheckAvailable {
-            return loc.t("Este motor no incluye la herramienta de comprobación.", "This engine does not ship the check tool.")
+            return AppInfo.branded("This engine does not ship the check tool.")
         }
-        return loc.t("Ejecuta las pruebas del motor y añade el resultado al diagnóstico.", "Runs the engine tests and adds the result to diagnostics.")
+        return AppInfo.branded("Runs the engine tests and adds the result to diagnostics.")
     }
     private var engineCheckSheet: some View {
         VStack(spacing: 14) {
             ProgressView().controlSize(.large)
-            Text(loc.t("Comprobando el motor…", "Checking the engine…")).font(.headline)
-            Text(loc.t("%@ operaciones probadas%@", "%@ operations tested%@", "\(checker.testCount)",
-                       "\(checker.currentOp.isEmpty ? "" : " · \(checker.currentOp)")"))
+            Text(AppInfo.branded("Checking the engine…")).font(.headline)
+            Text(AppInfo.branded("\(checker.testCount) operations tested\("\(checker.currentOp.isEmpty ? "" : " · \(checker.currentOp)")")"))
                 .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) { checker.cancel() }.keyboardShortcut(.cancelAction)
+            Button(AppInfo.branded("Cancel"), role: .cancel) { checker.cancel() }.keyboardShortcut(.cancelAction)
         }
         .padding(24).frame(minWidth: 340)
     }
     private func startEngineCheck() {
         checker.start(settings: ServerSettings.fromDefaults()) { result in
             guard !result.cancelled else { return }
-            saveDiagnostics(extra: EngineCheck.report(result, localized: loc.t), name: "xeonllm-engine-check.txt")
-            checkVerdict = EngineCheck.verdict(result, localized: loc.t)
+            saveDiagnostics(extra: EngineCheck.report(result), name: "xeonllm-engine-check.txt")
+            checkVerdict = EngineCheck.verdict(result)
         }
     }
     private func exportDiagnostics() { saveDiagnostics(extra: nil, name: "xeonllm-diagnostics.txt") }

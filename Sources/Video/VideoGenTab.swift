@@ -48,8 +48,8 @@ struct VideoControls: View {
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $sidebarMode) {
-                Text(loc.t("Crear", "Create")).tag(VideoSidebarMode.create)
-                Text(loc.t("Lotes", "Batch")).tag(VideoSidebarMode.batch)
+                Text(AppInfo.branded("Create")).tag(VideoSidebarMode.create)
+                Text(AppInfo.branded("Batch")).tag(VideoSidebarMode.batch)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -91,30 +91,28 @@ struct VideoControls: View {
     private var modelCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                Label(loc.t("Instancia", "Instance"), systemImage: "cube")
+                Label(AppInfo.branded("Instance"), systemImage: "cube")
                     .font(.headline)
                 Spacer()
-                Text(loc.t("Experimental", "Experimental"))
+                Text(AppInfo.branded("Experimental"))
                     .font(.caption2.bold())
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(.orange.opacity(0.18), in: Capsule())
                     .foregroundStyle(.orange)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(loc.t("Modelo", "Model")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("Model")).font(.caption).foregroundStyle(.secondary)
                 Picker("", selection: $modelName) {
                     ForEach(VideoGenCatalog.all) { Text($0.name).tag($0.name) }
                 }
                 .labelsHidden()
-                Text(model.detail(loc.isSpanish))
+                Text(model.detail)
                     .font(.caption2).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !installed { installBox }
             if !model.fitsVRAMClass(vram) {
-                Label(loc.t("Requiere %@ GB de VRAM; hay %@ GB disponibles.",
-                            "Requires %@ GB of VRAM; %@ GB is available.",
-                            "\(Int(model.minVRAMGB))", "\(Int(vram))"),
+                Label(AppInfo.branded("Requires \(Int(model.minVRAMGB)) GB of VRAM; \(Int(vram)) GB is available."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.orange)
             }
@@ -123,15 +121,14 @@ struct VideoControls: View {
 
     private var promptCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(loc.t("Descripción", "Prompt")).font(.headline)
+            Text(AppInfo.branded("Prompt")).font(.headline)
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $prompt)
                     .font(.body).frame(minHeight: 96)
                     .scrollContentBackground(.hidden).padding(8)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                 if prompt.isEmpty {
-                    Text(loc.t("Describe el movimiento, la escena y la cámara…",
-                               "Describe the motion, scene, and camera…"))
+                    Text(AppInfo.branded("Describe the motion, scene, and camera…"))
                         .font(.body).foregroundStyle(.tertiary)
                         .padding(.horizontal, 13).padding(.vertical, 15)
                         .allowsHitTesting(false)
@@ -145,14 +142,14 @@ struct VideoControls: View {
     private var negativePromptRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(loc.t("Prompt negativo", "Negative prompt")).font(.subheadline)
+                Text(AppInfo.branded("Negative prompt")).font(.subheadline)
                 Spacer()
                 Button { negativePrompt = model.negativePrompt } label: {
                     Image(systemName: "arrow.counterclockwise")
                 }
                 .buttonStyle(GlassIconButtonStyle()).controlSize(.small)
                 .disabled(negativePrompt == model.negativePrompt)
-                .iconHelp(loc.t("Restaurar el prompt del modelo", "Restore the model prompt"))
+                .iconHelp(AppInfo.branded("Restore the model prompt"))
             }
             TextEditor(text: $negativePrompt)
                 .font(.callout).frame(minHeight: 44)
@@ -160,8 +157,7 @@ struct VideoControls: View {
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                 .overlay(alignment: .topLeading) {
                     if negativePrompt.isEmpty {
-                        Text(loc.t("borroso, deforme, marca de agua, texto…",
-                                   "blurry, deformed, watermark, text…"))
+                        Text(AppInfo.branded("blurry, deformed, watermark, text…"))
                             .font(.callout).foregroundStyle(.tertiary)
                             .padding(.horizontal, 13).padding(.vertical, 15)
                             .allowsHitTesting(false)
@@ -172,18 +168,16 @@ struct VideoControls: View {
 
     private var settingsCard: some View {
         VStack(spacing: 12) {
-            settingRow(loc.t("Resolución", "Resolution"),
-                       help: loc.t("Solo los tamaños que el modelo declara. Fuera de ellos la imagen sale blanda o el modelo ni acepta la forma.",
-                                   "Only the sizes the model states. Outside them the picture comes back soft, or the model does not accept the shape at all.")) {
+            settingRow(AppInfo.branded("Resolution"),
+                       help: AppInfo.branded("Only the sizes the model states. Outside them the picture comes back soft, or the model does not accept the shape at all.")) {
                 // shows the size a run will use, which is the model's first while none is chosen
                 Picker("", selection: Binding(get: { size.label }, set: { sizeLabel = $0 })) {
                     ForEach(model.sizes) { Text($0.label).tag($0.label) }
                 }
                 .labelsHidden().frame(width: 140, alignment: .trailing)
             }
-            settingRow(loc.t("Fotogramas", "Frames"),
-                       help: loc.t("Los VAE temporales admitidos por el motor requieren cuentas 4n+1.",
-                                   "The temporal VAEs supported by the engine require 4n+1 frame counts.")) {
+            settingRow(AppInfo.branded("Frames"),
+                       help: AppInfo.branded("The temporal VAEs supported by the engine require 4n+1 frame counts.")) {
                 Picker("", selection: $frames) {
                     ForEach(VideoGenLimits.frameCounts, id: \.self) { count in
                         Text("\(count) · \(String(format: "%.1f", VideoGenLimits.seconds(frames: count, fps: model.fps)))s").tag(count)
@@ -191,23 +185,20 @@ struct VideoControls: View {
                 }
                 .labelsHidden().frame(width: 140, alignment: .trailing)
             }
-            settingRow(loc.t("Pasos", "Steps"),
-                       help: loc.t("Más pasos afinan el detalle y tardan proporcionalmente más. El modelo trae su propia recomendación.",
-                                   "More steps refine the detail and take proportionally longer. The model ships its own recommendation.")) {
+            settingRow(AppInfo.branded("Steps"),
+                       help: AppInfo.branded("More steps refine the detail and take proportionally longer. The model ships its own recommendation.")) {
                 Stepper("\(steps)", value: $steps, in: 8...60, step: 2).frame(width: 140, alignment: .trailing)
             }
-            settingRow(loc.t("Semilla", "Seed"),
-                       help: loc.t("Repite la misma semilla con el mismo prompt para reproducir un vídeo. Cámbiala para explorar variantes.",
-                                   "Repeat the same seed with the same prompt to reproduce a video. Change it to explore variations.")) {
+            settingRow(AppInfo.branded("Seed"),
+                       help: AppInfo.branded("Repeat the same seed with the same prompt to reproduce a video. Change it to explore variations.")) {
                 TextField("", value: $seed, format: .number).workspaceTextField().frame(width: 140)
             }
             if !hardware.gpus.isEmpty {
                 settingRow("GPU",
-                           help: loc.t("Qué GPU genera el vídeo. Con varias tarjetas conviene dejar libre la que pinta la pantalla.",
-                                       "Which GPU generates the video. With several cards, leave the one driving the display free.")) {
+                           help: AppInfo.branded("Which GPU generates the video. With several cards, leave the one driving the display free.")) {
                     if hardware.gpus.count > 1 {
                         Picker("", selection: $gpuIndex) {
-                            Text(loc.t("Automática", "Automatic")).tag(-1)
+                            Text(AppInfo.branded("Automatic")).tag(-1)
                             ForEach(Array(hardware.gpus.enumerated()), id: \.offset) { i, gpu in Text(gpu.name).tag(i) }
                         }
                         .labelsHidden().frame(width: 140, alignment: .trailing)
@@ -217,9 +208,8 @@ struct VideoControls: View {
                     }
                 }
             }
-            settingRow(loc.t("Decodificar por bloques", "Decode in tiles"),
-                       help: loc.t("Recomendado. Sin esto el decodificado aclara un fotograma de cada cuatro y el clip parpadea, y además pide hasta 16 GB en vez de 3.4. Cuesta un 26% del decodificado.",
-                                   "Recommended. Without it the decode brightens every fourth frame and the clip flickers, and it asks for up to 16 GB instead of 3.4. It costs 26% of the decode.")) {
+            settingRow(AppInfo.branded("Decode in tiles"),
+                       help: AppInfo.branded("Recommended. Without it the decode brightens every fourth frame and the clip flickers, and it asks for up to 16 GB instead of 3.4. It costs 26% of the decode.")) {
                 Toggle("", isOn: $vaeTiling).labelsHidden().toggleStyle(.switch)
             }
             if let warning = framesBeyondNative {
@@ -227,13 +217,11 @@ struct VideoControls: View {
                     .font(.caption).foregroundStyle(.orange)
             }
             if let recommended = VideoGenLimits.recommendedVRAMGB(model: model, frames: frames) {
-                Label(loc.t("Esta configuración recomienda %@ GB de VRAM.",
-                            "This configuration recommends %@ GB of VRAM.", "\(Int(recommended))"),
+                Label(AppInfo.branded("This configuration recommends \(Int(recommended)) GB of VRAM."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.orange)
             } else if vramFraction > 0.9 {
-                Label(loc.t("Uso estimado: %@% de la VRAM.", "Estimated use: %@% of VRAM.",
-                            "\(Int(vramFraction * 100))"), systemImage: "memorychip")
+                Label(AppInfo.branded("Estimated use: \(Int(vramFraction * 100))% of VRAM."), systemImage: "memorychip")
                     .font(.caption).foregroundStyle(.orange)
             }
             Text(modelNote).font(.caption2).foregroundStyle(.tertiary)
@@ -243,17 +231,16 @@ struct VideoControls: View {
 
     private var initImageRow: some View {
         HStack(spacing: 6) {
-            Text(loc.t("Imagen inicial (img2video)", "Init image (img2video)")).font(.caption)
-                .help(loc.t("Este modelo puede animar una imagen: será el primer fotograma.",
-                            "This model can animate a still: it becomes the first frame."))
+            Text(AppInfo.branded("Init image (img2video)")).font(.caption)
+                .help(AppInfo.branded("This model can animate a still: it becomes the first frame."))
             Spacer(minLength: 6)
-            Button(initImage.isEmpty ? loc.t("Elegir…", "Choose…")
+            Button(initImage.isEmpty ? AppInfo.branded("Choose…")
                                      : URL(fileURLWithPath: initImage).lastPathComponent) { pickInitImage() }
                 .font(.caption).lineLimit(1).truncationMode(.middle).frame(maxWidth: 150, alignment: .trailing)
             if !initImage.isEmpty {
                 Button { initImage = "" } label: { Image(systemName: "xmark.circle") }
                     .buttonStyle(GlassIconButtonStyle())
-                    .iconHelp(loc.t("Quitar imagen", "Remove image"))
+                    .iconHelp(AppInfo.branded("Remove image"))
             }
         }
     }
@@ -272,27 +259,27 @@ struct VideoControls: View {
         VStack(alignment: .leading, spacing: 9) {
             if gen.isBusy {
                 Button(role: .cancel) { pool.cancelCurrent() } label: {
-                    Label(loc.t("Cancelar", "Cancel"), systemImage: "stop.circle").frame(maxWidth: .infinity)
+                    Label(AppInfo.branded("Cancel"), systemImage: "stop.circle").frame(maxWidth: .infinity)
                 }
                 .controlSize(.large)
             } else if sidebarMode == .create {
                 Button { pool.generate(request) } label: {
-                    Label(loc.t("Generar vídeo", "Generate video"), systemImage: "sparkles").frame(maxWidth: .infinity)
+                    Label(AppInfo.branded("Generate video"), systemImage: "sparkles").frame(maxWidth: .infinity)
                 }
                 .glassButton(prominent: true).controlSize(.large).disabled(!canSubmit)
             } else {
                 Button { addToQueue() } label: {
-                    Label(loc.t("Añadir a la cola", "Add to queue"), systemImage: "text.badge.plus").frame(maxWidth: .infinity)
+                    Label(AppInfo.branded("Add to queue"), systemImage: "text.badge.plus").frame(maxWidth: .infinity)
                 }
                 .glassButton(prominent: true).controlSize(.large).disabled(!canSubmit)
                 HStack(spacing: 8) {
-                    Text(loc.t("%@ pendientes", "%@ pending", "\(pool.queue.count)"))
+                    Text(AppInfo.branded("\(pool.queue.count) pending"))
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     Button {
                         pool.queueActive ? pool.stopQueue() : pool.startQueue()
                     } label: {
-                        Label(pool.queueActive ? loc.t("Pausar", "Pause") : loc.t("Procesar", "Process"),
+                        Label(pool.queueActive ? AppInfo.branded("Pause") : AppInfo.branded("Process"),
                               systemImage: pool.queueActive ? "pause.fill" : "play.fill")
                     }
                     .glassButton().disabled(pool.queue.isEmpty && !pool.queueActive)
@@ -302,8 +289,7 @@ struct VideoControls: View {
                 Label(failureText(why), systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.red)
             }
-            Text(loc.t("La generación se ejecuta localmente. El tiempo depende del hardware.",
-                       "Generation runs locally. Time depends on your hardware."))
+            Text(AppInfo.branded("Generation runs locally. Time depends on your hardware."))
                 .font(.caption2).foregroundStyle(.tertiary)
         }
     }
@@ -323,19 +309,15 @@ struct VideoControls: View {
         let sizes = model.sizes.map(\.label).joined(separator: ", ")
         if model.nativeFrames > 0 {
             let seconds = String(format: "%.1f", VideoGenLimits.seconds(frames: model.nativeFrames, fps: model.fps))
-            return loc.t("Resoluciones nativas: %@ · %@ fotogramas (%@ s) a %@ fps.",
-                         "Native resolutions: %@ · %@ frames (%@ s) at %@ fps.",
-                         sizes, "\(model.nativeFrames)", seconds, "\(model.fps)")
+            return AppInfo.branded("Native resolutions: \(sizes) · \(model.nativeFrames) frames (\(seconds) s) at \(model.fps) fps.")
         }
-        return loc.t("Resoluciones nativas: %@ · %@ fps.", "Native resolutions: %@ · %@ fps.", sizes, "\(model.fps)")
+        return AppInfo.branded("Native resolutions: \(sizes) · \(model.fps) fps.")
     }
 
     /// Past what the model was trained on the motion drifts, which reads as an app bug.
     private var framesBeyondNative: String? {
         guard model.nativeFrames > 0, frames > model.nativeFrames else { return nil }
-        return loc.t("Por encima de los %@ fotogramas que aprendió el modelo: el movimiento puede irse. Es límite del modelo, no de la app.",
-                     "Past the %@ frames the model learned: the motion may drift. That is the model's limit, not the app's.",
-                     "\(model.nativeFrames)")
+        return AppInfo.branded("Past the \(model.nativeFrames) frames the model learned: the motion may drift. That is the model's limit, not the app's.")
     }
 
     private var installBox: some View {
@@ -346,7 +328,7 @@ struct VideoControls: View {
                     Image(systemName: present ? "checkmark.circle.fill" : "circle.dashed")
                         .foregroundStyle(present ? .green : .secondary)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(component.label(loc.isSpanish)).font(.caption)
+                        Text(component.label).font(.caption)
                         Text(component.fileName).font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
@@ -364,12 +346,11 @@ struct VideoControls: View {
                     models.downloadImageComponent(urlString: component.urlString, fileName: component.fileName)
                 }
             } label: {
-                Label(loc.t("Descargar componentes", "Download components"), systemImage: "arrow.down.circle")
+                Label(AppInfo.branded("Download components"), systemImage: "arrow.down.circle")
                     .frame(maxWidth: .infinity)
             }
             .glassButton()
-            .help(loc.t("Solo descarga lo que falte: el codificador de texto es común a los Wan, así que cambiar entre ellos no vuelve a bajarlo.",
-                        "Downloads only what is missing: the Wan models share a text encoder, so switching between them does not fetch it again."))
+            .help(AppInfo.branded("Downloads only what is missing: the Wan models share a text encoder, so switching between them does not fetch it again."))
         }
         .padding(10)
         .background(WorkspaceStyle.inset, in: RoundedRectangle(cornerRadius: 10))
@@ -381,8 +362,8 @@ struct VideoControls: View {
     }
     private func failureText(_ why: String) -> String {
         switch why {
-        case "OOM": return loc.t("Sin VRAM. Reduce la resolución o los fotogramas.", "Out of VRAM. Lower the resolution or frame count.")
-        case "TIMEOUT": return loc.t("La GPU agotó el tiempo. Reduce la resolución o los fotogramas.", "The GPU timed out. Lower the resolution or frame count.")
+        case "OOM": return AppInfo.branded("Out of VRAM. Lower the resolution or frame count.")
+        case "TIMEOUT": return AppInfo.branded("The GPU timed out. Lower the resolution or frame count.")
         default: return why
         }
     }
@@ -423,12 +404,12 @@ struct VideoCanvas: View {
 
     private var detailTabPicker: some View {
         HStack(spacing: 3) {
-            detailTabButton(.videos, title: loc.t("Vídeos", "Videos"),
+            detailTabButton(.videos, title: AppInfo.branded("Videos"),
                             systemImage: "play.rectangle.on.rectangle")
             detailTabButton(.queue,
                             title: pool.queue.isEmpty
-                                ? loc.t("Cola", "Queue")
-                                : loc.t("Cola %@", "Queue %@", "\(pool.queue.count)"),
+                                ? AppInfo.branded("Queue")
+                                : AppInfo.branded("Queue \(pool.queue.count)"),
                             systemImage: "list.bullet.rectangle")
         }
         .padding(3)
@@ -456,12 +437,12 @@ struct VideoCanvas: View {
 
     @ViewBuilder private var videos: some View {
         if !VideoGenerator.engineInstalled {
-            centeredState(icon: "exclamationmark.triangle", title: loc.t("Motor de vídeo no disponible", "Video engine unavailable"),
-                          detail: loc.t("Instala o compila el motor de generación para crear vídeos.", "Install or build the generation engine to create videos."), color: .orange)
+            centeredState(icon: "exclamationmark.triangle", title: AppInfo.branded("Video engine unavailable"),
+                          detail: AppInfo.branded("Install or build the generation engine to create videos."), color: .orange)
         } else if pool.gallery.isEmpty {
             if pool.generator.isBusy { generationCanvas } else {
-                centeredState(icon: "play.rectangle.on.rectangle", title: loc.t("Crea tu primer vídeo", "Create your first video"),
-                              detail: loc.t("Elige un modelo, describe la escena y pulsa Generar.", "Choose a model, describe the scene, and press Generate."))
+                centeredState(icon: "play.rectangle.on.rectangle", title: AppInfo.branded("Create your first video"),
+                              detail: AppInfo.branded("Choose a model, describe the scene, and press Generate."))
             }
         } else {
             GeometryReader { geometry in
@@ -512,13 +493,13 @@ struct VideoCanvas: View {
     private func resultFooter(_ result: GeneratedVideo) -> some View {
         HStack(spacing: 12) {
             Circle().fill(.green).frame(width: 9, height: 9)
-            Text(loc.t("Generado en %@s", "Generated in %@s", "\(result.duration)"))
+            Text(AppInfo.branded("Generated in \(result.duration)s"))
                 .font(.caption.weight(.medium)).foregroundStyle(.green)
             Text("\(result.width) × \(result.height) · \(result.frameCount)f · \(result.fps) fps")
                 .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
             Spacer(minLength: 8)
-            Button { exportMP4(result) } label: { Label(loc.t("Guardar", "Save"), systemImage: "square.and.arrow.down") }
-            Button { reveal(result) } label: { Label(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder") }
+            Button { exportMP4(result) } label: { Label(AppInfo.branded("Save"), systemImage: "square.and.arrow.down") }
+            Button { reveal(result) } label: { Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder") }
         }
         .controlSize(.small).padding(.horizontal, 16).padding(.vertical, 12)
         .overlay(alignment: .top) { Divider() }
@@ -549,15 +530,15 @@ private struct VideoQueueView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         if pool.generator.isBusy {
-                            sectionTitle(loc.t("En curso", "In progress"), count: 1, icon: "gearshape.2")
+                            sectionTitle(AppInfo.branded("In progress"), count: 1, icon: "gearshape.2")
                             VideoGenerationProgressCard(gen: pool.generator, compact: false)
                         }
                         if !pool.queue.isEmpty {
-                            sectionTitle(loc.t("Pendientes", "Pending"), count: pool.queue.count, icon: "clock")
+                            sectionTitle(AppInfo.branded("Pending"), count: pool.queue.count, icon: "clock")
                             ForEach(Array(pool.queue.enumerated()), id: \.element.id) { index, request in pendingRow(request, number: index + 1) }
                         }
                         if !pool.gallery.isEmpty {
-                            sectionTitle(loc.t("Resultados", "Results"), count: pool.gallery.count, icon: "play.rectangle.on.rectangle")
+                            sectionTitle(AppInfo.branded("Results"), count: pool.gallery.count, icon: "play.rectangle.on.rectangle")
                             if grid {
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: 12)], spacing: 12) {
                                     ForEach(pool.gallery) { resultCard($0) }
@@ -576,8 +557,8 @@ private struct VideoQueueView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "rectangle.stack.badge.plus").font(.system(size: 40, weight: .light)).foregroundStyle(.tertiary)
-            Text(loc.t("Prepara un lote desde el sidebar", "Build a batch from the sidebar")).font(.title3.weight(.semibold))
-            Text(loc.t("Añade descripciones con su configuración y procésalas en orden.", "Add prompts with their settings and process them in order."))
+            Text(AppInfo.branded("Build a batch from the sidebar")).font(.title3.weight(.semibold))
+            Text(AppInfo.branded("Add prompts with their settings and process them in order."))
                 .font(.callout).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -587,17 +568,17 @@ private struct VideoQueueView: View {
 
     private var queueToolbar: some View {
         HStack(spacing: 10) {
-            Label(loc.t("%@ pendientes", "%@ pending", "\(pool.queue.count)"), systemImage: "list.number").font(.callout.weight(.medium))
-            if pool.generator.isBusy { Text(loc.t("Procesando", "Processing")).font(.caption).foregroundStyle(.green) }
+            Label(AppInfo.branded("\(pool.queue.count) pending"), systemImage: "list.number").font(.callout.weight(.medium))
+            if pool.generator.isBusy { Text(AppInfo.branded("Processing")).font(.caption).foregroundStyle(.green) }
             Spacer()
             FeedLayoutPicker(grid: $grid)
             Button { pool.queueActive ? pool.stopQueue() : pool.startQueue() } label: {
-                Label(pool.queueActive ? loc.t("Pausar", "Pause") : loc.t("Procesar", "Process"),
+                Label(pool.queueActive ? AppInfo.branded("Pause") : AppInfo.branded("Process"),
                       systemImage: pool.queueActive ? "pause.fill" : "play.fill")
             }
             .glassButton(prominent: true).disabled(pool.queue.isEmpty && !pool.queueActive)
             if pool.generator.isBusy {
-                Button(role: .cancel) { pool.cancelCurrent() } label: { Label(loc.t("Cancelar actual", "Cancel current"), systemImage: "stop.circle") }
+                Button(role: .cancel) { pool.cancelCurrent() } label: { Label(AppInfo.branded("Cancel current"), systemImage: "stop.circle") }
             }
         }
         .padding(12)
@@ -616,7 +597,7 @@ private struct VideoQueueView: View {
             }
             Spacer()
             Button { pool.remove(request.id) } label: { Image(systemName: "xmark") }
-                .buttonStyle(GlassIconButtonStyle()).iconHelp(loc.t("Quitar de la cola", "Remove from queue"))
+                .buttonStyle(GlassIconButtonStyle()).iconHelp(AppInfo.branded("Remove from queue"))
         }
         .padding(12)
         .background(WorkspaceStyle.surface, in: RoundedRectangle(cornerRadius: 12))
@@ -631,7 +612,7 @@ private struct VideoQueueView: View {
             Text("\(result.width) × \(result.height) · \(result.frameCount)f · \(result.modelName) · \(result.duration)s")
                 .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             HStack {
-                Button { exportMP4(result) } label: { Label(loc.t("Guardar", "Save"), systemImage: "square.and.arrow.down") }
+                Button { exportMP4(result) } label: { Label(AppInfo.branded("Save"), systemImage: "square.and.arrow.down") }
                 Button { reveal(result) } label: { Label("Finder", systemImage: "folder") }
             }
             .controlSize(.small)
@@ -653,10 +634,10 @@ private struct VideoQueueView: View {
             Spacer()
             Button { exportMP4(result) } label: { Image(systemName: "square.and.arrow.down") }
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Guardar vídeo", "Save video"))
+                .iconHelp(AppInfo.branded("Save video"))
             Button { reveal(result) } label: { Image(systemName: "folder") }
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Mostrar en Finder", "Reveal in Finder"))
+                .iconHelp(AppInfo.branded("Reveal in Finder"))
         }
         .padding(10)
         .background(WorkspaceStyle.surface, in: RoundedRectangle(cornerRadius: 12))
@@ -701,14 +682,14 @@ private struct VideoGenerationProgressCard: View {
     }
     private var stageTitle: String {
         switch gen.stage {
-        case .loading: return loc.t("Cargando modelos…", "Loading models…")
-        case .sampling: return loc.t("Generando · paso %@", "Sampling · step %@", gen.stepText)
-        case .decoding: return loc.t("Decodificando fotogramas…", "Decoding frames…")
+        case .loading: return AppInfo.branded("Loading models…")
+        case .sampling: return AppInfo.branded("Sampling · step \(gen.stepText)")
+        case .decoding: return AppInfo.branded("Decoding frames…")
         }
     }
     private var timeText: String {
-        if let eta = gen.etaSeconds { return loc.t("%@s · ~%@s restantes", "%@s · ~%@s left", "\(gen.elapsed)", "\(eta)") }
-        return loc.t("%@s transcurridos", "%@s elapsed", "\(gen.elapsed)")
+        if let eta = gen.etaSeconds { return AppInfo.branded("\(gen.elapsed)s · ~\(eta)s left") }
+        return AppInfo.branded("\(gen.elapsed)s elapsed")
     }
 }
 
@@ -719,7 +700,7 @@ private struct VideoGenerationThumbnail: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 ProgressView().controlSize(.small)
-                Text(loc.t("Generando vídeo", "Generating video")).font(.caption.weight(.semibold))
+                Text(AppInfo.branded("Generating video")).font(.caption.weight(.semibold))
                 Spacer(); Text("\(Int(gen.progress * 100))%").font(.caption2.monospacedDigit())
             }
             ProgressView(value: gen.progress).tint(Color.appAccent)
@@ -785,7 +766,7 @@ private struct VideoPlaybackView: View {
             HStack(spacing: 10) {
                 Button { playing.toggle() } label: { Image(systemName: playing ? "pause.fill" : "play.fill") }
                     .buttonStyle(GlassIconButtonStyle(active: playing))
-                    .iconHelp(playing ? loc.t("Pausar", "Pause") : loc.t("Reproducir", "Play"))
+                    .iconHelp(playing ? AppInfo.branded("Pause") : AppInfo.branded("Play"))
                 if !playing, playbackFrames.count > 1 {
                     Slider(value: Binding(get: { Double(frameIndex) }, set: { frameIndex = Int($0) }),
                            in: 0...Double(playbackFrames.count - 1))
@@ -793,7 +774,7 @@ private struct VideoPlaybackView: View {
                 } else {
                     Text(result.prompt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     Spacer()
-                    Text(loc.t("%@ fotogramas", "%@ frames", "\(result.frameCount)"))
+                    Text(AppInfo.branded("\(result.frameCount) frames"))
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
             }

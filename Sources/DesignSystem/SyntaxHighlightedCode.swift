@@ -113,7 +113,7 @@ struct CodePreview: View {
             HStack {
                 Text(language.isEmpty ? "code" : language).font(.headline)
                 Spacer()
-                Button(loc.t("Cerrar", "Close"), systemImage: "xmark", action: dismiss.callAsFunction)
+                Button(AppInfo.branded("Close"), systemImage: "xmark", action: dismiss.callAsFunction)
                     .labelStyle(.iconOnly)
                     .keyboardShortcut(.cancelAction)
             }

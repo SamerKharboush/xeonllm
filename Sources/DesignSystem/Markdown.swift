@@ -633,26 +633,26 @@ struct CodeBlock: View {
                 Button {
                     previewing = true
                 } label: {
-                    Label(loc.t("Ampliar código", "Expand code"),
+                    Label(AppInfo.branded("Expand code"),
                           systemImage: "arrow.up.left.and.arrow.down.right")
                               .labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderless)
-                .help(loc.t("Abrir código en una vista amplia", "Open code in a larger view"))
+                .help(AppInfo.branded("Open code in a larger view"))
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(content, forType: .string)
                     copied = true
                     Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
                 } label: {
-                    Label(loc.t("Copiar código", "Copy code"),
+                    Label(AppInfo.branded("Copy code"),
                           systemImage: copied ? "checkmark" : "doc.on.doc")
                               .labelStyle(.iconOnly)
                         .font(.system(size: 10))
                         .foregroundStyle(copied ? .green : .secondary)
                 }
                 .buttonStyle(.borderless)
-                .help(loc.t("Copiar código", "Copy code"))
+                .help(AppInfo.branded("Copy code"))
             }
             .padding(.horizontal, 10).padding(.vertical, 5)
             .background(Color(nsColor: OneDarkPro.background).brightness(-0.04))

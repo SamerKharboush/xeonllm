@@ -18,7 +18,7 @@ struct AudioControls: View {
     @AppStorage(SettingsKeys.whisperLoadPolicy) private var loadPolicyRaw = WhisperLoadPolicy.onDemand.rawValue
     @AppStorage(SettingsKeys.audioOperation) private var operationRaw = AudioStudioOperation.transcribe.rawValue
     @AppStorage(SettingsKeys.audioLanguage) private var language = "auto"
-    @AppStorage(SettingsKeys.audioTargetLanguage) private var targetLanguage = "Español"
+    @AppStorage(SettingsKeys.audioTargetLanguage) private var targetLanguage = "Spanish"
     @AppStorage(SettingsKeys.port) private var port = 8080
     @AppStorage(SettingsKeys.routerMode) private var routerMode = false
     @AppStorage(SettingsKeys.chatSelectedModel) private var routerModel = ""
@@ -69,16 +69,15 @@ struct AudioControls: View {
     }
 
     private var sourceCard: some View {
-        AudioSidebarSection(title: loc.t("Archivo", "File"), icon: "doc") {
+        AudioSidebarSection(title: AppInfo.branded("File"), icon: "doc") {
             VStack(alignment: .leading, spacing: 8) {
                 Button(action: pickMedia) {
-                    Label(loc.t("Elegir audio o vídeo…", "Choose audio or video…"),
+                    Label(AppInfo.branded("Choose audio or video…"),
                           systemImage: "folder")
                         .frame(maxWidth: .infinity)
                 }
                 .disabled(studio.isBusy)
-                .help(loc.t("Admite audio y vídeo; XeonLLM extrae el audio localmente sin modificar el original.",
-                            "Accepts audio and video; XeonLLM extracts audio locally without changing the original."))
+                .help(AppInfo.branded("Accepts audio and video; XeonLLM extracts audio locally without changing the original."))
 
                 if let source = studio.sourceURL {
                     Text(source.lastPathComponent)
@@ -88,8 +87,7 @@ struct AudioControls: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(loc.t("También puedes arrastrarlo al área de previsualización.",
-                               "You can also drop it onto the preview area."))
+                    Text(AppInfo.branded("You can also drop it onto the preview area."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -98,47 +96,44 @@ struct AudioControls: View {
     }
 
     private var taskCard: some View {
-        AudioSidebarSection(title: loc.t("Resultado", "Result"), icon: "captions.bubble") {
+        AudioSidebarSection(title: AppInfo.branded("Result"), icon: "captions.bubble") {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(loc.t("Operación", "Operation")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Operation")).font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $operationRaw) {
-                        Text(loc.t("Transcribir", "Transcribe")).tag(AudioStudioOperation.transcribe.rawValue)
-                        Text(loc.t("Traducir a inglés", "Translate to English")).tag(AudioStudioOperation.translateEnglish.rawValue)
-                        Text(loc.t("Traducir con el chat", "Translate with chat")).tag(AudioStudioOperation.translateLocal.rawValue)
+                        Text(AppInfo.branded("Transcribe")).tag(AudioStudioOperation.transcribe.rawValue)
+                        Text(AppInfo.branded("Translate to English")).tag(AudioStudioOperation.translateEnglish.rawValue)
+                        Text(AppInfo.branded("Translate with chat")).tag(AudioStudioOperation.translateLocal.rawValue)
                     }
                     .labelsHidden()
-                    .help(loc.t("Whisper transcribe o traduce directamente al inglés; otros idiomas usan el modelo local del chat sin cambiar los tiempos.",
-                                "Whisper transcribes or translates directly to English; other languages use the local chat model without changing timestamps."))
+                    .help(AppInfo.branded("Whisper transcribes or translates directly to English; other languages use the local chat model without changing timestamps."))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(loc.t("Idioma hablado", "Spoken language")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Spoken language")).font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $language) {
                         ForEach(WhisperLanguage.common) { item in
-                            Text(loc.isSpanish ? item.es : item.en).tag(item.id)
+                            Text(verbatim: item.name).tag(item.id)
                         }
                     }
                     .labelsHidden()
-                    .help(loc.t("Fijar el idioma mejora la precisión; Automático es útil cuando no lo conoces.",
-                                "Choosing the language improves accuracy; Automatic is useful when it is unknown."))
+                    .help(AppInfo.branded("Choosing the language improves accuracy; Automatic is useful when it is unknown."))
                 }
 
                 if operation == .translateLocal {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(loc.t("Idioma de destino", "Target language")).font(.caption).foregroundStyle(.secondary)
+                        Text(AppInfo.branded("Target language")).font(.caption).foregroundStyle(.secondary)
                         XeonDropdown(selection: targetLanguageSelection,
                                      options: targetLanguageOptions,
-                                     placeholder: loc.t("Elegir idioma", "Choose language"),
+                                     placeholder: AppInfo.branded("Choose language"),
                                      width: 172,
                                      maximumListHeight: 320,
                                      listWidth: 260)
                     }
-                    .help(loc.t("Elige el idioma final, por ejemplo Español, Coreano o Francés.",
-                                "Choose the final language, such as Spanish, Korean, or French."))
+                    .help(AppInfo.branded("Choose the final language, such as Spanish, Korean, or French."))
 
                     if usesCustomTargetLanguage {
-                        TextField(loc.t("Escribe otro idioma…", "Enter another language…"),
+                        TextField(AppInfo.branded("Enter another language…"),
                                   text: $targetLanguage)
                             .textFieldStyle(.plain)
                             .padding(8)
@@ -148,17 +143,15 @@ struct AudioControls: View {
                     }
                     chatRequirement
                     translationModelControl
-                    TextField(loc.t("Glosario: término = traducción", "Glossary: term = translation"),
+                    TextField(AppInfo.branded("Glossary: term = translation"),
                               text: $glossary, axis: .vertical)
                         .textFieldStyle(.plain)
                         .padding(8)
                         .workspaceFieldSurface()
                         .lineLimit(2...5)
-                        .help(loc.t("Fija nombres, marcas y términos, uno por línea, para mantenerlos iguales durante todo el vídeo.",
-                                    "Pins names, brands and terminology, one per line, to keep them consistent throughout the video."))
+                        .help(AppInfo.branded("Pins names, brands and terminology, one per line, to keep them consistent throughout the video."))
                 } else if operation == .translateEnglish {
-                    Label(loc.t("La traducción integrada de Whisper siempre produce inglés.",
-                                "Whisper's built-in translation always produces English."),
+                    Label(AppInfo.branded("Whisper's built-in translation always produces English."),
                           systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -170,34 +163,32 @@ struct AudioControls: View {
     @ViewBuilder
     private var translationModelControl: some View {
         if routerMode {
-            Picker(loc.t("Modelo traductor", "Translation model"), selection: $translationModel) {
+            Picker(AppInfo.branded("Translation model"), selection: $translationModel) {
                 ForEach(models.models) { item in
                     Text(ModelName.forPath(item.url.path).title)
                         .tag(ServerSettings.routerAlias(for: item.url.path))
                 }
             }
-            .help(loc.t("Elige el modelo del router que traducirá los subtítulos.",
-                        "Choose the router model that will translate the subtitles."))
+            .help(AppInfo.branded("Choose the router model that will translate the subtitles."))
             .task { selectDefaultTranslationModel() }
             if let selected = models.models.first(where: {
                 ServerSettings.routerAlias(for: $0.url.path) == translationModel
             }), selected.sizeBytes < 1_500_000_000 {
-                Label(loc.t("Un modelo mayor suele conservar mejor nombres, contexto y JSON en vídeos largos.",
-                            "A larger model usually preserves names, context, and JSON better in long videos."),
+                Label(AppInfo.branded("A larger model usually preserves names, context, and JSON better in long videos."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
         } else if models.models.isEmpty {
-            LabeledContent(loc.t("Modelo traductor", "Translation model")) {
-                Text(loc.t("Sin modelos", "No models")).lineLimit(1)
+            LabeledContent(AppInfo.branded("Translation model")) {
+                Text(AppInfo.branded("No models")).lineLimit(1)
             }
             downloadModelButton
         } else {
-            Picker(loc.t("Modelo traductor", "Translation model"), selection: $modelPath) {
-                Text(loc.t("Sin modelo", "No model")).tag("")
+            Picker(AppInfo.branded("Translation model"), selection: $modelPath) {
+                Text(AppInfo.branded("No model")).tag("")
                 ForEach(ModelFamilyGroup.grouped(models.models)) { group in
-                    Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                    Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                         ForEach(group.models) {
                             Text(ModelName.forPath($0.url.path).display)
                                 .tag($0.url.path)
@@ -211,17 +202,15 @@ struct AudioControls: View {
             .onChange(of: modelPath) { _, path in
                 ncmoe = Estimator.ncmoeForSelection(path: path, models: models.models)
             }
-            .help(loc.t("Modelo que traducirá los segmentos; es el mismo del Chat. Para cambiarlo hay que detener el motor.",
-                        "Model that will translate the segments; it is the same one Chat uses. Stop the engine to change it."))
+            .help(AppInfo.branded("Model that will translate the segments; it is the same one Chat uses. Stop the engine to change it."))
         }
     }
 
     private var downloadModelButton: some View {
-        Button(loc.t("Descargar un modelo…", "Download a model…"),
+        Button(AppInfo.branded("Download a model…"),
                systemImage: "arrow.down.circle", action: openModelCatalog)
         .controlSize(.small)
-        .help(loc.t("Abre el catálogo para descargar un modelo de lenguaje, necesario para traducir.",
-                    "Opens the catalog to download a language model, which translating requires."))
+        .help(AppInfo.branded("Opens the catalog to download a language model, which translating requires."))
     }
 
     private func openModelCatalog() {
@@ -232,32 +221,28 @@ struct AudioControls: View {
     @ViewBuilder
     private var chatRequirement: some View {
         if server.state == .running {
-            Label(loc.t("El chat está listo para traducir los segmentos.",
-                        "Chat is ready to translate the segments."), systemImage: "checkmark.circle.fill")
+            Label(AppInfo.branded("Chat is ready to translate the segments."), systemImage: "checkmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.green)
         } else {
             VStack(alignment: .leading, spacing: 7) {
-                Label(loc.t("Esta opción necesita el motor de chat activo.",
-                            "This option needs the chat engine running."),
+                Label(AppInfo.branded("This option needs the chat engine running."),
                       systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.orange)
                 if models.models.isEmpty {
                     downloadModelButton
                 } else if modelPath.isEmpty {
-                    Text(loc.t("Elige un modelo traductor abajo para poder iniciarlo.",
-                               "Pick a translation model below to start it."))
+                    Text(AppInfo.branded("Pick a translation model below to start it."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if server.state == .stopped {
-                    Button(loc.t("Iniciar motor de chat", "Start chat engine"),
+                    Button(AppInfo.branded("Start chat engine"),
                            systemImage: "play.fill") {
                         server.start(.fromDefaults())
                     }
                     .controlSize(.small)
-                    .help(loc.t("Carga el modelo configurado para traducir después de transcribir.",
-                                "Loads the configured model to translate after transcription."))
+                    .help(AppInfo.branded("Loads the configured model to translate after transcription."))
                 }
             }
         }
@@ -267,25 +252,24 @@ struct AudioControls: View {
         AudioSidebarSection(title: "Whisper.cpp · GPU", icon: "memorychip") {
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(loc.t("Modelo", "Model")).font(.caption).foregroundStyle(.secondary)
+                    Text(AppInfo.branded("Model")).font(.caption).foregroundStyle(.secondary)
                     Picker("", selection: $whisperModelID) {
                         ForEach(WhisperModel.catalog) { item in
                             Text(verbatim: "\(item.name) · \(item.sizeMB) MB").tag(item.id)
                         }
                     }
                     .labelsHidden()
-                    .help(loc.t("Turbo ofrece el mejor equilibrio; Large v3 prioriza precisión.",
-                                "Turbo offers the best balance; Large v3 prioritizes accuracy."))
+                    .help(AppInfo.branded("Turbo offers the best balance; Large v3 prioritizes accuracy."))
                 }
 
-                Text(loc.isSpanish ? model.detailES : model.detailEN)
+                Text(verbatim: model.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
                 if !models.whisperModelInstalled(model) {
                     downloadControl
                 } else {
-                    Label(loc.t("Modelo instalado", "Model installed"), systemImage: "checkmark.circle.fill")
+                    Label(AppInfo.branded("Model installed"), systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
                 }
@@ -295,13 +279,12 @@ struct AudioControls: View {
 
                 if hardware.gpus.count > 1 {
                     Picker("GPU", selection: $gpuIndex) {
-                        Text(loc.t("Automática", "Automatic")).tag(-1)
+                        Text(AppInfo.branded("Automatic")).tag(-1)
                         ForEach(Array(hardware.gpus.enumerated()), id: \.offset) { index, gpu in
                             Text(gpu.name).tag(index)
                         }
                     }
-                    .help(loc.t("Selecciona la GPU AMD que ejecutará Whisper.",
-                                "Select the AMD GPU that runs Whisper."))
+                    .help(AppInfo.branded("Select the AMD GPU that runs Whisper."))
                 }
             }
         }
@@ -315,44 +298,39 @@ struct AudioControls: View {
             VStack(alignment: .leading, spacing: 5) {
                 ProgressView(value: download.progress)
                 if let error = download.error {
-                    Text(loc.half(error)).font(.caption).foregroundStyle(.red)
-                    Button(loc.t("Reintentar detector de voz", "Retry voice detector"),
+                    Text(error).font(.caption).foregroundStyle(.red)
+                    Button(AppInfo.branded("Retry voice detector"),
                            systemImage: "arrow.clockwise") {
                         models.retryWhisperVADDownload(download)
                     }
-                    .help(loc.t("Reinicia la descarga de Silero VAD.",
-                                "Restarts the Silero VAD download."))
+                    .help(AppInfo.branded("Restarts the Silero VAD download."))
                 } else if download.phase == .paused {
-                    Button(loc.t("Reanudar detector de voz", "Resume voice detector"),
+                    Button(AppInfo.branded("Resume voice detector"),
                            systemImage: "arrow.down.circle", action: download.resume)
-                        .help(loc.t("Continúa la descarga de Silero VAD.",
-                                    "Continues the Silero VAD download."))
+                        .help(AppInfo.branded("Continues the Silero VAD download."))
                 } else {
-                    Text(loc.t("Descargando detector de voz…", "Downloading voice detector…"))
+                    Text(AppInfo.branded("Downloading voice detector…"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         } else if vadMode.isEnabled && !models.whisperVADInstalled {
             VStack(alignment: .leading, spacing: 6) {
-                Label(loc.t("Audio necesita detectar silencios", "Audio needs silence detection"),
+                Label(AppInfo.branded("Audio needs silence detection"),
                       systemImage: "waveform.badge.exclamationmark")
                     .font(.caption)
                     .foregroundStyle(.orange)
-                Button(loc.t("Descargar Silero VAD · 864 KB", "Download Silero VAD · 864 KB"),
+                Button(AppInfo.branded("Download Silero VAD · 864 KB"),
                        systemImage: "arrow.down.circle.fill", action: models.downloadWhisperVAD)
-                    .help(loc.t("Descarga el detector que separa voz y silencio antes de ejecutar Whisper.",
-                                "Downloads the detector that separates speech and silence before running Whisper."))
+                    .help(AppInfo.branded("Downloads the detector that separates speech and silence before running Whisper."))
             }
         }
         if vadMode.isEnabled && models.whisperVADInstalled && studio.sourceURL != nil {
-            Button(loc.t("Probar VAD en 30 segundos", "Preview VAD on 30 seconds"),
+            Button(AppInfo.branded("Preview VAD on 30 seconds"),
                    systemImage: "waveform.badge.magnifyingglass", action: previewVAD)
                 .disabled(studio.isBusy)
-                .help(loc.t("Analiza una muestra sin reemplazar la transcripción existente.",
-                            "Analyzes a sample without replacing the existing transcript."))
-            Text(loc.t("Cambia el modo o perfil y repite la prueba para comparar resultados.",
-                       "Change the mode or profile and repeat the preview to compare results."))
+                .help(AppInfo.branded("Analyzes a sample without replacing the existing transcript."))
+            Text(AppInfo.branded("Change the mode or profile and repeat the preview to compare results."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             vadPreviewResult
@@ -365,11 +343,11 @@ struct AudioControls: View {
         case .idle:
             EmptyView()
         case .running:
-            ProgressView(loc.t("Analizando muestra…", "Analyzing sample…"))
+            ProgressView(AppInfo.branded("Analyzing sample…"))
                 .controlSize(.small)
         case .ready(let count, let speech, let sample):
             VStack(alignment: .leading, spacing: 4) {
-                Label(loc.t("%@ segmentos · %@ s de voz en %@ s", "%@ segments · %@ s of speech in %@ s", "\(count)", "\(Int(speech.rounded()))", "\(Int(sample.rounded()))"),
+                Label(AppInfo.branded("\(count) segments · \(Int(speech.rounded())) s of speech in \(Int(sample.rounded())) s"),
                       systemImage: count > 0 ? "checkmark.circle.fill" : "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(count > 0 ? Color.green : Color.orange)
@@ -379,12 +357,11 @@ struct AudioControls: View {
                     }.joined(separator: " · "))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .help(loc.t("Intervalos que la configuración actual considera voz.",
-                                "Intervals the current configuration considers speech."))
+                    .help(AppInfo.branded("Intervals the current configuration considers speech."))
                 }
             }
         case .failed(let message):
-            Label(loc.half(message), systemImage: "exclamationmark.triangle")
+            Label(message, systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(.red)
         }
@@ -396,31 +373,28 @@ struct AudioControls: View {
             VStack(alignment: .leading, spacing: 5) {
                 ProgressView(value: download.progress)
                 if let error = download.error {
-                    Text(loc.half(error)).font(.caption).foregroundStyle(.red)
-                    Button(loc.t("Reintentar", "Retry"), systemImage: "arrow.clockwise") {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                    Button(AppInfo.branded("Retry"), systemImage: "arrow.clockwise") {
                         models.retryWhisperDownload(download)
                     }
-                    .help(loc.t("Reinicia la descarga del modelo.",
-                                "Restarts the model download."))
+                    .help(AppInfo.branded("Restarts the model download."))
                 } else if download.phase == .paused {
-                    Button(loc.t("Reanudar", "Resume"), systemImage: "arrow.down.circle",
+                    Button(AppInfo.branded("Resume"), systemImage: "arrow.down.circle",
                            action: download.resume)
-                        .help(loc.t("Continúa la descarga desde donde se pausó.",
-                                    "Continues the download from where it paused."))
+                        .help(AppInfo.branded("Continues the download from where it paused."))
                 } else {
-                    Text(loc.t("Descargando %@…", "Downloading %@…", "\(model.name)"))
+                    Text(AppInfo.branded("Downloading \(model.name)…"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         } else {
-            Button(loc.t("Descargar %@", "Download %@", "\(model.name)"),
+            Button(AppInfo.branded("Download \(model.name)"),
                    systemImage: "arrow.down.circle.fill") {
                 models.downloadWhisperModel(model)
             }
             .glassButton(prominent: true)
-            .help(loc.t("Descarga el modelo en la carpeta local de modelos Whisper.",
-                        "Downloads the model into the local Whisper model folder."))
+            .help(AppInfo.branded("Downloads the model into the local Whisper model folder."))
         }
     }
 
@@ -434,17 +408,17 @@ struct AudioControls: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     if let remaining = studio.remaining {
-                        Text(loc.t("~%@ restantes", "~%@ left", "\(MediaTime.compact(remaining))"))
+                        Text(AppInfo.branded("~\(MediaTime.compact(remaining)) left"))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
                 }
-                Button(loc.t(server.state == .running ? "Detener ambos motores" : "Cancelar",
-                             server.state == .running ? "Stop both engines" : "Cancel"),
+                Button(server.state == .running
+                       ? AppInfo.branded("Stop both engines")
+                       : AppInfo.branded("Cancel"),
                        systemImage: "stop.fill", action: stopProcessing)
                     .frame(maxWidth: .infinity)
-                    .help(loc.t("Cancela el trabajo y libera Whisper; si el chat está activo, también lo detiene.",
-                                "Cancels the job and frees Whisper; if chat is active, it stops that too."))
+                    .help(AppInfo.branded("Cancels the job and frees Whisper; if chat is active, it stops that too."))
             } else {
                 Button(action: startProcessing) {
                     Label(actionTitle, systemImage: operation == .transcribe ? "captions.bubble.fill" : "character.bubble.fill")
@@ -453,19 +427,17 @@ struct AudioControls: View {
                 .glassButton(prominent: true)
                 .controlSize(.large)
                 .disabled(!canStart)
-                .help(loc.t("Procesa el archivo localmente y conserva marcas de tiempo exportables.",
-                            "Processes the file locally and preserves exportable timestamps."))
+                .help(AppInfo.branded("Processes the file locally and preserves exportable timestamps."))
                 if !studio.originalCues.isEmpty && operation == .translateLocal {
-                    Button(loc.t("Reintentar solo la traducción", "Retry translation only"),
+                    Button(AppInfo.branded("Retry translation only"),
                            systemImage: "arrow.triangle.2.circlepath", action: retryTranslation)
                         .disabled(!canRetryTranslation)
-                        .help(loc.t("Conserva la transcripción de Whisper y vuelve a ejecutar únicamente el Chat.",
-                                    "Keeps the Whisper transcript and runs only Chat again."))
+                        .help(AppInfo.branded("Keeps the Whisper transcript and runs only Chat again."))
                 }
             }
 
             if case .failed(let message) = studio.stage {
-                Label(loc.half(message), systemImage: "exclamationmark.triangle.fill")
+                Label(message, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
             }
@@ -489,19 +461,19 @@ struct AudioControls: View {
 
     private var actionTitle: String {
         switch operation {
-        case .transcribe: loc.t("Crear subtítulos", "Create subtitles")
-        case .translateEnglish: loc.t("Transcribir y traducir", "Transcribe and translate")
-        case .translateLocal: loc.t("Transcribir y traducir", "Transcribe and translate")
+        case .transcribe: AppInfo.branded("Create subtitles")
+        case .translateEnglish: AppInfo.branded("Transcribe and translate")
+        case .translateLocal: AppInfo.branded("Transcribe and translate")
         }
     }
 
     private var stageText: String {
         switch studio.stage {
-        case .preparing: loc.t("Preparando el audio…", "Preparing audio…")
-        case .analyzingVAD: loc.t("Analizando VAD…", "Analyzing VAD…")
-        case .transcribing: loc.t("Whisper está transcribiendo…", "Whisper is transcribing…")
+        case .preparing: AppInfo.branded("Preparing audio…")
+        case .analyzingVAD: AppInfo.branded("Analyzing VAD…")
+        case .transcribing: AppInfo.branded("Whisper is transcribing…")
         case .translating:
-            loc.t("Traduciendo lote %@ de %@…", "Translating batch %@ of %@…", "\(studio.translatedBatchCount + 1)", "\(max(1, studio.translationBatchCount))")
+            AppInfo.branded("Translating batch \(studio.translatedBatchCount + 1) of \(max(1, studio.translationBatchCount))…")
         default: ""
         }
     }
@@ -556,7 +528,7 @@ struct AudioControls: View {
         guard operation == .translateLocal else { return }
         let current = targetLanguage.trimmingCharacters(in: .whitespacesAndNewlines)
         if current.isEmpty {
-            targetLanguage = TranslationLanguageOption.spanishValue
+            targetLanguage = TranslationLanguageOption.defaultTarget
         } else if let match = TranslationLanguageOption.matching(current), match.value != targetLanguage {
             targetLanguage = match.value
         }
@@ -588,10 +560,10 @@ struct AudioControls: View {
     private var targetLanguageOptions: [XeonDropdown<String>.Option] {
         [
             .init(value: TranslationLanguageOption.customValue,
-                  title: loc.t("Otro…", "Other…"),
+                  title: AppInfo.branded("Other…"),
                   systemImage: "ellipsis")
         ] + TranslationLanguageOption.all.map {
-            .init(value: $0.value, title: $0.label(isSpanish: loc.isSpanish))
+            .init(value: $0.value, title: $0.value)
         }
     }
 
@@ -637,26 +609,22 @@ struct AudioControls: View {
 private struct TranslationLanguageOption: Identifiable {
     let id: String
     let value: String
-    let spanish: String
-    let english: String
-
-    func label(isSpanish: Bool) -> String { isSpanish ? spanish : english }
 
     static let all: [TranslationLanguageOption] = {
-        let spanishLocale = Locale(identifier: "es")
-        let englishLocale = Locale(identifier: "en")
+        let locale = Locale(identifier: "en")
         var seen = Set<String>()
         return commonLanguageCodes.compactMap { code -> TranslationLanguageOption? in
-            guard let english = englishLocale.localizedString(forLanguageCode: code),
-                  let spanish = spanishLocale.localizedString(forLanguageCode: code),
-                  !english.isEmpty, !spanish.isEmpty,
+            guard let english = locale.localizedString(forLanguageCode: code),
+                  !english.isEmpty,
                   seen.insert(english.lowercased()).inserted else { return nil }
-            return TranslationLanguageOption(id: code, value: english,
-                                             spanish: spanish.capitalized(with: spanishLocale),
-                                             english: english.capitalized(with: englishLocale))
+            return TranslationLanguageOption(
+                id: code, value: english.capitalized(with: locale))
         }
-        .sorted { $0.spanish.localizedStandardCompare($1.spanish) == .orderedAscending }
+        .sorted { $0.value.localizedStandardCompare($1.value) == .orderedAscending }
     }()
+
+    /// Spanish is the default translation target: the interpreter's own speech.
+    static let defaultTarget = all.first(where: { $0.id == "es" })?.value ?? "Spanish"
 
     /// Everyday translation targets. Less common and constructed languages stay
     /// available through “Other” without overwhelming the dropdown.
@@ -669,18 +637,12 @@ private struct TranslationLanguageOption: Identifiable {
         "sv", "sw", "ta", "te", "th", "tr", "uk", "ur", "uz", "vi"
     ]
 
-    static var spanishValue: String {
-        all.first(where: { $0.id == "es" })?.value ?? "Spanish"
-    }
-
     static let customValue = "__xeonllm_custom_language__"
 
     static func matching(_ value: String) -> TranslationLanguageOption? {
         all.first {
             $0.id.caseInsensitiveCompare(value) == .orderedSame
                 || $0.value.caseInsensitiveCompare(value) == .orderedSame
-                || $0.spanish.caseInsensitiveCompare(value) == .orderedSame
-                || $0.english.caseInsensitiveCompare(value) == .orderedSame
         }
     }
 
@@ -690,14 +652,11 @@ private struct TranslationLanguageOption: Identifiable {
         // or Fon), so they must be chosen explicitly from the dropdown.
         guard input.count >= 4 else { return nil }
 
-        return all.compactMap { option -> (TranslationLanguageOption, Double)? in
-            let score = [option.english, option.spanish]
-                .map { similarity(input, normalized($0)) }
-                .max() ?? 0
-            return score >= minimumSimilarity ? (option, score) : nil
-        }
-        .max { $0.1 < $1.1 }?
-        .0
+        return all
+            .map { ($0, similarity(input, normalized($0.value))) }
+            .filter { $0.1 >= minimumSimilarity }
+            .max { $0.1 < $1.1 }?
+            .0
     }
 
     private static func normalized(_ value: String) -> String {

@@ -65,10 +65,9 @@ struct MaskEditorView: View {
                 .frame(width: 34, height: 34)
                 .background(Color.appAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 3) {
-                Text(loc.t("Pinta la zona a retocar", "Paint the area to repaint"))
+                Text(AppInfo.branded("Paint the area to repaint"))
                     .font(.headline)
-                Text(loc.t("Lo pintado se vuelve a generar; el resto de la foto se conserva.",
-                           "What you paint is regenerated; the rest of the photo is kept."))
+                Text(AppInfo.branded("What you paint is regenerated; the rest of the photo is kept."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -89,15 +88,14 @@ struct MaskEditorView: View {
         VStack(spacing: 14) {
             HStack(spacing: 8) {
                 Button { erasing = false } label: {
-                    Label(loc.t("Pincel", "Brush"), systemImage: "paintbrush.pointed")
+                    Label(AppInfo.branded("Brush"), systemImage: "paintbrush.pointed")
                 }
                 .glassButton(prominent: !erasing)
                 Button { erasing = true } label: {
-                    Label(loc.t("Borrador", "Eraser"), systemImage: "eraser")
+                    Label(AppInfo.branded("Eraser"), systemImage: "eraser")
                 }
                 .glassButton(prominent: erasing)
-                .help(loc.t("El pincel marca lo que se repinta; el borrador devuelve la zona a conservada.",
-                            "The brush marks what gets repainted; the eraser puts an area back to kept."))
+                .help(AppInfo.branded("The brush marks what gets repainted; the eraser puts an area back to kept."))
 
                 Divider().frame(height: 22)
 
@@ -106,8 +104,7 @@ struct MaskEditorView: View {
                     .foregroundStyle(.secondary)
                 Slider(value: $radius, in: 0.01...0.25)
                     .frame(minWidth: 100, maxWidth: 150)
-                    .help(loc.t("Diámetro del pincel, relativo al ancho de la imagen.",
-                                "Brush diameter, relative to the image width."))
+                    .help(AppInfo.branded("Brush diameter, relative to the image width."))
                 Image(systemName: "circle.fill")
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
@@ -115,12 +112,11 @@ struct MaskEditorView: View {
                 Spacer(minLength: 8)
 
                 Button { showMaskOnly.toggle() } label: {
-                    Label(loc.t("Ver máscara", "View mask"),
+                    Label(AppInfo.branded("View mask"),
                           systemImage: showMaskOnly ? "eye.fill" : "eye")
                 }
                 .glassButton(prominent: showMaskOnly)
-                    .help(loc.t("Muestra la máscara en blanco y negro, como la recibe el motor.",
-                                "Shows the mask in black and white, the way the engine gets it."))
+                    .help(AppInfo.branded("Shows the mask in black and white, the way the engine gets it."))
             }
 
             HStack(spacing: 10) {
@@ -131,7 +127,7 @@ struct MaskEditorView: View {
                 }
                 .buttonStyle(GlassIconButtonStyle())
                 .disabled(strokes.isEmpty)
-                .iconHelp(loc.t("Deshacer", "Undo"))
+                .iconHelp(AppInfo.branded("Undo"))
 
                 Button { strokes.removeAll() } label: {
                     Image(systemName: "trash")
@@ -139,20 +135,19 @@ struct MaskEditorView: View {
                     .buttonStyle(GlassIconButtonStyle())
                     .foregroundStyle(.red)
                     .disabled(strokes.isEmpty)
-                    .iconHelp(loc.t("Limpiar", "Clear"))
+                    .iconHelp(AppInfo.branded("Clear"))
 
                 Spacer()
 
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
                     .glassButton()
                     .keyboardShortcut(.cancelAction)
 
-                Button(loc.t("Usar máscara", "Use mask")) { save() }
+                Button(AppInfo.branded("Use mask")) { save() }
                     .keyboardShortcut(.defaultAction)
                     .glassButton(prominent: true)
                     .disabled(strokes.isEmpty)
-                    .help(loc.t("Guarda la máscara y la aplica a esta instancia.",
-                                "Saves the mask and applies it to this instance."))
+                    .help(AppInfo.branded("Saves the mask and applies it to this instance."))
             }
         }
     }
@@ -204,7 +199,7 @@ struct MaskEditorView: View {
     private func save() {
         let size = pixelSize
         guard let png = MaskEditorView.render(strokes: strokes, size: size) else {
-            error = loc.t("No se pudo generar la máscara.", "The mask could not be generated.")
+            error = AppInfo.branded("The mask could not be generated.")
             return
         }
         let url = outputDirectory.appendingPathComponent("mask-\(UUID().uuidString.prefix(8)).png")
@@ -214,7 +209,7 @@ struct MaskEditorView: View {
             maskPath = url.path
             dismiss()
         } catch {
-            self.error = loc.t("No se pudo guardar: %@", "Could not save: %@", error.localizedDescription)
+            self.error = AppInfo.branded("Could not save: \(error.localizedDescription)")
         }
     }
 

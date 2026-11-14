@@ -12,9 +12,9 @@ enum AudioTranslationError: LocalizedError {
         switch self {
         case .server(let status, let detail):
             let suffix = detail.isEmpty ? "" : ": \(detail)"
-            return "El motor de chat rechazó la traducción (HTTP \(status))\(suffix) / the chat engine rejected the translation (HTTP \(status))\(suffix)"
+            return "The chat engine rejected the translation (HTTP \(status))\(suffix)"
         case .invalidResponse:
-            return "El modelo no devolvió todos los subtítulos traducidos; prueba otro modelo de chat / the model did not return every translated subtitle; try another chat model."
+            return "The model did not return every translated subtitle; try another chat model."
         }
     }
 }

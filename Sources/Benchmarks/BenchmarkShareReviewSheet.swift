@@ -50,10 +50,10 @@ struct BenchmarkShareReviewSheet: View {
         HStack(spacing: 14) {
             SectionGlyph(systemName: "checkmark.shield")
             VStack(alignment: .leading, spacing: 3) {
-                Text(loc.t("Revisa antes de firmar", "Review before signing"))
+                Text(AppInfo.branded("Review before signing"))
                     .font(.title3)
                     .bold()
-                Text(loc.t("Todavía no se ha subido nada.", "Nothing has been uploaded yet."))
+                Text(AppInfo.branded("Nothing has been uploaded yet."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -61,26 +61,25 @@ struct BenchmarkShareReviewSheet: View {
             Text(ByteCountFormatter.string(fromByteCount: Int64(review.payloadByteCount), countStyle: .file))
                 .font(.caption.monospaced())
                 .foregroundStyle(.tertiary)
-                .help(loc.t("Tamaño exacto del JSON que se firmará", "Exact size of the JSON that will be signed"))
+                .help(AppInfo.branded("Exact size of the JSON that will be signed"))
         }
         .padding(20)
     }
 
     private var privacySummary: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(loc.t("Solo se enviará este benchmark", "Only this benchmark will be sent"),
+            Label(AppInfo.branded("Only this benchmark will be sent"),
                   systemImage: "lock.shield.fill")
                 .font(.headline)
                 .foregroundStyle(.green)
-            Text(loc.t("XeonLLM no incluye chats, prompts, nombres de cuenta ni rutas locales. Los archivos del modelo tampoco se suben: solo se incluyen su nombre, tamaño y SHA-256.",
-                       "XeonLLM does not include chats, prompts, account names, or local paths. Model files are not uploaded either: only their name, size, and SHA-256 are included."))
+            Text(AppInfo.branded("XeonLLM does not include chats, prompts, account names, or local paths. Model files are not uploaded either: only their name, size, and SHA-256 are included."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 18) {
-                Label(loc.t("Sin contenido de chats", "No chat content"), systemImage: "checkmark.circle")
-                Label(loc.t("Sin rutas locales", "No local paths"), systemImage: "checkmark.circle")
-                Label(loc.t("Clave privada en Llavero", "Private key stays in Keychain"), systemImage: "checkmark.circle")
+                Label(AppInfo.branded("No chat content"), systemImage: "checkmark.circle")
+                Label(AppInfo.branded("No local paths"), systemImage: "checkmark.circle")
+                Label(AppInfo.branded("Private key stays in Keychain"), systemImage: "checkmark.circle")
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -91,7 +90,7 @@ struct BenchmarkShareReviewSheet: View {
     }
 
     private var resultSummary: some View {
-        BenchmarkReviewSection(loc.t("Resultado medido", "Measured result"), systemImage: "gauge.with.dots.needle.67percent") {
+        BenchmarkReviewSection(AppInfo.branded("Measured result"), systemImage: "gauge.with.dots.needle.67percent") {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(review.modelName).font(.title3).bold()
@@ -101,14 +100,14 @@ struct BenchmarkShareReviewSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 HStack(spacing: 10) {
-                    BenchmarkReviewMetric(label: loc.t("Procesamiento del prompt", "Prompt processing"),
+                    BenchmarkReviewMetric(label: AppInfo.branded("Prompt processing"),
                                           value: String(format: "%.1f t/s", review.promptMedian),
                                           detail: runValues(review.promptRuns))
-                    BenchmarkReviewMetric(label: loc.t("Generación", "Generation"),
+                    BenchmarkReviewMetric(label: AppInfo.branded("Generation"),
                                           value: String(format: "%.1f t/s", review.generationMedian),
                                           detail: runValues(review.generationRuns))
                 }
-                Text(loc.t("Mediana de %@ ejecuciones independientes · pp%@ / tg%@", "Median of %@ independent runs · pp%@ / tg%@", "\(review.repetitions)", "\(review.promptTokens)", "\(review.generatedTokens)"))
+                Text(AppInfo.branded("Median of \(review.repetitions) independent runs · pp\(review.promptTokens) / tg\(review.generatedTokens)"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -116,22 +115,22 @@ struct BenchmarkShareReviewSheet: View {
     }
 
     private var systemSummary: some View {
-        BenchmarkReviewSection(loc.t("Equipo y configuración", "Machine and configuration"), systemImage: "desktopcomputer") {
+        BenchmarkReviewSection(AppInfo.branded("Machine and configuration"), systemImage: "desktopcomputer") {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 BenchmarkReviewField(label: "GPU", value: review.gpu)
                 BenchmarkReviewField(label: "CPU", value: review.cpu)
-                BenchmarkReviewField(label: loc.t("Memoria", "Memory"), value: review.memory)
-                BenchmarkReviewField(label: loc.t("Sistema", "System"), value: "\(review.machine) · \(review.operatingSystem)")
-                BenchmarkReviewField(label: loc.t("Backend / Flash Attention", "Backend / Flash Attention"), value: "\(review.backend) · \(review.flashAttention)")
-                BenchmarkReviewField(label: loc.t("Capas GPU / expertos CPU", "GPU layers / CPU experts"), value: "\(review.gpuLayers) / \(review.cpuMoeExperts)")
-                BenchmarkReviewField(label: loc.t("Caché KV", "KV cache"), value: review.cacheTypes)
-                BenchmarkReviewField(label: loc.t("App / contexto", "App / context"), value: "\(review.appVersion) · \(review.contextDepth)")
+                BenchmarkReviewField(label: AppInfo.branded("Memory"), value: review.memory)
+                BenchmarkReviewField(label: AppInfo.branded("System"), value: "\(review.machine) · \(review.operatingSystem)")
+                BenchmarkReviewField(label: AppInfo.branded("Backend / Flash Attention"), value: "\(review.backend) · \(review.flashAttention)")
+                BenchmarkReviewField(label: AppInfo.branded("GPU layers / CPU experts"), value: "\(review.gpuLayers) / \(review.cpuMoeExperts)")
+                BenchmarkReviewField(label: AppInfo.branded("KV cache"), value: review.cacheTypes)
+                BenchmarkReviewField(label: AppInfo.branded("App / context"), value: "\(review.appVersion) · \(review.contextDepth)")
             }
         }
     }
 
     private var artifactSummary: some View {
-        BenchmarkReviewSection(loc.t("Modelo identificado", "Model identity"), systemImage: "shippingbox") {
+        BenchmarkReviewSection(AppInfo.branded("Model identity"), systemImage: "shippingbox") {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(review.artifacts) { artifact in
                     VStack(alignment: .leading, spacing: 4) {
@@ -155,10 +154,9 @@ struct BenchmarkShareReviewSheet: View {
     }
 
     private var identitySummary: some View {
-        BenchmarkReviewSection(loc.t("Firma e identidad pública", "Signature and public identity"), systemImage: "signature") {
+        BenchmarkReviewSection(AppInfo.branded("Signature and public identity"), systemImage: "signature") {
             VStack(alignment: .leading, spacing: 8) {
-                Text(loc.t("La clave privada permanece en el Llavero de este Mac. Esta huella pública permite agrupar tus envíos y verificar que no fueron modificados.",
-                           "The private key remains in this Mac's Keychain. This public fingerprint groups your submissions and verifies that they were not modified."))
+                Text(AppInfo.branded("The private key remains in this Mac's Keychain. This public fingerprint groups your submissions and verifies that they were not modified."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Text(review.keyFingerprint)
@@ -168,21 +166,20 @@ struct BenchmarkShareReviewSheet: View {
                     .textSelection(.enabled)
                     .help(review.keyFingerprint)
                 if !review.contributor.isEmpty {
-                    BenchmarkReviewField(label: loc.t("Alias público", "Public alias"), value: review.contributor)
+                    BenchmarkReviewField(label: AppInfo.branded("Public alias"), value: review.contributor)
                 }
             }
         }
     }
 
     private var technicalDetails: some View {
-        BenchmarkReviewSection(loc.t("Evidencia técnica", "Technical evidence"), systemImage: "curlybraces") {
+        BenchmarkReviewSection(AppInfo.branded("Technical evidence"), systemImage: "curlybraces") {
             DisclosureGroup(isExpanded: $showTechnicalDetails) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(loc.t("El JSON se formatea aquí para facilitar su lectura. Al firmar se usan exactamente los bytes originales; el log completo aparece por separado.",
-                               "The JSON is formatted here for readability. Signing uses the exact original bytes; the complete log is shown separately."))
+                    Text(AppInfo.branded("The JSON is formatted here for readability. Signing uses the exact original bytes; the complete log is shown separately."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button(copiedJSON ? loc.t("JSON copiado", "JSON copied") : loc.t("Copiar JSON exacto", "Copy exact JSON"),
+                    Button(copiedJSON ? AppInfo.branded("JSON copied") : AppInfo.branded("Copy exact JSON"),
                            systemImage: copiedJSON ? "checkmark" : "doc.on.doc",
                            action: copyExactJSON)
                         .buttonStyle(.borderless)
@@ -206,27 +203,26 @@ struct BenchmarkShareReviewSheet: View {
                         .frame(height: 220)
                         .background(WorkspaceStyle.inset, in: RoundedRectangle(cornerRadius: 8))
                     } label: {
-                        Text(loc.t("Log completo del benchmark", "Complete benchmark log"))
+                        Text(AppInfo.branded("Complete benchmark log"))
                     }
                 }
                 .padding(.top, 10)
             } label: {
-                Text(loc.t("Mostrar JSON y log", "Show JSON and log"))
+                Text(AppInfo.branded("Show JSON and log"))
             }
         }
     }
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Label(loc.t("Solo al confirmar se firmará y enviará este contenido.",
-                        "Only after confirmation will this content be signed and sent."),
+            Label(AppInfo.branded("Only after confirmation will this content be signed and sent."),
                   systemImage: "lock")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel, action: onCancel)
+            Button(AppInfo.branded("Cancel"), role: .cancel, action: onCancel)
                 .glassButton()
-            Button(loc.t("Firmar y enviar benchmark", "Sign and send benchmark"),
+            Button(AppInfo.branded("Sign and send benchmark"),
                    systemImage: "paperplane.fill", action: onSubmit)
                 .glassButton(prominent: true)
                 .keyboardShortcut(.defaultAction)

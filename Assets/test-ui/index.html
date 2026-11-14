@@ -133,11 +133,8 @@ let aiName       = "Assistant";
 let modelLoaded  = false;
 
 // ── i18n ──────────────────────────────────────────────────────────────
-// Spanish and English are built in, like the app. Any other language is loaded
-// from lang/<code>.json — the same community overlay files the app ships,
-// copied next to this page. The English text is the lookup key, with English as
-// the fallback, so a missing or partial translation never shows blank.
-// The app passes the chosen language as ?lang=; otherwise we use the browser's.
+// The app ships one language. The English text is also the lookup key, so a
+// missing string never shows blank.
 const EN = {
   maxTokens: "Max tokens", clear: "Clear chat", send: "Send", stop: "Stop",
   placeholder: "Type your message… (Enter sends, Shift+Enter newline)",
@@ -146,17 +143,8 @@ const EN = {
   serverUnavailable: "server unavailable",
   firstResp: "first resp.", errorRunning: "is llama-server running?",
 };
-const ES = {
-  maxTokens: "Máx. tokens", clear: "Limpiar chat", send: "Enviar", stop: "Detener",
-  placeholder: "Escribe tu mensaje… (Enter envía, Shift+Enter salto de línea)",
-  reasoning: "Razonamiento", you: "Tú", assistant: "Asistente",
-  connecting: "conectando…", unknownModel: "modelo desconocido",
-  serverUnavailable: "servidor no disponible",
-  firstResp: "primera resp.", errorRunning: "¿está corriendo llama-server?",
-};
 const params = new URLSearchParams(location.search);
-const LANG = (params.get("lang") || navigator.language || "en").slice(0, 2).toLowerCase();
-document.documentElement.lang = LANG;
+document.documentElement.lang = "en";
 
 // The app passes the real device name and inference backend in use; show them
 // in the badge instead of guessing. Falls back to the static "Metal" label when
@@ -168,7 +156,7 @@ if (gpu && backend) badgeEl.textContent = gpu + " · " + backend;
 else if (gpu) badgeEl.textContent = gpu;
 else if (backend) badgeEl.textContent = backend;
 
-let T = LANG === "es" ? ES : EN;
+const T = EN;
 
 function applyStrings() {
   document.getElementById("max-tokens-label").firstChild.textContent = T.maxTokens + " ";
@@ -181,18 +169,6 @@ function applyStrings() {
   }
 }
 applyStrings();
-
-// Community language: overlay the English defaults with the fetched file.
-if (LANG !== "es" && LANG !== "en") {
-  fetch("lang/" + LANG + ".json")
-    .then(r => r.ok ? r.json() : {})
-    .catch(() => ({}))
-    .then(ov => {
-      T = Object.fromEntries(Object.entries(EN).map(
-        ([k, en]) => [k, (ov[en] && ov[en].trim()) ? ov[en] : en]));
-      applyStrings();
-    });
-}
 
 tempEl.oninput = () => document.getElementById("temp-val").textContent = tempEl.value;
 

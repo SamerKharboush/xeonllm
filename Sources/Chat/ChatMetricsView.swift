@@ -12,24 +12,24 @@ struct ChatMetricsView: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
             if let model, !model.isEmpty {
-                metricRow(loc.t("Modelo", "Model"), value: model, icon: "cube")
+                metricRow(AppInfo.branded("Model"), value: model, icon: "cube")
             }
             if timings.cachedTokens != nil {
-                metricRow(loc.t("Contexto en caché", "Cached context"),
+                metricRow(AppInfo.branded("Cached context"),
                           value: tokenValue(timings.cachedTokens), icon: "bolt.horizontal.circle")
             }
-            metricRow(loc.t("Procesamiento del prompt", "Prompt processing"),
+            metricRow(AppInfo.branded("Prompt processing"),
                       value: combined(tokens: timings.promptTokens,
                                       milliseconds: timings.promptMilliseconds,
                                       rate: timings.promptTokensPerSecond),
                       icon: "book.pages")
             if let ttft = timings.timeToFirstTokenMilliseconds {
-                metricRow(loc.t("Primer token", "First token"),
+                metricRow(AppInfo.branded("First token"),
                           value: ttft >= 1000 ? String(format: "%.2f s", ttft / 1000)
                                               : String(format: "%.0f ms", ttft),
                           icon: "timer")
             }
-            metricRow(loc.t("Generación", "Generation"),
+            metricRow(AppInfo.branded("Generation"),
                       value: combined(tokens: timings.generatedTokens,
                                       milliseconds: timings.generationMilliseconds,
                                       rate: timings.generationTokensPerSecond),

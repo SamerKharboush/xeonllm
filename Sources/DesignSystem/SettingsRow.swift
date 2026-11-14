@@ -282,17 +282,15 @@ struct ProfileNameField: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            TextField(loc.t("Nombre del perfil (p. ej. Código, Chat rápido)",
-                            "Profile name (e.g. Coding, Quick chat)"), text: $name)
+            TextField(AppInfo.branded("Profile name (e.g. Coding, Quick chat)"), text: $name)
                 .workspaceTextField()
                 .lineLimit(1)
                 .onSubmit(save)
-            Button(loc.t("Guardar actual", "Save current"), action: save)
+            Button(AppInfo.branded("Save current"), action: save)
                 .glassButton()
                 .fixedSize()
                 .disabled(trimmed.isEmpty)
-                .infoTip(loc.t("Guarda toda la configuración actual (modelo incluido) con este nombre.",
-                               "Saves the entire current configuration (model included) under this name."))
+                .infoTip(AppInfo.branded("Saves the entire current configuration (model included) under this name."))
         }
     }
 

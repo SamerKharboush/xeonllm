@@ -152,28 +152,26 @@ struct ChatMapSection: View {
                     }
                 legend(map)
                 if map.layers.contains(where: { !$0.complete }) {
-                    Text(loc.t("El mapa muestra parte de los resultados: no todos caben.",
-                               "The map shows part of the results: not all of them fit."))
+                    Text(AppInfo.branded("The map shows part of the results: not all of them fit."))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
         } else if message.mapRequest != nil {
             HStack(spacing: 8) {
                 Button(action: onShow) {
-                    Label(loc.t("Ver en el mapa", "Show on a map"), systemImage: "map")
+                    Label(AppInfo.branded("Show on a map"), systemImage: "map")
                         .font(.callout)
                 }
                 .glassButton()
                 .disabled(loading)
-                .help(loc.t("Dibuja en un mapa lo que la respuesta consultó.",
-                            "Draws on a map what the answer looked up."))
+                .help(AppInfo.branded("Draws on a map what the answer looked up."))
                 if loading {
                     ProgressView().controlSize(.small)
-                    Text(loc.t("Cargando el mapa…", "Loading the map…"))
+                    Text(AppInfo.branded("Loading the map…"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if failed {
-                    Text(loc.t("No se pudo cargar el mapa", "The map could not be loaded"))
+                    Text(AppInfo.branded("The map could not be loaded"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -197,7 +195,7 @@ struct ChatMapSection: View {
                 ForEach(Array(map.layers.enumerated()), id: \.offset) { index, layer in
                     HStack(spacing: 6) {
                         Circle().fill(Color(nsColor: ChatMapCanvas.color(index))).frame(width: 8, height: 8)
-                        Text(layer.title ?? loc.t("Capa", "Layer")).font(.caption.weight(.medium))
+                        Text(layer.title ?? AppInfo.branded("Layer")).font(.caption.weight(.medium))
                         if let subtitle = layer.subtitle {
                             Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
@@ -205,20 +203,18 @@ struct ChatMapSection: View {
                             Text("(\(count))").font(.caption).foregroundStyle(.secondary)
                         }
                         if let title = layer.linkTitle, let url = layer.linkURL.flatMap(URL.init(string:)) {
-                            Button(loc.t("Abrir en %@", "Open in %@", title)) { NSWorkspace.shared.open(url) }
+                            Button(AppInfo.branded("Open in \(title)")) { NSWorkspace.shared.open(url) }
                                 .buttonStyle(.link).font(.caption)
-                                .help(loc.t("Abre la capa en su visor original, en el navegador.",
-                                            "Opens the layer in its own viewer, in the browser."))
+                                .help(AppInfo.branded("Opens the layer in its own viewer, in the browser."))
                         }
                     }
                 }
             }
             Spacer()
             ChatFigureResizeButton(enlarged: enlarged) { enlarged.toggle() }
-            Button(loc.t("Exportar GeoJSON", "Export GeoJSON")) { export(map) }
+            Button(AppInfo.branded("Export GeoJSON")) { export(map) }
                 .buttonStyle(.link).font(.caption)
-                .help(loc.t("Guarda lo dibujado en archivos que abren QGIS y otras aplicaciones GIS: uno por capa y tipo de geometría, como los toman sus herramientas de importación.",
-                            "Saves what is drawn to files that QGIS and other GIS applications open: one per layer and kind of geometry, as their import tools take them."))
+                .help(AppInfo.branded("Saves what is drawn to files that QGIS and other GIS applications open: one per layer and kind of geometry, as their import tools take them."))
         }
     }
 
@@ -229,10 +225,8 @@ struct ChatMapSection: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.prompt = loc.t("Exportar aquí", "Export here")
-        panel.message = loc.t("Un archivo .geojson por capa y tipo de geometría: %@",
-                              "One .geojson file per layer and kind of geometry: %@",
-                              files.map(\.name).joined(separator: ", "))
+        panel.prompt = AppInfo.branded("Export here")
+        panel.message = AppInfo.branded("One .geojson file per layer and kind of geometry: \(files.map(\.name).joined(separator: ", "))")
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         for file in files {
             try? file.data.write(to: folder.appendingPathComponent(file.name))
@@ -294,11 +288,11 @@ struct ChatMapFeatureCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Circle().fill(Color(nsColor: ChatMapCanvas.color(feature.layer))).frame(width: 8, height: 8)
-                Text(feature.title ?? loc.t("Elemento", "Feature")).font(.caption.weight(.semibold)).lineLimit(1)
+                Text(feature.title ?? AppInfo.branded("Feature")).font(.caption.weight(.semibold)).lineLimit(1)
                 Spacer(minLength: 8)
                 Button(action: onClose) { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help(loc.t("Cerrar", "Close"))
+                    .help(AppInfo.branded("Close"))
             }
             Divider()
             ScrollView {

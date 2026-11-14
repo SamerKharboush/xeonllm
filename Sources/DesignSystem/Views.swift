@@ -32,15 +32,15 @@ enum Section_: String, CaseIterable, Identifiable {
     }
     func title(_ loc: Localizer) -> String {
         switch self {
-        case .dashboard: return loc.t("Inicio", "Home")
+        case .dashboard: return AppInfo.branded("Home")
         case .chat: return "Chat"
-        case .models: return loc.t("Modelos", "Models")
+        case .models: return AppInfo.branded("Models")
         case .benchmarks: return "Benchmarks"
-        case .docs: return loc.t("Documentación", "Docs")
-        case .logs: return loc.t("Registro", "Logs")
-        case .chatSettings: return loc.t("Ajustes del chat", "Chat Settings")
-        case .settings: return loc.t("Ajustes", "Settings")
-        case .about: return loc.t("Acerca de", "About")
+        case .docs: return AppInfo.branded("Docs")
+        case .logs: return AppInfo.branded("Logs")
+        case .chatSettings: return AppInfo.branded("Chat Settings")
+        case .settings: return AppInfo.branded("Settings")
+        case .about: return AppInfo.branded("About")
         }
     }
 }
@@ -68,7 +68,7 @@ struct ControlPanelView: View {
                         Button {
                             control.serverAnchor = nil
                         } label: {
-                            Label(loc.t("Volver a servidores", "Back to servers"), systemImage: "chevron.left")
+                            Label(AppInfo.branded("Back to servers"), systemImage: "chevron.left")
                         }
                         .buttonStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
@@ -123,15 +123,15 @@ struct ControlPanelView: View {
     }
 
     private var subtitle: String {
-        if selectedServer != nil { return loc.t("Modelo y configuración de esta instancia.", "Model and settings for this instance.") }
+        if selectedServer != nil { return AppInfo.branded("Model and settings for this instance.") }
         switch control.section {
-        case .dashboard, .chat: return loc.t("Tu equipo y tu IA, de un vistazo.", "Your machine and AI status at a glance.")
-        case .models: return loc.t("Encuentra, descarga y gestiona tus modelos locales.", "Discover, download and manage your local models.")
-        case .benchmarks: return loc.t("Mide el rendimiento de tu equipo.", "Measure performance on your hardware.")
-        case .settings, .chatSettings: return loc.t("Control completo sobre tu experiencia local.", "Fine-tune your local AI experience.")
-        case .logs: return loc.t("Actividad y diagnóstico de los motores.", "Engine activity and diagnostics.")
-        case .docs: return loc.t("Guías y referencia de XeonLLM.", "XeonLLM guides and reference.")
-        case .about: return loc.t("IA local, hecha para tu Mac.", "Local AI, built for your Mac.")
+        case .dashboard, .chat: return AppInfo.branded("Your machine and AI status at a glance.")
+        case .models: return AppInfo.branded("Discover, download and manage your local models.")
+        case .benchmarks: return AppInfo.branded("Measure performance on your hardware.")
+        case .settings, .chatSettings: return AppInfo.branded("Fine-tune your local AI experience.")
+        case .logs: return AppInfo.branded("Engine activity and diagnostics.")
+        case .docs: return AppInfo.branded("XeonLLM guides and reference.")
+        case .about: return AppInfo.branded("Local AI, built for your Mac.")
         }
     }
 
@@ -148,10 +148,9 @@ struct OnboardingSheet: View {
             HStack(spacing: 16) {
                 XeonLLMLogo(size: 58)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(loc.t("Bienvenido a XeonLLM", "Welcome to XeonLLM"))
+                    Text(AppInfo.branded("Welcome to XeonLLM"))
                         .font(.system(size: 22, weight: .bold))
-                    Text(loc.t("Modelos de lenguaje en tu GPU, sin nube ni cuentas.",
-                               "Language models on your GPU, with no cloud or accounts."))
+                    Text(AppInfo.branded("Language models on your GPU, with no cloud or accounts."))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -165,14 +164,11 @@ struct OnboardingSheet: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 step("1", icon: "arrow.down.circle",
-                     loc.t("Descarga un modelo del catálogo. XeonLLM indica cuáles caben en tu equipo.",
-                           "Download a model from the catalog. XeonLLM shows which ones fit your machine."))
+                     AppInfo.branded("Download a model from the catalog. XeonLLM shows which ones fit your machine."))
                 step("2", icon: "slider.horizontal.3",
-                     loc.t("Pulsa «Usar» para configurar automáticamente sus parámetros.",
-                           "Press “Use” to configure its parameters automatically."))
+                     AppInfo.branded("Press “Use” to configure its parameters automatically."))
                 step("3", icon: "bubble.left.and.bubble.right",
-                     loc.t("Vuelve al Chat, inicia el servidor y comienza a escribir.",
-                           "Return to Chat, start the server, and begin typing."))
+                     AppInfo.branded("Return to Chat, start the server, and begin typing."))
             }
             .padding(20)
 
@@ -180,24 +176,22 @@ struct OnboardingSheet: View {
 
             HStack(spacing: 10) {
                 Button(action: onDismiss) {
-                    Label(loc.t("Explorar por mi cuenta", "Explore on my own"),
+                    Label(AppInfo.branded("Explore on my own"),
                           systemImage: "arrow.right")
                 }
                 .glassButton()
                 .controlSize(.large)
-                .help(loc.t("Cierra esta guía y continúa en el chat.",
-                            "Closes this guide and continues to Chat."))
+                .help(AppInfo.branded("Closes this guide and continues to Chat."))
                 Spacer()
                 Button {
                     onGoToModels()
                 } label: {
-                    Label(loc.t("Elegir mi primer modelo", "Pick my first model"),
+                    Label(AppInfo.branded("Pick my first model"),
                           systemImage: "shippingbox")
                 }
                 .glassButton(prominent: true)
                 .controlSize(.large)
-                .help(loc.t("Abre el catálogo para elegir un modelo compatible.",
-                            "Opens the catalog to choose a compatible model."))
+                .help(AppInfo.branded("Opens the catalog to choose a compatible model."))
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -244,7 +238,7 @@ struct ServerStatsToolbar: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
                 stat("Prompt", server.promptSpeed)
-                stat(loc.t("Generación", "Generation"), server.genSpeed)
+                stat(AppInfo.branded("Generation"), server.genSpeed)
                 Divider().frame(height: 18)
                 statusBadge
             }
@@ -262,8 +256,7 @@ struct ServerStatsToolbar: View {
             Text(value.map { String(format: "%.0f", $0) } ?? "—")
                 .font(.system(size: 12, design: .monospaced).weight(.semibold))
         }
-        .help(loc.t("%@: velocidad de la última petición en tokens por segundo.",
-                    "%@: last request speed in tokens per second.", label))
+        .help(AppInfo.branded("\(label): last request speed in tokens per second."))
     }
 
     private var statusBadge: some View {
@@ -271,14 +264,14 @@ struct ServerStatsToolbar: View {
         // word is enough here and the detail belongs in the tooltip
         let (text, color): (String, Color) = {
             switch server.state {
-            case .stopped: return (loc.t("Detenido", "Stopped"), .secondary)
-            case .starting: return (loc.t("Cargando…", "Loading…"), .orange)
-            case .running: return (loc.t("Activo", "Running"), .green)
-            case .failed: return (loc.t("Error", "Error"), .red)
+            case .stopped: return (AppInfo.branded("Stopped"), .secondary)
+            case .starting: return (AppInfo.branded("Loading…"), .orange)
+            case .running: return (AppInfo.branded("Running"), .green)
+            case .failed: return (AppInfo.branded("Error"), .red)
             }
         }()
         var detail = text
-        if case .failed(let msg) = server.state { detail = loc.half(msg) }
+        if case .failed(let msg) = server.state { detail = msg }
         return HStack(spacing: 5) {
             if case .failed = server.state {
                 Image(systemName: "exclamationmark.triangle.fill")

@@ -11,7 +11,7 @@ struct ServerConfigurationBackButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label(loc.t("Volver al resumen", "Back to overview"), systemImage: "chevron.left")
+            Label(AppInfo.branded("Back to overview"), systemImage: "chevron.left")
         }
         .glassButton()
         .frame(maxWidth: .infinity, alignment: .leading)

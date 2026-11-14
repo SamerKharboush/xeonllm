@@ -54,7 +54,7 @@ final class SubtitleVideoExporter: ObservableObject {
               let videoTrack = composition.addMutableTrack(withMediaType: .video,
                                                            preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw CocoaError(.fileReadUnsupportedScheme,
-                             userInfo: [NSLocalizedDescriptionKey: "El archivo no contiene vídeo / the file contains no video."])
+                             userInfo: [NSLocalizedDescriptionKey: "The file contains no video."])
         }
         try videoTrack.insertTimeRange(range, of: sourceVideo, at: .zero)
         videoTrack.preferredTransform = try await sourceVideo.load(.preferredTransform)

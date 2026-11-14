@@ -33,7 +33,7 @@ struct ExtensionsSettingsView: View {
         .onAppear(perform: reload)
     }
 
-    private func text(_ text: EngineExtensions.Text) -> String { text.pick(spanish: loc.isSpanish) }
+    private func text(_ text: EngineExtensions.Text) -> String { text.value }
 
     private func reload() {
         let result = EngineExtensions.all()
@@ -50,33 +50,32 @@ struct ExtensionsSettingsView: View {
     private var folderRow: some View {
         let custom = !(UserDefaults.standard.string(forKey: SettingsKeys.extensionsFolder) ?? "").isEmpty
         return SettingsRowGroup {
-            SettingsRow(icon: "folder", title: loc.t("Carpeta de extensiones", "Extensions folder"),
+            SettingsRow(icon: "folder", title: AppInfo.branded("Extensions folder"),
                         subtitle: EngineExtensions.chosenFolder.path,
-                        help: loc.t("Cada subcarpeta con un extension.json es una extensión. Las que encuentres aquí empiezan apagadas.",
-                                    "Every subfolder with an extension.json is one extension. The ones found here start off.")) {
+                        help: AppInfo.branded("Every subfolder with an extension.json is one extension. The ones found here start off.")) {
                 HStack(spacing: 8) {
-                    Button(loc.t("Abrir", "Open")) {
+                    Button(AppInfo.branded("Open")) {
                         let folder = EngineExtensions.chosenFolder
                         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                         NSWorkspace.shared.open(folder)
                     }
                     .glassButton()
-                    .help(loc.t("Abre la carpeta en el Finder; si no existe, la crea.", "Opens the folder in Finder, creating it if needed."))
-                    Button(loc.t("Cambiar…", "Change…"), action: chooseFolder)
+                    .help(AppInfo.branded("Opens the folder in Finder, creating it if needed."))
+                    Button(AppInfo.branded("Change…"), action: chooseFolder)
                         .glassButton()
-                        .help(loc.t("Elige otra carpeta de extensiones.", "Choose another extensions folder."))
+                        .help(AppInfo.branded("Choose another extensions folder."))
                     if custom {
-                        Button(loc.t("Restablecer", "Reset")) {
+                        Button(AppInfo.branded("Reset")) {
                             UserDefaults.standard.removeObject(forKey: SettingsKeys.extensionsFolder)
                             reload()
                             pendingRestart = true
                         }
                         .glassButton()
-                        .help(loc.t("Vuelve a la carpeta por defecto.", "Goes back to the default folder."))
+                        .help(AppInfo.branded("Goes back to the default folder."))
                     }
                     Button(action: reload) { Image(systemName: "arrow.clockwise") }
                         .glassButton()
-                        .help(loc.t("Vuelve a leer la carpeta.", "Reads the folder again."))
+                        .help(AppInfo.branded("Reads the folder again."))
                 }
             }
         }
@@ -95,23 +94,22 @@ struct ExtensionsSettingsView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(loc.t("No hay extensiones en esta carpeta.", "There are no extensions in this folder."))
+            Text(AppInfo.branded("There are no extensions in this folder."))
                 .font(.callout)
-            Text(loc.t("Una extensión es una carpeta con un extension.json que declara servidores MCP y sus ajustes. Cualquier persona o programa puede crearla.",
-                       "An extension is a folder with an extension.json that declares MCP servers and their settings. Any person or program can create one."))
+            Text(AppInfo.branded("An extension is a folder with an extension.json that declares MCP servers and their settings. Any person or program can create one."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if let docs = URL(string: AppInfo.repositoryURL + "/blob/main/docs/extensions.md") {
-                Link(loc.t("Formato de las extensiones", "Extension format"), destination: docs)
+                Link(AppInfo.branded("Extension format"), destination: docs)
                     .font(.caption)
-                    .help(loc.t("Abre la especificación en GitHub.", "Opens the specification on GitHub."))
+                    .help(AppInfo.branded("Opens the specification on GitHub."))
             }
         }
     }
 
     private var problemList: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(loc.t("No se pudieron cargar", "Could not be loaded")).font(.headline)
+            Text(AppInfo.branded("Could not be loaded")).font(.headline)
             ForEach(problems) { problem in
                 Label("\(problem.folder.lastPathComponent): \(problem.reason)", systemImage: "exclamationmark.triangle")
                     .font(.caption)
@@ -129,13 +127,13 @@ struct ExtensionsSettingsView: View {
                 if let version = item.manifest.version {
                     Text(version).font(.caption).foregroundStyle(.secondary)
                 }
-                Text(item.bundled ? loc.t("Incluida en la app", "Included in the app") : loc.t("De la carpeta", "From the folder"))
+                Text(item.bundled ? AppInfo.branded("Included in the app") : AppInfo.branded("From the folder"))
                     .font(.caption2)
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(.quaternary.opacity(0.5), in: Capsule())
                 Spacer(minLength: 8)
                 SettingsToggle(isOn: Binding(get: { enabled.contains(item.id) }, set: { setEnabled(item, $0) }))
-                    .help(loc.t("Activa o apaga esta extensión", "Turns this extension on or off"))
+                    .help(AppInfo.branded("Turns this extension on or off"))
             }
             if let description = item.manifest.description {
                 Text(text(description)).font(.caption).foregroundStyle(.secondary)
@@ -163,7 +161,7 @@ struct ExtensionsSettingsView: View {
                 .replacingOccurrences(of: "{extension}", with: item.folder.path)
         }
         var lines = (item.manifest.servers ?? [:]).sorted { $0.key < $1.key }.map { describe($0.key, $0.value) }
-        if let agent = item.manifest.agent { lines.append(describe(loc.t("agente", "agent"), agent)) }
+        if let agent = item.manifest.agent { lines.append(describe(AppInfo.branded("agent"), agent)) }
         return lines
     }
 
@@ -174,17 +172,15 @@ struct ExtensionsSettingsView: View {
         }
         if on && !item.bundled {
             let alert = NSAlert()
-            alert.messageText = loc.t("¿Activar %@?", "Turn on %@?", text(item.manifest.name))
-            var detail = loc.t("Ejecutará estos programas con tus permisos:", "It will run these programs with your permissions:")
+            alert.messageText = AppInfo.branded("Turn on \(text(item.manifest.name))?")
+            var detail = AppInfo.branded("It will run these programs with your permissions:")
                 + "\n\n" + programs(item).map { "• " + $0 }.joined(separator: "\n")
             if !replaced.isEmpty {
-                detail += "\n\n" + loc.t("Se apagará %@, porque solo una extensión puede traer su agente.",
-                                         "%@ will be turned off, since only one extension can bring its agent.",
-                                         replaced.map { text($0.manifest.name) }.joined(separator: ", "))
+                detail += "\n\n" + AppInfo.branded("\(replaced.map { text($0.manifest.name) }.joined(separator: ", ")) will be turned off, since only one extension can bring its agent.")
             }
             alert.informativeText = detail
-            alert.addButton(withTitle: loc.t("Activar", "Turn on"))
-            alert.addButton(withTitle: loc.t("Cancelar", "Cancel"))
+            alert.addButton(withTitle: AppInfo.branded("Turn on"))
+            alert.addButton(withTitle: AppInfo.branded("Cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         for other in replaced {
@@ -292,11 +288,11 @@ struct ExtensionsSettingsView: View {
         case .paths:
             VStack(alignment: .leading, spacing: 6) {
                 SettingsRow(icon: "folder", title: title, help: help) {
-                    Button(loc.t("Añadir…", "Add…")) { addPath(field, item) }
+                    Button(AppInfo.branded("Add…")) { addPath(field, item) }
                         .glassButton()
                         .help(takesAnyFolder(field) && (field.fileTypes ?? []).isEmpty
-                              ? loc.t("Elige una carpeta de datos.", "Pick a data folder.")
-                              : loc.t("Elige un archivo o una carpeta de datos.", "Pick a data file or folder."))
+                              ? AppInfo.branded("Pick a data folder.")
+                              : AppInfo.branded("Pick a data file or folder."))
                 }
                 ForEach(paths(field, item)) { entry in
                     HStack(spacing: 8) {
@@ -310,7 +306,7 @@ struct ExtensionsSettingsView: View {
                             Image(systemName: "minus.circle")
                         }
                         .buttonStyle(.plain)
-                        .help(loc.t("Quitar", "Remove"))
+                        .help(AppInfo.branded("Remove"))
                     }
                     .padding(.horizontal, 14)
                 }
@@ -359,9 +355,9 @@ struct ExtensionsSettingsView: View {
         let allowed = isFolder.boolValue ? takesAnyFolder(field) || folders.contains(ext) : files.contains(ext)
         guard allowed else {
             let alert = NSAlert()
-            alert.messageText = loc.t("Ese tipo de dato no se puede leer aquí", "That kind of data cannot be read here")
+            alert.messageText = AppInfo.branded("That kind of data cannot be read here")
             alert.informativeText = (files.map { "." + $0 } + folders.map {
-                $0 == "*" ? loc.t("cualquier carpeta", "any folder") : "." + $0
+                $0 == "*" ? AppInfo.branded("any folder") : "." + $0
             }).joined(separator: ", ")
             alert.runModal()
             return
@@ -393,18 +389,18 @@ struct ExtensionsSettingsView: View {
 
     private var restartRow: some View {
         HStack(spacing: 10) {
-            Label(loc.t("Los cambios se aplican al reiniciar el servidor.", "Changes apply when the server restarts."),
+            Label(AppInfo.branded("Changes apply when the server restarts."),
                   systemImage: "arrow.clockwise")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 8)
             if pendingRestart && serverRunning {
-                Button(loc.t("Reiniciar servidor", "Restart server")) {
+                Button(AppInfo.branded("Restart server")) {
                     server.restart(.fromDefaults())
                     pendingRestart = false
                 }
                 .glassButton(prominent: true)
-                .help(loc.t("Reinicia el servidor con estos ajustes.", "Restarts the server with these settings."))
+                .help(AppInfo.branded("Restarts the server with these settings."))
             }
         }
     }
@@ -419,20 +415,19 @@ private struct SecretSettingsField: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            SecureField(stored ? loc.t("Guardado en el Llavero", "Stored in the Keychain") : "", text: $draft)
+            SecureField(stored ? AppInfo.branded("Stored in the Keychain") : "", text: $draft)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 220)
                 .onSubmit(commit)
-                .help(loc.t("Se guarda en el Llavero de macOS y solo llega al motor al arrancarlo.",
-                            "Stored in the macOS Keychain and handed to the engine only when it starts."))
-            Button(loc.t("Guardar", "Save"), action: commit)
+                .help(AppInfo.branded("Stored in the macOS Keychain and handed to the engine only when it starts."))
+            Button(AppInfo.branded("Save"), action: commit)
                 .glassButton()
                 .disabled(draft.isEmpty)
-                .help(loc.t("Guarda el valor en el Llavero.", "Saves the value in the Keychain."))
+                .help(AppInfo.branded("Saves the value in the Keychain."))
             if stored {
-                Button(loc.t("Borrar", "Clear")) { save("") }
+                Button(AppInfo.branded("Clear")) { save("") }
                     .glassButton()
-                    .help(loc.t("Borra el valor guardado.", "Removes the stored value."))
+                    .help(AppInfo.branded("Removes the stored value."))
             }
         }
     }
@@ -471,8 +466,7 @@ private struct JSONSettingsEditor: View {
                 }
                 .onChange(of: draft) { _, value in commit(value) }
             if invalid {
-                Text(loc.t("No es un objeto JSON válido; se guarda en cuanto lo sea.",
-                           "Not a valid JSON object; it is saved as soon as it is one."))
+                Text(AppInfo.branded("Not a valid JSON object; it is saved as soon as it is one."))
                     .font(.caption2)
                     .foregroundStyle(.red)
             }

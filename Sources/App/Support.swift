@@ -35,7 +35,6 @@ enum ProductDefaults {
 /// and `ProfileStore` all reference these constants, so a typo is a compile
 /// error instead of a silent bug.
 enum SettingsKeys {
-    static let language = "lang"
     /// "bundled" or "custom". Not a path: two installs share this domain.
     static let engineKind = "engineKind"
     /// Only read when engineKind is "custom".

@@ -14,22 +14,20 @@ struct ForkConversationSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label(loc.t("Bifurcar conversación", "Fork conversation"),
+            Label(AppInfo.branded("Fork conversation"),
                   systemImage: "arrow.triangle.branch")
                 .font(.title2.weight(.semibold))
-            Text(loc.t("Crea una conversación independiente hasta este mensaje. La conversación original no cambia.",
-                       "Creates an independent conversation through this message. The original conversation is unchanged."))
+            Text(AppInfo.branded("Creates an independent conversation through this message. The original conversation is unchanged."))
                 .foregroundStyle(.secondary)
-            TextField(loc.t("Título (opcional)", "Title (optional)"), text: $title,
-                      prompt: Text(loc.t("Bifurcación de %@", "Fork of %@", "\(sourceTitle)")))
+            TextField(AppInfo.branded("Title (optional)"), text: $title,
+                      prompt: Text(AppInfo.branded("Fork of \(sourceTitle)")))
                 .workspaceTextField()
-            Toggle(loc.t("Incluir archivos, imágenes, audio y video",
-                         "Include files, images, audio and video"),
+            Toggle(AppInfo.branded("Include files, images, audio and video"),
                    isOn: $includeAttachments)
             HStack {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
-                Button(loc.t("Crear bifurcación", "Create fork")) {
+                Button(AppInfo.branded("Cancel")) { dismiss() }
+                Button(AppInfo.branded("Create fork")) {
                     let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
                     confirm(value.isEmpty ? nil : value, includeAttachments)
                     dismiss()

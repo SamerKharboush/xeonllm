@@ -146,44 +146,42 @@ struct NeedleTestCard: View {
     @State private var maxLength = 32768
 
     var body: some View {
-        Card(title: loc.t("Memoria de contexto", "Context recall"), icon: "text.magnifyingglass") {
+        Card(title: AppInfo.branded("Context recall"), icon: "text.magnifyingglass") {
             VStack(alignment: .leading, spacing: 12) {
-                Text(loc.t("Esconde un código en un texto largo a varias profundidades y pregunta por él al servidor en marcha, sin razonamiento. Sirve para comprobar que un KV cuantizado o un contexto largo siguen recordando lo que leyeron.",
-                           "Hides a code in a long text at several depths and asks the running server for it, with reasoning off. It checks that a quantized KV cache or a long context still recalls what it read."))
+                Text(AppInfo.branded("Hides a code in a long text at several depths and asks the running server for it, with reasoning off. It checks that a quantized KV cache or a long context still recalls what it read."))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 12) {
                     let fitting = test.lengths(fitting: test.contextTokens)
                     if fitting.isEmpty {
                         Text(server.runningPort == nil
-                             ? loc.t("Inicia el servidor principal con el modelo que quieras probar.", "Start the main server with the model you want to test.")
-                             : loc.t("El contexto del servidor es menor de 8K.", "The server's context is under 8K."))
+                             ? AppInfo.branded("Start the main server with the model you want to test.")
+                             : AppInfo.branded("The server's context is under 8K."))
                             .font(.callout).foregroundStyle(.secondary)
                     } else {
-                        Picker(loc.t("Hasta", "Up to"), selection: $maxLength) {
+                        Picker(AppInfo.branded("Up to"), selection: $maxLength) {
                             ForEach(fitting, id: \.self) { l in
                                 Text("\(l / 1024)K").tag(l)
                             }
                         }
                         .frame(width: 150)
                         .disabled(test.running)
-                        .help(loc.t("Longitud máxima del texto. Solo aparecen las que caben en el contexto del servidor; las largas pueden tardar varios minutos cada una.",
-                                    "Longest text to try. Only lengths that fit the server's context are offered; long ones can take several minutes each."))
+                        .help(AppInfo.branded("Longest text to try. Only lengths that fit the server's context are offered; long ones can take several minutes each."))
                     }
                     Spacer()
                     if test.running {
                         ProgressView().controlSize(.small)
-                        Button(loc.t("Detener", "Stop")) { test.cancel() }
-                            .help(loc.t("Detiene la prueba tras la petición en curso.", "Stops the test after the current request."))
+                        Button(AppInfo.branded("Stop")) { test.cancel() }
+                            .help(AppInfo.branded("Stops the test after the current request."))
                     } else {
-                        Button(loc.t("Ejecutar", "Run")) {
+                        Button(AppInfo.branded("Run")) {
                             if let port = server.runningPort { test.run(port: port, upTo: maxLength) }
                         }
                         .glassButton(prominent: true)
                         .disabled(server.runningPort == nil || fitting.isEmpty)
                         .help(server.runningPort == nil
-                              ? loc.t("Inicia el servidor principal con el modelo que quieras probar.", "Start the main server with the model you want to test.")
-                              : loc.t("Hace una petición por longitud y profundidad al servidor en marcha.", "Sends one request per length and depth to the running server."))
+                              ? AppInfo.branded("Start the main server with the model you want to test.")
+                              : AppInfo.branded("Sends one request per length and depth to the running server."))
                     }
                 }
                 if let error = test.error {
@@ -206,9 +204,9 @@ struct NeedleTestCard: View {
         let lengths = Array(Set(test.cells.map(\.length))).sorted()
         return Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
             GridRow {
-                Text(loc.t("Longitud", "Length")).font(.caption.weight(.semibold))
+                Text(AppInfo.branded("Length")).font(.caption.weight(.semibold))
                 ForEach(NeedleTest.depths, id: \.self) { d in
-                    Text(loc.t("Código al %@%%", "Code at %@%%", "\(d)")).font(.caption.weight(.semibold))
+                    Text(AppInfo.branded("Code at \(d)%%")).font(.caption.weight(.semibold))
                 }
             }
             ForEach(lengths, id: \.self) { l in
@@ -228,7 +226,7 @@ struct NeedleTestCard: View {
                   systemImage: passed ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .foregroundStyle(passed ? .green : .red)
                 .font(.callout.monospacedDigit())
-                .help(loc.t("Respuesta: %@", "Answer: %@", cell.answer ?? ""))
+                .help(AppInfo.branded("Answer: \(cell.answer ?? "")"))
         } else {
             Text("—").foregroundStyle(.secondary)
         }

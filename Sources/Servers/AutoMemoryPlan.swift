@@ -197,10 +197,6 @@ struct AutoMemoryActual: Decodable, Equatable {
 
 /// User-facing wording for a plan. Rounded numbers: the exact MiB belong to diagnostics.
 enum AutoMemoryText {
-    private static func t(_ es: String, _ en: String) -> String {
-        (UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en") == "es" ? es : en
-    }
-
     private static func gib(_ mib: Double) -> String {
         String(format: "~%.1f GiB", mib/1024)
     }
@@ -209,18 +205,18 @@ enum AutoMemoryText {
         switch kv {
         case "f16": return "F16"
         case "q8_0": return "Q8"
-        case "turbo4": return t("Turbo4 (ahorro de memoria)", "Turbo4 (memory saver)")
+        case "turbo4": return AppInfo.branded("Turbo4 (memory saver)")
         default: return kv
         }
     }
 
     static func modeLabel(_ mode: String) -> String {
         switch mode {
-        case "full_gpu": return t("GPU completa", "Full GPU")
+        case "full_gpu": return AppInfo.branded("Full GPU")
         case "dmoe": return "Dynamic MoE"
-        case "dmoe_bounded": return t("Dynamic MoE (RAM limitada)", "Dynamic MoE (bounded RAM)")
-        case "legacy_offload": return t("Expertos en CPU", "Expert offload")
-        default: return t("Sin configuración válida", "No valid configuration")
+        case "dmoe_bounded": return AppInfo.branded("Dynamic MoE (bounded RAM)")
+        case "legacy_offload": return AppInfo.branded("Expert offload")
+        default: return AppInfo.branded("No valid configuration")
         }
     }
 
@@ -229,22 +225,21 @@ enum AutoMemoryText {
         var parts = [modeLabel(plan.mode)]
         if plan.usesDynamicMoE {
             let arena = runtime.map { $0.isOn ? $0.arenaMib : 0 } ?? plan.arenaMib
-            parts.append(t("\(gib(arena)) de caché de expertos", "\(gib(arena)) expert cache"))
+            parts.append(AppInfo.branded("\(gib(arena)) expert cache"))
             if let p = plan.product, p.dmoe.warmBytes > 0 {
-                parts.append(t("\(gib(Double(p.dmoe.warmBytes)/1048576)) en RAM", "\(gib(Double(p.dmoe.warmBytes)/1048576)) in RAM"))
+                parts.append(AppInfo.branded("\(gib(Double(p.dmoe.warmBytes)/1048576)) in RAM"))
             }
-            if plan.productState == .memoryConstrained { parts.append(t("memoria justa", "memory constrained")) }
+            if plan.productState == .memoryConstrained { parts.append(AppInfo.branded("memory constrained")) }
         } else if plan.mode == "legacy_offload" {
-            parts.append(t("\(plan.ncmoe) capas de expertos en CPU", "\(plan.ncmoe) expert layers on CPU"))
+            parts.append(AppInfo.branded("\(plan.ncmoe) expert layers on CPU"))
         }
-        parts.append(t("contexto \(plan.nCtx / 1024)K", "\(plan.nCtx / 1024)K context"))
+        parts.append(AppInfo.branded("\(plan.nCtx / 1024)K context"))
         // a plan that found no configuration chose no cache type either
         if !plan.isUnsupported {
             parts.append(plan.autoPickedTurbo4
-                         ? t("KV Turbo4 (Auto: puede ir más rápido, con algo menos de calidad)",
-                             "KV Turbo4 (Auto: can be faster, at some quality cost)")
+                         ? AppInfo.branded("KV Turbo4 (Auto: can be faster, at some quality cost)")
                          : "KV \(kvLabel(plan.kv))")
-            parts.append(t("\(gib(plan.projectedFreeMib)) de VRAM libre", "\(gib(plan.projectedFreeMib)) VRAM headroom"))
+            parts.append(AppInfo.branded("\(gib(plan.projectedFreeMib)) VRAM headroom"))
         }
         return parts.joined(separator: " · ")
     }
@@ -254,43 +249,32 @@ enum AutoMemoryText {
         var s: String
         switch plan.state {
         case "FULL_GPU_OPTIMAL":
-            s = t("GPU completa: el modelo y el contexto pedido caben con margen.",
-                  "Full GPU: the model and the requested context fit with headroom.")
+            s = AppInfo.branded("Full GPU: the model and the requested context fit with headroom.")
         case "DMOE_CONTEXT_OPTIMAL":
-            s = t("Dynamic MoE: el modelo cabe entero, pero no dejaría margen para el contexto pedido; los expertos poco usados se quedan en RAM.",
-                  "Dynamic MoE: the model would fit, but not with room for the requested context; rarely used experts stay in RAM.")
+            s = AppInfo.branded("Dynamic MoE: the model would fit, but not with room for the requested context; rarely used experts stay in RAM.")
         case "DMOE_CAPACITY_REQUIRED":
-            s = t("Dynamic MoE: el modelo no cabe en VRAM; la GPU guarda los expertos más usados.",
-                  "Dynamic MoE: the model does not fit in VRAM; the GPU keeps the most used experts.")
+            s = AppInfo.branded("Dynamic MoE: the model does not fit in VRAM; the GPU keeps the most used experts.")
         case "DMOE_BOUNDED_HOST" where plan.savesHostRAM:
-            s = t("Dynamic MoE ahorrando RAM: la RAM guarda solo los expertos que no están en VRAM y el resto se lee del archivo del modelo.",
-                  "Dynamic MoE saving RAM: RAM keeps only the experts that are not in VRAM and the rest are read from the model file.")
+            s = AppInfo.branded("Dynamic MoE saving RAM: RAM keeps only the experts that are not in VRAM and the rest are read from the model file.")
         case "DMOE_BOUNDED_HOST":
-            s = t("Dynamic MoE con RAM limitada: la memoria libre ahora no da para todo el banco de expertos; la RAM guarda los más usados y el resto se lee del archivo del modelo.",
-                  "Dynamic MoE with bounded RAM: free memory right now cannot hold the whole expert bank; RAM keeps the most used experts and the rest are read from the model file.")
+            s = AppInfo.branded("Dynamic MoE with bounded RAM: free memory right now cannot hold the whole expert bank; RAM keeps the most used experts and the rest are read from the model file.")
         case "LEGACY_OFFLOAD_BETTER":
-            s = t("Expertos en CPU: Dynamic MoE no está disponible para este modelo o esta máquina.",
-                  "Expert offload: Dynamic MoE is not available for this model or machine.")
+            s = AppInfo.branded("Expert offload: Dynamic MoE is not available for this model or machine.")
         default:
             if let u = plan.product?.unsupported {
                 let need = { (b: Int64) in gib(Double(b)/1048576) }
                 s = u.requiredVramBytes > u.availableVramBytes
-                    ? t("No hay configuración segura: hace falta \(need(u.requiredVramBytes)) de VRAM y hay \(need(u.availableVramBytes)).",
-                        "No safe configuration: it needs \(need(u.requiredVramBytes)) of VRAM and \(need(u.availableVramBytes)) is free.")
-                    : t("No hay configuración segura: hace falta \(need(u.requiredHostBytes)) de RAM y ahora hay \(need(u.availableHostBytes)).",
-                        "No safe configuration: it needs \(need(u.requiredHostBytes)) of RAM and \(need(u.availableHostBytes)) is available now.")
+                    ? AppInfo.branded("No safe configuration: it needs \(need(u.requiredVramBytes)) of VRAM and \(need(u.availableVramBytes)) is free.")
+                    : AppInfo.branded("No safe configuration: it needs \(need(u.requiredHostBytes)) of RAM and \(need(u.availableHostBytes)) is available now.")
             } else {
-                s = t("Ninguna configuración deja un margen de VRAM seguro con este contexto; reduce el contexto.",
-                      "No configuration leaves a safe VRAM margin at this context; lower the context.")
+                s = AppInfo.branded("No configuration leaves a safe VRAM margin at this context; lower the context.")
             }
         }
         if plan.kv == "q8_0" {
-            s += " " + t("KV Q8: reduce la memoria del contexto lo suficiente para mantener una caché de expertos útil.",
-                         "KV Q8: shrinks context memory enough to keep a useful expert cache.")
+            s += " " + AppInfo.branded("KV Q8: shrinks context memory enough to keep a useful expert cache.")
         }
         if plan.autoPickedTurbo4 {
-            s += " " + t("KV Turbo4, elegido por Auto: ni F16 ni Q8 dejaban los expertos en la GPU. Puede ir bastante más rápido que con los expertos en la CPU, con algo de pérdida de calidad; fija la caché KV en F16 o Q8 para evitarlo.",
-                         "KV Turbo4, picked by Auto: neither F16 nor Q8 kept the experts on the GPU. It can be much faster than experts on the CPU, at some quality cost; set the KV cache to F16 or Q8 to avoid it.")
+            s += " " + AppInfo.branded("KV Turbo4, picked by Auto: neither F16 nor Q8 kept the experts on the GPU. It can be much faster than experts on the CPU, at some quality cost; set the KV cache to F16 or Q8 to avoid it.")
         }
         if !plan.fallback.isEmpty { s += " (\(plan.fallback))" }
         return s
@@ -301,14 +285,11 @@ enum AutoMemoryText {
         switch runtime.code {
         case "DMOE_ON": return nil
         case "DMOE_HOST_BANK_NOT_LOCKABLE":
-            return t("Dynamic MoE no pudo reservar suficiente memoria del sistema bloqueada.",
-                     "Dynamic MoE could not reserve enough locked system memory.")
+            return AppInfo.branded("Dynamic MoE could not reserve enough locked system memory.")
         case "DMOE_ARENA_BELOW_MINIMUM":
-            return t("La VRAM libre no alcanza para una caché de expertos útil.",
-                     "Free VRAM is too small for a useful expert cache.")
+            return AppInfo.branded("Free VRAM is too small for a useful expert cache.")
         default:
-            return t("Dynamic MoE no admite la geometría de este modelo.",
-                     "Dynamic MoE does not support this model's layout.")
+            return AppInfo.branded("Dynamic MoE does not support this model's layout.")
         }
     }
 }

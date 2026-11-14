@@ -14,25 +14,23 @@ struct DflashMemoryWarningSheet: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Label(loc.t("DFlash está usando casi toda la VRAM",
-                        "DFlash is using almost all VRAM"),
+            Label(AppInfo.branded("DFlash is using almost all VRAM"),
                   systemImage: "exclamationmark.triangle.fill")
                 .font(.title2)
                 .bold()
                 .foregroundStyle(.orange)
 
-            Text(loc.t("El servidor mantiene %@ de %@ GiB ocupados (%@). Esta configuración puede perder rendimiento, paginar memoria o fallar cuando crezca el contexto.", "The server is holding %@ of %@ GiB (%@). This configuration can lose performance, page memory, or fail as the context grows.", "\(usedText)", "\(totalText)", "\(fractionText)"))
+            Text(AppInfo.branded("The server is holding \(usedText) of \(totalText) GiB (\(fractionText)). This configuration can lose performance, page memory, or fail as the context grows."))
 
-            Text(loc.t("Recomendación: vuelve a Auto para que XeonLLM elija una configuración segura; también puedes desactivar DFlash o continuar y recordar esta decisión.",
-                       "Recommendation: return to Auto so XeonLLM can choose a safe configuration; you can also disable DFlash or continue and remember this decision."))
+            Text(AppInfo.branded("Recommendation: return to Auto so XeonLLM can choose a safe configuration; you can also disable DFlash or continue and remember this decision."))
                 .foregroundStyle(.secondary)
 
             HStack {
-                Button(loc.t("Continuar", "Continue"), action: continueAction)
+                Button(AppInfo.branded("Continue"), action: continueAction)
                 Spacer()
-                Button(loc.t("Desactivar y reiniciar", "Disable and restart"),
+                Button(AppInfo.branded("Disable and restart"),
                        role: .destructive, action: disableAction)
-                Button(loc.t("Auto y reiniciar", "Auto and restart"),
+                Button(AppInfo.branded("Auto and restart"),
                        action: automaticAction)
                     .buttonStyle(.borderedProminent)
             }

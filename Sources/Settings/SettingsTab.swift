@@ -79,20 +79,17 @@ struct SettingsView: View {
     }
     /// Why the chosen Turbo combination cannot run, so the warning names the actual cause
     /// instead of listing every reason Turbo might be unavailable.
-    private var turboKVIncompatibleReason: (es: String, en: String)? {
+    private var turboKVIncompatibleReason: String? {
         guard turboKVSelected else { return nil }
         if ServerSettings.isAppleSilicon {
-            return ("TurboQuant KV solo está disponible en tarjetas sin memoria unificada.",
-                    "TurboQuant KV is only available on cards without unified memory.")
+            return "TurboQuant KV is only available on cards without unified memory."
         }
         if !ServerSettings.modelSupportsTurboKV(at: modelPath) {
-            return ("Este modelo no admite TurboQuant KV: sus cabezas de atención no llegan a un múltiplo de 128.",
-                    "This model does not support TurboQuant KV: its attention heads do not pad to a multiple of 128.")
+            return "This model does not support TurboQuant KV: its attention heads do not pad to a multiple of 128."
         }
         if cacheTypeV.hasPrefix("turbo") && !cacheTypeK.hasPrefix("turbo") &&
             ServerSettings.modelUsesMLA(at: modelPath) {
-            return ("Este modelo guarda claves y valores en una sola caché, así que ambos deben llevar el mismo tipo.",
-                    "This model keeps keys and values in a single cache, so both must use the same type.")
+            return "This model keeps keys and values in a single cache, so both must use the same type."
         }
         return nil
     }
@@ -167,7 +164,7 @@ struct SettingsView: View {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = loc.t("Elegir", "Choose")
+        panel.prompt = AppInfo.branded("Choose")
         panel.directoryURL = models.directory
         if panel.runModal() == .OK, let url = panel.url {
             modelsDir = url.path
@@ -194,8 +191,7 @@ struct SettingsView: View {
                 .padding(.vertical, 12)
 
                 if manager.servers.count > 1 {
-                    Label(loc.t("Los servidores añadidos heredan estos ajustes, salvo lo que cambies en su configuración.",
-                                "Added servers inherit these settings except what you change in their configuration."),
+                    Label(AppInfo.branded("Added servers inherit these settings except what you change in their configuration."),
                           systemImage: "info.circle")
                         .font(.caption).foregroundStyle(.secondary)
                         .padding(.horizontal, 24).padding(.bottom, 6)
@@ -205,19 +201,17 @@ struct SettingsView: View {
             settingsContent
         }
         .confirmationDialog(
-            loc.t("¿Restablecer todas las opciones a sus valores por defecto?",
-                  "Reset all options to their defaults?"),
+            AppInfo.branded("Reset all options to their defaults?"),
             isPresented: $showResetConfirm, titleVisibility: .visible
         ) {
-            Button(loc.t("Restablecer", "Reset"), role: .destructive) {
+            Button(AppInfo.branded("Reset"), role: .destructive) {
                 SettingsKeys.resetOptionsToDefaults()
             }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) {}
+            Button(AppInfo.branded("Cancel"), role: .cancel) {}
         } message: {
-            Text(loc.t("Tus modelos descargados y la carpeta de modelos se conservan.",
-                       "Your downloaded models and models folder are kept."))
+            Text(AppInfo.branded("Your downloaded models and models folder are kept."))
         }
-        .alert(loc.t("Ajustes", "Settings"),
+        .alert(AppInfo.branded("Settings"),
                isPresented: Binding(get: { settingsTransferMessage != nil },
                                     set: { if !$0 { settingsTransferMessage = nil } })) {
             Button("OK") { settingsTransferMessage = nil }
@@ -228,33 +222,32 @@ struct SettingsView: View {
 
     private var settingsNavigation: some View {
         GlassSegmentedControl(selection: $settingsDestination, segments: [
-            .init(value: .general, title: loc.t("General", "General"), systemImage: "gearshape"),
-            .init(value: .models, title: loc.t("Modelos", "Models"), systemImage: "shippingbox"),
-            .init(value: .inference, title: loc.t("Inferencia", "Inference"), systemImage: "point.3.connected.trianglepath.dotted"),
-            .init(value: .speech, title: loc.t("Voz y audio", "Speech & Audio"), systemImage: "waveform"),
-            .init(value: .advanced, title: loc.t("Avanzado", "Advanced"), systemImage: "slider.horizontal.3"),
-            .init(value: .extensions, title: loc.t("Extensiones", "Extensions"), systemImage: "puzzlepiece.extension")
+            .init(value: .general, title: AppInfo.branded("General"), systemImage: "gearshape"),
+            .init(value: .models, title: AppInfo.branded("Models"), systemImage: "shippingbox"),
+            .init(value: .inference, title: AppInfo.branded("Inference"), systemImage: "point.3.connected.trianglepath.dotted"),
+            .init(value: .speech, title: AppInfo.branded("Speech & Audio"), systemImage: "waveform"),
+            .init(value: .advanced, title: AppInfo.branded("Advanced"), systemImage: "slider.horizontal.3"),
+            .init(value: .extensions, title: AppInfo.branded("Extensions"), systemImage: "puzzlepiece.extension")
         ])
     }
 
     private var settingsActions: some View {
         GlassActionGroup {
-            Button(loc.t("Importar", "Import"), systemImage: "square.and.arrow.down") {
+            Button(AppInfo.branded("Import"), systemImage: "square.and.arrow.down") {
                 importSettings()
             }
             .glassButton()
-            Button(loc.t("Exportar", "Export"), systemImage: "square.and.arrow.up") {
+            Button(AppInfo.branded("Export"), systemImage: "square.and.arrow.up") {
                 exportSettings()
             }
             .glassButton()
             Button(role: .destructive) { showResetConfirm = true } label: {
-                Label(loc.t("Restablecer", "Reset to defaults"),
+                Label(AppInfo.branded("Reset to defaults"),
                       systemImage: "arrow.counterclockwise")
             }
             .glassButton()
             .tint(.red)
-            .help(loc.t("Devuelve todas las opciones (motor, GPU, inferencia, chat) a sus valores por defecto. No elimina modelos ni cambia la carpeta de modelos.",
-                        "Returns every option (engine, GPU, inference, chat) to its default value. It does not delete models or change the models folder."))
+            .help(AppInfo.branded("Returns every option (engine, GPU, inference, chat) to its default value. It does not delete models or change the models folder."))
         }
     }
 
@@ -310,34 +303,28 @@ struct SettingsView: View {
         switch settingsDestination {
         case .general:
             return ("desktopcomputer",
-                    loc.t("Aplicación", "Application"),
-                    loc.t("Ajustes generales de la aplicación y su comportamiento.",
-                          "General application settings and behavior."))
+                    AppInfo.branded("Application"),
+                    AppInfo.branded("General application settings and behavior."))
         case .models:
             return ("memorychip",
-                    loc.t("Modelos, GPU y memoria", "Models, GPU & memory"),
-                    loc.t("Perfiles y opciones para cargar los modelos en tu hardware.",
-                          "Profiles and options for loading models on your hardware."))
+                    AppInfo.branded("Models, GPU & memory"),
+                    AppInfo.branded("Profiles and options for loading models on your hardware."))
         case .inference:
             return ("square.stack.3d.up",
-                    loc.t("Inferencia y contexto", "Inference & context"),
-                    loc.t("Contexto, caché y comportamiento de generación.",
-                          "Context, cache, and generation behavior."))
+                    AppInfo.branded("Inference & context"),
+                    AppInfo.branded("Context, cache, and generation behavior."))
         case .speech:
             return ("waveform",
-                    loc.t("Voz y transcripción", "Speech & transcription"),
-                    loc.t("Entrada de audio y transcripción local.",
-                          "Local audio input and transcription."))
+                    AppInfo.branded("Speech & transcription"),
+                    AppInfo.branded("Local audio input and transcription."))
         case .advanced:
             return ("slider.horizontal.3",
-                    loc.t("Servicios y motor", "Services & engine"),
-                    loc.t("Motor, red, embeddings y opciones adicionales.",
-                          "Engine, network, embeddings, and additional options."))
+                    AppInfo.branded("Services & engine"),
+                    AppInfo.branded("Engine, network, embeddings, and additional options."))
         case .extensions:
             return ("puzzlepiece.extension",
-                    loc.t("Extensiones", "Extensions"),
-                    loc.t("Herramientas y agentes que se añaden al motor desde una carpeta.",
-                          "Tools and agents added to the engine from a folder."))
+                    AppInfo.branded("Extensions"),
+                    AppInfo.branded("Tools and agents added to the engine from a folder."))
         }
     }
 
@@ -348,8 +335,7 @@ struct SettingsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try SettingsArchive.exportData().write(to: url, options: .atomic)
-            settingsTransferMessage = loc.t("Ajustes exportados correctamente.",
-                                            "Settings exported successfully.")
+            settingsTransferMessage = AppInfo.branded("Settings exported successfully.")
         } catch {
             settingsTransferMessage = error.localizedDescription
         }
@@ -362,7 +348,7 @@ struct SettingsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let count = try SettingsArchive.importData(Data(contentsOf: url))
-            settingsTransferMessage = loc.t("Se importaron %@ ajustes. Reinicia el servidor para aplicar los cambios del motor.", "Imported %@ settings. Restart the server to apply engine changes.", "\(count)")
+            settingsTransferMessage = AppInfo.branded("Imported \(count) settings. Restart the server to apply engine changes.")
         } catch {
             settingsTransferMessage = error.localizedDescription
         }
@@ -382,48 +368,42 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 14) {
 
                 SettingsRowGroup {
-                    SettingsRow(icon: "number", title: loc.t("Puerto", "Port"),
-                                help: loc.t("Puerto local del servidor (API compatible con OpenAI y chat web).",
-                                            "Local server port (OpenAI-compatible API and web chat).")) {
+                    SettingsRow(icon: "number", title: AppInfo.branded("Port"),
+                                help: AppInfo.branded("Local server port (OpenAI-compatible API and web chat).")) {
                         DeferredSettingsIntegerField(value: $port, in: 1...65_535, width: 120)
                     }
                     SettingsRow(icon: "engine.combustion",
-                                title: loc.t("Motor de inferencia", "Inference engine"),
-                                help: loc.t("Integrado: llama.cpp oficial con los kernels Metal para AMD, recomendado. Externo: cualquier llama-server tuyo.",
-                                            "Bundled: official llama.cpp with the Metal kernels for AMD, recommended. External: any llama-server of yours.")) {
+                                title: AppInfo.branded("Inference engine"),
+                                help: AppInfo.branded("Bundled: official llama.cpp with the Metal kernels for AMD, recommended. External: any llama-server of yours.")) {
                         XeonDropdown(selection: engineSelection, options: [
-                            .init(value: "bundled", title: loc.t("Integrado (oficial)", "Bundled (official)")),
-                            .init(value: "custom", title: loc.t("Externo…", "External…"))
+                            .init(value: "bundled", title: AppInfo.branded("Bundled (official)")),
+                            .init(value: "custom", title: AppInfo.branded("External…"))
                         ], width: 200)
                     }
                     if engineSelection.wrappedValue != "custom" {
                         SettingsRow(icon: "externaldrive",
-                                    title: loc.t("Recordar conversaciones (caché en disco)", "Remember conversations (disk cache)"),
-                                    help: loc.t("Guarda en disco la caché KV de cada conversación, así al reabrir un chat o reiniciar la app no se reprocesa el prompt (en un prompt largo ahorra varios segundos por turno). Requiere el kernel Flash Attention AMD activo; con KV cuantizado (q8_0/q4_0) el archivo es más pequeño y la restauración más rápida. Los archivos viven en Application Support y se borran al eliminar la conversación.",
-                                                "Saves each conversation's KV cache to disk, so reopening a chat or restarting the app skips re-processing the prompt (saves several seconds per turn on long prompts). Requires the AMD Flash Attention kernel; with quantized KV (q8_0/q4_0) the file is smaller and restore is faster. Files live in Application Support and are removed when you delete the conversation.")) {
+                                    title: AppInfo.branded("Remember conversations (disk cache)"),
+                                    help: AppInfo.branded("Saves each conversation's KV cache to disk, so reopening a chat or restarting the app skips re-processing the prompt (saves several seconds per turn on long prompts). Requires the AMD Flash Attention kernel; with quantized KV (q8_0/q4_0) the file is smaller and restore is faster. Files live in Application Support and are removed when you delete the conversation.")) {
                             SettingsToggle(isOn: $persistCache)
                                 .disabled(!amdFlashActive)
                         }
                     }
                     if engineSelection.wrappedValue == "custom" {
                         SettingsRow(icon: "terminal",
-                                    title: loc.t("Ruta del llama-server externo", "External llama-server path"),
-                                    help: loc.t("Ruta a un llama-server alternativo para probar otras builds.",
-                                                "Path to an alternative llama-server to test other builds.")) {
+                                    title: AppInfo.branded("External llama-server path"),
+                                    help: AppInfo.branded("Path to an alternative llama-server to test other builds.")) {
                             DeferredSettingsTextField("", text: $serverBinary,
                                                       width: 240, monospaced: true)
                         }
                     }
                     SettingsRow(icon: "point.3.connected.trianglepath.dotted",
-                                title: loc.t("Servidor de embeddings (--embeddings)", "Embeddings server (--embeddings)"),
-                                help: loc.t("Sirve /v1/embeddings para clientes RAG (p. ej. Obsidian Copilot), que sin esto reciben un error 501. Ojo: llama-server dedica el proceso a embeddings, así que actívalo con un modelo de embeddings; para chatear a la vez, añade un segundo servidor en Inicio con esta opción.",
-                                            "Serves /v1/embeddings for RAG clients (e.g. Obsidian Copilot), which otherwise get a 501 error. Note: llama-server dedicates the process to embeddings, so enable it with an embedding model; to keep chatting, add a second server on Home with this option.")) {
+                                title: AppInfo.branded("Embeddings server (--embeddings)"),
+                                help: AppInfo.branded("Serves /v1/embeddings for RAG clients (e.g. Obsidian Copilot), which otherwise get a 501 error. Note: llama-server dedicates the process to embeddings, so enable it with an embedding model; to keep chatting, add a second server on Home with this option.")) {
                         SettingsToggle(isOn: $embeddings)
                     }
                     SettingsRow(icon: "terminal",
-                                title: loc.t("Argumentos extra", "Extra arguments"),
-                                help: loc.t("Argumentos adicionales de llama-server separados por espacios. Un token CLAVE=VALOR se aplica como variable de entorno. En tarjetas GCN/Vega con texto corrupto, GGML_METAL_WAVE64_SAFEMODE=1 fuerza la ruta segura.",
-                                            "Additional llama-server arguments, space-separated. A KEY=VALUE token is applied as an environment variable. On GCN/Vega cards with corrupted text, GGML_METAL_WAVE64_SAFEMODE=1 forces the safe path.")) {
+                                title: AppInfo.branded("Extra arguments"),
+                                help: AppInfo.branded("Additional llama-server arguments, space-separated. A KEY=VALUE token is applied as an environment variable. On GCN/Vega cards with corrupted text, GGML_METAL_WAVE64_SAFEMODE=1 forces the safe path.")) {
                         DeferredSettingsTextField("", text: $extraArgs,
                                                   width: 240, monospaced: true)
                     }
@@ -431,33 +411,29 @@ struct SettingsView: View {
 
                 if engineSelection.wrappedValue != "custom" {
                     if currentModelIsVision {
-                        Label(loc.t("Con la visión activada (ojo) se omite en silencio: llama.cpp no permite guardar/restaurar slots con mmproj cargado. Con el ojo desactivado funciona normal.",
-                                    "Silently skipped while vision is on (the eye): llama.cpp cannot save/restore slots with mmproj loaded. With the eye off it works normally."),
+                        Label(AppInfo.branded("Silently skipped while vision is on (the eye): llama.cpp cannot save/restore slots with mmproj loaded. With the eye off it works normally."),
                               systemImage: "info.circle")
                             .font(.caption).foregroundStyle(.secondary)
                     } else if !amdFlashActive {
-                        Label(loc.t("Requiere activar el kernel Flash Attention AMD (arriba).",
-                                    "Requires enabling the AMD Flash Attention kernel (above)."),
+                        Label(AppInfo.branded("Requires enabling the AMD Flash Attention kernel (above)."),
                               systemImage: "info.circle")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Text(loc.t("Los cambios se aplican al reiniciar el servidor.",
-                           "Changes take effect when the server restarts."))
+                Text(AppInfo.branded("Changes take effect when the server restarts."))
                     .font(.caption).foregroundStyle(.secondary)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(loc.t("Registro del servidor", "Server log"))
+                    Text(AppInfo.branded("Server log"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                     Button { control.section = .logs } label: {
-                        Label(loc.t("Abrir registro completo", "Open full log"),
+                        Label(AppInfo.branded("Open full log"),
                               systemImage: "list.bullet.rectangle")
                     }
                     .glassButton()
-                    .infoTip(loc.t("El registro del servidor, con búsqueda, filtros y exportación, está en la pestaña Registro.",
-                                   "The server log — with search, filters and export — lives in the Logs tab."))
+                    .infoTip(AppInfo.branded("The server log — with search, filters and export — lives in the Logs tab."))
                 }
             }
             .padding(.horizontal, 16)
@@ -472,89 +448,72 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 SettingsRowGroup {
-                    SettingsRow(icon: "globe",
-                                title: loc.t("Idioma", "Language"),
-                                help: loc.t("Idioma de toda la interfaz de XeonLLM. Los idiomas aportados por la comunidad aparecen automáticamente.",
-                                            "Language for the entire XeonLLM interface. Community-contributed languages appear here automatically.")) {
-                        XeonDropdown(selection: $loc.language, options: loc.availableLanguages.map {
-                            .init(value: $0, title: loc.displayName($0))
-                        })
-                    }
                     SettingsRow(icon: "paintpalette",
-                                title: loc.t("Color de la app", "App color"),
-                                help: loc.t("Color de marca de botones, iconos y controles de toda la app. Independiente del color de acento del sistema.",
-                                            "Brand color for buttons, icons and controls across the app. Independent from the system accent color.")) {
+                                title: AppInfo.branded("App color"),
+                                help: AppInfo.branded("Brand color for buttons, icons and controls across the app. Independent from the system accent color.")) {
                         XeonDropdown(selection: $appAccentRaw, options: AppTheme.palette.map {
                             .init(value: $0.key, title: AppTheme.label($0.key, loc),
                                   swatch: AppTheme.swatchImage($0.color))
                         })
                     }
                     SettingsRow(icon: "menubar.rectangle",
-                                title: loc.t("Icono en la barra de menús", "Menu bar icon"),
-                                help: loc.t("Muestra un icono en la barra de menús con el estado del servidor y controles rápidos, aunque la ventana esté cerrada.",
-                                            "Shows a menu bar icon with server status and quick controls, even with the window closed.")) {
+                                title: AppInfo.branded("Menu bar icon"),
+                                help: AppInfo.branded("Shows a menu bar icon with server status and quick controls, even with the window closed.")) {
                         SettingsToggle(isOn: $menuBarIcon)
                     }
                     SettingsRow(icon: "memorychip",
-                                title: loc.t("VRAM de la GPU en la barra", "GPU VRAM in the menu bar"),
-                                help: loc.t("Dónde mostrar el uso de VRAM: junto al icono (porcentaje agregado) o como barras por GPU al abrir el panel.",
-                                            "Where to show VRAM usage: next to the icon (aggregate percentage) or as per-GPU bars when the panel opens.")) {
+                                title: AppInfo.branded("GPU VRAM in the menu bar"),
+                                help: AppInfo.branded("Where to show VRAM usage: next to the icon (aggregate percentage) or as per-GPU bars when the panel opens.")) {
                         XeonDropdown(selection: $menuBarGPU, options: [
-                            .init(value: "off", title: loc.t("Oculta", "Hidden")),
-                            .init(value: "icon", title: loc.t("En el icono", "In the icon")),
-                            .init(value: "panel", title: loc.t("En el panel", "In the panel"))
+                            .init(value: "off", title: AppInfo.branded("Hidden")),
+                            .init(value: "icon", title: AppInfo.branded("In the icon")),
+                            .init(value: "panel", title: AppInfo.branded("In the panel"))
                         ])
                         .disabled(!menuBarIcon)
                     }
                     SettingsRow(icon: "play.circle",
-                                title: loc.t("Iniciar servidor al abrir la app", "Start server on app launch"),
-                                help: loc.t("Arranca automáticamente el último modelo configurado al abrir XeonLLM.",
-                                            "Automatically starts the last configured model when XeonLLM opens.")) {
+                                title: AppInfo.branded("Start server on app launch"),
+                                help: AppInfo.branded("Automatically starts the last configured model when XeonLLM opens.")) {
                         SettingsToggle(isOn: $autoStart)
                     }
                     if AppInfo.updatesEnabled {
                         SettingsRow(icon: "arrow.triangle.2.circlepath",
-                                    title: loc.t("Buscar actualizaciones cada hora", "Check for updates hourly"),
-                                    help: loc.t("Además del chequeo al abrir la app, revisa en silencio cada hora mientras esté abierta y enciende el aviso de actualización si hay versión nueva. No descarga ni instala nada solo.",
-                                                "Besides the launch check, silently re-checks every hour while the app is open and lights the update badge when a new version exists. Never downloads or installs on its own.")) {
+                                    title: AppInfo.branded("Check for updates hourly"),
+                                    help: AppInfo.branded("Besides the launch check, silently re-checks every hour while the app is open and lights the update badge when a new version exists. Never downloads or installs on its own.")) {
                             SettingsToggle(isOn: $updateAutoCheck)
                         }
                     }
                     SettingsRow(icon: "key",
-                                title: loc.t("Proteger la API con clave", "Protect the API with a key"),
-                                help: loc.t("Genera una clave (guardada en el Llavero) que el servidor exige a cada petición. El chat de la app la usa automáticamente; útil en Macs compartidas.",
-                                            "Generates a key (stored in the Keychain) required on every request. The in-app chat uses it automatically; useful on shared Macs.")) {
+                                title: AppInfo.branded("Protect the API with a key"),
+                                help: AppInfo.branded("Generates a key (stored in the Keychain) required on every request. The in-app chat uses it automatically; useful on shared Macs.")) {
                         SettingsToggle(isOn: $apiKeyEnabled)
                     }
                     SettingsRow(icon: "network",
-                                title: loc.t("Descubrible en red local", "Discoverable on local network"),
-                                help: loc.t("Hace que el servidor escuche en la red local y lo anuncia con Bonjour como 'XeonLLM API'. Actívalo solo en redes confiables; reinicia el servidor si está activo.",
-                                            "Makes the server listen on the local network and advertises it with Bonjour as 'XeonLLM API'. Enable only on trusted networks; restarts the server if it's running.")) {
+                                title: AppInfo.branded("Discoverable on local network"),
+                                help: AppInfo.branded("Makes the server listen on the local network and advertises it with Bonjour as 'XeonLLM API'. Enable only on trusted networks; restarts the server if it's running.")) {
                         SettingsToggle(isOn: Binding(get: { localNetworkDiscovery },
                                                      set: setDiscoverable))
                     }
                     SettingsRow(icon: "folder",
-                                title: loc.t("Carpeta de modelos", "Models folder"),
+                                title: AppInfo.branded("Models folder"),
                                 subtitle: models.directory.path,
-                                help: loc.t("Carpeta donde se descargan, buscan y eliminan los modelos .gguf. Por defecto es ~/models. Al cambiarla, los modelos ya descargados en la carpeta anterior no se mueven; muévelos a mano si los quieres en la nueva.",
-                                            "Folder where .gguf models are downloaded, scanned and deleted. Defaults to ~/models. When you change it, models already in the old folder are not moved; move them yourself if you want them in the new one.")) {
+                                help: AppInfo.branded("Folder where .gguf models are downloaded, scanned and deleted. Defaults to ~/models. When you change it, models already in the old folder are not moved; move them yourself if you want them in the new one.")) {
                         HStack(spacing: 8) {
                             if !modelsDir.isEmpty {
-                                Button(loc.t("Restablecer", "Reset")) {
+                                Button(AppInfo.branded("Reset")) {
                                     modelsDir = ""
                                     models.refresh()
                                 }
                                 .glassButton()
                             }
-                            Button(loc.t("Cambiar…", "Change…")) { chooseModelsFolder() }
+                            Button(AppInfo.branded("Change…")) { chooseModelsFolder() }
                                 .glassButton()
                         }
                     }
                 }
 
                 if localNetworkDiscovery && !apiKeyEnabled {
-                    Label(loc.t("Recomendado: activa 'Proteger la API con clave' antes de exponer el servidor en la red local.",
-                                "Recommended: enable 'Protect the API with a key' before exposing the server on the local network."),
+                    Label(AppInfo.branded("Recommended: enable 'Protect the API with a key' before exposing the server on the local network."),
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
@@ -562,7 +521,7 @@ struct SettingsView: View {
                 }
                 if apiKeyEnabled {
                     HStack {
-                        Text(loc.t("Clave", "Key")).foregroundStyle(.secondary)
+                        Text(AppInfo.branded("Key")).foregroundStyle(.secondary)
                         Text(Keychain.apiKey())
                             .font(.system(size: 11, design: .monospaced))
                             .textSelection(.enabled)
@@ -571,9 +530,8 @@ struct SettingsView: View {
                             NSPasteboard.general.setString(Keychain.apiKey(), forType: .string)
                         } label: { Image(systemName: "doc.on.doc") }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel(loc.t("Copiar la clave", "Copy the key"))
-                            .infoTip(loc.t("Copiar para usarla desde otros clientes (Authorization: Bearer …).",
-                                        "Copy to use from other clients (Authorization: Bearer …)."))
+                            .accessibilityLabel(AppInfo.branded("Copy the key"))
+                            .infoTip(AppInfo.branded("Copy to use from other clients (Authorization: Bearer …)."))
                     }
                     .font(.caption)
                 }
@@ -591,7 +549,7 @@ struct SettingsView: View {
             }
 
             if settingsDestination == .models {
-            Section(loc.t("Perfiles", "Profiles")) {
+            Section(AppInfo.branded("Profiles")) {
                 ProfileNameField()
                 ForEach(profileStore.profiles) { p in
                     HStack(spacing: 10) {
@@ -610,157 +568,136 @@ struct SettingsView: View {
                                 .lineLimit(1).truncationMode(.middle)
                         }
                         Spacer(minLength: 12)
-                        Button(loc.t("Aplicar", "Apply")) { profileStore.apply(p) }
+                        Button(AppInfo.branded("Apply")) { profileStore.apply(p) }
                             .glassButton()
                             .fixedSize()
-                            .infoTip(loc.t("Carga esta configuración. Reinicia el servidor para usarla.",
-                                        "Loads this configuration. Restart the server to use it."))
+                            .infoTip(AppInfo.branded("Loads this configuration. Restart the server to use it."))
                         Button(role: .destructive) { profileStore.delete(p) } label: {
-                            Label(loc.t("Borrar", "Delete"), systemImage: "trash")
+                            Label(AppInfo.branded("Delete"), systemImage: "trash")
                         }
                             .labelStyle(.iconOnly)
                             .glassButton()
                             .tint(.red)
-                            .accessibilityLabel(loc.t("Eliminar el perfil", "Delete the profile"))
+                            .accessibilityLabel(AppInfo.branded("Delete the profile"))
                     }
                 }
             }
 
-            Section(loc.t("Rendimiento y memoria", "Performance & Memory")) {
-                Toggle(loc.t("Dynamic MoE (experimental)", "Dynamic MoE (experimental)"), isOn: $dynamicMoeEnabled)
+            Section(AppInfo.branded("Performance & Memory")) {
+                Toggle(AppInfo.branded("Dynamic MoE (experimental)"), isOn: $dynamicMoeEnabled)
                     .settingsGlyph("wand.and.stars")
-                    .infoTip(loc.t("Apagado: los modelos MoE usan la descarga de expertos estándar con tus ajustes de abajo. Encendido: el motor usa GPU, RAM y el propio archivo del modelo para que quepa; guarda en VRAM los expertos más usados y en RAM lo que la máquina puede dar ahora, elige KV y lote, y si nada cabe con seguridad no carga el modelo y dice por qué.",
-                                "Off: MoE models use the standard expert offload with your settings below. On: the engine uses the GPU, RAM and the model file itself to fit the model; it keeps the most used experts in VRAM and in RAM what the machine can give right now, picks the KV and batch size, and when nothing fits safely it does not load the model and says why."))
+                    .infoTip(AppInfo.branded("Off: MoE models use the standard expert offload with your settings below. On: the engine uses the GPU, RAM and the model file itself to fit the model; it keeps the most used experts in VRAM and in RAM what the machine can give right now, picks the KV and batch size, and when nothing fits safely it does not load the model and says why."))
                 if dynamicMoeEnabled {
-                    LabeledContent(loc.t("Ejecución", "Execution")) {
+                    LabeledContent(AppInfo.branded("Execution")) {
                         XeonDropdown(selection: $executionMode, options: [
-                            .init(value: "auto", title: loc.t("Auto", "Auto")),
-                            .init(value: "full", title: loc.t("GPU completa (manual)", "Full GPU (manual)")),
+                            .init(value: "auto", title: AppInfo.branded("Auto")),
+                            .init(value: "full", title: AppInfo.branded("Full GPU (manual)")),
                             .init(value: "dmoe", title: "Dynamic MoE"),
-                            .init(value: "legacy", title: loc.t("Expertos en CPU (clásico)", "Legacy offload"))
+                            .init(value: "legacy", title: AppInfo.branded("Legacy offload"))
                         ], width: 200)
                     }
                     .settingsGlyph("cpu")
-                    .infoTip(loc.t("Auto elige solo. GPU completa carga todo en la GPU aunque deje poco margen (para pruebas). Dynamic MoE lo fuerza en modelos MoE. Expertos en CPU usa el ajuste manual de ncmoe de abajo.",
-                                "Auto decides on its own. Full GPU loads everything on the GPU even with little headroom (for testing). Dynamic MoE forces it on MoE models. Legacy offload uses the manual ncmoe setting below."))
-                    LabeledContent(loc.t("KV cache", "KV cache")) {
+                    .infoTip(AppInfo.branded("Auto decides on its own. Full GPU loads everything on the GPU even with little headroom (for testing). Dynamic MoE forces it on MoE models. Legacy offload uses the manual ncmoe setting below."))
+                    LabeledContent(AppInfo.branded("KV cache")) {
                         XeonDropdown(selection: $autoKVMode, options: [
-                            .init(value: "auto", title: loc.t("Auto", "Auto")),
+                            .init(value: "auto", title: AppInfo.branded("Auto")),
                             .init(value: "f16", title: "F16"),
                             .init(value: "q8_0", title: "Q8"),
-                            .init(value: "turbo4", title: loc.t("Turbo4 (ahorro de memoria)", "Turbo4 (memory saver)"))
+                            .init(value: "turbo4", title: AppInfo.branded("Turbo4 (memory saver)"))
                         ], width: 200)
                     }
                     .settingsGlyph("key")
-                    .infoTip(loc.t("Auto usa F16 y pasa a Q8 solo cuando libera memoria que de verdad importa (Q8 no cambia la calidad de forma medible). Turbo4 ahorra más memoria a cambio de algo de calidad: Auto solo lo elige, si el modelo lo admite, cuando ni F16 ni Q8 dejan los expertos en la GPU, y en ese caso puede ir bastante más rápido. Elige F16 o Q8 para no usarlo nunca.",
-                                "Auto uses F16 and moves to Q8 only when that frees memory that really matters (Q8 has no measurable quality cost). Turbo4 saves more memory at some quality cost: Auto picks it, when the model supports it, only if neither F16 nor Q8 keeps the experts on the GPU, and then it can be much faster. Pick F16 or Q8 to never use it."))
-                    Toggle(loc.t("Ahorrar RAM", "Save RAM"), isOn: $dynamicMoeLeanRAM)
+                    .infoTip(AppInfo.branded("Auto uses F16 and moves to Q8 only when that frees memory that really matters (Q8 has no measurable quality cost). Turbo4 saves more memory at some quality cost: Auto picks it, when the model supports it, only if neither F16 nor Q8 keeps the experts on the GPU, and then it can be much faster. Pick F16 or Q8 to never use it."))
+                    Toggle(AppInfo.branded("Save RAM"), isOn: $dynamicMoeLeanRAM)
                         .settingsGlyph("memorychip")
-                        .infoTip(loc.t("Apagado: si caben, todos los expertos se quedan en RAM, también los que ya están en VRAM. Encendido: la RAM guarda solo los que no están en VRAM y deja libre el resto para otras apps; genera más lento (entre un 11 y un 17% en un modelo de 35B) y el primer prompt tras cargar tarda más.",
-                                    "Off: when they fit, every expert stays in RAM, also the ones already in VRAM. On: RAM keeps only the ones that are not in VRAM and leaves the rest free for other apps; generation is slower (11 to 17% on a 35B model) and the first prompt after loading takes longer."))
+                        .infoTip(AppInfo.branded("Off: when they fit, every expert stays in RAM, also the ones already in VRAM. On: RAM keeps only the ones that are not in VRAM and leaves the rest free for other apps; generation is slower (11 to 17% on a 35B model) and the first prompt after loading takes longer."))
                 }
             }
 
-            Section(loc.t("GPU y memoria", "GPU & memory")) {
-                LabeledContent(loc.t("GPU (Metal)", "GPU (Metal)")) {
-                    XeonDropdown(selection: $gpuIndex, options: [.init(value: -1, title: loc.t("Predeterminada", "Default"))]
+            Section(AppInfo.branded("GPU & memory")) {
+                LabeledContent(AppInfo.branded("GPU (Metal)")) {
+                    XeonDropdown(selection: $gpuIndex, options: [.init(value: -1, title: AppInfo.branded("Default"))]
                         + hardware.gpus.map {
                             .init(value: $0.index, title: "\($0.index): \($0.name) · \($0.vramGB) GB")
                         }, width: 220)
                 }
                 .settingsGlyph("cpu")
-                .infoTip(loc.t("Qué GPU usa el servidor si tienes varias. 'Predeterminada' deja elegir a Metal.",
-                            "Which GPU the server uses if you have several. 'Default' lets Metal choose."))
+                .infoTip(AppInfo.branded("Which GPU the server uses if you have several. 'Default' lets Metal choose."))
                 .disabled(multiGPU)
                 if hardware.gpus.count > 1 {
-                    Toggle(loc.t("Repartir el modelo entre todas las GPUs (experimental)",
-                                 "Split model across all GPUs (experimental)"), isOn: $multiGPU)
+                    Toggle(AppInfo.branded("Split model across all GPUs (experimental)"), isOn: $multiGPU)
                         .onChange(of: multiGPU) { _, on in
                             if !on { gpuListCSV = "" }
                         }
                         .settingsGlyph("square.split.2x1")
-                        .infoTip(loc.t("Reparte el modelo entre todas las GPUs detectadas (--split-mode) en vez de usar una sola, p. ej. para cargar un modelo que no cabe en una. Anula el selector de arriba.",
-                                    "Splits the model across all detected GPUs (--split-mode) instead of using one, e.g. to load a model that doesn't fit on a single card. Overrides the picker above."))
+                        .infoTip(AppInfo.branded("Splits the model across all detected GPUs (--split-mode) instead of using one, e.g. to load a model that doesn't fit on a single card. Overrides the picker above."))
                     if multiGPU && hardware.gpus.count > 2 && splitSelection.count < 2 {
-                        LabeledContent(loc.t("GPUs a usar", "GPUs to use")) {
-                            XeonDropdown(selection: $multiGPUCount, options: [.init(value: 0, title: loc.t("Todas (%@)", "All (%@)", "\(hardware.gpus.count)"))]
+                        LabeledContent(AppInfo.branded("GPUs to use")) {
+                            XeonDropdown(selection: $multiGPUCount, options: [.init(value: 0, title: AppInfo.branded("All (\(hardware.gpus.count))"))]
                                 + (2...hardware.gpus.count).map { .init(value: $0, title: "\($0)") }, width: 130)
                         }
                         .settingsGlyph("number")
-                        .infoTip(loc.t("Cuántas GPUs repartir. Más GPUs = prompt más rápido; menos GPUs = generación más rápida (menos sincronización entre tarjetas).",
-                                    "How many GPUs to split across. More GPUs = faster prompt; fewer GPUs = faster generation (less cross-card sync)."))
+                        .infoTip(AppInfo.branded("How many GPUs to split across. More GPUs = faster prompt; fewer GPUs = faster generation (less cross-card sync)."))
                     }
                     if multiGPU {
-                        LabeledContent(loc.t("GPUs del reparto", "Split GPUs")) {
+                        LabeledContent(AppInfo.branded("Split GPUs")) {
                             GPUMultiPicker(
                                 label: splitSelection.count >= 2
-                                    ? loc.t("%@ elegidas", "%@ selected", "\(splitSelection.count)")
-                                    : loc.t("Todas", "All"),
+                                    ? AppInfo.branded("\(splitSelection.count) selected")
+                                    : AppInfo.branded("All"),
                                 selection: Set(splitSelection),
-                                defaultTitle: loc.t("Todas", "All"),
+                                defaultTitle: AppInfo.branded("All"),
                                 onDefault: { gpuListCSV = "" },
                                 onSelect: { gpuListCSV = $0.sorted().map(String.init).joined(separator: ",") },
                                 onToggle: toggleSplitGPU)
                         }
                         .settingsGlyph("rectangle.split.3x1")
-                        .infoTip(loc.t("Qué GPUs concretas participan en el reparto (p. ej. la 0 y la 6, saltándose las demás). Con 'Todas' se usan las primeras N del selector de arriba, y cada atajo 'Fabric' elige de una vez las tarjetas unidas por un mismo puente.",
-                                    "Which specific GPUs take part in the split (e.g. 0 and 6, skipping the rest). With 'All', the first N from the picker above are used, and each 'Fabric' shortcut picks every card behind one bridge at once."))
+                        .infoTip(AppInfo.branded("Which specific GPUs take part in the split (e.g. 0 and 6, skipping the rest). With 'All', the first N from the picker above are used, and each 'Fabric' shortcut picks every card behind one bridge at once."))
                         if splitSelection.count == 1 {
-                            Label(loc.t("Elige al menos 2 GPUs para el reparto; con una sola se usan todas.",
-                                        "Pick at least 2 GPUs for the split; with only one, all are used."),
+                            Label(AppInfo.branded("Pick at least 2 GPUs for the split; with only one, all are used."),
                                   systemImage: "info.circle")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
-                        Label(loc.t("⚠️ Experimental y sin validar en GPU AMD/Metal: el reparto entre GPUs es una ruta distinta que podría dar salida incorrecta o colgar el motor. Verifica que la generación sea coherente y vigila la estabilidad. Necesita más pruebas.",
-                                    "⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing."),
+                        Label(AppInfo.branded("⚠️ Experimental and unvalidated on AMD/Metal: cross-GPU splitting is a different path that could produce wrong output or hang the engine. Check that generation is coherent and watch stability. Needs more testing."),
                               systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
                             .labelStyle(.titleAndIcon)
-                        LabeledContent(loc.t("Cómo repartirlo", "How to split it")) {
+                        LabeledContent(AppInfo.branded("How to split it")) {
                             XeonDropdown(selection: $splitMode, options: [
-                                .init(value: "layer", title: loc.t("Por capas", "By layers")),
-                                .init(value: "tensor", title: loc.t("Por tensores", "By tensors"))
+                                .init(value: "layer", title: AppInfo.branded("By layers")),
+                                .init(value: "tensor", title: AppInfo.branded("By tensors"))
                             ])
                         }
                         .settingsGlyph("square.split.2x2")
-                        .infoTip(loc.t("Por capas: cada GPU se queda unas capas enteras y trabajan por turnos. Es lo más rápido generando y lo más probado. Por tensores: las dos GPUs trabajan a la vez dentro de cada capa, así que leen el prompt mucho más rápido, pero se ponen de acuerdo en cada capa y esa espera cuesta lo mismo por token generado: en un modelo pequeño se come la ganancia, y en uno grande (decenas de GB) sale ganando en las dos cosas.",
-                                    "By layers: each GPU keeps whole layers and they take turns. Fastest at generating, and the best tested. By tensors: both GPUs work at once inside every layer, so they read the prompt much faster, but they sync up on every layer and that wait costs the same on each generated token: on a small model it eats the gain, on a big one (tens of GB) it wins at both."))
+                        .infoTip(AppInfo.branded("By layers: each GPU keeps whole layers and they take turns. Fastest at generating, and the best tested. By tensors: both GPUs work at once inside every layer, so they read the prompt much faster, but they sync up on every layer and that wait costs the same on each generated token: on a small model it eats the gain, on a big one (tens of GB) it wins at both."))
                         if splitMode == "tensor" && !splitGroupOptions.isEmpty {
-                            LabeledContent(loc.t("TensorMesh: ancho de la malla", "TensorMesh: mesh width")) {
-                                XeonDropdown(selection: $splitGroupSize, options: [.init(value: 0, title: loc.t("Sin malla", "No mesh"))]
+                            LabeledContent(AppInfo.branded("TensorMesh: mesh width")) {
+                                XeonDropdown(selection: $splitGroupSize, options: [.init(value: 0, title: AppInfo.branded("No mesh"))]
                                     + splitGroupOptions.map { .init(value: $0, title: "\($0)") }, width: 130)
                             }
                             .settingsGlyph("grid")
-                            .infoTip(loc.t("Organiza las GPUs en una malla: dentro de cada fila el modelo se corta por tensores y entre filas por capas. Así cada tarjeta solo espera a las de su fila, no a todas, que es lo que hunde la generación al pasar de dos tarjetas a cuatro. Medido en cuatro Radeon Pro W6800X con un 8B: con filas de dos genera 57 contra 30 con las cuatro juntas. Lo que consigue es usar cuatro tarjetas a la velocidad de dos, no ir más rápido que dos: una fila de dos rinde igual que un reparto por tensores con solo dos tarjetas (1624 contra 1667 leyendo, 57 contra 58 generando). Sirve para ganar la VRAM de cuatro sin pagar su lentitud.",
-                                        "Arranges the GPUs as a mesh: inside a row the model is cut by tensors, between rows by layers. Each card then waits only for the others in its row instead of all of them, which is what sinks generation when going from two cards to four. Measured on four Radeon Pro W6800X with an 8B: rows of two generate 57 against 30 with all four together. What it buys is four cards at the speed of two, not more speed than two: a row of two matches a plain tensor split on two cards (1624 against 1667 reading, 57 against 58 generating). Use it to get the VRAM of four without their slowdown."))
+                            .infoTip(AppInfo.branded("Arranges the GPUs as a mesh: inside a row the model is cut by tensors, between rows by layers. Each card then waits only for the others in its row instead of all of them, which is what sinks generation when going from two cards to four. Measured on four Radeon Pro W6800X with an 8B: rows of two generate 57 against 30 with all four together. What it buys is four cards at the speed of two, not more speed than two: a row of two matches a plain tensor split on two cards (1624 against 1667 reading, 57 against 58 generating). Use it to get the VRAM of four without their slowdown."))
                         }
-                        Toggle(loc.t("Traspaso rápido entre GPUs",
-                                     "Fast hand-off between GPUs"), isOn: $mgpuEvents)
+                        Toggle(AppInfo.branded("Fast hand-off between GPUs"), isOn: $mgpuEvents)
                             .settingsGlyph("bolt.horizontal")
-                            .infoTip(loc.t("Pasa los datos de una GPU a otra sin vaciar las colas de las dos en cada copia. Repartiendo por capas no cambia nada; repartiendo por tensores es la mayor parte de la velocidad de generación (medido +59% en dos GPUs). Apágalo solo para diagnosticar.",
-                                        "Hands data from one GPU to the other without draining both queues on every copy. It changes nothing when splitting by layers; when splitting by tensors it is most of the generation speed (measured +59% on two GPUs). Turn it off only to diagnose."))
-                        Toggle(loc.t("Infinity Fabric Link entre GPUs",
-                                     "Infinity Fabric Link between GPUs"), isOn: $mgpuPeer)
+                            .infoTip(AppInfo.branded("Hands data from one GPU to the other without draining both queues on every copy. It changes nothing when splitting by layers; when splitting by tensors it is most of the generation speed (measured +59% on two GPUs). Turn it off only to diagnose."))
+                        Toggle(AppInfo.branded("Infinity Fabric Link between GPUs"), isOn: $mgpuPeer)
                             .disabled(!hasPeerLink)
                             .settingsGlyph("link")
-                            .infoTip(loc.t("Si dos GPUs del reparto comparten un puente Infinity Fabric (las dos mitades de una W6800X Duo o Vega II Duo, o dos tarjetas unidas por el puente externo), copia las activaciones directamente entre ellas en vez de pasar por la RAM del sistema. Repartiendo por tensores acelera la lectura del prompt un 16% sin costar generación, medido en cuatro Radeon Pro Vega II. Necesita el traspaso rápido encendido: por sí solo baja la generación a la mitad. Si el equipo no lo soporta, la copia vuelve sola al método seguro.",
-                                        "If two GPUs in the split share an Infinity Fabric bridge (the two halves of a W6800X Duo or Vega II Duo, or two cards joined by the external bridge), copies activations directly between them instead of through system RAM. When splitting by tensors it reads the prompt 16% faster at no cost to generation, measured on four Radeon Pro Vega II. It needs the fast hand-off on: on its own it halves generation. If the machine doesn't support it, the copy falls back to the safe path on its own."))
+                            .infoTip(AppInfo.branded("If two GPUs in the split share an Infinity Fabric bridge (the two halves of a W6800X Duo or Vega II Duo, or two cards joined by the external bridge), copies activations directly between them instead of through system RAM. When splitting by tensors it reads the prompt 16% faster at no cost to generation, measured on four Radeon Pro Vega II. It needs the fast hand-off on: on its own it halves generation. If the machine doesn't support it, the copy falls back to the safe path on its own."))
                         if !hasPeerLink {
-                            Label(loc.t("No se detecta ningún puente entre estas GPUs, así que no hay nada que activar. Metal las pondría en un mismo grupo de pares si lo hubiera.",
-                                        "No bridge is detected between these GPUs, so there is nothing to turn on. Metal would put them in the same peer group if there were one."),
+                            Label(AppInfo.branded("No bridge is detected between these GPUs, so there is nothing to turn on. Metal would put them in the same peer group if there were one."),
                                   systemImage: "info.circle")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if splitMode == "tensor" && splitTargetCount > 2 {
-                            Label(loc.t("Con más de dos GPUs el reparto por tensores lee el prompt casi el doble de rápido, pero genera más lento: cada capa obliga a las GPUs a esperarse y esa espera crece con cada GPU que añades. Medido en cuatro Vega II: 207 contra 109 leyendo, 13.2 contra 16.2 generando. Con dos GPUs no pierde nada.",
-                                        "With more than two GPUs a tensor split reads the prompt almost twice as fast but generates slower: every layer makes the GPUs wait for each other, and that wait grows with each GPU you add. Measured on four Vega II: 207 against 109 reading, 13.2 against 16.2 generating. With two GPUs it loses nothing."),
+                            Label(AppInfo.branded("With more than two GPUs a tensor split reads the prompt almost twice as fast but generates slower: every layer makes the GPUs wait for each other, and that wait grows with each GPU you add. Measured on four Vega II: 207 against 109 reading, 13.2 against 16.2 generating. With two GPUs it loses nothing."),
                                   systemImage: "info.circle")
                                 .font(.caption).foregroundStyle(.orange)
                         }
                         if mgpuPeer && splitMode != "tensor" {
-                            Label(loc.t("Con reparto por capas no hace nada: el puente acelera la reducción que solo existe repartiendo por tensores.",
-                                        "With a layer split it does nothing: the bridge speeds up the reduction that only exists when splitting by tensors."),
+                            Label(AppInfo.branded("With a layer split it does nothing: the bridge speeds up the reduction that only exists when splitting by tensors."),
                                   systemImage: "info.circle")
                                 .font(.caption).foregroundStyle(.orange)
                         }
@@ -768,125 +705,107 @@ struct SettingsView: View {
                 }
                 // Covers the case the picker cannot: macOS choosing the eGPU on its own.
                 if ServerController.hasExternalGPU() {
-                    Toggle(loc.t("Pesos residentes en VRAM (recomendado para eGPU)",
-                                 "VRAM-resident weights (recommended for eGPU)"), isOn: $forcePrivateBuffers)
+                    Toggle(AppInfo.branded("VRAM-resident weights (recommended for eGPU)"), isOn: $forcePrivateBuffers)
                         .settingsGlyph("internaldrive")
-                        .infoTip(loc.t("El motor Metal usa memoria compartida (del sistema) en GPUs externas, lo que transfiere los pesos por Thunderbolt en cada operación y desploma la velocidad (~0.8 t/s). Esto fuerza buffers privados en VRAM. Si fijas una eGPU en el selector de arriba ya se activa solo; usa esto cuando dejas 'Predeterminada' y macOS elige la eGPU.",
-                                    "The Metal backend uses shared (system) memory on external GPUs, which streams weights over Thunderbolt every op and tanks speed (~0.8 t/s). This forces private VRAM buffers. If you pin an eGPU in the picker above it's automatic; use this when you leave 'Default' and macOS picks the eGPU."))
+                        .infoTip(AppInfo.branded("The Metal backend uses shared (system) memory on external GPUs, which streams weights over Thunderbolt every op and tanks speed (~0.8 t/s). This forces private VRAM buffers. If you pin an eGPU in the picker above it's automatic; use this when you leave 'Default' and macOS picks the eGPU."))
                 }
-                Stepper(ngl < 0 ? loc.t("Capas en GPU (-ngl): Auto", "GPU layers (-ngl): Auto")
-                                : loc.t("Capas en GPU (-ngl): %@", "GPU layers (-ngl): %@", "\(ngl)"),
+                Stepper(ngl < 0 ? AppInfo.branded("GPU layers (-ngl): Auto")
+                                : AppInfo.branded("GPU layers (-ngl): \(ngl)"),
                         value: $ngl, in: -1...99)
                     .settingsGlyph("square.3.layers.3d")
-                    .infoTip(loc.t("Cuántas capas del modelo van a la GPU. 99 = todas (recomendado si caben en VRAM). Auto, por debajo de 0, sube las que caben en la VRAM libre sin tocar la reserva de VRAM; con Dynamic MoE o expertos en CPU sube todas.",
-                                "How many model layers go to the GPU. 99 = all (recommended if they fit in VRAM). Auto, below 0, loads as many as fit in free VRAM and keeps the VRAM reserve; with Dynamic MoE or experts on the CPU it loads them all."))
+                    .infoTip(AppInfo.branded("How many model layers go to the GPU. 99 = all (recommended if they fit in VRAM). Auto, below 0, loads as many as fit in free VRAM and keeps the VRAM reserve; with Dynamic MoE or experts on the CPU it loads them all."))
                 let modelIsMoE = modelPath.isEmpty || ServerSettings.modelIsMoE(at: modelPath)
                 Stepper(modelIsMoE
-                            ? loc.t("Expertos MoE en CPU: %@", "MoE experts on CPU: %@", "\(ncmoe)")
-                            : loc.t("Expertos MoE en CPU: no aplica (modelo denso)", "MoE experts on CPU: N/A (dense model)"),
+                            ? AppInfo.branded("MoE experts on CPU: \(ncmoe)")
+                            : AppInfo.branded("MoE experts on CPU: N/A (dense model)"),
                         value: Binding(get: { ncmoe }, set: { v in
                             ncmoe = v
                             ServerSettings.rememberNcmoe(v, forModel: modelPath)
                         }), in: 0...99)
                     .settingsGlyph("cpu")
-                    .infoTip(loc.t("Solo modelos MoE: capas cuyos 'expertos' viven en RAM y los procesa el CPU. Se ajusta solo al elegir modelo; súbelo si la VRAM se satura, bájalo si te sobra. (Deshabilitado en modelos densos, donde el motor lo ignora.)",
-                                "MoE models only: layers whose 'experts' live in RAM and run on the CPU. Auto-set when picking a model; raise if VRAM saturates, lower if you have headroom. (Disabled on dense models, where the engine ignores it.)"))
+                    .infoTip(AppInfo.branded("MoE models only: layers whose 'experts' live in RAM and run on the CPU. Auto-set when picking a model; raise if VRAM saturates, lower if you have headroom. (Disabled on dense models, where the engine ignores it.)"))
                     .disabled(!modelIsMoE || (dynamicMoeEnabled && executionMode != "legacy"))
                 Stepper(vramReserve == 0
-                            ? loc.t("Reserva de VRAM: automática", "VRAM reserve: automatic")
-                            : loc.t("Reserva de VRAM: %@ MB", "VRAM reserve: %@ MB", "\(vramReserve)"),
+                            ? AppInfo.branded("VRAM reserve: automatic")
+                            : AppInfo.branded("VRAM reserve: \(vramReserve) MB"),
                         value: $vramReserve, in: 0...4096, step: 256)
                     .settingsGlyph("gauge.with.needle")
-                    .infoTip(loc.t("VRAM que se deja libre para el sistema y la interfaz. La respetan el plan de Dynamic MoE, el modo router, DFlash en Auto y las capas en GPU en Auto. Automática deja un 8% de la tarjeta, entre 768 y 1536 MB.",
-                                "VRAM left free for the system and UI. The Dynamic MoE plan, router mode, DFlash in Auto and GPU layers in Auto keep it. Automatic leaves 8% of the card, between 768 and 1536 MB."))
-                Toggle(loc.t("Copiar pesos a VRAM (--no-mmap, recomendado)",
-                             "Copy weights to VRAM (--no-mmap, recommended)"), isOn: $noMmap)
+                    .infoTip(AppInfo.branded("VRAM left free for the system and UI. The Dynamic MoE plan, router mode, DFlash in Auto and GPU layers in Auto keep it. Automatic leaves 8% of the card, between 768 and 1536 MB."))
+                Toggle(AppInfo.branded("Copy weights to VRAM (--no-mmap, recommended)"), isOn: $noMmap)
                     .settingsGlyph("arrow.down.to.line")
-                    .infoTip(loc.t("Copia los pesos a la VRAM en vez de leerlos por PCIe en cada token. En GPU dedicada multiplica la velocidad (~6×). Desactívalo solo para depurar.",
-                                "Copies weights into VRAM instead of reading them over PCIe per token. On a discrete GPU this multiplies speed (~6×). Disable only for debugging."))
-                Toggle(loc.t("Bloquear modelo en RAM (--mlock)", "Lock model in RAM (--mlock)"), isOn: $mlock)
+                    .infoTip(AppInfo.branded("Copies weights into VRAM instead of reading them over PCIe per token. On a discrete GPU this multiplies speed (~6×). Disable only for debugging."))
+                Toggle(AppInfo.branded("Lock model in RAM (--mlock)"), isOn: $mlock)
                     .settingsGlyph("lock")
-                    .infoTip(loc.t("Impide que macOS mueva el modelo a swap o lo comprima: estabilidad de velocidad constante. Útil con modelos MoE grandes; requiere RAM suficiente.",
-                                "Prevents macOS from swapping or compressing the model: consistent speed. Useful with large MoE models; requires enough free RAM."))
-                LabeledContent(loc.t("Caché de prompts en RAM", "Prompt cache in RAM")) {
+                    .infoTip(AppInfo.branded("Prevents macOS from swapping or compressing the model: consistent speed. Useful with large MoE models; requires enough free RAM."))
+                LabeledContent(AppInfo.branded("Prompt cache in RAM")) {
                     XeonDropdown(selection: $cacheRAM, options: [
-                        .init(value: 0, title: loc.t("Desactivada", "Disabled")),
+                        .init(value: 0, title: AppInfo.branded("Disabled")),
                         .init(value: 1024, title: "1 GB"), .init(value: 2048, title: "2 GB"),
                         .init(value: 4096, title: "4 GB"), .init(value: 8192, title: "8 GB")
                     ])
                 }
                 .settingsGlyph("memorychip")
-                .infoTip(loc.t("RAM extra donde el motor recuerda conversaciones recientes para no reprocesarlas al cambiar de chat o cliente. Sin límite el motor usa hasta 8 GB: junto a un modelo grande lleva al equipo a swap y la velocidad se degrada con el uso. 2 GB es un buen equilibrio.",
-                            "Extra RAM where the engine remembers recent conversations to avoid reprocessing them when switching chats or clients. Unlimited, the engine uses up to 8 GB: next to a large model that pushes the machine into swap and speed degrades over time. 2 GB is a good balance."))
+                .infoTip(AppInfo.branded("Extra RAM where the engine remembers recent conversations to avoid reprocessing them when switching chats or clients. Unlimited, the engine uses up to 8 GB: next to a large model that pushes the machine into swap and speed degrades over time. 2 GB is a good balance."))
 
-                LabeledContent(loc.t("Tope de tokens por imagen", "Image token cap")) {
+                LabeledContent(AppInfo.branded("Image token cap")) {
                     XeonDropdown(selection: $imageMaxTokens, options: [
-                        .init(value: 0, title: loc.t("Del modelo", "Model's")),
+                        .init(value: 0, title: AppInfo.branded("Model's")),
                         .init(value: 4096, title: "4096"), .init(value: 2048, title: "2048"),
                         .init(value: 1024, title: "1024")
                     ])
                 }
                 .settingsGlyph("photo")
-                .infoTip(loc.t("Cuántos tokens puede ocupar una imagen en los modelos con visión. Por defecto manda el modelo. La memoria del codificador de visión crece con el cuadrado de este número, así que bajarlo la recorta mucho, a costa de detalle: es lo que permite cargar un modelo con visión en tarjetas donde ese buffer no cabe.",
-                            "How many tokens one image may take on vision models. The model decides by default. The vision encoder's memory grows with the square of this number, so lowering it cuts memory a lot at the cost of detail: it is what makes a vision model load on cards where that buffer does not fit."))
+                .infoTip(AppInfo.branded("How many tokens one image may take on vision models. The model decides by default. The vision encoder's memory grows with the square of this number, so lowering it cuts memory a lot at the cost of detail: it is what makes a vision model load on cards where that buffer does not fit."))
             }
             }
 
             if settingsDestination == .inference {
             Section {
-                LabeledContent(loc.t("Contexto", "Context")) {
+                LabeledContent(AppInfo.branded("Context")) {
                     XeonDropdown(selection: $ctx, options: ServerSettings.contextChoices(modelPath: modelPath).map {
                         .init(value: $0, title: "\(ServerSettings.contextLabel($0)) tokens")
                     })
                 }
                 .settingsGlyph("text.alignleft")
-                .infoTip(loc.t("Tamaño máximo de la conversación en tokens. Más contexto = más memoria para el KV cache (mira los tipos de abajo para compensar).",
-                            "Maximum conversation size in tokens. More context = more KV cache memory (see the types below to compensate)."))
+                .infoTip(AppInfo.branded("Maximum conversation size in tokens. More context = more KV cache memory (see the types below to compensate)."))
                 if ctx >= 131072 {
-                    Label(loc.t("Contexto muy grande (para pruebas). El KV cache puede no caber en VRAM/RAM; en GPU AMD sin Flash Attention la generación se ralentiza con la profundidad. Cuantiza las claves (q8_0) para compensar; para uso normal 16–32k.",
-                                "Very large context (for testing). The KV cache may not fit in VRAM/RAM; on AMD GPUs without Flash Attention generation slows with depth. Quantize keys (q8_0) to compensate; 16–32k is fine for normal use."),
+                    Label(AppInfo.branded("Very large context (for testing). The KV cache may not fit in VRAM/RAM; on AMD GPUs without Flash Attention generation slows with depth. Quantize keys (q8_0) to compensate; 16–32k is fine for normal use."),
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                LabeledContent(loc.t("KV cache: claves (-ctk)", "KV cache: keys (-ctk)")) {
+                LabeledContent(AppInfo.branded("KV cache: keys (-ctk)")) {
                     XeonDropdown(selection: $cacheTypeK, options: availableKVTypes.map { .init(value: $0, title: $0) }, width: 120)
                 }
                 .settingsGlyph("key")
                 .infoTip(amdFlashActive
-                    ? loc.t("Cuantización de las claves del KV cache. Con el kernel Flash Attention AMD, cualquier combinación estándar (f16/q8_0/q4_0 en claves y valores) corre en GPU a velocidad plena, incluida la ruta rápida de prompts largos. Para máximo ahorro de memoria: q8_0/q8_0 (mitad, recomendado) o q4_0/q4_0 (un cuarto); para comprimir solo las claves manteniendo los valores en precisión completa: q8_0/f16 o q4_0/f16.",
-                            "Quantization for KV cache keys. With the AMD Flash Attention kernel, any standard combination (f16/q8_0/q4_0 for keys and values) runs on the GPU at full speed, including the fast long-prompt route. For maximum memory savings: q8_0/q8_0 (half, recommended) or q4_0/q4_0 (a quarter); to compress only the keys while keeping values at full precision: q8_0/f16 or q4_0/f16.")
-                    : loc.t("Cuantización de las claves del KV cache. En GPU AMD (sin el kernel Flash Attention AMD): q8_0 reduce las claves a la mitad casi sin costo de velocidad (recomendado), dejando los valores en f16; q4_0 a un cuarto.",
-                            "Quantization for KV cache keys. On AMD GPUs (without the AMD Flash Attention kernel): q8_0 halves key memory at almost no speed cost (recommended), keeping values at f16; q4_0 quarters it."))
-                LabeledContent(loc.t("KV cache: valores (-ctv)", "KV cache: values (-ctv)")) {
+                    ? AppInfo.branded("Quantization for KV cache keys. With the AMD Flash Attention kernel, any standard combination (f16/q8_0/q4_0 for keys and values) runs on the GPU at full speed, including the fast long-prompt route. For maximum memory savings: q8_0/q8_0 (half, recommended) or q4_0/q4_0 (a quarter); to compress only the keys while keeping values at full precision: q8_0/f16 or q4_0/f16.")
+                    : AppInfo.branded("Quantization for KV cache keys. On AMD GPUs (without the AMD Flash Attention kernel): q8_0 halves key memory at almost no speed cost (recommended), keeping values at f16; q4_0 quarters it."))
+                LabeledContent(AppInfo.branded("KV cache: values (-ctv)")) {
                     XeonDropdown(selection: $cacheTypeV, options: availableKVTypes.map { .init(value: $0, title: $0) }, width: 120)
                 }
                 .settingsGlyph("number.square")
                 .infoTip(amdFlashActive
-                    ? loc.t("Cuantización de los valores del KV cache. Con el kernel Flash Attention AMD cualquier valor estándar (f16/q8_0/q4_0) corre en GPU a velocidad plena, incluida la ruta rápida de prompts largos. Cuantizar los valores ahorra más memoria; dejarlos en f16 (con claves cuantizadas) conserva más calidad... ambos van igual de rápidos.",
-                            "Quantization for KV cache values. With the AMD Flash Attention kernel any standard value type (f16/q8_0/q4_0) runs on the GPU at full speed, including the fast long-prompt route. Quantizing values saves more memory; keeping them at f16 (with quantized keys) preserves more quality... both run equally fast.")
-                    : loc.t("Cuantización de los valores del KV cache. ⚠️ En GPU AMD (sin el kernel Flash Attention AMD) esto fuerza Flash Attention en CPU: la generación baja ~3× (de ~50 a ~15-19 t/s en un 8B). Úsalo solo cuando necesites contexto enorme; si no, déjalo en f16 y cuantiza solo las claves.",
-                            "Quantization for KV cache values. ⚠️ On AMD GPUs (without the AMD Flash Attention kernel) this forces Flash Attention onto the CPU: generation drops ~3× (from ~50 to ~15-19 t/s on an 8B). Use only when you need huge context; otherwise keep f16 and quantize keys only."))
+                    ? AppInfo.branded("Quantization for KV cache values. With the AMD Flash Attention kernel any standard value type (f16/q8_0/q4_0) runs on the GPU at full speed, including the fast long-prompt route. Quantizing values saves more memory; keeping them at f16 (with quantized keys) preserves more quality... both run equally fast.")
+                    : AppInfo.branded("Quantization for KV cache values. ⚠️ On AMD GPUs (without the AMD Flash Attention kernel) this forces Flash Attention onto the CPU: generation drops ~3× (from ~50 to ~15-19 t/s on an 8B). Use only when you need huge context; otherwise keep f16 and quantize keys only."))
                 if !turboKVIncompatible, let s = kvSuggestion, cacheTypeK != s.k || cacheTypeV != s.v {
                     HStack(alignment: .center, spacing: 12) {
                         Image(systemName: "sparkles")
                             .font(.body)
                             .foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(loc.t("Sugerencia medida: claves %@, valores %@", "Measured suggestion: %@ keys, %@ values", "\(s.k)", "\(s.v)"))
+                            Text(AppInfo.branded("Measured suggestion: \(s.k) keys, \(s.v) values"))
                                 .font(.callout.weight(.medium))
-                            Text(loc.t("Calidad indistinguible de f16 y un 25% menos de caché que q8_0 en ambos.",
-                                       "Quality indistinguishable from f16, and 25% less cache than q8_0 on both."))
+                            Text(AppInfo.branded("Quality indistinguishable from f16, and 25% less cache than q8_0 on both."))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 8)
-                        Button(loc.t("Aplicar", "Apply")) { cacheTypeK = s.k; cacheTypeV = s.v }
+                        Button(AppInfo.branded("Apply")) { cacheTypeK = s.k; cacheTypeV = s.v }
                             .glassButton()
                             .controlSize(.small)
-                            .help(loc.t("Pone las claves en %@ y los valores en %@.",
-                                        "Sets keys to %@ and values to %@.", s.k, s.v))
+                            .help(AppInfo.branded("Sets keys to \(s.k) and values to \(s.v)."))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -894,136 +813,116 @@ struct SettingsView: View {
                 }
                 if let reason = turboKVIncompatibleReason {
                     HStack(alignment: .center, spacing: 12) {
-                        Label(loc.t(reason.es, reason.en),
+                        Label(AppInfo.branded(reason),
                               systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
                             .fixedSize(horizontal: false, vertical: true)
                         if let s = kvSuggestion {
                             Spacer(minLength: 8)
-                            Button(loc.t("Usar %@ / %@", "Use %@ / %@", "\(s.k)", "\(s.v)")) {
+                            Button(AppInfo.branded("Use \(s.k) / \(s.v)")) {
                                 cacheTypeK = s.k; cacheTypeV = s.v
                             }
                             .glassButton()
                             .controlSize(.small)
-                            .help(loc.t("Cambia a una combinación válida y medida.",
-                                        "Switches to a valid, measured combination."))
+                            .help(AppInfo.branded("Switches to a valid, measured combination."))
                         }
                     }
                 } else if turboKVSelected {
-                    Label(loc.t("Turbo en las claves es lo que cuesta calidad, y más cuanto menor es el modelo. Con las claves en q8_0, los valores admiten Turbo4 sin pérdida apreciable en ningún tamaño, y Turbo3 casi; Turbo en ambos conviene solo en modelos grandes.",
-                                "Turbo on the keys is what costs quality, the more so the smaller the model. With keys at q8_0, values take Turbo4 with no appreciable loss at any size, and Turbo3 nearly so; Turbo on both is only worth it on large models."),
+                    Label(AppInfo.branded("Turbo on the keys is what costs quality, the more so the smaller the model. With keys at q8_0, values take Turbo4 with no appreciable loss at any size, and Turbo3 nearly so; Turbo on both is only worth it on large models."),
                           systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Toggle(loc.t("Reuso de caché de prompt (rápido)", "Prompt cache reuse (fast)"), isOn: $cacheReuse)
+                Toggle(AppInfo.branded("Prompt cache reuse (fast)"), isOn: $cacheReuse)
                     .settingsGlyph("arrow.triangle.2.circlepath")
-                    .infoTip(loc.t("Cuando reescribes/editas el prompt (asistentes de código) o se recorta el razonamiento entre turnos, reutiliza la caché desplazándola en vez de reprocesar — mucho más rápido. Es una aproximación: la salida sigue coherente pero puede variar levemente frente a un cálculo exacto. Desactívalo si quieres resultados idénticos y reproducibles.",
-                                "When the prompt is rewritten/edited (coding assistants) or the reasoning is trimmed between turns, it reuses the cache by shifting it instead of reprocessing — much faster. It's an approximation: output stays coherent but can differ slightly from an exact recompute. Turn it off for identical, reproducible results."))
-                Stepper(loc.t("Hilos de CPU: %@", "CPU threads: %@", "\(threads)"),
+                    .infoTip(AppInfo.branded("When the prompt is rewritten/edited (coding assistants) or the reasoning is trimmed between turns, it reuses the cache by shifting it instead of reprocessing — much faster. It's an approximation: output stays coherent but can differ slightly from an exact recompute. Turn it off for identical, reproducible results."))
+                Stepper(AppInfo.branded("CPU threads: \(threads)"),
                         value: $threads, in: 0...max(0, hardware.physicalCores))
                     .settingsGlyph("cpu")
-                    .infoTip(loc.t("Hilos para la parte que corre en CPU (expertos MoE, tokenización). Tu equipo tiene %@ hilos; los núcleos físicos (%@) suelen ser el óptimo; más hilos no acelera si el límite es la RAM.",
-                                "Threads for the CPU side (MoE experts, tokenization). Your machine has %@ threads; physical cores (%@) are usually optimal; more threads won't help if RAM bandwidth is the limit.",
-                                String(hardware.logicalCores), String(hardware.physicalCores)))
+                    .infoTip(AppInfo.branded("Threads for the CPU side (MoE experts, tokenization). Your machine has \(String(hardware.logicalCores)) threads; physical cores (\(String(hardware.physicalCores))) are usually optimal; more threads won't help if RAM bandwidth is the limit."))
                     .onAppear { if threads > hardware.physicalCores { threads = max(0, hardware.physicalCores) } }
-                LabeledContent(loc.t("Flash Attention estándar (CPU)", "Standard Flash Attention (CPU)")) {
+                LabeledContent(AppInfo.branded("Standard Flash Attention (CPU)")) {
                     XeonDropdown(selection: $flashAttn, options: ["auto", "on", "off"].map { .init(value: $0, title: $0) }, width: 120)
                 }
                 .settingsGlyph("bolt.horizontal.circle")
                 .disabled(amdFlashActive || kvNeedsFlashAttention)
-                .infoTip(loc.t("Ruta Flash Attention estándar de llama.cpp. En GPU AMD cae en CPU; se fuerza a 'on' cuando el KV está cuantizado. Para atención en GPU usa el kernel AMD de abajo.",
-                            "Standard llama.cpp Flash Attention path. On AMD GPUs it falls back to CPU; it is forced to 'on' when KV is quantized. For GPU attention use the AMD kernel below."))
+                .infoTip(AppInfo.branded("Standard llama.cpp Flash Attention path. On AMD GPUs it falls back to CPU; it is forced to 'on' when KV is quantized. For GPU attention use the AMD kernel below."))
                 if engineSelection.wrappedValue != "custom" {
-                    Toggle(loc.t("Kernel Flash Attention AMD (GPU)", "AMD Flash Attention kernel (GPU)"), isOn: $faAmd)
+                    Toggle(AppInfo.branded("AMD Flash Attention kernel (GPU)"), isOn: $faAmd)
                         .settingsGlyph("bolt.fill")
-                        .infoTip(loc.t("Kernel Metal propio, activo por defecto, que ejecuta la atención (prompt y generación) en la GPU AMD: cabezas estándar 64/72/128/256/512 y TurboQuant con padding 128/256/384/512/640. Si lo apagas, el KV cuantizado sigue requiriendo Flash Attention pero usa la ruta estándar en CPU.",
-                                    "Custom Metal kernel, on by default, that runs attention (prompt and generation) on the AMD GPU: standard heads 64/72/128/256/512 and TurboQuant padded heads 128/256/384/512/640. If you turn it off, quantized KV still requires Flash Attention but uses the standard CPU path."))
+                        .infoTip(AppInfo.branded("Custom Metal kernel, on by default, that runs attention (prompt and generation) on the AMD GPU: standard heads 64/72/128/256/512 and TurboQuant padded heads 128/256/384/512/640. If you turn it off, quantized KV still requires Flash Attention but uses the standard CPU path."))
                     Label(amdFlashActive
-                            ? loc.t("Usando kernel AMD en GPU; Flash Attention queda forzado a 'on'.",
-                                    "Using the AMD GPU kernel; Flash Attention is forced to 'on'.")
+                            ? AppInfo.branded("Using the AMD GPU kernel; Flash Attention is forced to 'on'.")
                             : kvNeedsFlashAttention
-                              ? loc.t("El KV cuantizado requiere Flash Attention: con el kernel AMD apagado usa el FA estándar en CPU.",
-                                      "Quantized KV requires Flash Attention: with the AMD kernel off, it uses standard FA on CPU.")
-                              : loc.t("Flash Attention estándar corre en la CPU en GPU AMD; activa el kernel AMD para usar la GPU.",
-                                      "Standard Flash Attention runs on CPU on AMD GPUs; enable the AMD kernel to use the GPU."),
+                              ? AppInfo.branded("Quantized KV requires Flash Attention: with the AMD kernel off, it uses standard FA on CPU.")
+                              : AppInfo.branded("Standard Flash Attention runs on CPU on AMD GPUs; enable the AMD kernel to use the GPU."),
                           systemImage: amdFlashActive ? "bolt.fill" : "cpu")
                         .font(.caption).foregroundStyle(amdFlashActive ? .green : .secondary)
                 }
                 if !modelPath.isEmpty && ServerSettings.modelUsesMTP(at: modelPath) {
-                    Label(loc.t("MTP automático activo", "Automatic MTP active"),
+                    Label(AppInfo.branded("Automatic MTP active"),
                           systemImage: "hare.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
-                        .infoTip(loc.t("MTP se activa automáticamente cuando el GGUF trae el cabezal, tanto en modelos densos como MoE.",
-                                    "MTP turns on automatically whenever the GGUF includes the head, for both dense and MoE models."))
+                        .infoTip(AppInfo.branded("MTP turns on automatically whenever the GGUF includes the head, for both dense and MoE models."))
                 }
                 if engineSelection.wrappedValue != "custom" {
-                    Toggle(loc.t("Prefetch de expertos MoE (prompt)", "MoE expert prefetch (prompt)"), isOn: $prefetchExperts)
+                    Toggle(AppInfo.branded("MoE expert prefetch (prompt)"), isOn: $prefetchExperts)
                         .settingsGlyph("square.stack.3d.down.forward")
-                        .infoTip(loc.t("Para modelos MoE con expertos en RAM (ncmoe > 0): sube los pesos de expertos a la GPU por una cola Metal paralela, solapando la subida con el cómputo. De 1.8× a 4.4× de velocidad de prompt medida (35B, gemma-4-26B, gpt-oss) sin costo de generación; el primer prompt tras cargar el modelo es algo más lento mientras se preparan los buffers.",
-                                    "For MoE models with experts in RAM (ncmoe > 0): uploads expert weights to the GPU through a parallel Metal queue, overlapping the upload with compute. Measured 1.8×-4.4× prompt speed (35B, gemma-4-26B, gpt-oss) at no generation cost; the first prompt after loading the model is slightly slower while buffers warm up."))
+                        .infoTip(AppInfo.branded("For MoE models with experts in RAM (ncmoe > 0): uploads expert weights to the GPU through a parallel Metal queue, overlapping the upload with compute. Measured 1.8×-4.4× prompt speed (35B, gemma-4-26B, gpt-oss) at no generation cost; the first prompt after loading the model is slightly slower while buffers warm up."))
                     if routerMode || ServerSettings.modelIsMoE(at: modelPath) {
-                        LabeledContent(loc.t("Micro-lote del prompt", "Prompt micro-batch")) {
+                        LabeledContent(AppInfo.branded("Prompt micro-batch")) {
                             XeonDropdown(selection: $ubatch, options: ServerSettings.ubatchOptions.map {
                                 .init(value: $0, title: ServerSettings.ubatchLabel($0, loc: loc))
                             })
                         }
                         .settingsGlyph("square.grid.3x3")
-                        .infoTip(loc.t("Cuántos tokens de prompt procesa la GPU de una vez. Solo aporta en modelos MoE, y cuánto depende de dónde estén los expertos. Con expertos en CPU cada micro-lote los sube por el bus, así que uno más grande paga ese viaje menos veces: medido en una Radeon RX 6700 XT, leer 2048 tokens pasa de 475 a 886 tokens por segundo en un 35B, y de 546 a 1133 en un 30B. Con el modelo entero en la tarjeta la mejora ronda el 10%, igual con una GPU que repartido entre varias. La generación no cambia en ningún caso. A cambio ocupa VRAM, cerca de 0.5 GB por cada 512 tokens de micro-lote, así que si vas justo tendrás que bajar los expertos en CPU para compensar.",
-                                    "How many prompt tokens the GPU processes at once. It only helps MoE models, and how much depends on where the experts live. With experts on the CPU every micro-batch uploads them over the bus, so a larger one pays that trip fewer times: measured on a Radeon RX 6700 XT, reading 2048 tokens goes from 475 to 886 tokens per second on a 35B, and from 546 to 1133 on a 30B. With the model whole on the card the gain is around 10%, the same on one GPU as split across several. Generation is unchanged in every case. In exchange it takes VRAM, around 0.5 GB per 512 tokens of micro-batch, so if you are tight you will have to lower the experts on CPU to make room."))
+                        .infoTip(AppInfo.branded("How many prompt tokens the GPU processes at once. It only helps MoE models, and how much depends on where the experts live. With experts on the CPU every micro-batch uploads them over the bus, so a larger one pays that trip fewer times: measured on a Radeon RX 6700 XT, reading 2048 tokens goes from 475 to 886 tokens per second on a 35B, and from 546 to 1133 on a 30B. With the model whole on the card the gain is around 10%, the same on one GPU as split across several. Generation is unchanged in every case. In exchange it takes VRAM, around 0.5 GB per 512 tokens of micro-batch, so if you are tight you will have to lower the experts on CPU to make room."))
                     }
                 }
-                LabeledContent(loc.t("Peticiones simultáneas", "Concurrent requests")) {
+                LabeledContent(AppInfo.branded("Concurrent requests")) {
                     XeonDropdown(selection: $parallelSlots, options: [
-                        .init(value: 1, title: loc.t("1 (recomendado)", "1 (recommended)")),
+                        .init(value: 1, title: AppInfo.branded("1 (recommended)")),
                         .init(value: 2, title: "2"), .init(value: 4, title: "4"),
                         .init(value: 0, title: "Auto")
                     ])
                 }
                 .settingsGlyph("person.2")
-                .infoTip(loc.t("Cuántas peticiones procesa el motor a la vez. Con 1, las peticiones hacen cola en vez de competir por la GPU, y un prompt enorme interrumpido por el timeout de un cliente (VS Code) se retoma donde iba al reintentar. Sube el valor solo si varios clientes usan el servidor a la vez.",
-                            "How many requests the engine processes at once. With 1, requests queue instead of competing for the GPU, and a huge prompt interrupted by a client timeout (VS Code) resumes where it was on retry. Raise it only if several clients use the server at the same time."))
+                .infoTip(AppInfo.branded("How many requests the engine processes at once. With 1, requests queue instead of competing for the GPU, and a huge prompt interrupted by a client timeout (VS Code) resumes where it was on retry. Raise it only if several clients use the server at the same time."))
                 if parallelSlots > 1 {
-                    Toggle(loc.t("Contexto separado por petición", "Separate context per request"), isOn: $separateKV)
+                    Toggle(AppInfo.branded("Separate context per request"), isOn: $separateKV)
                         .settingsGlyph("rectangle.split.2x1")
-                        .infoTip(loc.t("Cada petición simultánea tiene su propia parte del contexto (el contexto dividido entre las peticiones) en vez de compartirlo. Medido en una Radeon RX 6700 XT con varias peticiones a la vez: entre un 7 y un 11% más rápido al generar y entre un 11 y un 18% menos de espera con prompts largos. A cambio, ninguna conversación puede pasar de su parte; apagado, el chat conserva su ventana completa.",
-                                    "Each simultaneous request gets its own share of the context (the context divided by the requests) instead of sharing it. Measured on a Radeon RX 6700 XT with several requests at once: 7 to 11% faster generation and 11 to 18% less wait with long prompts. In exchange, no conversation can grow past its share; off, the chat keeps its full window."))
+                        .infoTip(AppInfo.branded("Each simultaneous request gets its own share of the context (the context divided by the requests) instead of sharing it. Measured on a Radeon RX 6700 XT with several requests at once: 7 to 11% faster generation and 11 to 18% less wait with long prompts. In exchange, no conversation can grow past its share; off, the chat keeps its full window."))
                 }
-                Toggle(loc.t("Razonamiento como texto (clientes externos)",
-                             "Reasoning as plain text (external clients)"), isOn: $reasoningInline)
+                Toggle(AppInfo.branded("Reasoning as plain text (external clients)"), isOn: $reasoningInline)
                     .settingsGlyph("brain")
-                    .infoTip(loc.t("Envía el razonamiento dentro de la respuesta (<think>…) en vez del campo aparte reasoning_content. Actívalo si un cliente externo (VS Code, plugins) se queda 'pensando' sin mostrar nada. El chat de la app entiende ambos formatos.",
-                                "Sends the reasoning inline in the response (<think>…) instead of the separate reasoning_content field. Enable it if an external client (VS Code, plugins) appears stuck 'thinking' showing nothing. The in-app chat understands both formats."))
-                LabeledContent(loc.t("Razonamiento por defecto", "Default reasoning")) {
+                    .infoTip(AppInfo.branded("Sends the reasoning inline in the response (<think>…) instead of the separate reasoning_content field. Enable it if an external client (VS Code, plugins) appears stuck 'thinking' showing nothing. The in-app chat understands both formats."))
+                LabeledContent(AppInfo.branded("Default reasoning")) {
                     XeonDropdown(selection: $serverDefaultReasoning, options: [
-                        .init(value: "model", title: loc.t("El del modelo", "Model default")),
-                        .init(value: "off", title: loc.t("Desactivado", "Off")),
-                        .init(value: "low", title: loc.t("Bajo", "Low")),
-                        .init(value: "medium", title: loc.t("Medio", "Medium")),
-                        .init(value: "high", title: loc.t("Alto", "High")),
+                        .init(value: "model", title: AppInfo.branded("Model default")),
+                        .init(value: "off", title: AppInfo.branded("Off")),
+                        .init(value: "low", title: AppInfo.branded("Low")),
+                        .init(value: "medium", title: AppInfo.branded("Medium")),
+                        .init(value: "high", title: AppInfo.branded("High")),
                     ])
                 }
                 .settingsGlyph("brain.head.profile")
-                .infoTip(loc.t("Nivel de razonamiento para las peticiones que no eligen uno, como las de VS Code o muchos agentes. Una petición que lo indica siempre gana. Los niveles solo cambian algo en modelos cuya plantilla los acepta; «Desactivado» funciona en todos los que razonan.",
-                            "Reasoning level for requests that do not choose one, such as those from VS Code or many agents. A request that sets it always wins. Levels only change anything on models whose template accepts them; Off works on every reasoning model."))
-                LabeledContent(loc.t("Longitud máxima por defecto", "Default response limit")) {
+                .infoTip(AppInfo.branded("Reasoning level for requests that do not choose one, such as those from VS Code or many agents. A request that sets it always wins. Levels only change anything on models whose template accepts them; Off works on every reasoning model."))
+                LabeledContent(AppInfo.branded("Default response limit")) {
                     XeonDropdown(selection: $serverDefaultMaxTokens, options: [
-                        .init(value: -1, title: loc.t("Como el chat", "Same as the chat")),
-                        .init(value: 0, title: loc.t("Sin límite", "No limit")),
+                        .init(value: -1, title: AppInfo.branded("Same as the chat")),
+                        .init(value: 0, title: AppInfo.branded("No limit")),
                         .init(value: 2048, title: "2K"), .init(value: 4096, title: "4K"),
                         .init(value: 8192, title: "8K"), .init(value: 16384, title: "16K"),
                         .init(value: 32768, title: "32K"),
                     ])
                 }
                 .settingsGlyph("text.append")
-                .infoTip(loc.t("Tokens de respuesta para las peticiones que no fijan max_tokens, como las del chat web o muchas apps. Evita que un cliente sin límite deje al modelo razonando o escribiendo sin fin. «Como el chat» usa el mismo máximo que el chat de la app.",
-                            "Response tokens for requests that do not set max_tokens, such as the web chat's or many apps'. It keeps a client without a limit from leaving the model reasoning or writing without end. “Same as the chat” uses the in-app chat's maximum."))
-                Toggle(loc.t("Plantilla de chat (--jinja)", "Chat template (--jinja)"), isOn: $jinja)
+                .infoTip(AppInfo.branded("Response tokens for requests that do not set max_tokens, such as the web chat's or many apps'. It keeps a client without a limit from leaving the model reasoning or writing without end. “Same as the chat” uses the in-app chat's maximum."))
+                Toggle(AppInfo.branded("Chat template (--jinja)"), isOn: $jinja)
                     .settingsGlyph("curlybraces")
-                    .infoTip(loc.t("Usa la plantilla de chat oficial del modelo (formato de mensajes, herramientas). Déjalo activado salvo problemas con un modelo concreto.",
-                                "Uses the model's official chat template (message format, tools). Keep it on unless a specific model misbehaves."))
+                    .infoTip(AppInfo.branded("Uses the model's official chat template (message format, tools). Keep it on unless a specific model misbehaves."))
             }
             }
 

@@ -15,7 +15,7 @@ struct AudioVADCustomControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LabeledContent(loc.t("Confianza de voz", "Speech confidence")) {
+            LabeledContent(AppInfo.branded("Speech confidence")) {
                 HStack {
                     Slider(value: $threshold, in: 0.1...0.95, step: 0.05)
                     Text(threshold, format: .number.precision(.fractionLength(2)))
@@ -23,10 +23,9 @@ struct AudioVADCustomControls: View {
                         .frame(width: 34, alignment: .trailing)
                 }
             }
-            .help(loc.t("Un valor alto descarta más voces débiles; también puede perder una voz principal suave.",
-                        "A high value rejects more weak voices; it can also miss a quiet main voice."))
+            .help(AppInfo.branded("A high value rejects more weak voices; it can also miss a quiet main voice."))
 
-            LabeledContent(loc.t("Voz mínima", "Minimum speech")) {
+            LabeledContent(AppInfo.branded("Minimum speech")) {
                 HStack {
                     Slider(value: $minSpeechMS, in: 100...2_000, step: 50)
                     Text(minSpeechMS / 1_000,
@@ -35,10 +34,9 @@ struct AudioVADCustomControls: View {
                         .frame(width: 34, alignment: .trailing)
                 }
             }
-            .help(loc.t("Descarta intervenciones más breves que esta duración, expresada en segundos.",
-                        "Rejects speech shorter than this duration, shown in seconds."))
+            .help(AppInfo.branded("Rejects speech shorter than this duration, shown in seconds."))
 
-            LabeledContent(loc.t("Silencio para cortar", "Silence to split")) {
+            LabeledContent(AppInfo.branded("Silence to split")) {
                 HStack {
                     Slider(value: $minSilenceMS, in: 50...2_000, step: 50)
                     Text(minSilenceMS / 1_000,
@@ -47,10 +45,9 @@ struct AudioVADCustomControls: View {
                         .frame(width: 34, alignment: .trailing)
                 }
             }
-            .help(loc.t("Divide un tramo cuando el silencio alcanza esta duración, expresada en segundos.",
-                        "Splits a segment when silence reaches this duration, shown in seconds."))
+            .help(AppInfo.branded("Splits a segment when silence reaches this duration, shown in seconds."))
 
-            LabeledContent(loc.t("Tramo máximo", "Maximum segment")) {
+            LabeledContent(AppInfo.branded("Maximum segment")) {
                 HStack {
                     Slider(value: $maxSpeechSeconds, in: 10...120, step: 5)
                     Text(maxSpeechSeconds, format: .number)
@@ -58,10 +55,9 @@ struct AudioVADCustomControls: View {
                         .frame(width: 28, alignment: .trailing)
                 }
             }
-            .help(loc.t("Fuerza cortes periódicos para impedir que una frase alimente segmentos demasiado largos.",
-                        "Forces periodic splits so one phrase cannot feed excessively long segments."))
+            .help(AppInfo.branded("Forces periodic splits so one phrase cannot feed excessively long segments."))
 
-            LabeledContent(loc.t("Margen de palabra", "Word padding")) {
+            LabeledContent(AppInfo.branded("Word padding")) {
                 HStack {
                     Slider(value: $speechPadMS, in: 0...500, step: 20)
                     Text(speechPadMS / 1_000,
@@ -70,14 +66,12 @@ struct AudioVADCustomControls: View {
                         .frame(width: 34, alignment: .trailing)
                 }
             }
-            .help(loc.t("Conserva un pequeño margen alrededor de cada voz para no cortar palabras.",
-                        "Keeps a small margin around speech so words are not clipped."))
+            .help(AppInfo.branded("Keeps a small margin around speech so words are not clipped."))
 
-            Button(loc.t("Restablecer ajustes", "Reset settings"),
+            Button(AppInfo.branded("Reset settings"),
                    systemImage: "arrow.counterclockwise", action: resetValues)
                 .controlSize(.small)
-                .help(loc.t("Restaura los valores personalizados al perfil Equilibrado.",
-                            "Restores custom values to the Balanced profile."))
+                .help(AppInfo.branded("Restores custom values to the Balanced profile."))
         }
     }
 

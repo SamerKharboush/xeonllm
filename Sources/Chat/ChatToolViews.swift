@@ -38,11 +38,10 @@ struct ToolCallCard: View {
                     }
                     if call.state == .running { ProgressView().controlSize(.mini) }
                     if call.accepted == true {
-                        Text(loc.t("aceptada, sin confirmar", "accepted, not confirmed"))
+                        Text(AppInfo.branded("accepted, not confirmed"))
                             .font(.caption)
                             .foregroundStyle(.orange)
-                            .help(loc.t("El servicio aceptó la operación pero no ha dicho que terminara.",
-                                        "The service accepted the operation but has not said it finished."))
+                            .help(AppInfo.branded("The service accepted the operation but has not said it finished."))
                     }
                 }
                 .font(.callout.weight(.medium))
@@ -58,7 +57,7 @@ struct ToolCallCard: View {
         }
         .padding(10)
         .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
-        .accessibilityLabel(loc.t("Llamada a herramienta %@", "Tool call %@", "\(call.name)"))
+        .accessibilityLabel(AppInfo.branded("Tool call \(call.name)"))
     }
 }
 
@@ -115,7 +114,7 @@ private struct ToolCallDetailView: View {
                 }
                 if let result = presentation.result, !result.isEmpty {
                     Text(result).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                } else { emptyState(loc.t("Dibujando…", "Drawing…")) }
+                } else { emptyState(AppInfo.branded("Drawing…")) }
             case .dateTime:
                 if let result = presentation.result, !result.isEmpty {
                     Label(result, systemImage: "calendar.badge.clock")
@@ -382,8 +381,8 @@ struct ToolRoundsGroup: View, Equatable {
     }
 
     private var summary: String {
-        let count = calls.count == 1 ? loc.t("1 herramienta", "1 tool")
-            : loc.t("%@ herramientas", "%@ tools", "\(calls.count)")
+        let count = calls.count == 1 ? AppInfo.branded("1 tool")
+            : AppInfo.branded("\(calls.count) tools")
         var titles: [String] = []
         for call in calls {
             let title = ToolCallPresentation.make(call).title
@@ -407,7 +406,7 @@ struct ToolRoundsGroup: View, Equatable {
                     HStack(spacing: 7) {
                         Text(summary).lineLimit(1)
                         if withoutResult > 0 {
-                            Text(loc.t("%@ sin resultado", "%@ without a result", "\(withoutResult)"))
+                            Text(AppInfo.branded("\(withoutResult) without a result"))
                                 .foregroundStyle(.red)
                         }
                         if running { ProgressView().controlSize(.mini) }
@@ -420,21 +419,18 @@ struct ToolRoundsGroup: View, Equatable {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(loc.t("Muestra u oculta las llamadas a herramientas de este turno, con sus resultados y el texto que el modelo escribió antes de cada una.",
-                            "Shows or hides this turn's tool calls, with their results and the text the model wrote before each one."))
+                .help(AppInfo.branded("Shows or hides this turn's tool calls, with their results and the text the model wrote before each one."))
                 if isExpanded {
                     ForEach(rounds.filter { $0.role == "assistant" }) { round in
                         let said = [round.parts.thinking ?? "", round.parts.body, round.settledInterim ?? ""]
                             .filter { !$0.isEmpty }.joined(separator: "\n\n")
                         if !said.isEmpty {
-                            DisclosureGroup(loc.t("Texto del modelo antes de la llamada (no verificado)",
-                                                  "Model text before the call (not verified)")) {
+                            DisclosureGroup(AppInfo.branded("Model text before the call (not verified)")) {
                                 Text(said).chatFont(.small).foregroundStyle(.secondary).textSelection(.enabled)
                             }
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .help(loc.t("Lo que el modelo escribió antes de llamar a la herramienta. No es un resultado: lo calculado está en cada tarjeta.",
-                                        "What the model wrote before calling the tool. It is not a result: what was computed is in each card."))
+                            .help(AppInfo.branded("What the model wrote before calling the tool. It is not a result: what was computed is in each card."))
                         }
                         ForEach(round.toolCalls ?? []) { ToolCallCard(call: $0) }
                     }

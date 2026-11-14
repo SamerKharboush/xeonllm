@@ -215,23 +215,20 @@ struct ChatSketchSection: View {
             ChatSketchCanvas(sketch: sketch)
                 .frame(height: enlarged ? 360 : 170)
                 .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
-                .help(loc.t("Croquis según los datos de la respuesta: el punto 1 es el inicio y cada tramo va al número siguiente.",
-                            "Sketch from the answer's data: point 1 is the start and each leg runs to the next number."))
+                .help(AppInfo.branded("Sketch from the answer's data: point 1 is the start and each leg runs to the next number."))
             HStack(alignment: .top) {
                 Text(caption).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Menu(loc.t("Exportar", "Export")) {
-                    Button(loc.t("Imagen PNG", "PNG image")) { save(png(), as: "png") }
-                    Button(loc.t("DXF (CAD)", "DXF (CAD)")) { save(Data(sketch.dxf().utf8), as: "dxf") }
-                    Button(loc.t("Esquinas en CSV", "Corners as CSV")) { save(Data(sketch.csv().utf8), as: "csv") }
-                    Button(loc.t("Shapefile (ZIP)", "Shapefile (ZIP)")) {
-                        save(sketch.shapefile(named: ChatMap.fileStem(sketch.title ?? loc.t("croquis", "sketch"))), as: "zip")
+                Menu(AppInfo.branded("Export")) {
+                    Button(AppInfo.branded("PNG image")) { save(png(), as: "png") }
+                    Button(AppInfo.branded("DXF (CAD)")) { save(Data(sketch.dxf().utf8), as: "dxf") }
+                    Button(AppInfo.branded("Corners as CSV")) { save(Data(sketch.csv().utf8), as: "csv") }
+                    Button(AppInfo.branded("Shapefile (ZIP)")) {
+                        save(sketch.shapefile(named: ChatMap.fileStem(sketch.title ?? AppInfo.branded("sketch"))), as: "zip")
                     }
                 }
                 .menuStyle(.borderlessButton).fixedSize().font(.caption)
-                .help(loc.t("PNG para un informe; DXF para aplicaciones CAD y GIS, en %@ desde el punto 1; CSV con las esquinas numeradas.",
-                            "PNG for a report; DXF for CAD and GIS applications, in %@ from point 1; CSV with the numbered corners.",
-                            sketch.unit))
+                .help(AppInfo.branded("PNG for a report; DXF for CAD and GIS applications, in \(sketch.unit) from point 1; CSV with the numbered corners."))
             }
         }
     }
@@ -252,18 +249,17 @@ struct ChatSketchSection: View {
     private func save(_ data: Data?, as kind: String) {
         guard let data else { return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = ChatMap.fileStem(sketch.title ?? loc.t("croquis", "sketch")) + "." + kind
+        panel.nameFieldStringValue = ChatMap.fileStem(sketch.title ?? AppInfo.branded("sketch")) + "." + kind
         panel.allowedContentTypes = [UTType(filenameExtension: kind) ?? .data]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? data.write(to: url)
     }
 
     private var caption: String {
-        var text = sketch.plane.map { loc.t("Croquis en %@", "Sketch in %@", $0) }
-            ?? loc.t("Croquis sin ubicar en el mapa", "Sketch, not placed on a map")
+        var text = sketch.plane.map { AppInfo.branded("Sketch in \($0)") }
+            ?? AppInfo.branded("Sketch, not placed on a map")
         if sketch.closed && sketch.gap > sketch.span * 1e-4 {
-            text += " · " + loc.t("en rojo, lo que le falta para cerrar: %@ %@", "in red, what it lacks to close: %@ %@",
-                                  ChatSketchCanvas.figure(sketch.gap), sketch.unit)
+            text += " · " + AppInfo.branded("in red, what it lacks to close: \(ChatSketchCanvas.figure(sketch.gap)) \(sketch.unit)")
         }
         if let notice = sketch.notice { text += " · " + notice }
         return text
@@ -283,7 +279,7 @@ struct ChatFigureResizeButton: View {
                 .font(.caption)
         }
         .buttonStyle(.borderless)
-        .help(enlarged ? loc.t("Reducir", "Make smaller") : loc.t("Ampliar", "Enlarge"))
+        .help(enlarged ? AppInfo.branded("Make smaller") : AppInfo.branded("Enlarge"))
     }
 }
 

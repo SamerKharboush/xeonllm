@@ -28,9 +28,9 @@ struct DflashControl: View {
 
     private var detailRow: some View {
         XeonDropdown(selection: $mode, options: [
-            .init(value: .off, title: loc.t("Apagado", "Off"), systemImage: "bolt.slash"),
-            .init(value: .auto, title: "Auto", subtitle: loc.t("Respeta la reserva de VRAM", "Respects the VRAM reserve"), systemImage: "wand.and.stars"),
-            .init(value: .forced, title: loc.t("Forzado", "Forced"), subtitle: loc.t("Ignora la reserva de seguridad", "Ignores the safety reserve"), systemImage: "bolt.fill")
+            .init(value: .off, title: AppInfo.branded("Off"), systemImage: "bolt.slash"),
+            .init(value: .auto, title: "Auto", subtitle: AppInfo.branded("Respects the VRAM reserve"), systemImage: "wand.and.stars"),
+            .init(value: .forced, title: AppInfo.branded("Forced"), subtitle: AppInfo.branded("Ignores the safety reserve"), systemImage: "bolt.fill")
         ], width: 220, listWidth: 300)
         .onAppear { mode = ServerSettings.dflashMode(forModel: modelPath) }
         .onChange(of: mode) { _, value in ServerSettings.setDflashMode(value, forModel: modelPath) }
@@ -38,24 +38,23 @@ struct DflashControl: View {
 
     private var settingsRows: some View {
         Group {
-            LabeledContent(loc.t("Borrador", "Draft")) {
-                Picker(loc.t("Borrador", "Draft"), selection: $mode) {
-                    Text(loc.t("Apagado", "Off")).tag(DflashMode.off)
+            LabeledContent(AppInfo.branded("Draft")) {
+                Picker(AppInfo.branded("Draft"), selection: $mode) {
+                    Text(AppInfo.branded("Off")).tag(DflashMode.off)
                     Text("Auto").tag(DflashMode.auto)
-                    Text(loc.t("Forzado", "Forced")).tag(DflashMode.forced)
+                    Text(AppInfo.branded("Forced")).tag(DflashMode.forced)
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
             }
             if active, let acc = server.dflashAcceptance {
-                LabeledContent(loc.t("Aceptación", "Acceptance")) {
+                LabeledContent(AppInfo.branded("Acceptance")) {
                     Text(acc.formatted(.percent.precision(.fractionLength(0)))).monospacedDigit()
                 }
             }
         }
         .onAppear { mode = ServerSettings.dflashMode(forModel: modelPath) }
         .onChange(of: mode) { _, value in ServerSettings.setDflashMode(value, forModel: modelPath) }
-        .help(loc.t("Auto usa DFlash cuando hay un draft compatible y el planificador deja memoria suficiente. Forzado ignora la reserva de seguridad y avisa si la VRAM supera 95 %.",
-                    "Auto uses DFlash when a compatible draft is installed and the memory planner leaves enough headroom. Forced ignores the safety reserve and warns if VRAM exceeds 95%."))
+        .help(AppInfo.branded("Auto uses DFlash when a compatible draft is installed and the memory planner leaves enough headroom. Forced ignores the safety reserve and warns if VRAM exceeds 95%."))
     }
 
     private var inlineRow: some View {
@@ -69,13 +68,12 @@ struct DflashControl: View {
             if active, let acc = server.dflashAcceptance {
                 Text(acc.formatted(.percent.precision(.fractionLength(0))))
                     .monospacedDigit().foregroundStyle(.secondary)
-                    .help(loc.t("Aceptación del borrador en la última respuesta",
-                                "Draft acceptance on the last response"))
+                    .help(AppInfo.branded("Draft acceptance on the last response"))
             }
             Picker("DFlash", selection: $mode) {
-                Text(loc.t("Off", "Off")).tag(DflashMode.off)
-                Text(loc.t("Auto", "Auto")).tag(DflashMode.auto)
-                Text(loc.t("Forzado", "Forced")).tag(DflashMode.forced)
+                Text(AppInfo.branded("Off")).tag(DflashMode.off)
+                Text(AppInfo.branded("Auto")).tag(DflashMode.auto)
+                Text(AppInfo.branded("Forced")).tag(DflashMode.forced)
             }
             .labelsHidden()
             .fixedSize()
@@ -89,7 +87,6 @@ struct DflashControl: View {
         .onChange(of: active) { _, on in
             withAnimation(on ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : .default) { glow = on }
         }
-        .help(loc.t("Auto usa DFlash cuando hay un draft compatible y el planificador deja memoria suficiente. Forzado ignora la reserva de seguridad y avisa si la VRAM supera 95 %.",
-                    "Auto uses DFlash when a compatible draft is installed and the memory planner leaves enough headroom. Forced ignores the safety reserve and warns if VRAM exceeds 95%."))
+        .help(AppInfo.branded("Auto uses DFlash when a compatible draft is installed and the memory planner leaves enough headroom. Forced ignores the safety reserve and warns if VRAM exceeds 95%."))
     }
 }

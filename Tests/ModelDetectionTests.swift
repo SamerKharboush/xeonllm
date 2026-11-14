@@ -647,7 +647,7 @@ final class ModelDetectionTests: XCTestCase {
         let model = dir.appendingPathComponent("Qwen3.6-35B-A3B-Q8_0.gguf")
         try writeGGUFWithArchitecture("qwen3moe", to: model)
 
-        XCTAssertTrue(GGUFFile.isDraft(draft.path), "un borrador no puede aparecer como modelo")
+        XCTAssertTrue(GGUFFile.isDraft(draft.path), "a draft must not appear as a model")
         XCTAssertFalse(GGUFFile.isDraft(model.path))
 
         let found = LocalModel.scan(in: dir).map(\.name)

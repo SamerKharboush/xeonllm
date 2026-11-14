@@ -201,7 +201,7 @@ final class DownloadItem: NSObject, ObservableObject, Identifiable, URLSessionDa
                 let free = capacity
                 let neededGB = Double(remaining) / 1_073_741_824
                 let freeGB = Double(free) / 1_073_741_824
-                phase = .failed(String(format: "Espacio insuficiente: %.1f GB libres, %.1f GB necesarios / not enough disk space", freeGB, neededGB))
+                phase = .failed(String(format: "Not enough disk space: %.1f GB free, %.1f GB needed", freeGB, neededGB))
                 return
             }
             totalMB = Double(needed) / 1_048_576
@@ -235,7 +235,7 @@ final class DownloadItem: NSObject, ObservableObject, Identifiable, URLSessionDa
     }
 
     func cancel() {
-        phase = .failed("Cancelada / cancelled")
+        phase = .failed("Cancelled")
         task?.cancel()
         sink.close()
         session.invalidateAndCancel()
@@ -255,7 +255,7 @@ final class DownloadItem: NSObject, ObservableObject, Identifiable, URLSessionDa
                         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
         guard let http = response as? HTTPURLResponse else {
             completionHandler(.cancel)
-            phase = .failed("Respuesta de descarga inválida / invalid download response")
+            phase = .failed("Invalid download response")
             return
         }
         let offset = requestedOffset
@@ -278,7 +278,7 @@ final class DownloadItem: NSObject, ObservableObject, Identifiable, URLSessionDa
                 total = expectedBytes
             case .reject:
                 completionHandler(.cancel)
-                phase = .failed("El servidor rechazó la reanudación / server rejected resume request")
+                phase = .failed("The server rejected the resume request")
                 return
             }
             completionHandler(plan == .alreadyComplete ? .cancel : .allow)
@@ -331,7 +331,7 @@ final class DownloadItem: NSObject, ObservableObject, Identifiable, URLSessionDa
             } else {
                 try? FileManager.default.removeItem(at: staging)
                 AppLog.downloads.error("checksum mismatch for \(self.fileName)")
-                self.phase = .failed("Checksum SHA-256 no coincide: descarga corrupta, reintenta / checksum mismatch: corrupt download, retry")
+                self.phase = .failed("Checksum mismatch: corrupt download, retry")
             }
         }
     }

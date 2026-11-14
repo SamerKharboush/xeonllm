@@ -1571,7 +1571,7 @@ struct ServerSettings {
     nonisolated static let ubatchOptions = [0, 1024, 2048, 4096]
 
     nonisolated static func ubatchLabel(_ value: Int, loc: Localizer) -> String {
-        value == 0 ? loc.t("512 (por defecto)", "512 (default)") : String(value)
+        value == 0 ? AppInfo.branded("512 (default)") : String(value)
     }
 
     /// Remembers the ncmoe the user settled on for a MoE model, so selecting
@@ -2016,11 +2016,7 @@ final class ServerController: ObservableObject {
     @Published var ctxFitNote: String?
     /// Engine MCP servers the engine said it could not spawn, by engine name -> command.
     @Published private(set) var mcpSpawnFailures: [String: String] = [:]
-    private var fitNoteText: String {
-        (UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en") == "es"
-            ? "El ajuste de memoria no se aplicó"
-            : "Memory fitting did not apply"
-    }
+    private let fitNoteText = "Memory fitting did not apply"
     /// A starved host executor leaves the backend unusable; one restart per launch recovers it.
     private var recoveredFromExecutorFailure = false
 
@@ -2064,12 +2060,11 @@ final class ServerController: ObservableObject {
 
     var serverURL: URL { URL(string: "http://127.0.0.1:\(currentPort)/")! }
 
-    /// Web chat URL carrying the app's language and the real device names, so the
-    /// bundled console reports what's in use instead of guessing.
+    /// Web chat URL carrying the real device names, so the bundled console
+    /// reports what's in use instead of guessing.
     var webChatURL: URL {
-        let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
         var comps = URLComponents(string: "http://127.0.0.1:\(currentPort)/")!
-        var items = [URLQueryItem(name: "lang", value: lang)]
+        var items: [URLQueryItem] = []
         if let gpu = ServerController.availableGPUs().max(by: { $0.vramMB < $1.vramMB })?.name {
             items.append(URLQueryItem(name: "gpu", value: gpu))
         }
@@ -2136,16 +2131,13 @@ final class ServerController: ObservableObject {
     func start(_ settings: ServerSettings) {
         guard state == .stopped || isFailed else { return }
         guard FileManager.default.fileExists(atPath: settings.serverBinary) else {
-            state = .failed("No existe el binario llama-server en la ruta configurada")
+            state = .failed("No llama-server binary at the configured path")
             return
         }
         if settings.routerMode {
             let models = LocalModel.scan(in: ServerSettings.modelsDirectory)
             guard !models.isEmpty else {
-                let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-                state = .failed(lang == "es"
-                    ? "No hay modelos descargados en la carpeta de modelos"
-                    : "No models downloaded in the models folder")
+                state = .failed("No models downloaded in the models folder")
                 return
             }
             if settings.usesTurboKV,
@@ -2164,16 +2156,13 @@ final class ServerController: ObservableObject {
             }
         } else {
             guard FileManager.default.fileExists(atPath: settings.modelPath) else {
-                state = .failed("Selecciona un modelo en la pestaña Modelos")
+                state = .failed("Select a model in the Models tab")
                 return
             }
             // TurboQuant weight quants (tq3_1s/tq4_1s) decode to garbage, so refuse
             // rather than serve it.
             if ServerSettings.modelIsTurboQuantWeights(at: settings.modelPath) {
-                let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-                state = .failed(lang == "es"
-                    ? "Modelo TurboQuant no soportado: la cuantización de pesos TurboQuant (tq3_1s/tq4_1s) produce salida incorrecta en este motor, tanto en modelos densos como MoE. Usa un modelo en cuantización estándar (Q4_K, Q5_K, Q6_K, Q8_0…)."
-                    : "TurboQuant model not supported: TurboQuant weight quantization (tq3_1s/tq4_1s) produces incorrect output on this engine, for both dense and MoE models. Use a standard-quant model (Q4_K, Q5_K, Q6_K, Q8_0…).")
+                state = .failed("TurboQuant model not supported: TurboQuant weight quantization (tq3_1s/tq4_1s) produces incorrect output on this engine, for both dense and MoE models. Use a standard-quant model (Q4_K, Q5_K, Q6_K, Q8_0…).")
                 return
             }
             if settings.usesTurboKV &&
@@ -2310,10 +2299,7 @@ final class ServerController: ObservableObject {
     private func failPortInUse(port: Int, holder: PortHolder) {
         guard state == .starting else { return }
         let who = holder.pid.map { "\(holder.name) (pid \($0))" } ?? holder.name
-        let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-        state = .failed(lang == "es"
-            ? "El puerto \(port) ya lo usa \(who). El motor de XeonLLM no recibiría ninguna petición: el chat y la interfaz web hablarían con ese programa. Ciérralo o elige otro puerto en Ajustes."
-            : "Port \(port) is already in use by \(who). XeonLLM's engine would get no requests: the chat and the web UI would talk to that program instead. Stop it, or choose another port in Settings.")
+        state = .failed("Port \(port) is already in use by \(who). XeonLLM's engine would get no requests: the chat and the web UI would talk to that program instead. Stop it, or choose another port in Settings.")
     }
 
     private func restartAfterFailure(_ settings: ServerSettings) {
@@ -2335,10 +2321,8 @@ final class ServerController: ObservableObject {
     private func failAutoPlan(_ plan: AutoMemoryPlan?) {
         guard state == .starting else { return }
         autoPlan = plan
-        let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-        state = .failed(plan.map { AutoMemoryText.reason($0) } ?? (lang == "es"
-            ? "El motor no pudo planificar la memoria para este modelo; revisa el registro."
-            : "The engine could not plan memory for this model; check the log."))
+        state = .failed(plan.map { AutoMemoryText.reason($0) }
+            ?? "The engine could not plan memory for this model; check the log.")
     }
 
     /// The preview is a projection; the engine's runtime file says what really started. A planned
@@ -2371,10 +2355,7 @@ final class ServerController: ObservableObject {
     }
 
     private func failTurboKV(model: String) {
-        let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-        state = .failed(lang == "es"
-            ? "TurboQuant KV no es compatible con \(model) o con la combinación elegida: requiere Metal AMD y cabezas con padding 128, 256, 384, 512 o 640; en MLA, Turbo en valores también requiere Turbo en claves; q4_0 no se puede mezclar con Turbo."
-            : "TurboQuant KV is not compatible with \(model) or the selected combination: it requires AMD Metal and heads padded to 128, 256, 384, 512 or 640; on MLA, Turbo values also require Turbo keys; q4_0 cannot be mixed with Turbo.")
+        state = .failed("TurboQuant KV is not compatible with \(model) or the selected combination: it requires AMD Metal and heads padded to 128, 256, 384, 512 or 640; on MLA, Turbo values also require Turbo keys; q4_0 cannot be mixed with Turbo.")
     }
 
     /// Header at the top of the server log: version, engine, model, GPUs and the
@@ -2562,7 +2543,7 @@ final class ServerController: ObservableObject {
                     // layers once and say so, instead of failing the server.
                     if proc.terminationStatus == 86, !self.retryLayerSplit {
                         self.retryLayerSplit = true
-                        self.consume("\n[XeonLLM] este modelo no admite reparto por tensores — reintentando por capas / this model has no tensor split — retrying by layers\n")
+                        self.consume("this model has no tensor split — retrying by layers\n")
                         AppLog.server.error("no tensor split for this model; retrying with --split-mode layer")
                         self.state = .starting
                         self.launch(settings)
@@ -2574,9 +2555,7 @@ final class ServerController: ObservableObject {
                     // a second one within ten minutes stays failed so a repeating cause is not hidden.
                     if wasServing, self.lastCrashRelaunch.map({ Date().timeIntervalSince($0) > 600 }) ?? true {
                         self.lastCrashRelaunch = Date()
-                        // the log is the engine's, in English; the diagnosis carries both languages
-                        let reason = why.range(of: " / ").map { String(why[$0.upperBound...]) } ?? why
-                        self.consume("\n[XeonLLM] the engine stopped (\(reason)) — restarting\n")
+                        self.consume("\n[XeonLLM] the engine stopped (\(why)) — restarting\n")
                         self.state = .starting
                         self.launch(settings)
                         return
@@ -2587,9 +2566,7 @@ final class ServerController: ObservableObject {
         }
 
         ctxFitNote = settings.cardFit.map { f in
-            (UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en") == "es"
-                ? "Contexto reducido a \(f.ctx) (de \(settings.ctx)) para que la caché KV quepa en \(f.devices == 1 ? "la tarjeta" : "las tarjetas")"
-                : "Context lowered to \(f.ctx) (from \(settings.ctx)) so the KV cache fits the card\(f.devices == 1 ? "" : "s")"
+            "Context lowered to \(f.ctx) (from \(settings.ctx)) so the KV cache fits the card\(f.devices == 1 ? "" : "s")"
         }
         fileLog.startSession()   // new timestamped per-session file, prunes old ones
         consume(Self.startupBanner(settings: settings, args: args))
@@ -2609,64 +2586,64 @@ final class ServerController: ObservableObject {
         }
     }
 
-    /// Maps known engine failure patterns to actionable, bilingual messages.
+    /// Maps known engine failure patterns to actionable messages.
     static func diagnose(_ log: String, exitCode: Int32) -> String {
         let tail = log.suffix(6000).lowercased()
         if tail.contains("unknown model architecture") || tail.contains("unknown architecture") {
-            return "Arquitectura no soportada por este motor / model architecture not supported by this engine"
+            return "model architecture not supported by this engine"
         }
         if exitCode == 86 || tail.contains("has no two-way tensor split") {
-            return "Este modelo no admite el reparto por tensores: cámbialo a por capas en Ajustes / this model has no tensor split: switch to by layers in Settings"
+            return "this model has no tensor split: switch to by layers in Settings"
         }
         if tail.contains("split_mode_tensor not implemented for architecture") {
-            return "Esta arquitectura no admite el reparto por tensores: cámbialo a por capas en Ajustes / this architecture has no tensor split: switch to by layers in Settings"
+            return "this architecture has no tensor split: switch to by layers in Settings"
         }
         if tail.contains("address already in use") || tail.contains("couldn't bind") {
-            return "Puerto ocupado: cambia el puerto en Ajustes / port busy: change it in Settings"
+            return "port busy: change it in Settings"
         }
         // A refused block does not necessarily mean total memory is exhausted.
         if tail.contains("failed to allocate buffer, size =") {
             // Graph tensors cannot be split by the weight-buffer cap.
             if tail.contains("ggml_gallocr_reserve") {
-                return "La tarjeta rechazó un bloque de memoria del grafo: reduce el contexto, y si el modelo tiene visión baja el tope de tokens por imagen / the card refused a graph memory block: reduce context, and lower the image token cap if the model has vision"
+                return "the card refused a graph memory block: reduce context, and lower the image token cap if the model has vision"
             }
-            return "La tarjeta rechazó un bloque de memoria demasiado grande: reduce el contexto, o arranca con XEON_METAL_MAX_BUFFER_MB=1024 para repartirlo / the card refused a single oversized memory block: reduce context, or start with XEON_METAL_MAX_BUFFER_MB=1024 to split it"
+            return "the card refused a single oversized memory block: reduce context, or start with XEON_METAL_MAX_BUFFER_MB=1024 to split it"
         }
         if tail.contains("out of memory") || tail.contains("failed to allocate")
             || tail.contains("insufficient memory") || tail.contains("kiogpucommandbuffercallbackerroroutofmemory") {
-            return "Memoria insuficiente: sube 'Expertos MoE en CPU' o reduce el contexto / out of memory: raise 'MoE experts on CPU' or reduce context"
+            return "out of memory: raise 'MoE experts on CPU' or reduce context"
         }
         if tail.contains("quantized v cache") {
-            return "El KV cuantizado requiere Flash Attention: activa el kernel AMD o usa FA estándar / quantized KV requires Flash Attention: enable the AMD kernel or use standard FA"
+            return "quantized KV requires Flash Attention: enable the AMD kernel or use standard FA"
         }
         // The tensor named in the abort says whether it is the projector or the model itself.
         if tail.contains("pre-allocated tensor") && tail.contains("cannot run the operation") {
             return tail.contains("pre-allocated tensor (v.")
-                ? "El proyector de visión usa un formato que esta tarjeta no ejecuta (normalmente BF16): descarga el mmproj en F16 / the vision projector uses a format this card cannot run (usually BF16): download the F16 mmproj"
-                : "Un tensor del modelo usa un formato que esta tarjeta no ejecuta (normalmente BF16): usa un GGUF en F16 o cuantizado / a model tensor uses a format this card cannot run (usually BF16): use an F16 or quantized GGUF"
+                ? "the vision projector uses a format this card cannot run (usually BF16): download the F16 mmproj"
+                : "a model tensor uses a format this card cannot run (usually BF16): use an F16 or quantized GGUF"
         }
         // The engine's own wording. Matching a bare "mtp" also matched every file named -MTP-.
         if tail.contains("doesn't contain mtp layers") || tail.contains("failed to create mtp context") {
-            return "Este modelo no trae cabezal MTP: descarga la variante -MTP- / model has no MTP head: download the -MTP- variant"
+            return "model has no MTP head: download the -MTP- variant"
         }
         if tail.contains("invalid ggml type") || tail.contains("should be in [0,") {
-            return "Cuantización no soportada por el motor (formato de un fork): usa un GGUF con quant estándar (Q4_K_M, Q8_0, Q2_0_g64…) / quantization not supported by the engine (a fork's format): use a GGUF with a standard quant (Q4_K_M, Q8_0, Q2_0_g64…)"
+            return "quantization not supported by the engine (a fork's format): use a GGUF with a standard quant (Q4_K_M, Q8_0, Q2_0_g64…)"
         }
         // Prism ML models store rotated weights; a transform this engine does not know would
         // load and answer with garbage, so the engine refuses it instead
         if tail.contains("prism.hadamard") || tail.contains("Hadamard") {
-            return "El modelo pide una rotación de Hadamard que este motor no admite: usa otra versión del GGUF / the model asks for a Hadamard rotation this engine does not support: use another build of the GGUF"
+            return "the model asks for a Hadamard rotation this engine does not support: use another build of the GGUF"
         }
         if tail.contains("invalid magic") || tail.contains("failed to load model")
             || tail.contains("error loading model") {
-            return "Modelo dañado o incompleto: vuelve a descargarlo / model file damaged or incomplete: re-download it"
+            return "model file damaged or incomplete: re-download it"
         }
         if exitCode == SIGILL {
             return AppInfo.isNoAVX2
-                ? "Instrucción ilegal (SIGILL): este CPU no soporta el motor — reporta tu modelo de CPU en GitHub / illegal instruction (SIGILL): this CPU can't run the engine — report your CPU model on GitHub"
-                : "Instrucción ilegal (SIGILL): este CPU no soporta AVX2 — instala la versión no-AVX2 del release / illegal instruction (SIGILL): this CPU lacks AVX2 — install the no-AVX2 build from the release"
+                ? "illegal instruction (SIGILL): this CPU can't run the engine — report your CPU model on GitHub"
+                : "illegal instruction (SIGILL): this CPU lacks AVX2 — install the no-AVX2 build from the release"
         }
-        return "El motor terminó con código \(exitCode) — revisa el registro en Ajustes / engine exited with code \(exitCode) — see the log in Settings"
+        return "engine exited with code \(exitCode) — see the log in Settings"
     }
 
     /// `MCP '<name>': failed to spawn '<command>'` from the engine's server-mcp.cpp.
@@ -2856,10 +2833,7 @@ final class ServerController: ObservableObject {
                 try? await Task.sleep(for: .seconds(2))
             }
             await MainActor.run {
-                let lang = UserDefaults.standard.string(forKey: SettingsKeys.language) ?? "en"
-                self?.state = .failed(lang == "es"
-                    ? "El servidor no estuvo listo en 10 minutos"
-                    : "The server was not ready after 10 minutes")
+                self?.state = .failed("The server was not ready after 10 minutes")
                 self?.stopDiscovery()
                 if let p = self?.process {
                     let pid = p.processIdentifier
@@ -2995,15 +2969,12 @@ final class ServerController: ObservableObject {
             if line.contains("mixed expert execution failed"), !recoveredFromExecutorFailure,
                state == .running, let settings = launchedSettings {
                 recoveredFromExecutorFailure = true
-                autoPlanNote = Localizer().t("El sistema dejó sin CPU a Dynamic MoE; el servidor se reinició.",
-                                             "The system starved Dynamic MoE of CPU; the server was restarted.")
+                autoPlanNote = AppInfo.branded("The system starved Dynamic MoE of CPU; the server was restarted.")
                 restartAfterFailure(settings)
             }
             if GPURecovery.reports(line), state == .running, let settings = launchedSettings, let failed = process {
                 if GPURecovery.shared.admit(port: currentPort) {
-                    autoPlanNote = Localizer().t(
-                        "Un trabajo de la GPU no terminó a tiempo y el motor dejó de poder usarla; el servidor se reinició. Vuelve a enviar el último mensaje.",
-                        "A GPU job did not finish in time and the engine could no longer use the GPU; the server was restarted. Send the last message again.")
+                    autoPlanNote = AppInfo.branded("A GPU job did not finish in time and the engine could no longer use the GPU; the server was restarted. Send the last message again.")
                     // the request in flight gets its error before the process goes
                     Task { [weak self] in
                         try? await Task.sleep(for: .seconds(3))
@@ -3012,9 +2983,7 @@ final class ServerController: ObservableObject {
                         self.restartAfterFailure(settings)
                     }
                 } else {
-                    autoPlanNote = Localizer().t(
-                        "La GPU volvió a fallar menos de 10 minutos después del último reinicio automático, así que el servidor no se reinició: reinícialo a mano.",
-                        "The GPU failed again less than 10 minutes after the last automatic restart, so the server was not restarted: restart it by hand.")
+                    autoPlanNote = AppInfo.branded("The GPU failed again less than 10 minutes after the last automatic restart, so the server was not restarted: restart it by hand.")
                 }
             }
             if line.contains("draft acceptance ="),

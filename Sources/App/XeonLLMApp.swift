@@ -88,19 +88,19 @@ struct XeonLLMApp: App {
     /// undiscoverable and scene-local; they are AppStorage, so a command reaches them.
     @CommandsBuilder private var appCommands: some Commands {
         CommandGroup(after: .toolbar) {
-            Button(loc.t("Aumentar el texto del chat", "Increase chat text")) {
+            Button(AppInfo.branded("Increase chat text")) {
                 setFontScale(chatFontScale + ChatFont.step)
             }
             .keyboardShortcut("+", modifiers: .command)
-            Button(loc.t("Reducir el texto del chat", "Decrease chat text")) {
+            Button(AppInfo.branded("Decrease chat text")) {
                 setFontScale(chatFontScale - ChatFont.step)
             }
             .keyboardShortcut("-", modifiers: .command)
-            Button(loc.t("Tamaño original del texto", "Actual chat text size")) {
+            Button(AppInfo.branded("Actual chat text size")) {
                 setFontScale(1)
             }
             .keyboardShortcut("0", modifiers: .command)
-            Picker(loc.t("Ancho del chat", "Chat width"), selection: $chatWidth) {
+            Picker(AppInfo.branded("Chat width"), selection: $chatWidth) {
                 ForEach(ChatWidth.allCases, id: \.self) { width in
                     Text(width.title(loc)).tag(width.rawValue)
                 }
@@ -108,11 +108,11 @@ struct XeonLLMApp: App {
             Divider()
         }
         CommandGroup(replacing: .help) {
-            Button(loc.t("Documentación de XeonLLM", "XeonLLM documentation")) {
+            Button(AppInfo.branded("XeonLLM documentation")) {
                 obj.control.section = .docs
                 openWindow(id: "control")
             }
-            Button(loc.t("Reportar un problema", "Report an issue")) {
+            Button(AppInfo.branded("Report an issue")) {
                 NSWorkspace.shared.open(URL(string: AppInfo.issuesURL)!)
             }
         }
@@ -150,7 +150,7 @@ struct XeonLLMApp: App {
         .windowToolbarStyle(.unifiedCompact)
         .commands { appCommands }
 
-        Window(loc.t("Configuración", "Configuration"), id: "control") {
+        Window(AppInfo.branded("Configuration"), id: "control") {
             ControlPanelView()
                 .tint(AppTheme.accent(appAccentRaw))
                 .environmentObject(obj.server)
@@ -207,12 +207,12 @@ struct MenuBarView: View {
             Divider()
 
             HStack {
-                Button(loc.t("Abrir XeonLLM", "Open XeonLLM")) {
+                Button(AppInfo.branded("Open XeonLLM")) {
                     NSApp.activate(ignoringOtherApps: true)
                     NSApp.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
                 }
                 Spacer()
-                Button(loc.t("Salir", "Quit")) { NSApp.terminate(nil) }
+                Button(AppInfo.branded("Quit")) { NSApp.terminate(nil) }
             }
         }
         .padding(14)
@@ -221,7 +221,7 @@ struct MenuBarView: View {
 
     private var gpuSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(loc.t("GPUs", "GPUs")).font(.caption).foregroundStyle(.secondary)
+            Text(AppInfo.branded("GPUs")).font(.caption).foregroundStyle(.secondary)
             ForEach(vram.gpus) { g in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -263,7 +263,7 @@ struct MenuServerRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Circle().fill(dotColor).frame(width: 7, height: 7)
-                Text(isPrimary ? loc.t("Servidor", "Server") : c.name)
+                Text(isPrimary ? AppInfo.branded("Server") : c.name)
                     .font(.subheadline.weight(.medium)).lineLimit(1)
                 if c.state == .running, let tg = c.genSpeed {
                     Text(String(format: "%.1f t/s", tg))
@@ -274,9 +274,9 @@ struct MenuServerRow: View {
             }
             HStack(spacing: 6) {
                 Image(systemName: "wifi").font(.caption2).foregroundStyle(.secondary)
-                Text(loc.t("Descubrible en red", "Discoverable")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("Discoverable")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Toggle(loc.t("Descubrible en red", "Discoverable"), isOn: discoverBinding)
+                Toggle(AppInfo.branded("Discoverable"), isOn: discoverBinding)
                     .labelsHidden().toggleStyle(.switch).controlSize(.mini)
             }
         }
@@ -285,10 +285,10 @@ struct MenuServerRow: View {
     @ViewBuilder private var actions: some View {
         if running {
             ServerWebUIButton(server: c).controlSize(.small)
-            Button(loc.t("Detener", "Stop")) { c.stop() }.controlSize(.small)
+            Button(AppInfo.branded("Stop")) { c.stop() }.controlSize(.small)
         } else {
             ServerWebUIButton(server: c).controlSize(.small)
-            Button(loc.t("Iniciar", "Start")) {
+            Button(AppInfo.branded("Start")) {
                 c.start(isPrimary ? .fromDefaults() : c.effectiveSettings())
             }
             .controlSize(.small).disabled(!hasModel)

@@ -13,10 +13,10 @@ struct SystemPromptCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Label(loc.t("Sistema", "System"), systemImage: "text.bubble.fill")
+                Label(AppInfo.branded("System"), systemImage: "text.bubble.fill")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer()
-                Button(loc.t("Editar", "Edit"), systemImage: "pencil", action: edit)
+                Button(AppInfo.branded("Edit"), systemImage: "pencil", action: edit)
                     .labelStyle(.iconOnly).buttonStyle(.borderless)
             }
             Text(prompt)
@@ -24,8 +24,8 @@ struct SystemPromptCard: View {
                 .lineLimit(expanded ? nil : 4)
                 .textSelection(.enabled)
             if prompt.count > 240 {
-                Button(expanded ? loc.t("Mostrar menos", "Show less")
-                       : loc.t("Mostrar completo", "Show full")) { expanded.toggle() }
+                Button(expanded ? AppInfo.branded("Show less")
+                       : AppInfo.branded("Show full")) { expanded.toggle() }
                     .buttonStyle(.link).font(.caption)
             }
         }

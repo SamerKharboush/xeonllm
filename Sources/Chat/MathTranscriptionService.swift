@@ -109,15 +109,13 @@ enum MathTranscriptionService {
     ]
 
     static func unresolvedMessage(missing: String? = nil) -> String {
-        let loc = Localizer()
-        let base = loc.t("No pude validar cómo interpretar matemáticamente la petición. Reformúlala o escribe la expresión explícitamente.",
-                         "I couldn't validate the mathematical interpretation of that request. Please rephrase it or provide the expression explicitly.")
+        let base = AppInfo.branded("I couldn't validate the mathematical interpretation of that request. Please rephrase it or provide the expression explicitly.")
         let hint: String? = switch missing {
-        case "formula": loc.t("Escribe la fórmula o ecuación completa.", "Write out the complete formula or equation.")
-        case "data": loc.t("Indica todos los datos o muestras.", "Give every data value or sample.")
-        case "limits": loc.t("Indica los límites o el intervalo.", "Give the limits or the interval.")
-        case "conditions": loc.t("Indica las condiciones iniciales, si las hay.", "Give the initial conditions, if there are any.")
-        case "method": loc.t("Indica el método que quieres usar.", "Say which method you want.")
+        case "formula": AppInfo.branded("Write out the complete formula or equation.")
+        case "data": AppInfo.branded("Give every data value or sample.")
+        case "limits": AppInfo.branded("Give the limits or the interval.")
+        case "conditions": AppInfo.branded("Give the initial conditions, if there are any.")
+        case "method": AppInfo.branded("Say which method you want.")
         default: nil
         }
         return hint.map { base + " " + $0 } ?? base

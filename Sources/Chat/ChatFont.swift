@@ -42,9 +42,9 @@ enum ChatWidth: String, CaseIterable {
 
     func title(_ loc: Localizer) -> String {
         switch self {
-        case .standard: return loc.t("Estándar", "Standard")
-        case .wide: return loc.t("Amplio", "Wide")
-        case .full: return loc.t("Todo el ancho", "Full width")
+        case .standard: return AppInfo.branded("Standard")
+        case .wide: return AppInfo.branded("Wide")
+        case .full: return AppInfo.branded("Full width")
         }
     }
 }

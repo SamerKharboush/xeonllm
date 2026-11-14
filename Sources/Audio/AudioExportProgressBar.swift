@@ -10,18 +10,17 @@ struct AudioExportProgressBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Label(loc.t("Creando vídeo subtitulado…", "Creating captioned video…"),
+            Label(AppInfo.branded("Creating captioned video…"),
                   systemImage: "film.stack")
                 .font(.caption)
             ProgressView(value: exporter.progress)
             Text(exporter.progress, format: .percent.precision(.fractionLength(0)))
                 .font(.caption.monospacedDigit())
                 .frame(minWidth: 38, alignment: .trailing)
-            Button(loc.t("Cancelar exportación", "Cancel export"),
+            Button(AppInfo.branded("Cancel export"),
                    systemImage: "xmark", action: exporter.cancel)
                 .labelStyle(.iconOnly)
-                .help(loc.t("Cancela la creación del vídeo subtitulado.",
-                            "Cancels captioned video creation."))
+                .help(AppInfo.branded("Cancels captioned video creation."))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

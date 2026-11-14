@@ -29,7 +29,7 @@ struct VisionProjectorControl: View {
         let mismatch = resolved.map { ServerSettings.mmprojIncompatible(model: modelPath, projector: $0) } ?? false
         let candidates = ServerSettings.compatibleProjectors(forModel: modelPath)
         let current = resolved.map(Self.stem)
-            ?? (candidates.isEmpty ? loc.t("automático", "automatic") : loc.t("ninguno emparejado, elige uno", "none paired, pick one"))
+            ?? (candidates.isEmpty ? AppInfo.branded("automatic") : AppInfo.branded("none paired, pick one"))
         if layout == .settings {
             settingsRows(enabled: enabled, current: current, mismatch: mismatch, candidates: candidates)
         } else if layout == .detail {
@@ -46,19 +46,19 @@ struct VisionProjectorControl: View {
     private func detailRow(override: String?, current: String, mismatch: Bool, candidates: [String]) -> some View {
         let selected = override == "" ? "off" : (override ?? "auto")
         var options: [XeonDropdown<String>.Option] = [
-            .init(value: "auto", title: loc.t("Automático", "Automatic"), subtitle: current, systemImage: "wand.and.stars"),
-            .init(value: "off", title: loc.t("Solo texto", "Text only"), subtitle: loc.t("No cargar proyector", "Do not load a projector"), systemImage: "eye.slash")
+            .init(value: "auto", title: AppInfo.branded("Automatic"), subtitle: current, systemImage: "wand.and.stars"),
+            .init(value: "off", title: AppInfo.branded("Text only"), subtitle: AppInfo.branded("Do not load a projector"), systemImage: "eye.slash")
         ]
         for path in candidates {
             options.append(.init(value: path, title: Self.stem(path),
-                                 subtitle: loc.t("Compatible con la dimensión del modelo", "Matches the model's dimension"), systemImage: "eye"))
+                                 subtitle: AppInfo.branded("Matches the model's dimension"), systemImage: "eye"))
         }
         if let override, !override.isEmpty, !candidates.contains(override) {
-            options.append(.init(value: override, title: loc.t("Proyector personalizado", "Custom projector"),
+            options.append(.init(value: override, title: AppInfo.branded("Custom projector"),
                                  subtitle: URL(fileURLWithPath: override).lastPathComponent, systemImage: "doc"))
         }
-        options.append(.init(value: "choose", title: loc.t("Elegir archivo…", "Choose file…"),
-                             subtitle: loc.t("Selecciona un archivo mmproj GGUF", "Select an mmproj GGUF file"), systemImage: "folder"))
+        options.append(.init(value: "choose", title: AppInfo.branded("Choose file…"),
+                             subtitle: AppInfo.branded("Select an mmproj GGUF file"), systemImage: "folder"))
         return XeonDropdown(selection: Binding(get: { selected }, set: { value in
             switch value {
             case "off": set("")
@@ -67,7 +67,7 @@ struct VisionProjectorControl: View {
             default: set(value)
             }
         }), options: options,
-            placeholder: mismatch ? loc.t("Proyector incompatible", "Incompatible projector") : loc.t("Seleccionar visión", "Select vision"),
+            placeholder: mismatch ? AppInfo.branded("Incompatible projector") : AppInfo.branded("Select vision"),
             width: 220, listWidth: 320)
     }
 
@@ -79,23 +79,22 @@ struct VisionProjectorControl: View {
                     ForEach(candidates, id: \.self) { path in
                         Button(Self.stem(path)) { set(path) }
                     }
-                    Button(loc.t("Elegir archivo…", "Choose file…")) { pick() }
-                    Button(loc.t("Automático", "Automatic")) { set(nil) }
+                    Button(AppInfo.branded("Choose file…")) { pick() }
+                    Button(AppInfo.branded("Automatic")) { set(nil) }
                 } label: {
                     HStack(spacing: 4) {
                         Text("mmproj:").foregroundStyle(.secondary)
                         Text(current).lineLimit(1).truncationMode(.middle)
                         if mismatch {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                                .help(loc.t("El proyector no coincide con la dimensión del modelo; la visión podría fallar.",
-                                            "The projector doesn't match the model's dimension; vision may fail."))
+                                .help(AppInfo.branded("The projector doesn't match the model's dimension; vision may fail."))
                         }
                     }
                     .font(.caption)
                 }
                 .menuStyle(.button).glassButton().controlSize(.small).fixedSize()
             } else {
-                Text(loc.t("solo texto", "text-only")).font(.caption).foregroundStyle(.secondary)
+                Text(AppInfo.branded("text-only")).font(.caption).foregroundStyle(.secondary)
             }
             if !switchLeading { toggle(enabled) }
         }
@@ -103,24 +102,22 @@ struct VisionProjectorControl: View {
 
     private func settingsRows(enabled: Bool, current: String, mismatch: Bool, candidates: [String]) -> some View {
         Group {
-            Toggle(loc.t("Leer imágenes", "Read images"),
+            Toggle(AppInfo.branded("Read images"),
                    isOn: Binding(get: { enabled }, set: { set($0 ? nil : "") }))
-                .help(loc.t("Con la visión apagada el modelo responde solo a texto y no carga el proyector.",
-                            "With vision off the model answers text only and the projector is not loaded."))
+                .help(AppInfo.branded("With vision off the model answers text only and the projector is not loaded."))
             if enabled {
-                LabeledContent(loc.t("Proyector", "Projector")) {
+                LabeledContent(AppInfo.branded("Projector")) {
                     Menu(current) {
-                        Button(loc.t("Automático", "Automatic")) { set(nil) }
+                        Button(AppInfo.branded("Automatic")) { set(nil) }
                         ForEach(candidates, id: \.self) { path in
                             Button(Self.stem(path)) { set(path) }
                         }
-                        Button(loc.t("Elegir archivo…", "Choose file…")) { pick() }
+                        Button(AppInfo.branded("Choose file…")) { pick() }
                     }
                     .fixedSize()
                 }
                 if mismatch {
-                    Label(loc.t("El proyector no coincide con la dimensión del modelo; la visión podría fallar.",
-                                "The projector doesn't match the model's dimension; vision may fail."),
+                    Label(AppInfo.branded("The projector doesn't match the model's dimension; vision may fail."),
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
@@ -132,7 +129,7 @@ struct VisionProjectorControl: View {
     private func toggle(_ enabled: Bool) -> some View {
         Toggle("", isOn: Binding(get: { enabled }, set: { set($0 ? nil : "") }))
             .labelsHidden().toggleStyle(.switch).controlSize(.small)
-            .help(loc.t("Activar o desactivar la visión para este modelo", "Turn vision on or off for this model"))
+            .help(AppInfo.branded("Turn vision on or off for this model"))
     }
 
     private func set(_ value: String?) {

@@ -230,11 +230,11 @@ final class BenchmarkController: ObservableObject {
         let benchPath = URL(fileURLWithPath: settings.serverBinary)
             .deletingLastPathComponent().appendingPathComponent("llama-bench").path
         guard FileManager.default.fileExists(atPath: benchPath) else {
-            replaceOutput("llama-bench no encontrado / not found: \(benchPath)")
+            replaceOutput("llama-bench not found: \(benchPath)")
             return
         }
         guard FileManager.default.fileExists(atPath: settings.modelPath) else {
-            replaceOutput("Modelo no encontrado / model not found")
+            replaceOutput("model not found")
             return
         }
 
@@ -293,11 +293,11 @@ final class BenchmarkController: ObservableObject {
     func runReal(settings base: ServerSettings) {
         guard !running, !sweeping else { return }
         guard FileManager.default.fileExists(atPath: base.serverBinary) else {
-            replaceOutput("llama-server no encontrado / not found: \(base.serverBinary)")
+            replaceOutput("llama-server not found: \(base.serverBinary)")
             return
         }
         guard FileManager.default.fileExists(atPath: base.modelPath) else {
-            replaceOutput("Modelo no encontrado / model not found")
+            replaceOutput("model not found")
             return
         }
 
@@ -325,15 +325,15 @@ final class BenchmarkController: ObservableObject {
             }
             process = p
 
-            emit("… cargando modelo / loading model\n")
+            emit("… loading model\n")
             guard await waitForHealth(port: s.port, process: p) else {
-                emit("→ el servidor no arrancó / server did not start\n")
+                emit("→ server did not start\n")
                 return
             }
 
-            emit("… calentamiento (descartado) / warm-up (discarded)\n")
+            emit("… warm-up (discarded)\n")
             guard await completeOnce(port: s.port, nPredict: 64) != nil else {
-                emit("→ la generación falló / generation failed\n")
+                emit("→ generation failed\n")
                 return
             }
 
@@ -612,8 +612,8 @@ final class BenchmarkController: ObservableObject {
             guard let lowestSafe = fastSafe.min() else {
                 sweepBest = nil
                 sweepStatus = pp.isEmpty
-                    ? "Sweep sin resultados / sweep produced no results"
-                    : "Sweep sin configuración VRAM segura / no VRAM-safe result"
+                    ? "Sweep produced no results"
+                    : "no VRAM-safe result"
                 sweeping = false
                 fileLog.prune()
                 return
@@ -641,7 +641,7 @@ final class BenchmarkController: ObservableObject {
 
             guard let finalPp = pp[recommended], let finalTg = tg[recommended] else {
                 sweepBest = nil
-                sweepStatus = "Sweep sin resultados / sweep produced no results"
+                sweepStatus = "Sweep produced no results"
                 sweeping = false
                 fileLog.prune()
                 return

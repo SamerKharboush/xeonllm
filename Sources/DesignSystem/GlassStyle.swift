@@ -100,15 +100,15 @@ enum AppTheme {
 
     static func label(_ raw: String, _ loc: Localizer) -> String {
         switch raw {
-        case "pink": return loc.t("Rosa", "Pink")
-        case "blue": return loc.t("Azul", "Blue")
-        case "purple": return loc.t("Púrpura", "Purple")
-        case "indigo": return loc.t("Índigo", "Indigo")
-        case "teal": return loc.t("Turquesa", "Teal")
-        case "green": return loc.t("Verde", "Green")
-        case "orange": return loc.t("Naranja", "Orange")
-        case "red": return loc.t("Rojo", "Red")
-        case "system": return loc.t("Sistema", "System")
+        case "pink": return AppInfo.branded("Pink")
+        case "blue": return AppInfo.branded("Blue")
+        case "purple": return AppInfo.branded("Purple")
+        case "indigo": return AppInfo.branded("Indigo")
+        case "teal": return AppInfo.branded("Teal")
+        case "green": return AppInfo.branded("Green")
+        case "orange": return AppInfo.branded("Orange")
+        case "red": return AppInfo.branded("Red")
+        case "system": return AppInfo.branded("System")
         default: return raw
         }
     }
@@ -198,7 +198,7 @@ struct GlassSearchField: View {
                         .font(.system(size: 11)).foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .iconHelp(loc.t("Borrar la búsqueda", "Clear the search"))
+                .iconHelp(AppInfo.branded("Clear the search"))
             }
         }
         .padding(.horizontal, 10)

@@ -17,8 +17,8 @@ struct VideoGenSize: Identifiable, Hashable {
 
 struct VideoGenModel: Identifiable {
     let name: String
-    let detailES: String
-    let detailEN: String
+    /// One-line description shown under the model name.
+    let detail: String
     let components: [ImageGenComponent]
     let defaultSteps: Int
     let cfgScale: Double
@@ -66,7 +66,6 @@ struct VideoGenModel: Identifiable {
 
     func fitsVRAMClass(_ vramGB: Double) -> Bool { vramGB >= minVRAMGB * 0.9 }
 
-    func detail(_ spanish: Bool) -> String { spanish ? detailES : detailEN }
 }
 
 enum VideoGenCatalog {
@@ -91,8 +90,7 @@ enum VideoGenCatalog {
 
     static let wan21T2V13B = VideoGenModel(
         name: "Wan 2.1 T2V 1.3B",
-        detailES: "1.3B, texto a vídeo a 480p y 16 fps. Receta oficial: 50 pasos, CFG 5 y shift 5. El más ligero y rápido.",
-        detailEN: "1.3B text-to-video at 480p and 16 fps. Official recipe: 50 steps, CFG 5 and shift 5. The lightest and fastest.",
+        detail: "1.3B text-to-video at 480p and 16 fps. Official recipe: 50 steps, CFG 5 and shift 5. The lightest and fastest.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors",
@@ -107,8 +105,7 @@ enum VideoGenCatalog {
     /// Wan 2.2 TI2V in its supported safetensors format.
     static let wan22TI2V5B = VideoGenModel(
         name: "Wan 2.2 TI2V 5B",
-        detailES: "5B, texto o imagen a vídeo, 1280×704 a 24 fps. Alta calidad, pero lento y con VAE pesado.",
-        detailEN: "5B text- or image-to-video, 1280×704 at 24 fps. High quality, but slow with a heavy VAE.",
+        detail: "5B text- or image-to-video, 1280×704 at 24 fps. High quality, but slow with a heavy VAE.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
@@ -129,8 +126,7 @@ enum VideoGenCatalog {
 
     static let wan21I2V14B = VideoGenModel(
         name: "Wan 2.1 I2V 14B",
-        detailES: "14B, imagen a vídeo a 480p y 16 fps. Receta oficial 480p: 40 pasos, CFG 5 y shift 3. Checkpoint FP8 grande.",
-        detailEN: "14B image-to-video at 480p and 16 fps. Official 480p recipe: 40 steps, CFG 5 and shift 3. Large FP8 checkpoint.",
+        detail: "14B image-to-video at 480p and 16 fps. Official 480p recipe: 40 steps, CFG 5 and shift 3. Large FP8 checkpoint.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_i2v_480p_14B_fp8_scaled.safetensors",
@@ -146,8 +142,7 @@ enum VideoGenCatalog {
     /// LTX-2.3 distilled video model.
     static let ltx23Distilled = VideoGenModel(
         name: "LTX-2.3 distilled",
-        detailES: "22B destilado, 8 pasos. Los tamaños son menores que los del modelo porque por encima de ellos los primeros fotogramas salen corruptos. Incluye audio sincronizado; esta vista exporta solo vídeo.",
-        detailEN: "22B distilled, 8 steps. The sizes are smaller than the model allows because past them the opening frames come back corrupted. It includes synchronized audio; this view exports video only.",
+        detail: "22B distilled, 8 steps. The sizes are smaller than the model allows because past them the opening frames come back corrupted. It includes synchronized audio; this view exports video only.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/unsloth/LTX-2.3-GGUF/resolve/main/distilled/ltx-2.3-22b-distilled-Q4_K_M.gguf",
@@ -178,8 +173,7 @@ enum VideoGenCatalog {
     /// HunyuanVideo 1.5, 720p. Qwen2.5-VL 7B does the conditioning, so it is heavy.
     static let hunyuanVideo15 = VideoGenModel(
         name: "HunyuanVideo 1.5",
-        detailES: "8.3B, texto a vídeo a 720p y 24 fps. Receta oficial: 50 pasos, CFG 6 y shift 7; 24 GB de descarga.",
-        detailEN: "8.3B text-to-video at 720p and 24 fps. Official recipe: 50 steps, CFG 6 and shift 7; a 24 GB download.",
+        detail: "8.3B text-to-video at 720p and 24 fps. Official recipe: 50 steps, CFG 6 and shift 7; a 24 GB download.",
         components: [
             ImageGenComponent(kind: .diffusion,
                 urlString: "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/diffusion_models/hunyuanvideo1.5_720p_t2v_fp16.safetensors",

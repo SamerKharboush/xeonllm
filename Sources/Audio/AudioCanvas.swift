@@ -11,7 +11,7 @@ struct AudioCanvas: View {
     @AppStorage(SettingsKeys.audioExportFormat) private var exportFormatRaw = AudioExportFormat.srt.rawValue
     @AppStorage(SettingsKeys.audioExportTrack) private var exportTrackRaw = AudioExportTrack.translated.rawValue
     @AppStorage(SettingsKeys.audioTranscriptMode) private var transcriptModeRaw = AudioTranscriptMode.original.rawValue
-    @AppStorage(SettingsKeys.audioTargetLanguage) private var targetLanguage = "Español"
+    @AppStorage(SettingsKeys.audioTargetLanguage) private var targetLanguage = "Spanish"
     @AppStorage(SettingsKeys.audioGlossary) private var glossary = ""
     @AppStorage(SettingsKeys.audioTranslationModel) private var translationModel = ""
     @AppStorage(SettingsKeys.audioFollowTranscript) private var followTranscript = true
@@ -55,7 +55,7 @@ struct AudioCanvas: View {
             studio.select(url)
             return true
         } isTargeted: { dropTargeted = $0 }
-        .alert(loc.t("No se pudo exportar", "Could not export"),
+        .alert(AppInfo.branded("Could not export"),
                isPresented: $showExportError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -88,27 +88,23 @@ struct AudioCanvas: View {
 
     private var emptyDropZone: some View {
         ContentUnavailableView {
-            Label(loc.t("Audio y subtítulos", "Audio and subtitles"),
+            Label(AppInfo.branded("Audio and subtitles"),
                   systemImage: "waveform.and.mic")
         } description: {
-            Text(loc.t("Arrastra aquí una película, una grabación o una pista de audio para transcribirla localmente con la GPU.",
-                       "Drop a movie, recording, or audio track here to transcribe it locally on the GPU."))
+            Text(AppInfo.branded("Drop a movie, recording, or audio track here to transcribe it locally on the GPU."))
         } actions: {
-            Button(loc.t("Elegir archivo…", "Choose file…"),
+            Button(AppInfo.branded("Choose file…"),
                    systemImage: "folder", action: pickMedia)
                 .glassButton(prominent: true)
                 .controlSize(.large)
-                .help(loc.t("Selecciona un archivo de audio o vídeo del Mac.",
-                            "Select an audio or video file from your Mac."))
-            Button(loc.t("Abrir proyecto…", "Open project…"),
+                .help(AppInfo.branded("Select an audio or video file from your Mac."))
+            Button(AppInfo.branded("Open project…"),
                    systemImage: "folder.badge.gearshape", action: openProject)
-                .help(loc.t("Abre una transcripción guardada sin volver a procesarla.",
-                            "Opens a saved transcript without processing it again."))
+                .help(AppInfo.branded("Opens a saved transcript without processing it again."))
             if studio.hasRecoveryProject {
-                Button(loc.t("Recuperar último trabajo", "Recover last work"),
+                Button(AppInfo.branded("Recover last work"),
                        systemImage: "clock.arrow.circlepath", action: recoverProject)
-                    .help(loc.t("Restaura el último trabajo guardado automáticamente.",
-                                "Restores the last automatically saved work."))
+                    .help(AppInfo.branded("Restores the last automatically saved work."))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -141,7 +137,7 @@ struct AudioCanvas: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(loc.t("Transcripción", "Transcript"))
+                    Text(AppInfo.branded("Transcript"))
                         .font(.headline)
                     if !studio.cues.isEmpty {
                         Text(resultSummary).font(.caption).foregroundStyle(.secondary)
@@ -150,9 +146,9 @@ struct AudioCanvas: View {
                 Spacer()
                 if studio.hasTranslation {
                     GlassSegmentedControl(selection: $transcriptModeRaw, segments: [
-                        .init(value: AudioTranscriptMode.original.rawValue, title: loc.t("Original", "Original")),
-                        .init(value: AudioTranscriptMode.translated.rawValue, title: loc.t("Traducción", "Translation")),
-                        .init(value: AudioTranscriptMode.bilingual.rawValue, title: loc.t("Ambos", "Both")),
+                        .init(value: AudioTranscriptMode.original.rawValue, title: AppInfo.branded("Original")),
+                        .init(value: AudioTranscriptMode.translated.rawValue, title: AppInfo.branded("Translation")),
+                        .init(value: AudioTranscriptMode.bilingual.rawValue, title: AppInfo.branded("Both")),
                     ])
                 }
                 if showInlineTools, !studio.cues.isEmpty {
@@ -176,71 +172,70 @@ struct AudioCanvas: View {
         HStack(spacing: 8) {
             projectMenu
             Toggle(isOn: $followTranscript) {
-                Label(loc.t("Seguir reproducción", "Follow playback"), systemImage: "location.fill")
+                Label(AppInfo.branded("Follow playback"), systemImage: "location.fill")
                     .labelStyle(.iconOnly)
             }
                 .toggleStyle(.button)
-                .iconHelp(loc.t("Seguir reproducción", "Follow playback"))
+                .iconHelp(AppInfo.branded("Follow playback"))
             Toggle(isOn: $editing) {
-                Label(loc.t("Editar segmentos", "Edit segments"), systemImage: "pencil")
+                Label(AppInfo.branded("Edit segments"), systemImage: "pencil")
                     .labelStyle(.iconOnly)
             }
                 .toggleStyle(.button)
-                .iconHelp(loc.t("Editar segmentos", "Edit segments"))
-            Button(loc.t("Copiar texto", "Copy text"), systemImage: "doc.on.doc", action: copyText)
-                .help(loc.t("Copia el texto sin marcas de tiempo.", "Copies the text without timestamps."))
+                .iconHelp(AppInfo.branded("Edit segments"))
+            Button(AppInfo.branded("Copy text"), systemImage: "doc.on.doc", action: copyText)
+                .help(AppInfo.branded("Copies the text without timestamps."))
                 .labelStyle(.iconOnly)
                 .buttonStyle(GlassIconButtonStyle())
-                .iconHelp(loc.t("Copiar texto", "Copy text"))
+                .iconHelp(AppInfo.branded("Copy text"))
             exportMenu
         }
     }
 
     private var projectMenu: some View {
         Menu {
-            Button(loc.t("Abrir proyecto…", "Open project…"), systemImage: "folder", action: openProject)
-            Button(loc.t("Guardar proyecto…", "Save project…"), systemImage: "square.and.arrow.down", action: saveProject)
-                .help(loc.t("Guarda la transcripción, traducción y glosario para recuperarlos sin reprocesar.",
-                            "Saves the transcript, translation and glossary to restore them without reprocessing."))
+            Button(AppInfo.branded("Open project…"), systemImage: "folder", action: openProject)
+            Button(AppInfo.branded("Save project…"), systemImage: "square.and.arrow.down", action: saveProject)
+                .help(AppInfo.branded("Saves the transcript, translation and glossary to restore them without reprocessing."))
                 .disabled(studio.originalCues.isEmpty)
             if studio.hasRecoveryProject {
-                Button(loc.t("Recuperar último trabajo", "Recover last work"),
+                Button(AppInfo.branded("Recover last work"),
                        systemImage: "clock.arrow.circlepath", action: recoverProject)
             }
         } label: {
-            Label(loc.t("Proyecto", "Project"), systemImage: "folder.badge.gearshape")
+            Label(AppInfo.branded("Project"), systemImage: "folder.badge.gearshape")
                 .labelStyle(.iconOnly)
         }
         .menuStyle(.borderlessButton)
-        .iconHelp(loc.t("Proyecto", "Project"))
+        .iconHelp(AppInfo.branded("Project"))
     }
 
     private var exportMenu: some View {
         Menu {
             exportMenuContent
         } label: {
-            Label(loc.t("Exportar", "Export"), systemImage: "square.and.arrow.up")
+            Label(AppInfo.branded("Export"), systemImage: "square.and.arrow.up")
                 .labelStyle(.iconOnly)
         }
         .menuStyle(.borderlessButton)
-        .iconHelp(loc.t("Exportar", "Export"))
+        .iconHelp(AppInfo.branded("Export"))
     }
 
     @ViewBuilder private var exportMenuContent: some View {
-        Picker(loc.t("Formato", "Format"), selection: $exportFormatRaw) {
+        Picker(AppInfo.branded("Format"), selection: $exportFormatRaw) {
             ForEach(AudioExportFormat.allCases) { Text($0.rawValue.uppercased()).tag($0.rawValue) }
         }
-        Picker(loc.t("Contenido", "Content"), selection: $exportTrackRaw) {
-            Text(loc.t("Original", "Original")).tag(AudioExportTrack.original.rawValue)
-            Text(loc.t("Traducción", "Translation")).tag(AudioExportTrack.translated.rawValue)
-            Text(loc.t("Bilingüe", "Bilingual")).tag(AudioExportTrack.bilingual.rawValue)
+        Picker(AppInfo.branded("Content"), selection: $exportTrackRaw) {
+            Text(AppInfo.branded("Original")).tag(AudioExportTrack.original.rawValue)
+            Text(AppInfo.branded("Translation")).tag(AudioExportTrack.translated.rawValue)
+            Text(AppInfo.branded("Bilingual")).tag(AudioExportTrack.bilingual.rawValue)
         }
         Divider()
-        Button(loc.t("Guardar subtítulos…", "Save subtitles…"), systemImage: "doc.badge.arrow.up", action: exportResult)
+        Button(AppInfo.branded("Save subtitles…"), systemImage: "doc.badge.arrow.up", action: exportResult)
         if studio.isVideo {
-            Button(loc.t("Apariencia de los subtítulos…", "Subtitle appearance…"),
+            Button(AppInfo.branded("Subtitle appearance…"),
                    systemImage: "textformat") { stylingSubtitles = true }
-            Button(loc.t("Crear vídeo subtitulado…", "Create captioned video…"),
+            Button(AppInfo.branded("Create captioned video…"),
                    systemImage: "film", action: exportCaptionedVideo)
                 .disabled(videoExporter.isExporting)
         }
@@ -249,27 +244,27 @@ struct AudioCanvas: View {
     private var toolsPanel: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                toolSectionTitle(loc.t("Herramientas", "Transcript tools"), icon: "sparkles")
-                toolButton(loc.t("Seguir reproducción", "Follow playback"),
+                toolSectionTitle(AppInfo.branded("Transcript tools"), icon: "sparkles")
+                toolButton(AppInfo.branded("Follow playback"),
                            icon: "location.fill", active: followTranscript) {
                     followTranscript.toggle()
                 }
-                toolButton(loc.t("Editar segmentos", "Edit segments"),
+                toolButton(AppInfo.branded("Edit segments"),
                            icon: "pencil", active: editing) { editing.toggle() }
-                toolButton(loc.t("Copiar texto", "Copy text"), icon: "doc.on.doc") { copyText() }
+                toolButton(AppInfo.branded("Copy text"), icon: "doc.on.doc") { copyText() }
 
                 Divider()
-                toolSectionTitle(loc.t("Proyecto", "Project"), icon: "folder.badge.gearshape")
-                toolButton(loc.t("Abrir proyecto…", "Open project…"), icon: "folder") { openProject() }
-                toolButton(loc.t("Guardar proyecto…", "Save project…"), icon: "square.and.arrow.down",
+                toolSectionTitle(AppInfo.branded("Project"), icon: "folder.badge.gearshape")
+                toolButton(AppInfo.branded("Open project…"), icon: "folder") { openProject() }
+                toolButton(AppInfo.branded("Save project…"), icon: "square.and.arrow.down",
                            disabled: studio.originalCues.isEmpty) { saveProject() }
                 if studio.hasRecoveryProject {
-                    toolButton(loc.t("Recuperar último trabajo", "Recover last work"),
+                    toolButton(AppInfo.branded("Recover last work"),
                                icon: "clock.arrow.circlepath") { recoverProject() }
                 }
 
                 Divider()
-                toolSectionTitle(loc.t("Formatos de exportación", "Export formats"),
+                toolSectionTitle(AppInfo.branded("Export formats"),
                                  icon: "square.and.arrow.up")
                 VStack(spacing: 7) {
                     ForEach(AudioExportFormat.allCases) { format in
@@ -296,17 +291,17 @@ struct AudioCanvas: View {
                     }
                 }
 
-                Picker(loc.t("Contenido", "Content"), selection: $exportTrackRaw) {
-                    Text(loc.t("Original", "Original")).tag(AudioExportTrack.original.rawValue)
-                    Text(loc.t("Traducción", "Translation")).tag(AudioExportTrack.translated.rawValue)
-                    Text(loc.t("Bilingüe", "Bilingual")).tag(AudioExportTrack.bilingual.rawValue)
+                Picker(AppInfo.branded("Content"), selection: $exportTrackRaw) {
+                    Text(AppInfo.branded("Original")).tag(AudioExportTrack.original.rawValue)
+                    Text(AppInfo.branded("Translation")).tag(AudioExportTrack.translated.rawValue)
+                    Text(AppInfo.branded("Bilingual")).tag(AudioExportTrack.bilingual.rawValue)
                 }
 
                 if studio.isVideo {
                     Divider()
-                    toolSectionTitle(loc.t("Vídeo subtitulado", "Captioned video"), icon: "film")
-                    toolButton(loc.t("Apariencia", "Appearance"), icon: "textformat") { stylingSubtitles = true }
-                    toolButton(loc.t("Crear copia MOV…", "Create MOV copy…"), icon: "film.badge.plus",
+                    toolSectionTitle(AppInfo.branded("Captioned video"), icon: "film")
+                    toolButton(AppInfo.branded("Appearance"), icon: "textformat") { stylingSubtitles = true }
+                    toolButton(AppInfo.branded("Create MOV copy…"), icon: "film.badge.plus",
                                disabled: videoExporter.isExporting || studio.cues.isEmpty) {
                         exportCaptionedVideo()
                     }
@@ -342,10 +337,10 @@ struct AudioCanvas: View {
 
     private func exportDescription(_ format: AudioExportFormat) -> String {
         switch format {
-        case .srt: return loc.t("SubRip con tiempos", "SubRip subtitles")
-        case .vtt: return loc.t("WebVTT con tiempos", "WebVTT subtitles")
-        case .text: return loc.t("Texto sin tiempos", "Plain text")
-        case .json: return loc.t("Datos y marcas de tiempo", "Data with timestamps")
+        case .srt: return AppInfo.branded("SubRip subtitles")
+        case .vtt: return AppInfo.branded("WebVTT subtitles")
+        case .text: return AppInfo.branded("Plain text")
+        case .json: return AppInfo.branded("Data with timestamps")
         }
     }
 
@@ -354,11 +349,9 @@ struct AudioCanvas: View {
         let language = studio.detectedLanguage.isEmpty ? "" : " · \(studio.detectedLanguage.uppercased())"
         let translating = studio.translationBatchCount > 0 && studio.stage == .translating
         let translation = translating
-            ? " · " + loc.t("%@/%@ traducidos", "%@/%@ translated",
-                            "\(studio.translatedBatchCount)", "\(studio.translationBatchCount)")
+            ? " · " + AppInfo.branded("\(studio.translatedBatchCount)/\(studio.translationBatchCount) translated")
             : ""
-        return loc.t("%@ segmentos · %@ palabras%@%@", "%@ segments · %@ words%@%@",
-                     "\(studio.cues.count)", "\(words)", language, translation)
+        return AppInfo.branded("\(studio.cues.count) segments · \(words) words\(language)\(translation)")
     }
 
     private func pickMedia() {

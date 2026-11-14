@@ -101,7 +101,7 @@ struct MessageBubble: View, Equatable {
     private var actionsRow: some View {
         HStack(spacing: 0) {
             actionButton(copied ? "checkmark" : "doc.on.doc",
-                         help: loc.t("Copiar mensaje", "Copy message"),
+                         help: AppInfo.branded("Copy message"),
                          tint: copied ? .green : .secondary) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(
@@ -111,30 +111,30 @@ struct MessageBubble: View, Equatable {
             }
             if isLastAssistant && canRegenerate {
                 actionButton("arrow.clockwise",
-                             help: loc.t("Regenerar respuesta", "Regenerate response"),
+                             help: AppInfo.branded("Regenerate response"),
                              action: onRegenerate)
                 actionButton("arrow.right.to.line.compact",
-                             help: loc.t("Continuar respuesta", "Continue response"),
+                             help: AppInfo.branded("Continue response"),
                              action: onContinue)
             }
             if isUser && canRegenerate {
                 actionButton("pencil",
-                             help: loc.t("Editar y reenviar", "Edit and resend"),
+                             help: AppInfo.branded("Edit and resend"),
                              action: onEdit)
             }
             actionButton("arrow.triangle.branch",
-                         help: loc.t("Bifurcar conversación aquí", "Fork conversation here"),
+                         help: AppInfo.branded("Fork conversation here"),
                          action: onFork)
             actionButton("trash",
-                         help: loc.t("Eliminar desde este mensaje", "Delete from this message"),
+                         help: AppInfo.branded("Delete from this message"),
                          tint: .red) {
                 confirmingDelete = true
             }
             if !isUser && !isTool {
                 actionButton(showRawOutput ? "doc.richtext.fill" : "doc.plaintext",
                              help: showRawOutput
-                             ? loc.t("Mostrar respuesta renderizada", "Show rendered response")
-                             : loc.t("Mostrar salida sin procesar", "Show raw output")) {
+                             ? AppInfo.branded("Show rendered response")
+                             : AppInfo.branded("Show raw output")) {
                     showRawOutput.toggle()
                 }
             }
@@ -161,9 +161,9 @@ struct MessageBubble: View, Equatable {
             VStack(alignment: isUser ? .trailing : .leading, spacing: 3) {
                 // header
                 HStack(spacing: 8) {
-                    Text(isUser ? loc.t("Tú", "You")
-                         : isTool ? loc.t("Herramienta", "Tool")
-                         : loc.t("Asistente", "Assistant"))
+                    Text(isUser ? AppInfo.branded("You")
+                         : isTool ? AppInfo.branded("Tool")
+                         : AppInfo.branded("Assistant"))
                         .font(.caption.weight(.medium))
                     Text(message.date.formatted(date: .omitted, time: .shortened))
                         .font(.caption2).foregroundStyle(.tertiary)
@@ -176,19 +176,18 @@ struct MessageBubble: View, Equatable {
                         Text("MTP \(Int((accept * 100).rounded()))%")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
-                            .help(loc.t("Aceptación de la predicción multi-token: qué fracción de los tokens que el cabezal MTP adelantó resultó correcta. Más alta = más aceleración, sin cambio de calidad.",
-                                        "Multi-token prediction acceptance: the fraction of tokens the MTP head drafted that turned out right. Higher = more speedup, no quality change."))
+                            .help(AppInfo.branded("Multi-token prediction acceptance: the fraction of tokens the MTP head drafted that turned out right. Higher = more speedup, no quality change."))
                     }
                     if let timings = message.timings {
                         Button {
                             showingMetrics.toggle()
                         } label: {
-                            Label(loc.t("Métricas", "Metrics"), systemImage: "gauge.with.dots.needle.33percent")
+                            Label(AppInfo.branded("Metrics"), systemImage: "gauge.with.dots.needle.33percent")
                                 .labelStyle(.iconOnly)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
-                        .help(loc.t("Métricas de procesamiento y generación", "Prompt and generation metrics"))
+                        .help(AppInfo.branded("Prompt and generation metrics"))
                         .popover(isPresented: $showingMetrics, arrowEdge: .bottom) {
                             ChatMetricsView(timings: timings, model: message.model)
                         }
@@ -225,9 +224,7 @@ struct MessageBubble: View, Equatable {
                                     .font(.caption)
                                     .padding(.horizontal, 8).padding(.vertical, 3)
                                     .background(.quaternary.opacity(0.7), in: Capsule())
-                                    .help(loc.t("Archivo enviado al modelo en este turno (~%@ tokens).",
-                                                "File sent to the model this turn (~%@ tokens).",
-                                                String(a.estimatedTokens)))
+                                    .help(AppInfo.branded("File sent to the model this turn (~\(String(a.estimatedTokens)) tokens)."))
                             }
                         }
                     }
@@ -242,8 +239,8 @@ struct MessageBubble: View, Equatable {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) { thinkExpanded.toggle() }
                             } label: {
-                                reasoningHeader(isThinkingLive ? loc.t("Razonando…", "Thinking…")
-                                                               : loc.t("Razonamiento", "Reasoning"),
+                                reasoningHeader(isThinkingLive ? AppInfo.branded("Thinking…")
+                                                               : AppInfo.branded("Reasoning"),
                                                 expanded: thinkExpanded)
                             }
                             .buttonStyle(.plain)
@@ -296,13 +293,12 @@ struct MessageBubble: View, Equatable {
             hoverDismissTask = nil
         }
         .confirmationDialog(
-            loc.t("¿Eliminar este mensaje y todo lo que sigue?",
-                  "Delete this message and everything after it?"),
+            AppInfo.branded("Delete this message and everything after it?"),
             isPresented: $confirmingDelete,
             titleVisibility: .visible
         ) {
-            Button(loc.t("Eliminar", "Delete"), role: .destructive, action: onDelete)
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) { }
+            Button(AppInfo.branded("Delete"), role: .destructive, action: onDelete)
+            Button(AppInfo.branded("Cancel"), role: .cancel) { }
         }
         .sheet(item: $previewAttachment) { MediaAttachmentPreview(attachment: $0) }
     }
@@ -378,7 +374,7 @@ struct StreamingMessageBubble: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
-                    Text(loc.t("Asistente", "Assistant")).font(.caption.weight(.medium))
+                    Text(AppInfo.branded("Assistant")).font(.caption.weight(.medium))
                     Text(message.date.formatted(date: .omitted, time: .shortened))
                         .font(.caption2).foregroundStyle(.tertiary)
                 }
@@ -390,11 +386,11 @@ struct StreamingMessageBubble: View {
                                 toggleReasoning()
                             } label: {
                                 HStack(spacing: 6) {
-                                    reasoningHeader(visibleText.isEmpty ? loc.t("Razonando…", "Thinking…")
-                                                                        : loc.t("Razonamiento", "Reasoning"),
+                                    reasoningHeader(visibleText.isEmpty ? AppInfo.branded("Thinking…")
+                                                                        : AppInfo.branded("Reasoning"),
                                                     expanded: live.reasoningExpanded)
                                     if live.reasoningExpanded && visibleText.isEmpty {
-                                        Text(loc.t("actualización ligera", "light updates"))
+                                        Text(AppInfo.branded("light updates"))
                                             .font(.caption).foregroundStyle(.tertiary)
                                     }
                                 }
@@ -443,7 +439,7 @@ struct StreamingMessageBubble: View {
                         if let status = live.agentStatus, visibleText.isEmpty {
                             WorkStatusLabel(text: status, progress: nil, since: live.statusSince)
                         } else if !live.hasReasoning && visibleText.isEmpty {
-                            WorkStatusLabel(text: loc.t("Procesando el prompt", "Processing the prompt"),
+                            WorkStatusLabel(text: AppInfo.branded("Processing the prompt"),
                                             progress: live.prefillProgress, since: live.startedAt)
                         }
                         if let speed = live.speed {
@@ -511,8 +507,8 @@ struct WorkStatusLabel: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let seconds = String(max(0, Int(context.date.timeIntervalSince(since))))
-            Text(progress.map { loc.t("%@ · %@ % · %@ s", "%@ · %@% · %@ s", text, String(Int($0 * 100)), seconds) }
-                 ?? loc.t("%@ · %@ s", "%@ · %@ s", text, seconds))
+            Text(progress.map { AppInfo.branded("\(text) · \(String(Int($0 * 100)))% · \(seconds) s") }
+                 ?? AppInfo.branded("\(text) · \(seconds) s"))
                 .monospacedDigit()
         }
         .font(.caption)

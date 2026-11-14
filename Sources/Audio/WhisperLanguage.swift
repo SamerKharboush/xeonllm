@@ -4,20 +4,19 @@
 
 struct WhisperLanguage: Identifiable, Hashable {
     let id: String
-    let es: String
-    let en: String
+    let name: String
 
     static let common: [WhisperLanguage] = [
-        .init(id: "auto", es: "Detectar automáticamente", en: "Detect automatically"),
-        .init(id: "es", es: "Español", en: "Spanish"),
-        .init(id: "en", es: "Inglés", en: "English"),
-        .init(id: "fr", es: "Francés", en: "French"),
-        .init(id: "de", es: "Alemán", en: "German"),
-        .init(id: "it", es: "Italiano", en: "Italian"),
-        .init(id: "pt", es: "Portugués", en: "Portuguese"),
-        .init(id: "ja", es: "Japonés", en: "Japanese"),
-        .init(id: "ko", es: "Coreano", en: "Korean"),
-        .init(id: "zh", es: "Chino", en: "Chinese"),
-        .init(id: "ru", es: "Ruso", en: "Russian")
+        .init(id: "auto", name: "Detect automatically"),
+        .init(id: "es", name: "Spanish"),
+        .init(id: "en", name: "English"),
+        .init(id: "fr", name: "French"),
+        .init(id: "de", name: "German"),
+        .init(id: "it", name: "Italian"),
+        .init(id: "pt", name: "Portuguese"),
+        .init(id: "ja", name: "Japanese"),
+        .init(id: "ko", name: "Korean"),
+        .init(id: "zh", name: "Chinese"),
+        .init(id: "ru", name: "Russian")
     ]
 }

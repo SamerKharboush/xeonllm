@@ -29,31 +29,31 @@ struct DashboardMetricsView: View {
         DashboardMetric(title: "GPU", icon: "cpu",
                         value: activity.map { String(format: "%.0f%%", $0) } ?? "—",
                         detail: activity == nil
-                            ? loc.t("El controlador no reporta actividad", "Activity unavailable from driver")
+                            ? AppInfo.branded("Activity unavailable from driver")
                             : (vram.gpus.first?.name ?? "GPU"),
                         history: gpuHistory)
             .frame(minWidth: 150)
         DashboardMetric(title: "VRAM", icon: "memorychip",
                         value: vram.gpus.isEmpty ? "—" : String(format: "%.1f / %.0f GB", vram.usedMB / 1024, vram.totalMB / 1024),
-                        detail: loc.t("Uso real · capacidad de GPU", "Live usage · GPU capacity"),
+                        detail: AppInfo.branded("Live usage · GPU capacity"),
                         progress: vram.fraction)
             .frame(minWidth: 150)
-        DashboardMetric(title: loc.t("Memoria", "Memory"), icon: "internaldrive",
+        DashboardMetric(title: AppInfo.branded("Memory"), icon: "internaldrive",
                         value: String(format: "%.1f / %.0f GB", vram.memoryUsedMB / 1024,
                                       vram.memoryTotalMB / 1024),
-                        detail: loc.t("RAM activa · instalada", "Active RAM · installed"),
+                        detail: AppInfo.branded("Active RAM · installed"),
                         progress: vram.memoryFraction, tint: .chartSecondary)
             .frame(minWidth: 150)
-        DashboardMetric(title: loc.t("Rendimiento", "Throughput"), icon: "waveform.path.ecg",
+        DashboardMetric(title: AppInfo.branded("Throughput"), icon: "waveform.path.ecg",
                         value: server.genSpeed.map { String(format: "%.1f tok/s", $0) } ?? "—",
-                        detail: loc.t("Generación de la última petición", "Latest request generation speed"),
+                        detail: AppInfo.branded("Latest request generation speed"),
                         history: Array(server.genHistory.suffix(28)), tint: .chartSecondary)
             .frame(minWidth: 150)
         DashboardMetric(title: "Mac", icon: "desktopcomputer",
                         value: hardware.model.components(separatedBy: " (").first ?? hardware.model,
                         detail: "\(hardware.osVersion)\n" + (ServerSettings.isAppleSilicon
                             ? "Metal · Apple Silicon"
-                            : loc.t("Metal · build AMD parcheado", "Metal · patched AMD build")))
+                            : AppInfo.branded("Metal · patched AMD build")))
             .frame(minWidth: 150)
     }
 

@@ -40,22 +40,22 @@ struct MCPBrowserView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(loc.t("Contenido MCP", "MCP content")).font(.title2.weight(.semibold))
+                Text(AppInfo.branded("MCP content")).font(.title2.weight(.semibold))
                 Spacer()
-                Button(loc.t("Cerrar", "Close")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(AppInfo.branded("Close")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             .padding()
             Divider()
             Picker("", selection: $selectedTab) {
-                Text(loc.t("Recursos", "Resources")).tag(0)
-                Text(loc.t("Prompts", "Prompts")).tag(1)
+                Text(AppInfo.branded("Resources")).tag(0)
+                Text(AppInfo.branded("Prompts")).tag(1)
             }
             .pickerStyle(.segmented).padding()
-            TextField(loc.t("Buscar", "Search"), text: $query, prompt: Text(loc.t("Nombre o URI", "Name or URI")))
+            TextField(AppInfo.branded("Search"), text: $query, prompt: Text(AppInfo.branded("Name or URI")))
                 .workspaceTextField().padding(.horizontal)
             Group {
                 if loading {
-                    ProgressView(loc.t("Consultando servidores…", "Loading servers…"))
+                    ProgressView(AppInfo.branded("Loading servers…"))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error {
                     ContentUnavailableView(error, systemImage: "exclamationmark.triangle")
@@ -102,7 +102,7 @@ struct MCPBrowserView: View {
 
     private var resourceList: some View {
         List {
-            Section(loc.t("Recursos", "Resources")) {
+            Section(AppInfo.branded("Resources")) {
                 ForEach(resources) { resource in
                     HStack(spacing: 10) {
                 Image(systemName: attachedIDs.contains(resource.id) ? "checkmark.circle.fill" : "doc.text")
@@ -115,7 +115,7 @@ struct MCPBrowserView: View {
                 Spacer()
                 if readingID == resource.id { ProgressView().controlSize(.small) }
                 Button(attachedIDs.contains(resource.id)
-                       ? loc.t("Añadido", "Added") : loc.t("Adjuntar", "Attach")) {
+                       ? AppInfo.branded("Added") : AppInfo.branded("Attach")) {
                     attach(resource)
                 }
                 .disabled(readingID != nil || attachedIDs.contains(resource.id))
@@ -124,7 +124,7 @@ struct MCPBrowserView: View {
                 }
             }
             if !catalog.templates.isEmpty {
-                Section(loc.t("Plantillas", "Templates")) {
+                Section(AppInfo.branded("Templates")) {
                     ForEach(matchingTemplates) { template in
                         HStack(spacing: 10) {
                             Image(systemName: attachedIDs.contains(template.id)
@@ -137,7 +137,7 @@ struct MCPBrowserView: View {
                                 Text(template.serverName).font(.caption2).foregroundStyle(.tertiary)
                             }
                             Spacer()
-                            Button(loc.t("Usar", "Use")) { selectedTemplate = template }
+                            Button(AppInfo.branded("Use")) { selectedTemplate = template }
                                 .disabled(attachedIDs.contains(template.id))
                         }
                         .padding(.vertical, 3)
@@ -217,8 +217,8 @@ private struct MCPResourceTemplateForm: View {
             }
             HStack {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
-                Button(loc.t("Adjuntar", "Attach")) { submit(values); dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
+                Button(AppInfo.branded("Attach")) { submit(values); dismiss() }
                     .buttonStyle(.borderedProminent)
                     .disabled(template.variables.contains { (values[$0] ?? "").isEmpty })
             }
@@ -239,7 +239,7 @@ private struct MCPPromptForm: View {
             Text(prompt.title ?? prompt.name).font(.title3.weight(.semibold))
             if let description = prompt.description { Text(description).foregroundStyle(.secondary) }
             if prompt.arguments.isEmpty {
-                Text(loc.t("Este prompt no requiere argumentos.", "This prompt has no arguments."))
+                Text(AppInfo.branded("This prompt has no arguments."))
             } else {
                 Form {
                     ForEach(prompt.arguments) { argument in
@@ -253,8 +253,8 @@ private struct MCPPromptForm: View {
             }
             HStack {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
-                Button(loc.t("Insertar", "Insert")) { submit(values); dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
+                Button(AppInfo.branded("Insert")) { submit(values); dismiss() }
                     .buttonStyle(.borderedProminent)
                     .disabled(prompt.arguments.contains { $0.required && (values[$0.name] ?? "").isEmpty })
             }

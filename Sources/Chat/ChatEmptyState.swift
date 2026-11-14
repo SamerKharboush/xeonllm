@@ -16,26 +16,25 @@ struct ChatEmptyState: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(loc.t("¿En qué puedo ayudarte?", "What can I help with?"),
+            Label(AppInfo.branded("What can I help with?"),
                   systemImage: "bubble.left.and.text.bubble.right")
         } description: {
-            Text(loc.t("Todo se ejecuta en tu GPU, sin salir de tu equipo. Adjunta código, texto o PDF para preguntar sobre ellos.",
-                       "Everything runs on your GPU, never leaving your machine. Attach code, text or PDF files to ask about them."))
+            Text(AppInfo.branded("Everything runs on your GPU, never leaving your machine. Attach code, text or PDF files to ask about them."))
         } actions: {
             HStack {
-                Button(loc.t("Preguntar", "Ask"), systemImage: "bubble.left",
+                Button(AppInfo.branded("Ask"), systemImage: "bubble.left",
                        action: { onAction(.ask) })
                     .buttonStyle(.borderedProminent)
-                Button(loc.t("Adjuntar archivo", "Attach file"), systemImage: "paperclip",
+                Button(AppInfo.branded("Attach file"), systemImage: "paperclip",
                        action: { onAction(.files) })
-                Menu(loc.t("Sugerencias", "Suggestions"), systemImage: "sparkles") {
-                    Button(loc.t("Escribir código", "Write code"),
+                Menu(AppInfo.branded("Suggestions"), systemImage: "sparkles") {
+                    Button(AppInfo.branded("Write code"),
                            systemImage: "chevron.left.forwardslash.chevron.right",
                            action: { onAction(.code) })
-                    Button(loc.t("Resumir", "Summarize"), systemImage: "text.alignleft",
+                    Button(AppInfo.branded("Summarize"), systemImage: "text.alignleft",
                            action: { onAction(.summarize) })
                     Divider()
-                    Button(loc.t("Más opciones", "More options"), systemImage: "ellipsis.circle",
+                    Button(AppInfo.branded("More options"), systemImage: "ellipsis.circle",
                            action: { onAction(.explore) })
                 }
             }

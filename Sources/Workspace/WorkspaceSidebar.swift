@@ -22,28 +22,28 @@ struct WorkspaceSidebar: View {
                 VStack(alignment: .leading, spacing: 5) {
                     navigationRow(.dashboard)
                     Button { openWindow(id: "chat") } label: {
-                        Label(loc.t("Chat y estudio", "Chat & Studio"), systemImage: "bubble.left.and.bubble.right")
+                        Label(AppInfo.branded("Chat & Studio"), systemImage: "bubble.left.and.bubble.right")
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 14).padding(.vertical, 11)
                     }
                     .buttonStyle(.plain)
-                    heading(loc.t("Biblioteca", "Library"))
+                    heading(AppInfo.branded("Library"))
                     navigationRow(.models)
                     navigationRow(.benchmarks)
-                    heading(loc.t("Servidores", "Servers"))
+                    heading(AppInfo.branded("Servers"))
                     ForEach(manager.servers, id: \.id) { server in
                         SidebarServerRow(server: server)
                     }
                     Button {
-                        let server = manager.addServer(name: loc.t("Servidor %@", "Server %@", "\(manager.servers.count + 1)"), from: nil)
+                        let server = manager.addServer(name: AppInfo.branded("Server \(manager.servers.count + 1)"), from: nil)
                         animate { control.focusServer(server.id) }
                     } label: {
-                        Label(loc.t("Agregar servidor", "Add server"), systemImage: "plus")
+                        Label(AppInfo.branded("Add server"), systemImage: "plus")
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 14).padding(.vertical, 10)
                     }
                     .buttonStyle(.plain)
-                    heading(loc.t("Herramientas", "Tools"))
+                    heading(AppInfo.branded("Tools"))
                     navigationRow(.logs)
                     navigationRow(.docs)
                     Divider().padding(.vertical, 16).padding(.horizontal, 12)

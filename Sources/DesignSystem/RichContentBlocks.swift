@@ -26,12 +26,12 @@ struct RichContentBlock: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button(loc.t("Ampliar", "Expand"), systemImage: "arrow.up.left.and.arrow.down.right") {
+                Button(AppInfo.branded("Expand"), systemImage: "arrow.up.left.and.arrow.down.right") {
                     previewing = true
                 }
                     .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
-                .help(loc.t("Abrir vista interactiva", "Open interactive preview"))
+                .help(AppInfo.branded("Open interactive preview"))
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -50,7 +50,7 @@ struct RichContentBlock: View {
 
     private var label: String {
         switch kind {
-        case .math, .inlineMath: loc.t("Fórmula", "Formula")
+        case .math, .inlineMath: AppInfo.branded("Formula")
         case .mermaid: "Mermaid"
         case .svg: "SVG"
         }
@@ -79,7 +79,7 @@ private struct RichContentPreview: View {
             HStack {
                 Text(title).font(.headline)
                 Spacer()
-                Button(loc.t("Reducir", "Zoom out"), systemImage: "minus.magnifyingglass") {
+                Button(AppInfo.branded("Zoom out"), systemImage: "minus.magnifyingglass") {
                     zoom = max(0.5, zoom - 0.15)
                 }
                     .labelStyle(.iconOnly)
@@ -87,16 +87,16 @@ private struct RichContentPreview: View {
                 Text("\(Int((zoom * 100).rounded()))%")
                     .font(.system(.caption, design: .monospaced))
                     .frame(width: 44)
-                Button(loc.t("Tamaño real", "Actual size"), systemImage: "1.magnifyingglass") {
+                Button(AppInfo.branded("Actual size"), systemImage: "1.magnifyingglass") {
                     zoom = 1
                 }
                     .labelStyle(.iconOnly)
-                Button(loc.t("Ampliar", "Zoom in"), systemImage: "plus.magnifyingglass") {
+                Button(AppInfo.branded("Zoom in"), systemImage: "plus.magnifyingglass") {
                     zoom = min(3, zoom + 0.15)
                 }
                     .labelStyle(.iconOnly)
                 .disabled(zoom >= 3)
-                Button(loc.t("Cerrar", "Close"), systemImage: "xmark", action: dismiss.callAsFunction)
+                Button(AppInfo.branded("Close"), systemImage: "xmark", action: dismiss.callAsFunction)
                     .labelStyle(.iconOnly)
                     .keyboardShortcut(.cancelAction)
             }

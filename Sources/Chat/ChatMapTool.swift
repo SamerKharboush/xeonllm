@@ -109,11 +109,11 @@ enum ChatMapTool {
         }
         let title = (arguments["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let layer = ChatMap.Layer(
-            title: title ?? loc.t("Mapa", "Map"), geojson: geojson, linkTitle: nil, linkURL: nil,
+            title: title ?? AppInfo.branded("Map"), geojson: geojson, linkTitle: nil, linkURL: nil,
             complete: skipped.isEmpty,
-            subtitle: loc.t("Dibujado por el modelo · posiciones aproximadas", "Drawn by the model · approximate positions"),
-            fields: [ChatMap.Field(name: "name", alias: loc.t("Nombre", "Name")),
-                     ChatMap.Field(name: "note", alias: loc.t("Nota", "Note"))],
+            subtitle: AppInfo.branded("Drawn by the model · approximate positions"),
+            fields: [ChatMap.Field(name: "name", alias: AppInfo.branded("Name")),
+                     ChatMap.Field(name: "note", alias: AppInfo.branded("Note"))],
             count: features.count, drawn: true)
         var reply = "Drawn on a map under your answer: " + summary(features) + "."
         if !skipped.isEmpty { reply += " Left out: " + skipped.joined(separator: "; ") + "." }

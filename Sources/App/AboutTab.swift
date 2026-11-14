@@ -18,8 +18,6 @@ enum AppInfo {
     static let issuesURL = repositoryURL + "/issues"
     static let featureRequestURL = repositoryURL + "/issues/new?template=feature_request.yml"
     static let discussionsURL = repositoryURL + "/discussions"
-    static let donateNoteES = "XeonLLM es software libre. Puedes apoyar el proyecto con una estrella o una contribución en el repositorio."
-    static let donateNoteEN = "XeonLLM is free software. You can support the project with a star or a contribution in the repository."
 
     // A build packaged under another identity (XEON_APP_NAME in make-app.sh) carries these keys;
     // a plain build has none of them and keeps XeonLLM's.
@@ -102,12 +100,10 @@ struct AboutView: View {
                             .foregroundStyle(.secondary)
                         updateBadge
                     }
-                    Text(loc.t("Modelos de lenguaje locales con aceleración Metal en Macs Intel con GPU AMD.",
-                               "Local language models with Metal acceleration on Intel Macs with AMD GPUs."))
+                    Text(AppInfo.branded("Local language models with Metal acceleration on Intel Macs with AMD GPUs."))
                         .font(.system(size: 15, weight: .medium))
                         .lineLimit(2)
-                    Text(loc.t("Privado. Rápido. Potente. XeonLLM lleva la IA de código abierto a tu equipo con una experiencia nativa y limpia para macOS.",
-                               "Private. Fast. Powerful. XeonLLM brings open-source AI to your machine with a clean, native macOS experience."))
+                    Text(AppInfo.branded("Private. Fast. Powerful. XeonLLM brings open-source AI to your machine with a clean, native macOS experience."))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
@@ -116,7 +112,7 @@ struct AboutView: View {
                         Button {
                             showNotes = true
                         } label: {
-                            Label(loc.t("Ver notas de la versión", "View release notes"), systemImage: "doc.text")
+                            Label(AppInfo.branded("View release notes"), systemImage: "doc.text")
                         }
                         .glassButton()
                         .popover(isPresented: $showNotes, arrowEdge: .bottom) { ReleaseNotesPopover() }
@@ -136,22 +132,22 @@ struct AboutView: View {
     }
 
     private var versionLine: String {
-        let line = loc.t("Versión", "Version") + " " + AppInfo.productVersion
+        let line = AppInfo.branded("Version") + " " + AppInfo.productVersion
         guard AppInfo.isRebranded else { return line }
-        return line + " · " + loc.t("basado en %@ %@", "based on %@ %@", "XeonLLM", AppInfo.version)
+        return line + " · " + AppInfo.branded("based on \("XeonLLM") \(AppInfo.version)")
     }
 
     @ViewBuilder private var updateBadge: some View {
         if !AppInfo.updatesEnabled {
             EmptyView()
         } else if let latest = updates.latestVersion {
-            Text(loc.t("Disponible %@", "%@ available", latest))
+            Text(AppInfo.branded("\(latest) available"))
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 8).padding(.vertical, 3)
                 .foregroundStyle(.orange)
                 .background(Color.orange.opacity(0.12), in: Capsule())
         } else {
-            Text(loc.t("Más reciente", "Latest"))
+            Text(AppInfo.branded("Latest"))
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 8).padding(.vertical, 3)
                 .foregroundStyle(.green)
@@ -161,8 +157,7 @@ struct AboutView: View {
 
     @ViewBuilder private var updateButton: some View {
         if !AppInfo.updatesEnabled {
-            Label(loc.t("Las actualizaciones de esta compilación se gestionan fuera de la app",
-                        "Updates for this build are managed outside the app"),
+            Label(AppInfo.branded("Updates for this build are managed outside the app"),
                   systemImage: "building.2")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -171,8 +166,8 @@ struct AboutView: View {
                 Task { await updates.downloadAndInstall() }
             } label: {
                 Label(updates.installing
-                      ? loc.t("Actualizando…", "Updating…")
-                      : loc.t("Descargar %@", "Download %@", latest),
+                      ? AppInfo.branded("Updating…")
+                      : AppInfo.branded("Download \(latest)"),
                       systemImage: updates.installing ? "arrow.down.circle" : "arrow.down.app")
                     .spinningSymbol(updates.installing)
             }
@@ -183,8 +178,8 @@ struct AboutView: View {
                 Task { await updates.check() }
             } label: {
                 Label(updates.checking
-                      ? loc.t("Buscando…", "Checking…")
-                      : loc.t("Buscar actualizaciones", "Check for updates"),
+                      ? AppInfo.branded("Checking…")
+                      : AppInfo.branded("Check for updates"),
                       systemImage: "arrow.triangle.2.circlepath")
                     .spinningSymbol(updates.checking)
             }
@@ -197,20 +192,20 @@ struct AboutView: View {
         AdaptiveTwoUp(threshold: 860, spacing: 0) {
             HStack(spacing: 0) {
                 AboutBenefit(icon: "shield.checkered", color: .pink,
-                             title: loc.t("100% local", "100% Local"),
-                             detail: loc.t("Tus datos permanecen en tu equipo.", "Your data stays on your machine."))
+                             title: AppInfo.branded("100% Local"),
+                             detail: AppInfo.branded("Your data stays on your machine."))
                 AboutBenefit(icon: "bolt.fill", color: .pink,
-                             title: loc.t("Aceleración Metal", "Metal Acceleration"),
-                             detail: loc.t("Optimizado para Apple Silicon y GPU AMD.", "Optimized for Apple Silicon and AMD GPUs."))
+                             title: AppInfo.branded("Metal Acceleration"),
+                             detail: AppInfo.branded("Optimized for Apple Silicon and AMD GPUs."))
             }
         } second: {
             HStack(spacing: 0) {
                 AboutBenefit(icon: "shippingbox", color: .blue,
-                             title: loc.t("Código abierto", "Open Source"),
-                             detail: loc.t("Impulsado por la comunidad y modelos abiertos.", "Powered by the community and open models."))
+                             title: AppInfo.branded("Open Source"),
+                             detail: AppInfo.branded("Powered by the community and open models."))
                 AboutBenefit(icon: "lock", color: .green,
-                             title: loc.t("Privacidad primero", "Privacy First"),
-                             detail: loc.t("Sin telemetría ni seguimiento. No necesita la nube.", "No telemetry. No tracking. No cloud required."))
+                             title: AppInfo.branded("Privacy First"),
+                             detail: AppInfo.branded("No telemetry. No tracking. No cloud required."))
             }
         }
         .padding(.vertical, 8)
@@ -230,7 +225,7 @@ struct AboutView: View {
     }
 
     private var developerCard: some View {
-        AboutCard(icon: "person.2", title: loc.t("Desarrollador", "Developer")) {
+        AboutCard(icon: "person.2", title: AppInfo.branded("Developer")) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(AppInfo.developerName).font(.system(size: 14, weight: .semibold))
@@ -242,7 +237,7 @@ struct AboutView: View {
                 }
                 .glassButton().fixedSize()
                 Button { open(AppInfo.repositoryURL) } label: {
-                    Label(loc.t("Donar", "Donate"), systemImage: "heart.fill")
+                    Label(AppInfo.branded("Donate"), systemImage: "heart.fill")
                 }
                 .glassButton(prominent: true).fixedSize()
             }
@@ -250,19 +245,19 @@ struct AboutView: View {
     }
 
     private var creditsCard: some View {
-        AboutCard(icon: "hands.clap", title: loc.t("Créditos", "Credits")) {
+        AboutCard(icon: "hands.clap", title: AppInfo.branded("Credits")) {
             VStack(spacing: 0) {
                 AboutLinkRow(icon: nil, title: "ToshLLM (engeldlgado)",
-                             detail: loc.t("XeonLLM es un fork de ToshLLM", "XeonLLM is a fork of ToshLLM")) {
+                             detail: AppInfo.branded("XeonLLM is a fork of ToshLLM")) {
                     open("https://github.com/engeldlgado/toshllm")
                 }
                 Divider()
-                AboutLinkRow(icon: nil, title: "llama.cpp", detail: "ggml-org · " + loc.t("motor de inferencia", "inference engine")) {
+                AboutLinkRow(icon: nil, title: "llama.cpp", detail: "ggml-org · " + AppInfo.branded("inference engine")) {
                     open("https://github.com/ggml-org/llama.cpp")
                 }
                 Divider()
                 AboutLinkRow(icon: nil, title: "iRon-Llama (Basten7)",
-                             detail: loc.t("Parches Metal para GPU AMD en Mac Intel", "Metal patches for AMD dGPU on Intel Mac")) {
+                             detail: AppInfo.branded("Metal patches for AMD dGPU on Intel Mac")) {
                     open("https://github.com/Basten7/iRon-Llama-RC1")
                 }
             }
@@ -270,34 +265,34 @@ struct AboutView: View {
     }
 
     private var projectLinksCard: some View {
-        AboutCard(icon: "link", title: loc.t("Enlaces del proyecto", "Project links")) {
+        AboutCard(icon: "link", title: AppInfo.branded("Project links")) {
             VStack(spacing: 0) {
                 AboutLinkRow(icon: "chevron.left.forwardslash.chevron.right",
-                             title: loc.t("Repositorio de GitHub", "GitHub repository")) { open(AppInfo.repositoryURL) }
+                             title: AppInfo.branded("GitHub repository")) { open(AppInfo.repositoryURL) }
                 Divider()
                 AboutLinkRow(icon: "exclamationmark.triangle",
-                             title: loc.t("Reportar un problema", "Report an issue")) { open(AppInfo.issuesURL) }
+                             title: AppInfo.branded("Report an issue")) { open(AppInfo.issuesURL) }
                 Divider()
                 AboutLinkRow(icon: "lightbulb",
-                             title: loc.t("Solicitar una función", "Request a feature")) { open(AppInfo.featureRequestURL) }
+                             title: AppInfo.branded("Request a feature")) { open(AppInfo.featureRequestURL) }
                 Divider()
                 AboutLinkRow(icon: "bubble.left.and.bubble.right",
-                             title: loc.t("Debates", "Discussions")) { open(AppInfo.discussionsURL) }
+                             title: AppInfo.branded("Discussions")) { open(AppInfo.discussionsURL) }
             }
         }
     }
 
     private var systemInformation: some View {
         let hardware = AboutHardware.snapshot
-        return AboutCard(icon: "desktopcomputer", title: loc.t("Información del sistema", "System information"),
-                         subtitle: loc.t("Tu entorno actual.", "Your current environment.")) {
+        return AboutCard(icon: "desktopcomputer", title: AppInfo.branded("System information"),
+                         subtitle: AppInfo.branded("Your current environment.")) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Spacer()
                     Button {
                         copySystemInformation(hardware)
                     } label: {
-                        Label(copied ? loc.t("Copiado", "Copied") : loc.t("Copiar información", "Copy system info"),
+                        Label(copied ? AppInfo.branded("Copied") : AppInfo.branded("Copy system info"),
                               systemImage: copied ? "checkmark" : "doc.on.doc")
                     }
                     .glassButton()
@@ -305,10 +300,10 @@ struct AboutView: View {
                 .padding(.top, -38)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
                     AboutSystemMetric(icon: "apple.logo", title: "macOS", value: hardware.osVersion)
-                    AboutSystemMetric(icon: "cpu", title: loc.t("Chip", "Chip"),
+                    AboutSystemMetric(icon: "cpu", title: AppInfo.branded("Chip"),
                                       value: hardware.arch == "arm64" ? "Apple Silicon" : "Intel Mac")
                     AboutSystemMetric(icon: "display", title: "GPU", value: hardware.bestGPU?.name ?? "—")
-                    AboutSystemMetric(icon: "memorychip", title: loc.t("Memoria", "Memory"),
+                    AboutSystemMetric(icon: "memorychip", title: AppInfo.branded("Memory"),
                                       value: String(format: "%.0f GB", hardware.ramGB))
                 }
             }

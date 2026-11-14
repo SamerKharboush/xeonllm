@@ -82,12 +82,12 @@ final class SpeechDictationController: ObservableObject {
                     onText: @escaping (String) -> Void,
                     onFailure: @escaping () -> Void) {
         guard !isDictating, !isTranscribing else {
-            error = "Ya hay una transcripción en curso / a transcription is already running."
+            error = "A transcription is already running."
             onFailure()
             return
         }
         guard Self.engineInstalled else {
-            error = "No se encontró el motor de Whisper.cpp. Vuelve a instalar XeonLLM / the Whisper.cpp engine is missing. Reinstall XeonLLM."
+            error = "the Whisper.cpp engine is missing. Reinstall XeonLLM."
             onFailure()
             return
         }
@@ -98,7 +98,7 @@ final class SpeechDictationController: ObservableObject {
         self.onText = onText
         self.onFailure = onFailure
         error = nil
-        statusText = "Preparando audio… / Preparing audio…"
+        statusText = "Preparing audio…"
         isTranscribing = true
 
         let runID = UUID()
@@ -134,11 +134,11 @@ final class SpeechDictationController: ObservableObject {
 
     private func start(onText: @escaping (String) -> Void) async {
         guard Self.engineInstalled else {
-            error = "No se encontró el motor de Whisper.cpp. Vuelve a instalar XeonLLM / the Whisper.cpp engine is missing. Reinstall XeonLLM."
+            error = "the Whisper.cpp engine is missing. Reinstall XeonLLM."
             return
         }
         guard await AVCaptureDevice.requestAccess(for: .audio) else {
-            error = "El acceso al micrófono está denegado. Actívalo en Ajustes del Sistema → Privacidad y seguridad → Micrófono / microphone access was denied. Enable it in System Settings → Privacy & Security → Microphone."
+            error = "Microphone access was denied. Enable it in System Settings → Privacy & Security → Microphone."
             return
         }
 
@@ -216,7 +216,7 @@ final class SpeechDictationController: ObservableObject {
             }
         }
 
-        statusText = "Transcribiendo en la GPU… / Transcribing on the GPU…"
+        statusText = "Transcribing on the GPU…"
         isTranscribing = true
         do {
             try p.run()
@@ -228,12 +228,12 @@ final class SpeechDictationController: ObservableObject {
 
     func preload(modelURL: URL, gpuIndex: Int) {
         guard Self.persistentEngineInstalled else {
-            error = "No se encontró el servicio persistente de Whisper.cpp / the persistent Whisper.cpp service is missing."
+            error = "The persistent Whisper.cpp service is missing."
             return
         }
         Task {
             do {
-                statusText = "Cargando Whisper en la GPU… / Loading Whisper on the GPU…"
+                statusText = "Loading Whisper on the GPU…"
                 try await ensureServer(modelURL: modelURL, gpuIndex: gpuIndex)
                 statusText = nil
             } catch {
@@ -269,21 +269,21 @@ final class SpeechDictationController: ObservableObject {
             let runID = UUID()
             transcriptionID = runID
             fail(runID: runID,
-                 message: "No se encontró el servicio persistente de Whisper.cpp / the persistent Whisper.cpp service is missing.")
+                 message: "The persistent Whisper.cpp service is missing.")
             return
         }
         let runID = UUID()
         transcriptionID = runID
         timestampedOutput = withTimestamps
         statusText = isModelKeptLoaded
-            ? "Transcribiendo en la GPU… / Transcribing on the GPU…"
-            : "Cargando Whisper en la GPU… / Loading Whisper on the GPU…"
+            ? "Transcribing on the GPU…"
+            : "Loading Whisper on the GPU…"
         isTranscribing = true
         Task {
             do {
                 try await ensureServer(modelURL: modelURL, gpuIndex: gpuIndex)
                 guard transcriptionID == runID else { return }
-                statusText = "Transcribiendo en la GPU… / Transcribing on the GPU…"
+                statusText = "Transcribing on the GPU…"
                 try submitToServer(audioURL: audioURL, runID: runID,
                                    withTimestamps: withTimestamps)
             } catch {
@@ -340,7 +340,7 @@ final class SpeechDictationController: ObservableObject {
                 try Task.checkCancellation()
                 guard server.isRunning else {
                     throw CocoaError(.executableLoad,
-                                     userInfo: [NSLocalizedDescriptionKey: "Whisper.cpp no pudo mantener el modelo cargado / couldn't keep the Whisper.cpp model loaded."])
+                                     userInfo: [NSLocalizedDescriptionKey: "Whisper.cpp couldn't keep the model loaded."])
                 }
                 var request = URLRequest(url: readyURL)
                 request.timeoutInterval = 0.25
@@ -398,7 +398,7 @@ final class SpeechDictationController: ObservableObject {
         guard error == nil, (200..<300).contains(status), let data else {
             let message = error?.localizedDescription
                 ?? data.flatMap { String(data: $0, encoding: .utf8) }
-                ?? "Whisper.cpp no pudo transcribir con la GPU / Whisper.cpp could not transcribe with the GPU."
+                ?? "Whisper.cpp could not transcribe with the GPU."
             fail(runID: runID, message: message)
             return
         }
@@ -423,7 +423,7 @@ final class SpeechDictationController: ObservableObject {
             statusText = nil
             let lastLine = diagnostics.split(whereSeparator: \.isNewline).last.map(String.init) ?? ""
             error = lastLine.isEmpty
-                ? "Whisper.cpp no pudo transcribir con la GPU / Whisper.cpp could not transcribe with the GPU."
+                ? "Whisper.cpp could not transcribe with the GPU."
                 : lastLine
             AppLog.speech.error("Whisper failed: \(diagnostics, privacy: .public)")
             let failure = onFailure
@@ -449,7 +449,7 @@ final class SpeechDictationController: ObservableObject {
         statusText = nil
         let text = WhisperTranscript.normalized(raw)
         guard !text.isEmpty else {
-            error = "No se detectó voz / no speech was detected."
+            error = "No speech was detected."
             let failure = onFailure
             cleanupFiles()
             failure?()
@@ -467,7 +467,7 @@ final class SpeechDictationController: ObservableObject {
         isTranscribing = false
         statusText = nil
         error = message.isEmpty
-            ? "No se pudo preparar el audio / the audio could not be prepared."
+            ? "The audio could not be prepared."
             : message
         let failure = onFailure
         cleanupFiles()

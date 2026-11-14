@@ -28,9 +28,9 @@ struct LocalModelCard: View {
         HStack(spacing: 16) {
             identity(parsed: parsed, traits: traits, active: active)
                 .frame(minWidth: 270, maxWidth: .infinity, alignment: .leading)
-            metric(est.expectedSpeed, label: loc.t("Velocidad", "Speed"), icon: "bolt")
+            metric(est.expectedSpeed, label: AppInfo.branded("Speed"), icon: "bolt")
                 .frame(width: 115, alignment: .leading)
-            metric(model.sizeGB, label: loc.t("Tamaño", "Size"), icon: "internaldrive")
+            metric(model.sizeGB, label: AppInfo.branded("Size"), icon: "internaldrive")
                 .frame(width: 85, alignment: .leading)
             actions(path: path, traits: traits, active: active, updatable: updatable)
                 .frame(width: 142, alignment: .trailing)
@@ -47,7 +47,7 @@ struct LocalModelCard: View {
                 HStack(spacing: 7) {
                     Text(parsed.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                     if active {
-                        Label(loc.t("Activo", "Active"), systemImage: "checkmark.circle.fill")
+                        Label(AppInfo.branded("Active"), systemImage: "checkmark.circle.fill")
                             .font(.caption).foregroundStyle(.green)
                     }
                 }
@@ -72,17 +72,17 @@ struct LocalModelCard: View {
     private func actions(path: String, traits: ModelTraits, active: Bool, updatable: Bool) -> some View {
         HStack(spacing: 8) {
             if updatable {
-                Button(loc.t("Actualizar", "Update"), systemImage: "arrow.down.circle") {
+                Button(AppInfo.branded("Update"), systemImage: "arrow.down.circle") {
                     pendingUpdate = model
                 }
                 .glassButton().controlSize(.small)
             }
             if traits.hasDflash || ServerSettings.mightSupportVision(modelPath: path) {
                 Button { showingSettings = true } label: {
-                    Label(loc.t("Ajustes del modelo", "Model settings"), systemImage: "slider.horizontal.3")
+                    Label(AppInfo.branded("Model settings"), systemImage: "slider.horizontal.3")
                 }
                 .buttonStyle(.borderless).labelStyle(.iconOnly)
-                .iconHelp(loc.t("Ajustes del modelo", "Model settings"))
+                .iconHelp(AppInfo.branded("Model settings"))
                 .popover(isPresented: $showingSettings, arrowEdge: .bottom) {
                     LocalModelSettingsPopover(model: model, traits: traits)
                 }
@@ -108,23 +108,23 @@ private struct LocalModelMenu: View {
     @EnvironmentObject var models: ModelStore
 
     var body: some View {
-        Menu(loc.t("Más acciones", "More actions"), systemImage: "ellipsis") {
-            Button(loc.t("Mostrar en Finder", "Reveal in Finder"), systemImage: "folder") {
+        Menu(AppInfo.branded("More actions"), systemImage: "ellipsis") {
+            Button(AppInfo.branded("Reveal in Finder"), systemImage: "folder") {
                 NSWorkspace.shared.activateFileViewerSelecting([model.url])
             }
             if updatable {
-                Button(loc.t("Actualizar modelo", "Update model"), systemImage: "arrow.down.circle") {
+                Button(AppInfo.branded("Update model"), systemImage: "arrow.down.circle") {
                     pendingUpdate = model
                 }
             }
             if let visionCatalog = models.missingVisionProjector(for: model) {
-                Button(loc.t("Descargar archivo de visión", "Download vision file"),
+                Button(AppInfo.branded("Download vision file"),
                        systemImage: "photo.badge.arrow.down") {
                     models.downloadProjector(for: visionCatalog)
                 }
             }
             Divider()
-            Button(loc.t("Eliminar…", "Delete…"), systemImage: "trash", role: .destructive) {
+            Button(AppInfo.branded("Delete…"), systemImage: "trash", role: .destructive) {
                 pendingDelete = model
             }
         }
@@ -132,8 +132,7 @@ private struct LocalModelMenu: View {
         .menuIndicator(.hidden)
             .labelStyle(.iconOnly)
         .fixedSize()
-        .help(loc.t("Mostrar en Finder, actualizar o eliminar este modelo.",
-                    "Reveal in Finder, update or delete this model."))
+        .help(AppInfo.branded("Reveal in Finder, update or delete this model."))
     }
 }
 
@@ -157,10 +156,9 @@ private struct LocalModelSettingsPopover: View {
                     Section {
                         VisionProjectorControl(modelPath: model.url.path, layout: .settings)
                     } header: {
-                        Text(loc.t("Visión", "Vision"))
+                        Text(AppInfo.branded("Vision"))
                     } footer: {
-                        Text(loc.t("El proyector (mmproj) es el archivo que convierte la imagen en algo que el modelo entiende. En automático se empareja el de esta carpeta.",
-                                   "The projector (mmproj) is the file that turns an image into something the model understands. Automatic pairs the one in this folder."))
+                        Text(AppInfo.branded("The projector (mmproj) is the file that turns an image into something the model understands. Automatic pairs the one in this folder."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -170,8 +168,7 @@ private struct LocalModelSettingsPopover: View {
                     } header: {
                         Text("MTP")
                     } footer: {
-                        Text(loc.t("El modelo adelanta varios tokens por paso con su propio cabezal. Con textos que acepta poco puede ir más lento que sin él.",
-                                   "The model drafts several tokens per step with its own head. On text it accepts rarely it can run slower than without it."))
+                        Text(AppInfo.branded("The model drafts several tokens per step with its own head. On text it accepts rarely it can run slower than without it."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -181,18 +178,16 @@ private struct LocalModelSettingsPopover: View {
                     } header: {
                         Text("DFlash")
                     } footer: {
-                        Text(loc.t("Un modelo pequeño adelanta tokens que este verifica. Auto lo usa solo cuando queda memoria de sobra.",
-                                   "A small model drafts tokens this one verifies. Auto only uses it when memory allows."))
+                        Text(AppInfo.branded("A small model drafts tokens this one verifies. Auto only uses it when memory allows."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Section {
                     ModelExtraArgsControl(modelPath: model.url.path)
                 } header: {
-                    Text(loc.t("Argumentos extra", "Extra arguments"))
+                    Text(AppInfo.branded("Extra arguments"))
                 } footer: {
-                    Text(loc.t("Se añaden a los de Ajustes y solo se aplican a este modelo, por ejemplo un cabezal MTP en otro archivo.",
-                               "Added to the ones in Settings and applied to this model only, an MTP head in a separate file for instance."))
+                    Text(AppInfo.branded("Added to the ones in Settings and applied to this model only, an MTP head in a separate file for instance."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

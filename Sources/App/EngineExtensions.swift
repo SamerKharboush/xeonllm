@@ -9,10 +9,20 @@ import Foundation
 /// an agent and a settings page to the engine. They come from inside the app (XEON_APP_EXTENSIONS in
 /// make-app.sh) and from a folder the person picks; the ones from the folder stay off until approved.
 enum EngineExtensions {
+    /// A piece of extension copy. A plain string is the usual form; the older
+    /// `{"es": ..., "en": ...}` object is still accepted, with the English half used.
     struct Text: Decodable, Sendable {
-        let es: String
-        let en: String
-        func pick(spanish: Bool) -> String { spanish ? es : en }
+        let value: String
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let text = try? container.decode(String.self) {
+                value = text
+                return
+            }
+            let halves = try container.decode([String: String].self)
+            value = halves["en"] ?? halves.values.first ?? ""
+        }
     }
 
     struct Server: Decodable, Sendable {

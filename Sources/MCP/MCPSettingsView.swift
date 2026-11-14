@@ -22,15 +22,14 @@ struct MCPSettingsSection: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 32)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(loc.t("Sin servidores MCP", "No MCP servers"))
+                        Text(AppInfo.branded("No MCP servers"))
                             .font(.callout.weight(.medium))
-                        Text(loc.t("Añade un servidor para usar sus herramientas en el chat.",
-                                   "Add a server to use its tools in chat."))
+                        Text(AppInfo.branded("Add a server to use its tools in chat."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(loc.t("Añadir", "Add"), systemImage: "plus") {
+                    Button(AppInfo.branded("Add"), systemImage: "plus") {
                         editing = MCPServer(name: "MCP", url: "http://127.0.0.1:3000/mcp")
                     }
                     .glassButton()
@@ -56,23 +55,22 @@ struct MCPSettingsSection: View {
                                 Text(message).font(.caption2).foregroundStyle(.secondary)
                             }
                             if let command = controller.mcpSpawnFailures[server.engineName] {
-                                Text(loc.t("El motor no pudo iniciar «%@»: no está en su PATH.",
-                                           "The engine could not start “%@”: it is not on its PATH.", command))
+                                Text(AppInfo.branded("The engine could not start “\(command)”: it is not on its PATH."))
                                     .font(.caption2).foregroundStyle(.orange)
                             }
                         }
                         Spacer()
                         if testingID == server.id { ProgressView().controlSize(.small) }
-                        Button(loc.t("Probar", "Test"), systemImage: "stethoscope") {
+                        Button(AppInfo.branded("Test"), systemImage: "stethoscope") {
                             test(server)
                         }
                         .labelStyle(.iconOnly).buttonStyle(.borderless)
                         .foregroundStyle(.secondary)
-                        .help(loc.t("Probar conexión", "Test connection"))
-                        Button(loc.t("Editar", "Edit"), systemImage: "pencil") { editing = server }
+                        .help(AppInfo.branded("Test connection"))
+                        Button(AppInfo.branded("Edit"), systemImage: "pencil") { editing = server }
                             .labelStyle(.iconOnly).buttonStyle(.borderless)
                             .foregroundStyle(.secondary)
-                        Button(loc.t("Eliminar", "Delete"), systemImage: "trash", role: .destructive) {
+                        Button(AppInfo.branded("Delete"), systemImage: "trash", role: .destructive) {
                             delete(server)
                         }
                             .labelStyle(.iconOnly).buttonStyle(.borderless)
@@ -85,20 +83,18 @@ struct MCPSettingsSection: View {
             }
             HStack(spacing: 8) {
                 if !servers.isEmpty {
-                    Button(loc.t("Añadir servidor MCP", "Add MCP server"), systemImage: "plus") {
+                    Button(AppInfo.branded("Add MCP server"), systemImage: "plus") {
                         editing = MCPServer(name: "MCP", url: "http://127.0.0.1:3000/mcp")
                     }
                     .glassButton()
                 }
-                Button(loc.t("Importar configuración…", "Import configuration…"), systemImage: "doc.on.clipboard") {
+                Button(AppInfo.branded("Import configuration…"), systemImage: "doc.on.clipboard") {
                     importing = true
                 }
                 .glassButton()
-                .help(loc.t("Pega el bloque \"mcpServers\" que usan otros clientes MCP y se añaden todos de una vez.",
-                            "Paste the \"mcpServers\" block other MCP clients use and they are all added at once."))
+                .help(AppInfo.branded("Paste the \"mcpServers\" block other MCP clients use and they are all added at once."))
             }
-            Text(loc.t("Las cabeceras de autenticación se guardan en el Llavero de macOS. Las herramientas MCP usan la misma autorización por llamada que las herramientas locales.",
-                       "Authentication headers are stored in the macOS Keychain. MCP tools use the same per-call permission flow as local tools."))
+            Text(AppInfo.branded("Authentication headers are stored in the macOS Keychain. MCP tools use the same per-call permission flow as local tools."))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -146,7 +142,7 @@ struct MCPSettingsSection: View {
 
     private func test(_ server: MCPServer) {
         testingID = server.id
-        status[server.id] = loc.t("Conectando…", "Connecting…")
+        status[server.id] = AppInfo.branded("Connecting…")
         Task {
             await XeonMCPService.shared.disconnect(server.id)
             let tools = await XeonMCPService.shared.discoverTools()
@@ -154,9 +150,8 @@ struct MCPSettingsSection: View {
                 testingID = nil
                 let count = tools.filter { $0.mcpServerID == server.id }.count
                 status[server.id] = count > 0
-                    ? loc.t("Conectado · %@ herramientas", "Connected · %@ tools", "\(count)")
-                    : loc.t("Sin herramientas o conexión fallida; revisa el registro.",
-                            "No tools or connection failed; check the log.")
+                    ? AppInfo.branded("Connected · \(count) tools")
+                    : AppInfo.branded("No tools or connection failed; check the log.")
             }
         }
     }
@@ -184,12 +179,12 @@ private struct MCPServerEditor: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     SettingsRowGroup {
-                        SettingsRow(icon: "tag", title: loc.t("Nombre", "Name")) {
-                            TextField(loc.t("Nombre del servidor", "Server name"), text: $server.name)
+                        SettingsRow(icon: "tag", title: AppInfo.branded("Name")) {
+                            TextField(AppInfo.branded("Server name"), text: $server.name)
                                 .workspaceTextField(width: 310)
                         }
                         SettingsRow(icon: "point.3.connected.trianglepath.dotted",
-                                    title: loc.t("Transporte", "Transport"),
+                                    title: AppInfo.branded("Transport"),
                                     help: transportHelp) {
                             XeonDropdown(selection: $server.transport,
                                          options: transportOptions,
@@ -197,15 +192,14 @@ private struct MCPServerEditor: View {
                                          maximumListHeight: 250)
                         }
                         if server.transport.isLocal {
-                            SettingsRow(icon: "terminal", title: loc.t("Comando", "Command"),
-                                        help: loc.t("Ruta del ejecutable, o su nombre si está en el PATH.",
-                                                    "Path to the executable, or its name when it is on the PATH.")) {
+                            SettingsRow(icon: "terminal", title: AppInfo.branded("Command"),
+                                        help: AppInfo.branded("Path to the executable, or its name when it is on the PATH.")) {
                                 TextField("/usr/local/bin/server", text: $server.command)
                                     .font(.system(.caption, design: .monospaced))
                                     .workspaceTextField(width: 310)
                             }
-                            SettingsRow(icon: "folder", title: loc.t("Carpeta de trabajo", "Working directory"),
-                                        subtitle: loc.t("Opcional", "Optional")) {
+                            SettingsRow(icon: "folder", title: AppInfo.branded("Working directory"),
+                                        subtitle: AppInfo.branded("Optional")) {
                                 TextField("/path/to/project", text: $server.workingDirectory)
                                     .font(.system(.caption, design: .monospaced))
                                     .workspaceTextField(width: 310)
@@ -217,8 +211,8 @@ private struct MCPServerEditor: View {
                                     .workspaceTextField(width: 310)
                             }
                         }
-                        SettingsRow(icon: "clock", title: loc.t("Tiempo de espera", "Timeout"),
-                                    subtitle: loc.t("Entre 5 y 600 segundos", "Between 5 and 600 seconds")) {
+                        SettingsRow(icon: "clock", title: AppInfo.branded("Timeout"),
+                                    subtitle: AppInfo.branded("Between 5 and 600 seconds")) {
                             timeoutControl
                         }
                     }
@@ -228,24 +222,20 @@ private struct MCPServerEditor: View {
                     if server.engineReachable {
                         SettingsRowGroup {
                             SettingsRow(icon: "checkmark.shield",
-                                        title: loc.t("Disponible para el agente del servidor", "Available to the server agent"),
-                                        subtitle: loc.t("Se aplica al reiniciar el servidor", "Applies when the server restarts"),
+                                        title: AppInfo.branded("Available to the server agent"),
+                                        subtitle: AppInfo.branded("Applies when the server restarts"),
                                         help: server.transport.isLocal
-                                            ? loc.t("Vale para todo el servidor, no para un chat ni un cliente: el motor arranca este programa con los permisos de tu usuario, sin aislamiento, y su agente llama a sus herramientas cuando una petición lo necesita, venga de esta app, del chat web o de cualquier cliente de la API que llegue al agente. Ningún otro camino lo ve. Apruébalo solo si confías en el programa.",
-                                                    "It applies to the whole server, not to one chat or client: the engine starts this program with your user's permissions, without isolation, and its agent calls the tools whenever a request needs them, whether it comes from this app, the web chat or any API client that reaches the agent. No other path sees it. Only approve programs you trust.")
-                                            : loc.t("Vale para todo el servidor, no para un chat ni un cliente: el motor llega a este servidor remoto por un puente local y su agente llama a sus herramientas cuando una petición lo necesita, venga de esta app, del chat web o de cualquier cliente de la API que llegue al agente. Las cabeceras siguen en el Llavero y llegan al puente por el entorno del motor. Apruébalo solo si confías en el servidor.",
-                                                    "It applies to the whole server, not to one chat or client: the engine reaches this remote server through a local relay and its agent calls the tools whenever a request needs them, whether it comes from this app, the web chat or any API client that reaches the agent. The headers stay in the Keychain and reach the relay through the engine's environment. Only approve servers you trust.")) {
+                                            ? AppInfo.branded("It applies to the whole server, not to one chat or client: the engine starts this program with your user's permissions, without isolation, and its agent calls the tools whenever a request needs them, whether it comes from this app, the web chat or any API client that reaches the agent. No other path sees it. Only approve programs you trust.")
+                                            : AppInfo.branded("It applies to the whole server, not to one chat or client: the engine reaches this remote server through a local relay and its agent calls the tools whenever a request needs them, whether it comes from this app, the web chat or any API client that reaches the agent. The headers stay in the Keychain and reach the relay through the engine's environment. Only approve servers you trust.")) {
                                 SettingsToggle(isOn: Binding(get: { server.engineAccess == true },
                                                              set: { server.engineAccess = $0 }))
-                                    .help(loc.t("Aprobar este servidor para el agente del motor",
-                                                "Approve this server for the engine's agent"))
+                                    .help(AppInfo.branded("Approve this server for the engine's agent"))
                             }
                         }
                     }
 
                     if server.transport.isLocal {
-                        notice(loc.t("Este servidor se ejecuta en tu equipo con tus permisos. Añade solo programas en los que confíes.",
-                                     "This server runs on your machine with your permissions. Only add programs you trust."),
+                        notice(AppInfo.branded("This server runs on your machine with your permissions. Only add programs you trust."),
                                icon: "exclamationmark.triangle", color: .orange)
                     }
                     if let validationError {
@@ -267,10 +257,9 @@ private struct MCPServerEditor: View {
         HStack(spacing: 13) {
             SectionGlyph(systemName: "point.3.connected.trianglepath.dotted")
             VStack(alignment: .leading, spacing: 3) {
-                Text(loc.t("Servidor MCP", "MCP server"))
+                Text(AppInfo.branded("MCP server"))
                     .font(.title3.weight(.semibold))
-                Text(loc.t("Conecta herramientas locales o remotas con el chat.",
-                           "Connect local or remote tools to Chat."))
+                Text(AppInfo.branded("Connect local or remote tools to Chat."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -282,10 +271,10 @@ private struct MCPServerEditor: View {
     private var footer: some View {
         HStack(spacing: 10) {
             Spacer()
-            Button(loc.t("Cancelar", "Cancel")) { dismiss() }
+            Button(AppInfo.branded("Cancel")) { dismiss() }
                 .glassButton()
                 .keyboardShortcut(.cancelAction)
-            Button(loc.t("Guardar", "Save"), systemImage: "checkmark") { validateAndSave() }
+            Button(AppInfo.branded("Save"), systemImage: "checkmark") { validateAndSave() }
                 .glassButton(prominent: true)
                 .keyboardShortcut(.defaultAction)
         }
@@ -295,10 +284,10 @@ private struct MCPServerEditor: View {
 
     private var transportOptions: [XeonDropdown<MCPTransport>.Option] {
         [
-            .init(value: .automatic, title: loc.t("Automático", "Automatic"),
-                  subtitle: loc.t("Detecta el protocolo", "Detects the protocol"), systemImage: "wand.and.stars"),
-            .init(value: .stdio, title: loc.t("Local (stdio)", "Local (stdio)"),
-                  subtitle: loc.t("Ejecuta un programa local", "Runs a local program"), systemImage: "terminal"),
+            .init(value: .automatic, title: AppInfo.branded("Automatic"),
+                  subtitle: AppInfo.branded("Detects the protocol"), systemImage: "wand.and.stars"),
+            .init(value: .stdio, title: AppInfo.branded("Local (stdio)"),
+                  subtitle: AppInfo.branded("Runs a local program"), systemImage: "terminal"),
             .init(value: .streamableHTTP, title: "Streamable HTTP", systemImage: "network"),
             .init(value: .serverSentEvents, title: "SSE", systemImage: "dot.radiowaves.left.and.right"),
             .init(value: .webSocket, title: "WebSocket", systemImage: "arrow.left.arrow.right"),
@@ -306,8 +295,7 @@ private struct MCPServerEditor: View {
     }
 
     private var transportHelp: String {
-        loc.t("«Local (stdio)» ejecuta un programa del equipo y se comunica por sus tuberías. Los demás transportes se conectan a una URL.",
-              "“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.")
+        AppInfo.branded("“Local (stdio)” runs a program on this Mac and communicates over its pipes. The other transports connect to a URL.")
     }
 
     private var timeoutControl: some View {
@@ -317,7 +305,7 @@ private struct MCPServerEditor: View {
             }
             .buttonStyle(GlassIconButtonStyle())
             .disabled(server.timeoutSeconds <= 5)
-            .iconHelp(loc.t("Reducir tiempo de espera", "Decrease timeout"))
+            .iconHelp(AppInfo.branded("Decrease timeout"))
             Text("\(server.timeoutSeconds) s")
                 .font(.system(.caption, design: .monospaced).weight(.semibold))
                 .frame(width: 58)
@@ -326,16 +314,15 @@ private struct MCPServerEditor: View {
             }
             .buttonStyle(GlassIconButtonStyle())
             .disabled(server.timeoutSeconds >= 600)
-            .iconHelp(loc.t("Aumentar tiempo de espera", "Increase timeout"))
+            .iconHelp(AppInfo.branded("Increase timeout"))
         }
     }
 
     private var localArgumentsCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(loc.t("Argumentos", "Arguments"), systemImage: "list.bullet.rectangle")
+            Label(AppInfo.branded("Arguments"), systemImage: "list.bullet.rectangle")
                 .font(.callout.weight(.semibold))
-            Text(loc.t("Uno por línea; los argumentos con espacios permanecen completos.",
-                       "One per line; arguments containing spaces stay intact."))
+            Text(AppInfo.branded("One per line; arguments containing spaces stay intact."))
                 .font(.caption).foregroundStyle(.secondary)
             TextEditor(text: argumentsText)
                 .font(.system(.caption, design: .monospaced))
@@ -348,10 +335,9 @@ private struct MCPServerEditor: View {
 
     private var headersCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(loc.t("Cabeceras HTTP", "HTTP headers"), systemImage: "lock.shield")
+            Label(AppInfo.branded("HTTP headers"), systemImage: "lock.shield")
                 .font(.callout.weight(.semibold))
-            Text(loc.t("Objeto JSON opcional. Las credenciales se guardan en el Llavero de macOS.",
-                       "Optional JSON object. Credentials are stored in the macOS Keychain."))
+            Text(AppInfo.branded("Optional JSON object. Credentials are stored in the macOS Keychain."))
                 .font(.caption).foregroundStyle(.secondary)
             TextEditor(text: $headers)
                 .font(.system(.caption, design: .monospaced))
@@ -384,7 +370,7 @@ private struct MCPServerEditor: View {
         if server.transport.isLocal {
             server.command = server.command.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !server.command.isEmpty else {
-                validationError = loc.t("Indica el programa que hay que lanzar.", "Name the program to launch.")
+                validationError = AppInfo.branded("Name the program to launch.")
                 return
             }
             server.name = server.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -394,15 +380,14 @@ private struct MCPServerEditor: View {
         }
         guard let url = URL(string: server.url), let scheme = url.scheme?.lowercased(),
               ["http", "https", "ws", "wss"].contains(scheme) else {
-            validationError = loc.t("Introduce una URL MCP válida.", "Enter a valid MCP URL.")
+            validationError = AppInfo.branded("Enter a valid MCP URL.")
             return
         }
         let trimmed = headers.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             guard let data = trimmed.data(using: .utf8),
                   (try? JSONSerialization.jsonObject(with: data)) is [String: Any] else {
-                validationError = loc.t("Las cabeceras deben ser un objeto JSON.",
-                                        "Headers must be a JSON object.")
+                validationError = AppInfo.branded("Headers must be a JSON object.")
                 return
             }
         }
@@ -425,9 +410,9 @@ private struct MCPConfigImportSheet: View {
             HStack(spacing: 13) {
                 SectionGlyph(systemName: "doc.on.clipboard")
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(loc.t("Importar servidores MCP", "Import MCP servers"))
+                    Text(AppInfo.branded("Import MCP servers"))
                         .font(.title3.weight(.semibold))
-                    Text(loc.t("Admite servidores locales y remotos.", "Supports local and remote servers."))
+                    Text(AppInfo.branded("Supports local and remote servers."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -438,8 +423,7 @@ private struct MCPConfigImportSheet: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                Text(loc.t("Pega el bloque de configuración «mcpServers» de otro cliente MCP.",
-                           "Paste the “mcpServers” configuration block from another MCP client."))
+                Text(AppInfo.branded("Paste the “mcpServers” configuration block from another MCP client."))
                     .font(.callout).foregroundStyle(.secondary)
                 TextEditor(text: $text)
                     .font(.system(.caption, design: .monospaced))
@@ -457,9 +441,9 @@ private struct MCPConfigImportSheet: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button(loc.t("Cancelar", "Cancel")) { dismiss() }
+                Button(AppInfo.branded("Cancel")) { dismiss() }
                     .glassButton().keyboardShortcut(.cancelAction)
-                Button(loc.t("Importar", "Import"), systemImage: "square.and.arrow.down") { load() }
+                Button(AppInfo.branded("Import"), systemImage: "square.and.arrow.down") { load() }
                     .glassButton(prominent: true).keyboardShortcut(.defaultAction)
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }

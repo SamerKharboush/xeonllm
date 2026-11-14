@@ -12,15 +12,14 @@ struct ServerTelemetryView: View {
         VStack(alignment: .leading, spacing: 9) {
             if let activity = vram.activityPercent {
                 HStack {
-                    Text(loc.t("Actividad GPU", "GPU activity"))
+                    Text(AppInfo.branded("GPU activity"))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                     Spacer()
                     Text(String(format: "%.0f%%", activity))
                         .font(.system(size: 12)).monospacedDigit().foregroundStyle(.secondary)
                 }
                 ProgressView(value: min(max(activity / 100, 0), 1)).tint(.green)
-                    .help(loc.t("Actividad total de la GPU seleccionada; incluye otras aplicaciones.",
-                                "Total activity on the selected GPU, including other apps."))
+                    .help(AppInfo.branded("Total activity on the selected GPU, including other apps."))
             }
             HStack {
                 Text("VRAM").font(.system(size: 12)).foregroundStyle(.secondary)

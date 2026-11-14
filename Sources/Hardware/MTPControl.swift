@@ -17,13 +17,12 @@ struct MTPControl: View {
 
     private var sourceText: String {
         ServerSettings.modelHasMTP(at: modelPath)
-            ? loc.t("Cabezal MTP integrado", "Embedded MTP head")
-            : loc.t("Borrador MTP externo", "External MTP draft")
+            ? AppInfo.branded("Embedded MTP head")
+            : AppInfo.branded("External MTP draft")
     }
 
     private var helpText: String {
-        loc.t("Automático predice varios tokens por paso con el cabezal del modelo. Con textos que acepta poco puede generar más lento que sin él; Desactivado genera un token por paso. Se aplica al reiniciar el servidor.",
-              "Automatic predicts several tokens per step with the model's head. On text it accepts rarely it can generate slower than without it; Disabled generates one token per step. Applies when the server restarts.")
+        AppInfo.branded("Automatic predicts several tokens per step with the model's head. On text it accepts rarely it can generate slower than without it; Disabled generates one token per step. Applies when the server restarts.")
     }
 
     @ViewBuilder
@@ -41,19 +40,19 @@ struct MTPControl: View {
 
     private var detailRow: some View {
         XeonDropdown(selection: $enabled, options: [
-            .init(value: true, title: loc.t("Automático", "Automatic"),
+            .init(value: true, title: AppInfo.branded("Automatic"),
                   subtitle: sourceText, systemImage: "hare.fill"),
-            .init(value: false, title: loc.t("Desactivado", "Disabled"),
-                  subtitle: loc.t("Generación de un token por paso", "One-token decoding"), systemImage: "hare")
+            .init(value: false, title: AppInfo.branded("Disabled"),
+                  subtitle: AppInfo.branded("One-token decoding"), systemImage: "hare")
         ], width: 220, listWidth: 300)
         .help(helpText)
     }
 
     private var settingsRow: some View {
-        LabeledContent(loc.t("Predicción", "Prediction")) {
-            Picker(loc.t("Predicción", "Prediction"), selection: $enabled) {
-                Text(loc.t("Desactivado", "Disabled")).tag(false)
-                Text(loc.t("Automático", "Automatic")).tag(true)
+        LabeledContent(AppInfo.branded("Prediction")) {
+            Picker(AppInfo.branded("Prediction"), selection: $enabled) {
+                Text(AppInfo.branded("Disabled")).tag(false)
+                Text(AppInfo.branded("Automatic")).tag(true)
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
         }
@@ -62,8 +61,8 @@ struct MTPControl: View {
 
     private var inlineRow: some View {
         Picker("MTP", selection: $enabled) {
-            Text(loc.t("Off", "Off")).tag(false)
-            Text(loc.t("Auto", "Auto")).tag(true)
+            Text(AppInfo.branded("Off")).tag(false)
+            Text(AppInfo.branded("Auto")).tag(true)
         }
         .labelsHidden()
         .fixedSize()

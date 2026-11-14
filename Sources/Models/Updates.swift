@@ -111,7 +111,7 @@ final class UpdateChecker: ObservableObject {
                 let actual = await Task.detached { FileHash.sha256(of: dest) }.value
                 if let expected, let actual, expected.lowercased() != actual.lowercased() {
                     try? FileManager.default.removeItem(at: dest)
-                    installError = "Checksum no coincide: descarga descartada / checksum mismatch: download discarded"
+                    installError = "Checksum mismatch: download discarded"
                     return
                 }
             }
@@ -136,13 +136,13 @@ final class UpdateChecker: ObservableObject {
               let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let entities = obj["system-entities"] as? [[String: Any]],
               let mount = entities.compactMap({ $0["mount-point"] as? String }).first else {
-            throw UpdateError(message: "No se pudo montar el DMG / could not mount the DMG")
+            throw UpdateError(message: "Could not mount the DMG")
         }
         defer { _ = try? run("/usr/bin/hdiutil", ["detach", mount, "-force"]) }
 
         let fm = FileManager.default
         guard let appName = try fm.contentsOfDirectory(atPath: mount).first(where: { $0.hasSuffix(".app") }) else {
-            throw UpdateError(message: "El DMG no contiene una app / the DMG contains no app")
+            throw UpdateError(message: "The DMG contains no app")
         }
         let source = mount + "/" + appName
 
@@ -255,7 +255,7 @@ struct ReleaseNotesPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(loc.t("Notas de la versión", "Release notes"), systemImage: "doc.text")
+            Label(AppInfo.branded("Release notes"), systemImage: "doc.text")
                 .font(.headline)
             if updates.loadingNotes {
                 HStack {
@@ -272,7 +272,7 @@ struct ReleaseNotesPopover: View {
                                 HStack(spacing: 6) {
                                     Text("v\(note.version)").font(.subheadline.weight(.semibold))
                                     if note.version == AppInfo.version {
-                                        Text(loc.t("actual", "current"))
+                                        Text(AppInfo.branded("current"))
                                             .font(.caption2)
                                             .padding(.horizontal, 6).padding(.vertical, 1)
                                             .background(.quaternary, in: Capsule())
@@ -288,12 +288,12 @@ struct ReleaseNotesPopover: View {
                 }
                 .frame(maxHeight: 420)
             } else {
-                Text(loc.t("No se pudieron cargar las notas.", "Could not load the notes."))
+                Text(AppInfo.branded("Could not load the notes."))
                     .font(.callout).foregroundStyle(.secondary)
                     .frame(minHeight: 60)
             }
             Divider()
-            Button(loc.t("Ver en GitHub", "View on GitHub")) {
+            Button(AppInfo.branded("View on GitHub")) {
                 let tag = updates.releaseNotes?.first.map { "v\($0.version)" } ?? "v\(AppInfo.version)"
                 NSWorkspace.shared.open(URL(string: "https://github.com/SamerKharboush/xeonllm/releases/tag/\(tag)")!)
             }

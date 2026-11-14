@@ -158,18 +158,16 @@ enum MathGrounding {
     /// what is left open, nothing else.
     static func safeAnswer(results: [ValidatedMathResult], calls: [ChatToolCall]) -> String {
         guard !results.isEmpty else { return MathTranscriptionService.unresolvedMessage() }
-        let loc = Localizer()
-        var lines = [loc.t("Esto es lo que se pudo validar con las herramientas:", "This is what the tools validated:"), ""]
+        var lines = [AppInfo.branded("This is what the tools validated:"), ""]
         for result in distinct(results) {
-            let kind = result.exact ? loc.t("exacto", "exact") : loc.t("aproximado", "approximate")
+            let kind = result.exact ? AppInfo.branded("exact") : AppInfo.branded("approximate")
             let title = result.operation.prefix(1).uppercased() + result.operation.dropFirst()
             lines.append("- **\(title)** (\(kind)): " + result.result.joined(separator: " · "))
             if !result.input.isEmpty { lines.append("  ▸ " + result.input.joined(separator: " · ")) }
         }
         lines.append("")
         if !results.contains(where: \.exact) {
-            lines.append(loc.t("Ningún resultado exacto se pudo validar: los valores de arriba son aproximaciones numéricas.",
-                               "No exact result could be validated: the values above are numerical approximations."))
+            lines.append(AppInfo.branded("No exact result could be validated: the values above are numerical approximations."))
         }
         let replies = calls.compactMap { $0.result.flatMap(MathTranscriptionService.reply) }
         var open: [String] = []
@@ -177,15 +175,12 @@ enum MathGrounding {
             if let text = reply["unevaluated"] as? String, !open.contains(text) { open.append(text) }
         }
         for text in open {
-            lines.append(loc.t("No se obtuvo una forma exacta: SymPy no encontró forma cerrada para `%@`.",
-                               "No exact form was obtained: SymPy found no closed form for `%@`.", text))
+            lines.append(AppInfo.branded("No exact form was obtained: SymPy found no closed form for `\(text)`."))
         }
         if replies.contains(where: { MathTranscriptionService.errorCode($0).map(MathTranscriptionService.rejectionCodes.contains) == true }) {
-            lines.append(loc.t("Algunos cálculos no se hicieron porque no correspondían a la petición.",
-                               "Some calculations were not run because they did not match the request."))
+            lines.append(AppInfo.branded("Some calculations were not run because they did not match the request."))
         }
-        lines.append(loc.t("El resto de lo pedido no se pudo validar con las herramientas disponibles, y no se completa de memoria.",
-                           "The rest of the request could not be validated with the available tools, and is not filled in from memory."))
+        lines.append(AppInfo.branded("The rest of the request could not be validated with the available tools, and is not filled in from memory."))
         return lines.joined(separator: "\n")
     }
 

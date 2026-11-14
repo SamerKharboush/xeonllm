@@ -28,8 +28,8 @@ struct ServerWebUIButton: View {
         .disabled(server.state != .running)
         .opacity(server.state == .running ? 1 : 0.48)
         .help(server.state == .running
-              ? loc.t("Abrir la WebUI de este servidor", "Open this server's WebUI")
-              : loc.t("Inicia este servidor para abrir su WebUI", "Start this server to open its WebUI"))
-        .accessibilityLabel(loc.t("Abrir WebUI", "Open WebUI"))
+              ? AppInfo.branded("Open this server's WebUI")
+              : AppInfo.branded("Start this server to open its WebUI"))
+        .accessibilityLabel(AppInfo.branded("Open WebUI"))
     }
 }

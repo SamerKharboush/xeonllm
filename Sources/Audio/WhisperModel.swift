@@ -13,8 +13,8 @@ struct WhisperModel: Identifiable, Hashable {
     let name: String
     let sizeMB: Int
     let tier: Tier
-    let detailES: String
-    let detailEN: String
+    /// One-line description shown under the model name.
+    let detail: String
 
     var fileName: String { "ggml-\(id).bin" }
     var downloadURL: String {
@@ -23,15 +23,15 @@ struct WhisperModel: Identifiable, Hashable {
 
     static let catalog: [WhisperModel] = [
         .init(id: "small", name: "Small", sizeMB: 466, tier: .fast,
-              detailES: "Rápido · multilingüe", detailEN: "Fast · multilingual"),
+              detail: "Fast · multilingual"),
         .init(id: "large-v3-turbo-q5_0", name: "Large v3 Turbo Q5", sizeMB: 547, tier: .advanced,
-              detailES: "Compacto · precisión muy buena", detailEN: "Compact · very good accuracy"),
+              detail: "Compact · very good accuracy"),
         .init(id: "large-v3-turbo", name: "Large v3 Turbo", sizeMB: 1_536, tier: .recommended,
-              detailES: "Mejor equilibrio · multilingüe", detailEN: "Best balance · multilingual"),
+              detail: "Best balance · multilingual"),
         .init(id: "large-v3", name: "Large v3", sizeMB: 2_944, tier: .maximum,
-              detailES: "Máxima precisión · multilingüe", detailEN: "Maximum accuracy · multilingual"),
+              detail: "Maximum accuracy · multilingual"),
         .init(id: "base", name: "Base", sizeMB: 142, tier: .advanced,
-              detailES: "Dictado ligero · multilingüe", detailEN: "Light dictation · multilingual")
+              detail: "Light dictation · multilingual")
     ]
 
     static let recommendedID = "large-v3-turbo"

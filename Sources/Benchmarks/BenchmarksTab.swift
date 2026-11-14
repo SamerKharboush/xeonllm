@@ -77,21 +77,20 @@ struct BenchmarksView: View {
                 }
             }
         }
-        .alert(loc.t("Guardar como perfil", "Save as profile"),
+        .alert(AppInfo.branded("Save as profile"),
                isPresented: Binding(get: { savingResult != nil },
                                     set: { if !$0 { savingResult = nil } })) {
-            TextField(loc.t("Nombre del perfil", "Profile name"), text: $newProfileName)
-            Button(loc.t("Guardar", "Save")) {
+            TextField(AppInfo.branded("Profile name"), text: $newProfileName)
+            Button(AppInfo.branded("Save")) {
                 if let r = savingResult, var p = r.profile {
                     p.name = newProfileName.trimmingCharacters(in: .whitespaces)
                     if !p.name.isEmpty { profileStore.add(p) }
                 }
                 savingResult = nil
             }
-            Button(loc.t("Cancelar", "Cancel"), role: .cancel) { savingResult = nil }
+            Button(AppInfo.branded("Cancel"), role: .cancel) { savingResult = nil }
         } message: {
-            Text(loc.t("Se guarda la configuración completa de esta corrida. Aparecerá en Ajustes → Perfiles.",
-                       "Saves this run's full configuration. It will appear in Settings → Profiles."))
+            Text(AppInfo.branded("Saves this run's full configuration. It will appear in Settings → Profiles."))
         }
         .overlay(alignment: .bottom) {
             if let msg = appliedToast {
@@ -114,10 +113,9 @@ struct BenchmarksView: View {
                 HStack(spacing: 12) {
                     SectionGlyph(systemName: "person.3")
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(loc.t("Compartir con la comunidad", "Share with the community"))
+                        Text(AppInfo.branded("Share with the community"))
                             .font(.title3.weight(.semibold))
-                        Text(loc.t("Publica una medición verificable en toshllm.com",
-                                   "Publish a verifiable measurement on toshllm.com"))
+                        Text(AppInfo.branded("Publish a verifiable measurement on toshllm.com"))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -125,7 +123,7 @@ struct BenchmarksView: View {
                         Image(systemName: "xmark")
                     }
                     .buttonStyle(GlassIconButtonStyle())
-                    .iconHelp(loc.t("Cerrar", "Close"))
+                    .iconHelp(AppInfo.branded("Close"))
                 }
                 .padding(18)
                 Divider()
@@ -143,8 +141,8 @@ struct BenchmarksView: View {
     // MARK: run card
 
     private var engineName: String {
-        if cfg.serverBinary == ServerSettings.defaultBinary { return loc.t("Integrado", "Bundled") }
-        return loc.t("Externo", "External")
+        if cfg.serverBinary == ServerSettings.defaultBinary { return AppInfo.branded("Bundled") }
+        return AppInfo.branded("External")
     }
 
     private var isMoEModel: Bool {
@@ -165,11 +163,10 @@ struct BenchmarksView: View {
 
     private var benchLogButton: some View {
         Button { revealInFinder(file: bench.benchLogURL, folder: bench.benchLogDirectory) } label: {
-            Label(loc.t("Logs en Finder", "Logs in Finder"), systemImage: "folder").font(.caption)
+            Label(AppInfo.branded("Logs in Finder"), systemImage: "folder").font(.caption)
         }
         .buttonStyle(.borderless).foregroundStyle(.secondary)
-        .help(loc.t("Abre la carpeta con el registro completo de cada benchmark (header + salida), para compartir o depurar tras un cuelgue. Se conservan ~30 días.",
-                    "Opens the folder with each benchmark's full log (header + output), for sharing or debugging after a freeze. Kept ~30 days."))
+        .help(AppInfo.branded("Opens the folder with each benchmark's full log (header + output), for sharing or debugging after a freeze. Kept ~30 days."))
     }
 
     private var cardAccessories: some View {
@@ -178,45 +175,45 @@ struct BenchmarksView: View {
 
     private var inheritanceLabel: String {
         if let id = selectedProfile, let p = profileStore.profiles.first(where: { $0.id == id }) {
-            return loc.t("Configuración del perfil «%@»", "Config from profile “%@”", "\(p.name)")
+            return AppInfo.branded("Config from profile “\(p.name)”")
         }
-        return loc.t("Configuración heredada de Ajustes", "Config inherited from Settings")
+        return AppInfo.branded("Config inherited from Settings")
     }
 
     private var compactRunCard: some View {
-        Card(title: loc.t("Configuración del benchmark", "Benchmark configuration"),
+        Card(title: AppInfo.branded("Benchmark configuration"),
              icon: "gearshape",
              trailing: {
                 HStack(spacing: 8) {
                     Button {
                         withAnimation(.snappy(duration: 0.22)) { showAdvanced.toggle() }
                     } label: {
-                        Label(loc.t("Avanzado", "Advanced"),
+                        Label(AppInfo.branded("Advanced"),
                               systemImage: showAdvanced ? "chevron.up" : "slider.horizontal.3")
                     }
                     .glassButton().controlSize(.small)
                     .labelStyle(CompactLabelStyle(compact: !configFieldsWide))
-                    .help(loc.t("Opciones avanzadas de la prueba", "Advanced test options"))
+                    .help(AppInfo.branded("Advanced test options"))
 
                     Button { rememberWorkload(); bench.runReal(settings: cfg) } label: {
-                        Label(loc.t("Generación real", "Real generation"), systemImage: "text.bubble")
+                        Label(AppInfo.branded("Real generation"), systemImage: "text.bubble")
                     }
                     .glassButton().controlSize(.small)
                     .labelStyle(CompactLabelStyle(compact: !configFieldsWide))
-                    .help(loc.t("Mide la velocidad real con el servidor, MTP incluido", "Measures the real speed through the server, MTP included"))
+                    .help(AppInfo.branded("Measures the real speed through the server, MTP included"))
                     .disabled(busy || cfg.modelPath.isEmpty
                               || server.state == .running || server.state == .starting)
 
                     Button { showShareSheet = true } label: {
-                        Label(loc.t("Compartir", "Share"), systemImage: "person.3")
+                        Label(AppInfo.branded("Share"), systemImage: "person.3")
                     }
                     .glassButton().controlSize(.small)
                     .labelStyle(CompactLabelStyle(compact: !configFieldsWide))
-                    .help(loc.t("Comparte un resultado con la comunidad", "Shares a result with the community"))
+                    .help(AppInfo.branded("Shares a result with the community"))
                     .disabled(busy || cfg.modelPath.isEmpty)
 
                     if busy {
-                        Button(loc.t("Cancelar", "Cancel"), role: .destructive) {
+                        Button(AppInfo.branded("Cancel"), role: .destructive) {
                             if bench.sweeping { bench.cancelSweep() }
                             else { bench.cancel() }
                         }
@@ -227,7 +224,7 @@ struct BenchmarksView: View {
                             rememberWorkload()
                             bench.run(settings: cfg)
                         } label: {
-                            Label(loc.t("Ejecutar benchmark", "Run benchmark"), systemImage: "play.fill")
+                            Label(AppInfo.branded("Run benchmark"), systemImage: "play.fill")
                         }
                         .buttonStyle(.borderedProminent).controlSize(.regular)
                         .disabled(cfg.modelPath.isEmpty || server.state == .running || server.state == .starting)
@@ -287,7 +284,7 @@ struct BenchmarksView: View {
                 if busy {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text(bench.sweeping ? bench.sweepStatus : loc.t("Benchmark en curso…", "Benchmark running…"))
+                        Text(bench.sweeping ? bench.sweepStatus : AppInfo.branded("Benchmark running…"))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -297,29 +294,29 @@ struct BenchmarksView: View {
     }
 
     private var compactModelField: some View {
-        field(loc.t("Modelo", "Model")) {
+        field(AppInfo.branded("Model")) {
             Picker("", selection: modelBinding) {
-                Text(loc.t("— elegir —", "— pick —")).tag("")
+                Text(AppInfo.branded("— pick —")).tag("")
                 ForEach(models.modelGroups) { group in
-                    Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                    Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                         ForEach(group.models) { model in
                             Text(ModelName.forPath(model.url.path).display
-                                 + (ModelTraitsCache.cached(for: model.url.path)?.pickerSuffix(spanish: loc.isSpanish) ?? ""))
+                                 + (ModelTraitsCache.cached(for: model.url.path)?.pickerSuffix ?? ""))
                                 .tag(model.url.path)
                         }
                     }
                 }
             }
             .labelsHidden().frame(maxWidth: .infinity, alignment: .leading)
-            Text(loc.t("La prueba no modifica tus servidores.", "The test does not change your servers."))
+            Text(AppInfo.branded("The test does not change your servers."))
                 .font(.caption2).foregroundStyle(.tertiary)
         }
     }
 
     private var compactProfileField: some View {
-        field(loc.t("Perfil del motor", "Engine profile")) {
+        field(AppInfo.branded("Engine profile")) {
             Picker("", selection: $selectedProfile) {
-                Text(loc.t("Ajustes actuales", "Current settings")).tag(UUID?.none)
+                Text(AppInfo.branded("Current settings")).tag(UUID?.none)
                 ForEach(profileStore.profiles) { profile in
                     Text(profile.name).tag(Optional(profile.id))
                 }
@@ -348,13 +345,13 @@ struct BenchmarksView: View {
 
     private var compactWorkloadFields: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(loc.t("CARGA", "WORKLOAD"))
+            Text(AppInfo.branded("WORKLOAD"))
                 .font(.system(size: 10, weight: .semibold)).tracking(0.6)
                 .foregroundStyle(.tertiary)
             HStack(spacing: 8) {
                 compactNumberField("Prompt", value: $cfg.benchPP)
-                compactNumberField(loc.t("Generación", "Generation"), value: $cfg.benchTG)
-                compactNumberField(loc.t("Profundidad", "Depth"), value: $cfg.benchDepth)
+                compactNumberField(AppInfo.branded("Generation"), value: $cfg.benchTG)
+                compactNumberField(AppInfo.branded("Depth"), value: $cfg.benchDepth)
             }
         }
     }
@@ -377,9 +374,9 @@ struct BenchmarksView: View {
 
     /// Under Dynamic MoE the engine's plan owns offload, batch and KV; the run follows it.
     private var dynamicMoeNote: some View {
-        Text(loc.t("Activado: el plan del motor decide expertos, lote y KV", "On: the engine's plan picks experts, batch and KV"))
+        Text(AppInfo.branded("On: the engine's plan picks experts, batch and KV"))
             .font(.caption).foregroundStyle(.secondary)
-            .help(loc.t("Se desactiva en Ajustes → Rendimiento y memoria.", "Turn it off in Settings → Performance & Memory."))
+            .help(AppInfo.branded("Turn it off in Settings → Performance & Memory."))
     }
 
     private var advancedBenchmarkControls: some View {
@@ -390,10 +387,10 @@ struct BenchmarksView: View {
                 if cfg.usesAutoPlan {
                     field("Dynamic MoE") { dynamicMoeNote }
                 } else if isMoEModel {
-                    field(loc.t("MoE en CPU", "MoE on CPU")) {
+                    field(AppInfo.branded("MoE on CPU")) {
                         Stepper("\(cfg.ncmoe)", value: $cfg.ncmoe, in: 0...99)
                     }
-                    field(loc.t("Micro-lote", "Micro-batch")) {
+                    field(AppInfo.branded("Micro-batch")) {
                         Picker("", selection: $cfg.ubatch) {
                             ForEach(ServerSettings.ubatchOptions, id: \.self) { value in
                                 Text(ServerSettings.ubatchLabel(value, loc: loc)).tag(value)
@@ -404,16 +401,15 @@ struct BenchmarksView: View {
             }
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Label(loc.t("Modos avanzados", "Advanced modes"), systemImage: "slider.horizontal.3")
+                    Label(AppInfo.branded("Advanced modes"), systemImage: "slider.horizontal.3")
                         .font(.caption.weight(.semibold))
-                    Text(loc.t("Pruebas del servidor real y optimización para modelos MoE.",
-                               "Real-server tests and optimization for MoE models."))
+                    Text(AppInfo.branded("Real-server tests and optimization for MoE models."))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if isMoEModel && !cfg.usesAutoPlan {
                     Button { rememberWorkload(); bench.sweep(settings: cfg) } label: {
-                        Label(loc.t("Encontrar equilibrio", "Find balance"), systemImage: "scope")
+                        Label(AppInfo.branded("Find balance"), systemImage: "scope")
                     }
                     .disabled(cfg.modelPath.isEmpty || cfg.ncmoe == 0
                               || server.state == .running || server.state == .starting)
@@ -430,7 +426,7 @@ struct BenchmarksView: View {
             HStack(spacing: 10) {
                 Label(bench.sweepStatus, systemImage: "scope")
                     .font(.callout).foregroundStyle(Color.appAccent)
-                Button(loc.t("Aplicar ncmoe %@", "Apply ncmoe %@", "\(best)")) {
+                Button(AppInfo.branded("Apply ncmoe \(best)")) {
                     cfg.ncmoe = best
                     ServerSettings.rememberNcmoe(best, forModel: cfg.modelPath)
                     bench.sweepBest = nil
@@ -443,38 +439,37 @@ struct BenchmarksView: View {
     }
 
     private var runCard: some View {
-        Card(title: loc.t("Laboratorio de rendimiento", "Performance lab"), icon: "gauge.with.needle",
+        Card(title: AppInfo.branded("Performance lab"), icon: "gauge.with.needle",
             trailing: { cardAccessories }) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    parameterSectionTitle(loc.t("1 · Elige el modelo", "1 · Choose a model"), icon: "cube")
+                    parameterSectionTitle(AppInfo.branded("1 · Choose a model"), icon: "cube")
                     Picker("", selection: modelBinding) {
-                        Text(loc.t("— elegir —", "— pick —")).tag("")
+                        Text(AppInfo.branded("— pick —")).tag("")
                         ForEach(models.modelGroups) { group in
-                            Section(group.isOther ? loc.t("Otros", "Others") : group.family) {
+                            Section(group.isOther ? AppInfo.branded("Others") : group.family) {
                                 ForEach(group.models) { m in
                                     Text(ModelName.forPath(m.url.path).display
-                                         + (ModelTraitsCache.cached(for: m.url.path)?.pickerSuffix(spanish: loc.isSpanish) ?? ""))
+                                         + (ModelTraitsCache.cached(for: m.url.path)?.pickerSuffix ?? ""))
                                         .tag(m.url.path)
                                 }
                             }
                         }
                     }
                     .labelsHidden().frame(maxWidth: .infinity, alignment: .leading)
-                    Text(loc.t("La configuración se prueba de forma aislada y no modifica tus servidores.",
-                               "The configuration is tested in isolation and does not change your servers."))
+                    Text(AppInfo.branded("The configuration is tested in isolation and does not change your servers."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .benchmarkPanel()
 
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 12) {
-                        parameterSectionTitle(loc.t("2 · Motor y hardware", "2 · Engine and hardware"), icon: "cpu")
+                        parameterSectionTitle(AppInfo.branded("2 · Engine and hardware"), icon: "cpu")
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
                                   alignment: .leading, spacing: 12) {
-                            field(loc.t("Perfil", "Profile")) {
+                            field(AppInfo.branded("Profile")) {
                                 Picker("", selection: $selectedProfile) {
-                                    Text(loc.t("Ajustes actuales", "Current settings")).tag(UUID?.none)
+                                    Text(AppInfo.branded("Current settings")).tag(UUID?.none)
                                     ForEach(profileStore.profiles) { p in
                                         Text(p.name.count > 28 ? p.name.prefix(28) + "…" : p.name).tag(Optional(p.id))
                                     }
@@ -494,10 +489,10 @@ struct BenchmarksView: View {
                             if cfg.usesAutoPlan {
                                 field("Dynamic MoE") { dynamicMoeNote }
                             } else if isMoEModel {
-                                field(loc.t("MoE en CPU", "MoE on CPU")) {
+                                field(AppInfo.branded("MoE on CPU")) {
                                     Stepper("\(cfg.ncmoe)", value: $cfg.ncmoe, in: 0...99).fixedSize()
                                 }
-                                field(loc.t("Micro-lote", "Micro-batch")) {
+                                field(AppInfo.branded("Micro-batch")) {
                                     Picker("", selection: $cfg.ubatch) {
                                         ForEach(ServerSettings.ubatchOptions, id: \.self) { n in
                                             Text(ServerSettings.ubatchLabel(n, loc: loc)).tag(n)
@@ -520,21 +515,21 @@ struct BenchmarksView: View {
                     .benchmarkPanel()
 
                     VStack(alignment: .leading, spacing: 12) {
-                        parameterSectionTitle(loc.t("3 · Define la carga", "3 · Set the workload"), icon: "waveform.path.ecg")
+                        parameterSectionTitle(AppInfo.branded("3 · Set the workload"), icon: "waveform.path.ecg")
                         HStack(spacing: 12) {
                             workloadField("Prompt", flag: "-p", value: $cfg.benchPP,
-                                          help: loc.t("Tokens del prompt que se procesarán.", "Prompt tokens to process."))
-                            workloadField(loc.t("Generación", "Generation"), flag: "-n", value: $cfg.benchTG,
-                                          help: loc.t("Tokens que se generarán.", "Tokens to generate."))
-                            workloadField(loc.t("Profundidad", "Depth"), flag: "-d", value: $cfg.benchDepth,
-                                          help: loc.t("Tokens ya presentes en el contexto.", "Tokens already present in context."))
+                                          help: AppInfo.branded("Prompt tokens to process."))
+                            workloadField(AppInfo.branded("Generation"), flag: "-n", value: $cfg.benchTG,
+                                          help: AppInfo.branded("Tokens to generate."))
+                            workloadField(AppInfo.branded("Depth"), flag: "-d", value: $cfg.benchDepth,
+                                          help: AppInfo.branded("Tokens already present in context."))
                         }
                         HStack {
                             Label("pp\(cfg.benchPPClamped) · tg\(cfg.benchTGClamped)", systemImage: "timer")
                             Spacer()
                             Text(cfg.benchDepthClamped == 0
-                                 ? loc.t("Contexto vacío", "Empty context")
-                                 : loc.t("Contexto: %@ tokens", "Context: %@ tokens", "\(cfg.benchDepthClamped)"))
+                                 ? AppInfo.branded("Empty context")
+                                 : AppInfo.branded("Context: \(cfg.benchDepthClamped) tokens"))
                         }
                         .font(.caption).foregroundStyle(.secondary)
                     }
@@ -542,14 +537,14 @@ struct BenchmarksView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    parameterSectionTitle(loc.t("4 · Elige qué medir", "4 · Choose what to measure"), icon: "play.circle")
+                    parameterSectionTitle(AppInfo.branded("4 · Choose what to measure"), icon: "play.circle")
                     if busy {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 10)], spacing: 10) {
                             ProgressView().controlSize(.small)
-                            Text(bench.sweeping ? bench.sweepStatus : loc.t("Benchmark en curso…", "Benchmark running…"))
+                            Text(bench.sweeping ? bench.sweepStatus : AppInfo.branded("Benchmark running…"))
                                 .font(.callout).foregroundStyle(.secondary)
                             Spacer()
-                            Button(loc.t("Cancelar", "Cancel"), role: .destructive) {
+                            Button(AppInfo.branded("Cancel"), role: .destructive) {
                                 if bench.sweeping { bench.cancelSweep() }
                                 else { bench.cancel() }
                             }
@@ -557,24 +552,22 @@ struct BenchmarksView: View {
                         .padding(12)
                     } else {
                         HStack(spacing: 10) {
-                            runChoice(loc.t("Velocidad estándar", "Standard speed"),
-                                      subtitle: loc.t("Resultado comparable de prompt y generación.",
-                                                      "Comparable prompt and generation result."),
+                            runChoice(AppInfo.branded("Standard speed"),
+                                      subtitle: AppInfo.branded("Comparable prompt and generation result."),
                                       icon: "speedometer", prominent: true,
                                       disabled: cfg.modelPath.isEmpty || server.state == .running || server.state == .starting) {
                                 ServerSettings.rememberNcmoe(cfg.ncmoe, forModel: cfg.modelPath)
                                 rememberWorkload(); bench.run(settings: cfg)
                             }
-                            runChoice(loc.t("Generación real", "Real generation"),
-                                      subtitle: loc.t("Simula el chat e incluye MTP.", "Simulates chat and includes MTP."),
+                            runChoice(AppInfo.branded("Real generation"),
+                                      subtitle: AppInfo.branded("Simulates chat and includes MTP."),
                                       icon: "text.bubble", prominent: false,
                                       disabled: cfg.modelPath.isEmpty || server.state == .running || server.state == .starting) {
                                 rememberWorkload(); bench.runReal(settings: cfg)
                             }
                             if isMoEModel && !cfg.usesAutoPlan {
-                                runChoice(loc.t("Encontrar equilibrio", "Find best balance"),
-                                          subtitle: loc.t("Busca la distribución GPU/CPU más segura.",
-                                                          "Finds a safe GPU/CPU distribution."),
+                                runChoice(AppInfo.branded("Find best balance"),
+                                          subtitle: AppInfo.branded("Finds a safe GPU/CPU distribution."),
                                           icon: "scope", prominent: false,
                                           disabled: cfg.modelPath.isEmpty || cfg.ncmoe == 0
                                             || server.state == .running || server.state == .starting) {
@@ -589,7 +582,7 @@ struct BenchmarksView: View {
                     HStack(spacing: 10) {
                         Label(bench.sweepStatus, systemImage: "scope")
                             .font(.callout).foregroundStyle(Color.appAccent)
-                        Button(loc.t("Aplicar ncmoe %@", "Apply ncmoe %@", "\(best)")) {
+                        Button(AppInfo.branded("Apply ncmoe \(best)")) {
                             cfg.ncmoe = best
                             ServerSettings.rememberNcmoe(best, forModel: cfg.modelPath)
                             bench.sweepBest = nil
@@ -675,8 +668,8 @@ struct BenchmarksView: View {
                 Image(systemName: bench.sweeping ? "waveform.path.ecg" : "checkmark.circle.fill")
                     .foregroundStyle(bench.sweeping ? Color.appAccent : .green)
                 Text(bench.sweeping
-                     ? loc.t("Midiendo configuraciones", "Measuring configurations")
-                     : loc.t("Resultados temporales del sweep", "Temporary sweep results"))
+                     ? AppInfo.branded("Measuring configurations")
+                     : AppInfo.branded("Temporary sweep results"))
                     .font(.caption.weight(.semibold))
                 Spacer()
                 Text("\(bench.sweepSamples.count)")
@@ -708,8 +701,7 @@ struct BenchmarksView: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 7)
                         .background(.quaternary.opacity(0.45), in: .rect(cornerRadius: 8))
-                        .help(loc.t("Resultado temporal; solo el óptimo se guarda en el historial.",
-                                    "Temporary result; only the optimum is saved to history."))
+                        .help(AppInfo.branded("Temporary result; only the optimum is saved to history."))
                     }
                 }
             }
@@ -726,16 +718,14 @@ struct BenchmarksView: View {
 
     @ViewBuilder private var statusNote: some View {
         if server.state == .running || server.state == .starting {
-            Label(loc.t("Detén el servidor antes de medir: comparten la VRAM.",
-                        "Stop the server before benchmarking: they share VRAM."),
+            Label(AppInfo.branded("Stop the server before benchmarking: they share VRAM."),
                   systemImage: "exclamationmark.triangle")
                 .font(.caption).foregroundStyle(.orange)
         } else {
-            Text(loc.t("Mide pp%@ (prompt) y tg%@ (generación), 2 repeticiones. Tarda varios minutos en modelos grandes.", "Measures pp%@ (prompt) and tg%@ (generation), 2 repetitions. Takes minutes on large models.", "\(cfg.benchPPClamped)", "\(cfg.benchTGClamped)"))
+            Text(AppInfo.branded("Measures pp\(cfg.benchPPClamped) (prompt) and tg\(cfg.benchTGClamped) (generation), 2 repetitions. Takes minutes on large models."))
                 .font(.caption).foregroundStyle(.secondary)
             if ModelTraitsCache.cached(for: cfg.modelPath)?.hasMTP == true {
-                Label(loc.t("Ejecutar mide el decode crudo, sin MTP. Para la velocidad real de este modelo usa \"Generación real\".",
-                            "Run measures raw decode, without MTP. For this model's real speed use \"Real generation\"."),
+                Label(AppInfo.branded("Run measures raw decode, without MTP. For this model's real speed use \"Real generation\"."),
                       systemImage: "info.circle")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -766,15 +756,15 @@ struct BenchmarksView: View {
 
     private func faChipText(_ route: String) -> String {
         switch route {
-        case "amd-gpu": return loc.t("FA AMD GPU", "FA AMD GPU")
-        case "standard-cpu": return loc.t("FA CPU", "FA CPU")
-        case "standard-auto": return loc.t("FA auto", "FA auto")
-        default: return loc.t("FA off", "FA off")
+        case "amd-gpu": return AppInfo.branded("FA AMD GPU")
+        case "standard-cpu": return AppInfo.branded("FA CPU")
+        case "standard-auto": return AppInfo.branded("FA auto")
+        default: return AppInfo.branded("FA off")
         }
     }
 
     private var systemCard: some View {
-        Card(title: loc.t("Tu sistema", "Your system"), icon: "cpu") {
+        Card(title: AppInfo.branded("Your system"), icon: "cpu") {
             Group {
                 if systemFactsWide {
                     HStack(spacing: 0) {
@@ -799,8 +789,7 @@ struct BenchmarksView: View {
 
     private var cpuFact: some View {
         systemFact("cpu", hardware.cpuShortName,
-                   loc.t("%@ núcleos / %@ hilos", "%@ cores / %@ threads",
-                         "\(hardware.physicalCores)", "\(hardware.logicalCores)"))
+                   AppInfo.branded("\(hardware.physicalCores) cores / \(hardware.logicalCores) threads"))
     }
     private var ramFact: some View {
         systemFact("memorychip", String(format: "%.0f GB RAM", hardware.ramGB), hardware.arch)
@@ -845,16 +834,16 @@ struct BenchmarksView: View {
     private var resultsNavigation: some View {
         HStack(spacing: 12) {
             GlassSegmentedControl(selection: $dashboardSection, segments: [
-                .init(value: .results, title: loc.t("Resultados", "Results")),
-                .init(value: .comparison, title: loc.t("Comparación", "Comparison")),
-                .init(value: .charts, title: loc.t("Gráficos", "Charts")),
-                .init(value: .history, title: loc.t("Historial", "History")),
+                .init(value: .results, title: AppInfo.branded("Results")),
+                .init(value: .comparison, title: AppInfo.branded("Comparison")),
+                .init(value: .charts, title: AppInfo.branded("Charts")),
+                .init(value: .history, title: AppInfo.branded("History")),
             ])
             Spacer()
             if dashboardSection == .results || dashboardSection == .history {
                 HStack(spacing: 7) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField(loc.t("Buscar modelos…", "Search models…"), text: $resultSearch)
+                    TextField(AppInfo.branded("Search models…"), text: $resultSearch)
                         .textFieldStyle(.plain).frame(width: 170)
                     if !resultSearch.isEmpty {
                         Button { resultSearch = "" } label: { Image(systemName: "xmark.circle.fill") }
@@ -866,11 +855,11 @@ struct BenchmarksView: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(WorkspaceStyle.border))
 
                 Menu {
-                    Button(loc.t("Todos", "All")) { resultKind = "all" }
-                    Button(loc.t("Benchmark estándar", "Standard benchmark")) { resultKind = "raw" }
-                    Button(loc.t("Generación real", "Real generation")) { resultKind = "real" }
+                    Button(AppInfo.branded("All")) { resultKind = "all" }
+                    Button(AppInfo.branded("Standard benchmark")) { resultKind = "raw" }
+                    Button(AppInfo.branded("Real generation")) { resultKind = "real" }
                 } label: {
-                    Label(loc.t("Filtros", "Filters"), systemImage: "line.3.horizontal.decrease")
+                    Label(AppInfo.branded("Filters"), systemImage: "line.3.horizontal.decrease")
                 }
                 .menuStyle(.borderlessButton).fixedSize()
             }
@@ -895,7 +884,7 @@ struct BenchmarksView: View {
 
     private var resultsCard: some View {
         let visible = Array(filteredResults.prefix(resultsLimit))
-        return Card(title: loc.t("Resultados", "Results"), icon: "tablecells",
+        return Card(title: AppInfo.branded("Results"), icon: "tablecells",
                     trailing: {
                         Text("\(visible.count) / \(filteredResults.count)")
                             .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
@@ -970,23 +959,22 @@ struct BenchmarksView: View {
 
     @ViewBuilder private var bestResultCards: some View {
         if let best = bench.history.max(by: { $0.tg < $1.tg }) {
-            bestCard(title: loc.t("Mejor generación", "Best generation"),
+            bestCard(title: AppInfo.branded("Best generation"),
                      icon: "bolt.fill", value: best.tg, color: Color.appAccent, result: best)
         }
         if let best = bench.history.max(by: { $0.pp < $1.pp }) {
-            bestCard(title: loc.t("Mejor prompt", "Best prompt"),
+            bestCard(title: AppInfo.branded("Best prompt"),
                      icon: "text.alignleft", value: best.pp, color: Color.chartSecondary.opacity(0.85), result: best)
         }
     }
 
     @ViewBuilder private var summaryCards: some View {
-        summaryStatCard(title: loc.t("Total de pruebas", "Total runs"), icon: "clock",
+        summaryStatCard(title: AppInfo.branded("Total runs"), icon: "clock",
                         value: "\(bench.history.count)",
-                        subtitle: loc.t("en %@ modelos", "across %@ models",
-                                        "\(Set(bench.history.map(\.shortModel)).count)"),
+                        subtitle: AppInfo.branded("across \(Set(bench.history.map(\.shortModel)).count) models"),
                         color: .purple)
-        summaryStatCard(title: loc.t("Completadas", "Completed"), icon: "checkmark",
-                        value: "100%", subtitle: loc.t("Sin errores guardados", "No saved errors"),
+        summaryStatCard(title: AppInfo.branded("Completed"), icon: "checkmark",
+                        value: "100%", subtitle: AppInfo.branded("No saved errors"),
                         color: .green)
     }
 
@@ -999,7 +987,7 @@ struct BenchmarksView: View {
     private func applyGlobal(_ r: BenchResult) {
         guard let p = r.profile else { return }
         profileStore.setAsDefault(p)
-        appliedToast = loc.t("Aplicado al default global", "Applied to global default")
+        appliedToast = AppInfo.branded("Applied to global default")
         let token = UUID(); lastToast = token
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
             if lastToast == token { appliedToast = nil }
@@ -1077,15 +1065,15 @@ struct BenchmarksView: View {
 
     private var chartsCard: some View {
         let points = Array(bench.history.prefix(24).reversed())
-        return Card(title: loc.t("Tendencias de rendimiento", "Performance trends"), icon: "chart.xyaxis.line",
+        return Card(title: AppInfo.branded("Performance trends"), icon: "chart.xyaxis.line",
                     trailing: {
-                        Text(loc.t("Últimos %@ resultados", "Last %@ results", "\(points.count)"))
+                        Text(AppInfo.branded("Last \(points.count) results"))
                             .font(.caption).foregroundStyle(.secondary)
                     }) {
             HStack(spacing: 14) {
                 benchmarkChart(title: "Prompt", points: points, value: \.pp,
                                color: Color.chartSecondary)
-                benchmarkChart(title: loc.t("Generación", "Generation"), points: points, value: \.tg,
+                benchmarkChart(title: AppInfo.branded("Generation"), points: points, value: \.tg,
                                color: Color.appAccent)
             }
         }
@@ -1099,7 +1087,7 @@ struct BenchmarksView: View {
                 Circle().fill(color).frame(width: 8, height: 8)
                 Text(title).font(.headline)
                 Spacer()
-                Text(loc.t("Promedio %@ t/s", "Average %@ t/s", String(format: "%.1f", average)))
+                Text(AppInfo.branded("Average \(String(format: "%.1f", average)) t/s"))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Chart(points) { result in
@@ -1127,7 +1115,7 @@ struct BenchmarksView: View {
         // would squash the generation bars, so each metric normalizes to its own max.
         let maxTG = recent.map(\.tg).max() ?? 1
         let maxPP = recent.map(\.pp).max() ?? 1
-        return Card(title: loc.t("Comparativa (últimas %@ corridas)", "Comparison (last %@ runs)", "\(recent.count)"), icon: "chart.bar") {
+        return Card(title: AppInfo.branded("Comparison (last \(recent.count) runs)"), icon: "chart.bar") {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(recent) { r in
                     HStack(alignment: .center, spacing: 12) {
@@ -1147,20 +1135,19 @@ struct BenchmarksView: View {
                                     Text("v\(v)")
                                         .font(.system(size: 10, design: .monospaced))
                                         .foregroundStyle(.tertiary)
-                                        .help(loc.t("Versión de XeonLLM que hizo esta medición",
-                                                    "XeonLLM version that produced this run"))
+                                        .help(AppInfo.branded("XeonLLM version that produced this run"))
                                 }
                                 Spacer(minLength: 0)
                             }
-                            metricBar(loc.t("Gen", "Gen"), value: r.tg, max: maxTG, color: Color.appAccent)
+                            metricBar(AppInfo.branded("Gen"), value: r.tg, max: maxTG, color: Color.appAccent)
                             metricBar("Prompt", value: r.pp, max: maxPP, color: Color.chartSecondary.opacity(0.8))
                         }
                         if r.profile != nil {
                             VStack(spacing: 6) {
                                 rowAction("square.and.arrow.down",
-                                          loc.t("Guardar como perfil", "Save as profile")) { promptSave(r) }
+                                          AppInfo.branded("Save as profile")) { promptSave(r) }
                                 rowAction("checkmark.circle",
-                                          loc.t("Aplicar a los Ajustes globales", "Apply to global Settings")) { applyGlobal(r) }
+                                          AppInfo.branded("Apply to global Settings")) { applyGlobal(r) }
                             }
                         }
                     }
@@ -1168,11 +1155,10 @@ struct BenchmarksView: View {
                     if r.id != recent.last?.id { Divider().opacity(0.4) }
                 }
                 HStack(spacing: 16) {
-                    legendDot(Color.appAccent, loc.t("Generación", "Generation"))
+                    legendDot(Color.appAccent, AppInfo.branded("Generation"))
                     legendDot(Color.chartSecondary.opacity(0.8), "Prompt")
                     Spacer()
-                    Text(loc.t("t/s · barras normalizadas por métrica",
-                               "t/s · bars normalized per metric"))
+                    Text(AppInfo.branded("t/s · bars normalized per metric"))
                         .font(.caption2).foregroundStyle(.tertiary)
                 }
                 .padding(.top, 4)
@@ -1209,8 +1195,8 @@ struct BenchmarksView: View {
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background((quant == "—" ? Color.secondary : Color.appAccent).opacity(0.12), in: Capsule())
             .help(quant == "—"
-                  ? loc.t("El resultado antiguo no guardó el quant", "This older result did not store its quant")
-                  : loc.t("Quantización del modelo", "Model quantization"))
+                  ? AppInfo.branded("This older result did not store its quant")
+                  : AppInfo.branded("Model quantization"))
     }
 
     private func legendDot(_ color: Color, _ text: String) -> some View {
@@ -1226,10 +1212,10 @@ struct BenchmarksView: View {
         let bestTG = bench.history.max(by: { $0.tg < $1.tg })?.id
         let visible = Array(bench.history.prefix(historyLimit))
         let lastID = visible.last?.id
-        return Card(title: loc.t("Historial completo", "Full history"), icon: "clock",
+        return Card(title: AppInfo.branded("Full history"), icon: "clock",
                     trailing: {
                         HStack(spacing: 12) {
-                            Text(loc.t("%@ de %@", "%@ of %@", "\(visible.count)", "\(bench.history.count)"))
+                            Text(AppInfo.branded("\(visible.count) of \(bench.history.count)"))
                                 .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                             if !bench.history.isEmpty { clearHistoryButton }
                         }
@@ -1258,10 +1244,10 @@ struct BenchmarksView: View {
 
     private var clearHistoryButton: some View {
         Button(role: .destructive) { bench.clearHistory() } label: {
-            Label(loc.t("Limpiar", "Clear"), systemImage: "trash").font(.caption)
+            Label(AppInfo.branded("Clear"), systemImage: "trash").font(.caption)
         }
         .buttonStyle(.borderless).foregroundStyle(.secondary)
-        .help(loc.t("Borrar todo el historial de benchmarks", "Delete the entire benchmark history"))
+        .help(AppInfo.branded("Delete the entire benchmark history"))
     }
 }
 
@@ -1332,7 +1318,7 @@ private struct BenchmarkLoadMoreButton: View {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.down")
                         .font(.system(size: 10, weight: .bold))
-                    Text(loc.t("Cargar 20 más", "Load 20 more"))
+                    Text(AppInfo.branded("Load 20 more"))
                     Text("\(remaining)")
                         .font(.system(size: 10, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.secondary)
@@ -1399,23 +1385,23 @@ private struct BenchmarkResultTableHeader: View {
     var body: some View {
         HStack(spacing: 12) {
             if compact {
-                Text(loc.t("MODELO Y CONFIGURACIÓN", "MODEL AND CONFIGURATION"))
+                Text(AppInfo.branded("MODEL AND CONFIGURATION"))
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text(loc.t("MODELO", "MODEL")).frame(minWidth: 230, maxWidth: .infinity, alignment: .leading)
-                Text(loc.t("QUANT", "QUANT")).frame(width: 96, alignment: .leading)
-                Text(loc.t("CONFIGURACIÓN / GPU", "CONFIGURATION / GPU"))
+                Text(AppInfo.branded("MODEL")).frame(minWidth: 230, maxWidth: .infinity, alignment: .leading)
+                Text(AppInfo.branded("QUANT")).frame(width: 96, alignment: .leading)
+                Text(AppInfo.branded("CONFIGURATION / GPU"))
                     .frame(width: 180, alignment: .leading)
             }
             HStack(spacing: 14) {
                 Label("Prompt t/s", systemImage: "circle.fill").foregroundStyle(Color.chartSecondary)
-                Label(loc.t("Generación t/s", "Generation t/s"), systemImage: "circle.fill")
+                Label(AppInfo.branded("Generation t/s"), systemImage: "circle.fill")
                     .foregroundStyle(Color.appAccent)
             }
             .fixedSize()
             .frame(minWidth: compact ? BenchmarkResultTableRow.compactMetricsWidth : 300,
                    maxWidth: compact ? BenchmarkResultTableRow.compactMetricsWidth : .infinity, alignment: .leading)
-            Text(loc.t("ACCIONES", "ACTIONS")).frame(width: 92, alignment: .trailing)
+            Text(AppInfo.branded("ACTIONS")).frame(width: 92, alignment: .trailing)
         }
         .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
         .padding(.horizontal, 10).padding(.vertical, 7)
@@ -1519,7 +1505,7 @@ private struct BenchmarkResultTableRow: View, Equatable {
                     .foregroundStyle(Color.chartSecondary)
                     .padding(.horizontal, 5).padding(.vertical, 2)
                     .background(Color.chartSecondary.opacity(0.13), in: Capsule())
-                    .help(loc.t("Medido con %@", "Measured with %@", dmoe))
+                    .help(AppInfo.branded("Measured with \(dmoe)"))
             }
         }
     }
@@ -1538,7 +1524,7 @@ private struct BenchmarkResultTableRow: View, Equatable {
             .fixedSize(horizontal: true, vertical: false)
     }
 
-    private var gpuLine: String { result.gpu ?? loc.t("GPU predeterminada", "Default GPU") }
+    private var gpuLine: String { result.gpu ?? AppInfo.branded("Default GPU") }
 
     private var workloadText: some View {
         Text(workloadLine)
@@ -1564,17 +1550,17 @@ private struct BenchmarkResultTableRow: View, Equatable {
     private var actions: some View {
         HStack(spacing: 4) {
             if result.profile != nil {
-                tableAction("square.and.arrow.down", loc.t("Guardar como perfil", "Save as profile"), onSaveProfile)
-                tableAction("checkmark.circle", loc.t("Aplicar a Ajustes", "Apply to Settings"), onApplyGlobal)
+                tableAction("square.and.arrow.down", AppInfo.branded("Save as profile"), onSaveProfile)
+                tableAction("checkmark.circle", AppInfo.branded("Apply to Settings"), onApplyGlobal)
             }
-            tableAction("trash", loc.t("Eliminar", "Delete"), destructive: true, onDelete)
+            tableAction("trash", AppInfo.branded("Delete"), destructive: true, onDelete)
         }
         .frame(width: 92, alignment: .trailing)
     }
 
     private var engineLine: String {
         let engine = result.engine == "bundled" || result.engine == nil
-            ? loc.t("Integrado", "Bundled")
+            ? AppInfo.branded("Bundled")
             : (result.engine ?? "—")
         return engine
     }
@@ -1603,7 +1589,7 @@ private struct BenchmarkResultTableRow: View, Equatable {
         let value = result.ctv ?? "—"
         var values = ["KV \(key)/\(value)", "v\(result.appVersion ?? "—")"]
         if result.peer == true { values.append("IF Link") }
-        if result.shared == true { values.append(loc.t("Compartido", "Shared")) }
+        if result.shared == true { values.append(AppInfo.branded("Shared")) }
         return values.joined(separator: " · ")
     }
 
@@ -1643,14 +1629,13 @@ private struct BenchmarkOutputCard: View {
     let onClose: () -> Void
 
     var body: some View {
-        Card(title: loc.t("Salida de la ejecución", "Run output"), icon: "terminal", trailing: {
+        Card(title: AppInfo.branded("Run output"), icon: "terminal", trailing: {
             Button(action: onClose) {
-                Label(loc.t("Cerrar salida", "Close output"), systemImage: "xmark")
+                Label(AppInfo.branded("Close output"), systemImage: "xmark")
                     .labelStyle(.iconOnly)
             }
             .buttonStyle(GlassIconButtonStyle())
-            .help(loc.t("Oculta la salida y vuelve a mostrar la información del sistema.",
-                        "Hide the output and show system information again."))
+            .help(AppInfo.branded("Hide the output and show system information again."))
         }) {
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
@@ -1708,7 +1693,7 @@ private struct BenchHistoryRow: View, Equatable {
                     if isBest {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 9)).foregroundStyle(.yellow)
-                            .help(loc.t("Mejor generación", "Best generation"))
+                            .help(AppInfo.branded("Best generation"))
                     }
                     Text(r.shortModel).font(.callout.weight(.medium))
                     Text(r.quantization)
@@ -1718,17 +1703,17 @@ private struct BenchHistoryRow: View, Equatable {
                         .background((r.quantization == "—" ? Color.secondary : Color.appAccent).opacity(0.12),
                                     in: Capsule())
                         .help(r.quantization == "—"
-                              ? loc.t("El resultado antiguo no guardó el quant", "This older result did not store its quant")
-                              : loc.t("Quantización del modelo", "Model quantization"))
+                              ? AppInfo.branded("This older result did not store its quant")
+                              : AppInfo.branded("Model quantization"))
                     if let dmoe = r.dynamicMoeLabel {
                         Image(systemName: "memorychip")
                             .font(.system(size: 9)).foregroundStyle(Color.chartSecondary)
-                            .help(loc.t("Medido con %@", "Measured with %@", dmoe))
+                            .help(AppInfo.branded("Measured with \(dmoe)"))
                     }
                     if r.shared == true {
                         Image(systemName: "globe")
                             .font(.system(size: 9)).foregroundStyle(Color.appAccent)
-                            .help(loc.t("Compartido con la comunidad", "Shared with the community"))
+                            .help(AppInfo.branded("Shared with the community"))
                     }
                 }
                 HStack(spacing: 5) {
@@ -1744,8 +1729,7 @@ private struct BenchHistoryRow: View, Equatable {
                         Text("v\(version)")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.tertiary)
-                            .help(loc.t("Versión de XeonLLM que hizo esta medición",
-                                        "XeonLLM version that produced this run"))
+                            .help(AppInfo.branded("XeonLLM version that produced this run"))
                     }
                     Text(r.date, format: .dateTime.day().month().hour().minute())
                         .font(.caption2).foregroundStyle(.tertiary)
@@ -1771,11 +1755,11 @@ private struct BenchHistoryRow: View, Equatable {
             HStack(spacing: 6) {
                 if r.profile != nil {
                     action("square.and.arrow.down",
-                           loc.t("Guardar como perfil", "Save as profile"), onSaveProfile)
+                           AppInfo.branded("Save as profile"), onSaveProfile)
                     action("checkmark.circle",
-                           loc.t("Aplicar a los Ajustes globales", "Apply to global Settings"), onApplyGlobal)
+                           AppInfo.branded("Apply to global Settings"), onApplyGlobal)
                 }
-                action("trash", loc.t("Eliminar", "Delete"), destructive: true, onDelete)
+                action("trash", AppInfo.branded("Delete"), destructive: true, onDelete)
             }
             .padding(.leading, 10)
         }

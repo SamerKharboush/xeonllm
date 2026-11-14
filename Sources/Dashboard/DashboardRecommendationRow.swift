@@ -13,7 +13,7 @@ struct DashboardRecommendationRow: View {
             HStack(spacing: 18) {
                 roleBadge.frame(width: 98, alignment: .leading)
                 identity.frame(minWidth: 165, maxWidth: .infinity, alignment: .leading)
-                column(rec.est.expectedSpeed, detail: loc.t("Velocidad estimada", "Estimated speed"), icon: "bolt")
+                column(rec.est.expectedSpeed, detail: AppInfo.branded("Estimated speed"), icon: "bolt")
                     .frame(width: 140, alignment: .leading)
                 column(String(format: "%.1f GB", rec.est.vramGB), detail: "VRAM", icon: "internaldrive")
                     .frame(width: 85, alignment: .leading)
@@ -36,7 +36,7 @@ struct DashboardRecommendationRow: View {
         .padding(.horizontal, 16).padding(.vertical, 14)
         .background(WorkspaceStyle.surface, in: RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(WorkspaceStyle.border))
-        .help(rec.model.detail(loc.isSpanish))
+        .help(rec.model.detail)
     }
 
     private var identity: some View {
@@ -44,7 +44,7 @@ struct DashboardRecommendationRow: View {
             ModelBrandIcon(name: rec.model.name)
             VStack(alignment: .leading, spacing: 5) {
                 Text(ModelName(rec.model.name).title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                Text(rec.model.isVision ? loc.t("Visión · Multimodal", "Vision · Multimodal") : rec.model.isCoder ? loc.t("Código · Agentes", "Code · Agents") : rec.model.spec.isMoE ? "MoE" : loc.t("Uso general", "General purpose"))
+                Text(rec.model.isVision ? AppInfo.branded("Vision · Multimodal") : rec.model.isCoder ? AppInfo.branded("Code · Agents") : rec.model.spec.isMoE ? "MoE" : AppInfo.branded("General purpose"))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
@@ -61,10 +61,10 @@ struct DashboardRecommendationRow: View {
 
     private var role: (text: String, icon: String, color: Color) {
         switch rec.role {
-        case .fast: return (loc.t("RÁPIDO", "FASTEST"), "hare.fill", .green)
-        case .balanced: return (loc.t("EQUILIBRADO", "BALANCED"), "sparkles", .blue)
-        case .quality: return (loc.t("CALIDAD", "QUALITY"), "star.fill", .orange)
-        case .coding: return (loc.t("CÓDIGO", "CODING"), "chevron.left.forwardslash.chevron.right", .purple)
+        case .fast: return (AppInfo.branded("FASTEST"), "hare.fill", .green)
+        case .balanced: return (AppInfo.branded("BALANCED"), "sparkles", .blue)
+        case .quality: return (AppInfo.branded("QUALITY"), "star.fill", .orange)
+        case .coding: return (AppInfo.branded("CODING"), "chevron.left.forwardslash.chevron.right", .purple)
         }
     }
 
@@ -72,16 +72,16 @@ struct DashboardRecommendationRow: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(compatibilityLabel, systemImage: rec.est.level == .no ? "xmark.circle.fill" : "circle.fill")
                 .font(.system(size: 12)).foregroundStyle(rec.est.level == .ideal ? .green : .orange)
-            Text(loc.t("Compatibilidad", "Compatibility")).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(AppInfo.branded("Compatibility")).font(.system(size: 11)).foregroundStyle(.secondary)
         }
     }
 
     private var compatibilityLabel: String {
         switch rec.est.level {
-        case .ideal: return loc.t("GPU completa", "Full GPU")
-        case .good: return loc.t("Híbrido", "Hybrid")
-        case .slow: return loc.t("Lento", "Slow")
-        case .no: return loc.t("No cabe", "Won’t fit")
+        case .ideal: return AppInfo.branded("Full GPU")
+        case .good: return AppInfo.branded("Hybrid")
+        case .slow: return AppInfo.branded("Slow")
+        case .no: return AppInfo.branded("Won’t fit")
         }
     }
 

@@ -11,15 +11,14 @@ struct AgentContinuationCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(loc.t("El agente alcanzó el límite de 8 turnos. ¿Continuar?",
-                        "The agent reached its 8-turn limit. Continue?"),
+            Label(AppInfo.branded("The agent reached its 8-turn limit. Continue?"),
                   systemImage: "arrow.clockwise.circle")
                 .font(.callout)
             HStack {
-                Button(loc.t("Continuar", "Continue"), systemImage: "play.fill",
+                Button(AppInfo.branded("Continue"), systemImage: "play.fill",
                        action: continueAction)
                     .buttonStyle(.borderedProminent)
-                Button(loc.t("Detener", "Stop"), systemImage: "stop.fill",
+                Button(AppInfo.branded("Stop"), systemImage: "stop.fill",
                        role: .destructive, action: stopAction)
                     .glassButton()
             }
