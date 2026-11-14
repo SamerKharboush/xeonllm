@@ -13,6 +13,7 @@ struct UpdateError: LocalizedError {
 
 struct ReleaseNote: Identifiable {
     let version: String
+    let published: Date
     let body: String
     var id: String { version }
 }
@@ -209,6 +210,12 @@ final class UpdateChecker: ObservableObject {
     @Published var releaseNotes: [ReleaseNote]?
     @Published var loadingNotes = false
 
+    nonisolated static let isoDate: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
     /// Notes from the running version up to the newest release; when already
     /// up to date, just the running version's notes.
     func fetchReleaseNotes() async {
@@ -219,20 +226,29 @@ final class UpdateChecker: ObservableObject {
               let (data, response) = try? await URLSession.shared.data(from: url),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-        let all = list.compactMap { obj -> (String, String)? in
-            guard let tag = obj["tag_name"] as? String else { return nil }
+        let all = list.compactMap { obj -> (String, String, Date)? in
+            guard let tag = obj["tag_name"] as? String,
+                  let published = obj["published_at"] as? String,
+                  let date = Self.isoDate.date(from: published) else { return nil }
             let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-            return (version, obj["body"] as? String ?? "")
+            return (version, obj["body"] as? String ?? "", date)
         }
         releaseNotes = Self.notesToShow(all: all, current: AppInfo.version)
-            .map { ReleaseNote(version: $0.0, body: $0.1) }
+            .map { ReleaseNote(version: $0.0, published: $0.2, body: $0.1) }
     }
 
-    nonisolated static func notesToShow(all: [(String, String)], current: String) -> [(String, String)] {
-        let newer = all.filter { isVersion($0.0, newerThan: current) }
-            .sorted { isVersion($0.0, newerThan: $1.0) }
-        if !newer.isEmpty { return newer }
-        return all.filter { $0.0 == current }
+    /// Releases published after the running version's own release, newest
+    /// first; when the running version has no release on GitHub yet (a dev
+    /// build), just the most recent one. Order follows `published_at`, not the
+    /// version number: a beta numbered above the next release must not look
+    /// newer than it.
+    nonisolated static func notesToShow(all: [(String, String, Date)], current: String) -> [(String, String, Date)] {
+        let sorted = all.sorted { $0.2 > $1.2 }
+        guard let running = sorted.first(where: { $0.0 == current }) else {
+            return sorted.first.map { [$0] } ?? []
+        }
+        let newer = sorted.filter { $0.2 > running.2 }
+        return newer.isEmpty ? [running] : newer
     }
 
     /// Numeric per-component comparison (0.81.1 < 0.82 < 1.0).

@@ -3345,16 +3345,45 @@ final class SystemPromptResolutionTests: XCTestCase {
 }
 
 final class ReleaseNotesRangeTests: XCTestCase {
-    let all = [("0.81.66", "c"), ("0.81.65", "b"), ("0.81.64", "a"), ("0.81.63", "z")]
+    private func d(_ s: String) -> Date { UpdateChecker.isoDate.date(from: s)! }
+    /// No release published after v0.1.0 (2026-11-14).
+    private var list: [(String, String, Date)] {
+        [("0.1.0", "v010", d("2026-11-14T10:00:00Z")),
+         ("0.87.31-beta.8", "beta", d("2026-11-13T18:01:33Z")),
+         ("0.81.66", "old", d("2026-01-05T10:00:00Z"))]
+    }
 
-    func testShowsEverythingNewerThanCurrentNewestFirst() {
-        let out = UpdateChecker.notesToShow(all: all, current: "0.81.64")
-        XCTAssertEqual(out.map(\.0), ["0.81.66", "0.81.65"])
+    func testBetaNumberedAboveReleaseIsNotNewer() {
+        let out = UpdateChecker.notesToShow(all: list, current: "0.1.0")
+        XCTAssertEqual(out.map(\.0), ["0.1.0"],
+                       "0.87.31-beta.8 sorts above 0.1.0 numerically but is older by date")
+    }
+
+    func testReleasePublishedAfterCurrentIsShown() {
+        let withNewer = [("0.1.1", "new", d("2026-11-20T10:00:00Z"))] + list
+        let out = UpdateChecker.notesToShow(all: withNewer, current: "0.1.0")
+        XCTAssertEqual(out.map(\.0), ["0.1.1"])
+    }
+
+    func testBetaRunningShowsLaterRelease() {
+        let out = UpdateChecker.notesToShow(all: [("0.1.0", "v010", d("2026-11-14T10:00:00Z")),
+                                                 ("0.87.31-beta.8", "beta", d("2026-11-13T18:01:33Z"))],
+                                            current: "0.87.31-beta.8")
+        XCTAssertEqual(out.map(\.0), ["0.1.0"])
+    }
+
+    func testRunningVersionNotOnGitHubShowsNewestByDate() {
+        let out = UpdateChecker.notesToShow(all: list, current: "0.2.0-dev")
+        XCTAssertEqual(out.map(\.0), ["0.1.0"])
     }
 
     func testUpToDateShowsOnlyTheCurrentVersion() {
-        let out = UpdateChecker.notesToShow(all: all, current: "0.81.66")
-        XCTAssertEqual(out.map(\.0), ["0.81.66"])
+        let out = UpdateChecker.notesToShow(all: list, current: "0.1.0")
+        XCTAssertEqual(out.map(\.0), ["0.1.0"])
+    }
+
+    func testEmptyListShowsNothing() {
+        XCTAssertTrue(UpdateChecker.notesToShow(all: [], current: "0.1.0").isEmpty)
     }
 }
 
