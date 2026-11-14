@@ -513,7 +513,7 @@ final class BenchmarkSharing: ObservableObject {
     nonisolated static func signatureMessage(purpose: String, challengeId: String,
                                              nonce: String, payload: Data) -> Data {
         let hash = SHA256.hash(data: payload).map { String(format: "%02x", $0) }.joined()
-        return Data("toshllm-benchmark-v2\n\(purpose)\n\(challengeId)\n\(nonce)\n\(hash)".utf8)
+        return Data("xeonllm-benchmark-v2\n\(purpose)\n\(challengeId)\n\(nonce)\n\(hash)".utf8)
     }
 
     nonisolated static func base64URL(_ data: Data) -> String {

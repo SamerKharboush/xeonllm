@@ -30,7 +30,7 @@ requests
 - `_wg32` is appended to that name when the split-cache path is on (`fa_amd_nwg > 1`).
 
 The plain `_w64` name is requested first. When that build is refused, or when
-`TOSH_FA_AMD_LDS32` is set, the same path requests the name's `_lds32` twin
+`XEON_FA_AMD_LDS32` is set, the same path requests the name's `_lds32` twin
 (`..._w64_lds32`, or `..._w64_wg32_lds32` when the split-cache name was the primary), halves
 `fa_amd_nsg`, and dispatches the twin. A name refused once is memoised and not requested again
 (`ggml_metal_fa_amd_pipeline`), so the failed build is paid once per process, not per layer.

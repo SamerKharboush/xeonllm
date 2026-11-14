@@ -4,12 +4,12 @@ XeonLLM is a fork of [ToshLLM](https://github.com/engeldlgado/toshllm) by Engelb
 like it, GPL-3.0 (see [LICENSE](LICENSE)). The components below are redistributed inside
 the app under their own licenses.
 
-## Math runtime (`Contents/Resources/tosh-sympy`)
+## Math runtime (`Contents/Resources/xeon-sympy`)
 
 Built by `scripts/build-sympy.sh` from pinned releases, each checked against its SHA-256. The
-full license texts are in [`helpers/tosh-sympy/licenses`](helpers/tosh-sympy/licenses) and
-[`helpers/tosh-scientific/licenses`](helpers/tosh-scientific/licenses), and are copied into
-the app at `Contents/Resources/tosh-sympy/licenses`.
+full license texts are in [`helpers/xeon-sympy/licenses`](helpers/xeon-sympy/licenses) and
+[`helpers/xeon-scientific/licenses`](helpers/xeon-scientific/licenses), and are copied into
+the app at `Contents/Resources/xeon-sympy/licenses`.
 
 | Component | Version | License | Text |
 |---|---|---|---|
@@ -56,10 +56,10 @@ libraries of both wheels are removed at build time and are not redistributed.
 
 ## Maps (`Contents/Resources/rich-content/maplibre` and the web chat)
 
-The chat's maps are drawn with these libraries, bundled into `toshmap.js` by
+The chat's maps are drawn with these libraries, bundled into `xeonmap.js` by
 `scripts/build-map.sh` and into the web chat's bundle. Their license texts are in
 [`Assets/rich-content/maplibre/licenses`](Assets/rich-content/maplibre/licenses) and are copied into the app
-next to `toshmap.js`.
+next to `xeonmap.js`.
 
 | Component | Version | License | Text |
 |---|---|---|---|

@@ -331,22 +331,22 @@ struct RichText: View {
     }
 
     /// JavaScript twin of `inlineMathBodies`, built from the same two patterns.
-    /// `toshTokenizeMath` swaps each formula for a placeholder token.
+    /// `xeonTokenizeMath` swaps each formula for a placeholder token.
     static var inlineMathScript: String {
         let encode = { (value: String) in
             (try? String(data: JSONEncoder().encode(value), encoding: .utf8)) ?? "\"\""
         }
         return """
-        const toshMathPattern = new RegExp(\(encode(inlineMathPattern)), 'gu');
-        const toshFormulaBody = new RegExp(\(encode(formulaBodyPattern)), 'u');
-        const toshParenBody = new RegExp(\(encode(parenBodyPattern)), 'u');
-        function toshTokenizeMath(raw) {
+        const xeonMathPattern = new RegExp(\(encode(inlineMathPattern)), 'gu');
+        const xeonFormulaBody = new RegExp(\(encode(formulaBodyPattern)), 'u');
+        const xeonParenBody = new RegExp(\(encode(parenBodyPattern)), 'u');
+        function xeonTokenizeMath(raw) {
           const formulas = [];
-          const text = raw.replace(toshMathPattern, (match, paren, dollar, number) => {
+          const text = raw.replace(xeonMathPattern, (match, paren, dollar, number) => {
             const body = paren ?? dollar ?? number;
-            if (!toshFormulaBody.test(body) && !(paren !== undefined && toshParenBody.test(body))) return match;
+            if (!xeonFormulaBody.test(body) && !(paren !== undefined && xeonParenBody.test(body))) return match;
             formulas.push(body);
-            return `TOSHMATH${formulas.length - 1}TOKEN`;
+            return `XEONMATH${formulas.length - 1}TOKEN`;
           });
           return { text, formulas };
         }

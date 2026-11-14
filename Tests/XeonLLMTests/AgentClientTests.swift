@@ -12,7 +12,7 @@ final class AgentClientTests: XCTestCase {
     private let refused = #"{"success": false, "operation": "evaluate", "error": {"code": "transcription_mismatch", "message": "No."}}"#
 
     private func store() -> (ChatStore, UUID) {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-agent-client-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-agent-client-\(UUID().uuidString)")
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let store = ChatStore(storageDirectory: directory)
         store.newConversation()

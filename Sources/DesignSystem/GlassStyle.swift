@@ -26,9 +26,9 @@ private struct GlassSurface<S: InsettableShape>: ViewModifier {
                 .background(.background, in: shape)
                 .overlay(shape.strokeBorder(.primary.opacity(contrast == .increased ? 0.45 : 0.18)))
         } else {
-            #if compiler(>=6.2) && !TOSH_LEGACY_UI
+            #if compiler(>=6.2) && !XEON_LEGACY_UI
             if #available(macOS 26.0, *) {
-                content.glassEffect(makeToshGlass(tint: tint, interactive: interactive), in: shape)
+                content.glassEffect(makeXeonGlass(tint: tint, interactive: interactive), in: shape)
             } else {
                 materialSurface(content)
             }
@@ -44,9 +44,9 @@ private struct GlassSurface<S: InsettableShape>: ViewModifier {
     }
 }
 
-#if compiler(>=6.2) && !TOSH_LEGACY_UI
+#if compiler(>=6.2) && !XEON_LEGACY_UI
 @available(macOS 26.0, *)
-private func makeToshGlass(tint: Color?, interactive: Bool) -> Glass {
+private func makeXeonGlass(tint: Color?, interactive: Bool) -> Glass {
     var glass: Glass = .regular
     if let tint { glass = glass.tint(tint) }
     if interactive { glass = glass.interactive() }

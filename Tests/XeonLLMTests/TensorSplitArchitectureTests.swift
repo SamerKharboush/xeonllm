@@ -10,7 +10,7 @@ import XCTest
 final class TensorSplitArchitectureTests: XCTestCase {
     private func writeGGUF(architecture: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-arch-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-arch-\(UUID().uuidString).gguf")
         var data = Data("GGUF".utf8)
         func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
         func u64(_ v: UInt64) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }

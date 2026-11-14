@@ -130,9 +130,9 @@ El interruptor **Kernel Flash Attention AMD** ejecuta la atención —tanto el p
 
 **Externo** — Cualquier binario `llama-server` tuyo, para probar builds propias.
 
-**ToshGEMM**, activo por defecto, es un kernel de multiplicación de matrices en mosaico (tiled) escrito a medida para el procesamiento de prompt en GPUs AMD, que en esta GPU llevó el prompt de un 8B de ~101 a ~470 t/s (~5×). No es un interruptor: corre siempre que el modelo procesa el prompt en GPU.
+**XeonGEMM**, activo por defecto, es un kernel de multiplicación de matrices en mosaico (tiled) escrito a medida para el procesamiento de prompt en GPUs AMD, que en esta GPU llevó el prompt de un 8B de ~101 a ~470 t/s (~5×). No es un interruptor: corre siempre que el modelo procesa el prompt en GPU.
 
-Para modelos MoE con expertos en RAM (ncmoe > 0), el interruptor **Prefetch de expertos MoE** (Ajustes → Inferencia y contexto, activado por defecto) sube el procesamiento del prompt de 1.8× a 4.4× adicional sobre ToshGEMM, sin costo en la generación, solapando la subida de pesos a la GPU con el cómputo.
+Para modelos MoE con expertos en RAM (ncmoe > 0), el interruptor **Prefetch de expertos MoE** (Ajustes → Inferencia y contexto, activado por defecto) sube el procesamiento del prompt de 1.8× a 4.4× adicional sobre XeonGEMM, sin costo en la generación, solapando la subida de pesos a la GPU con el cómputo.
 """),
         DocSection(title: "Perfiles", icon: "person.2", body: """
 Un perfil guarda **toda** la configuración: modelo, motor, parámetros de memoria y contexto. Se crean en Ajustes → Perfiles escribiendo un nombre y pulsando "Guardar actual".
@@ -245,14 +245,14 @@ Agentes de terminal y SDKs basados en el formato Anthropic, no solo OpenAI. El m
         DocSection(title: "Herramientas matemáticas y el agente", icon: "function", body: """
 Con **Matemática simbólica (SymPy)** o **Cálculo científico (NumPy y SciPy)** encendidos (Ajustes del chat → Agentes), el motor lleva diez herramientas con 70 operaciones: expresiones, ecuaciones, matrices y verificación con SymPy; integrales y ecuaciones numéricas, optimización, ajuste, estadística y señales con SciPy. El infinito se escribe `oo` y `-oo`.
 
-#### El agente de Tosh
+#### El agente de Xeon
 El turno lo lleva el motor, no la app: decide si la pregunta pide un cálculo, obliga a pasar por una herramienta o a preguntar lo que falta, compara cada llamada con tu mensaje antes de ejecutarla y solo deja en la respuesta números de tu mensaje o de un resultado validado. El chat de la app y el chat web lo usan; las tarjetas de herramientas muestran cada llamada, lo que se leyó y si se validó o se rechazó.
 
 Las herramientas matemáticas se usan sin preguntar, porque solo calculan; puedes apagarlo en **Usar las herramientas matemáticas sin preguntar**. Entonces el chat pide permiso en cada llamada y lleva el turno él mismo, con las mismas reglas, porque el motor no puede preguntarte.
 
 #### Desde fuera de la app
-- **Agente**: `/v1/chat/completions` con la cabecera `X-Tosh-Agent: on`. Sin cabecera también, si activas **Responder con las herramientas por la API**. La respuesta trae un objeto `tosh` con `version`, `intent`, `outcome`, las llamadas con su `status`, los `validated_results` y las pasadas del modelo.
-- **Inferencia en bruto**: con `X-Tosh-Agent: off`, o con `tools`, `grammar`, `json_schema` o `response_format` en la petición. Es el modelo tal cual, sin ninguna de esas garantías.
+- **Agente**: `/v1/chat/completions` con la cabecera `X-Xeon-Agent: on`. Sin cabecera también, si activas **Responder con las herramientas por la API**. La respuesta trae un objeto `xeon` con `version`, `intent`, `outcome`, las llamadas con su `status`, los `validated_results` y las pasadas del modelo.
+- **Inferencia en bruto**: con `X-Xeon-Agent: off`, o con `tools`, `grammar`, `json_schema` o `response_format` en la petición. Es el modelo tal cual, sin ninguna de esas garantías.
 - **Herramientas directas**: `GET /tools` y `POST /tools` `{"tool": "scientific_compute", "params": {...}}`. Una llamada, sin modelo.
 
 En streaming llegan avisos de progreso con `delta` vacío y la respuesta entera al final, ya comprobada. Cerrar la conexión detiene el turno.
@@ -260,7 +260,7 @@ En streaming llegan avisos de progreso con `delta` vacío y la respuesta entera 
 Los campos `_source`, `_reviewed` y `_trust` son internos: el motor los pone con una clave que ningún cliente ve, y si los manda un cliente se descartan.
 
 ```
-curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Tosh-Agent: on' \\
+curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Xeon-Agent: on' \\
   -H 'Content-Type: application/json' \\
   -d '{"messages":[{"role":"user","content":"Integra x^3/(e^x-1) de 0 a infinito"}]}'
 ```
@@ -268,12 +268,12 @@ curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Tosh-Agent: on' \\
         DocSection(title: "Rendimiento de referencia", icon: "gauge.high", body: """
 Números medidos en el equipo de desarrollo (RX 6700 XT 12 GB, DDR4, macOS):
 
-**Qwen3-8B Q4** (todo en VRAM, con ToshGEMM): ~476 t/s prompt, ~60 t/s generación
+**Qwen3-8B Q4** (todo en VRAM, con XeonGEMM): ~476 t/s prompt, ~60 t/s generación
 
 **Qwen3.6-35B-A3B Q4** (MoE híbrido, ncmoe 24):
 - Normal: ~197 t/s prompt, ~25 t/s generación
 - Con Prefetch de expertos MoE: ~470 t/s prompt (2.4×), generación sin cambio
-- Con MTP: cifra sin remedir tras las mejoras de ToshGEMM/staging; la última medición (+34%, 19.3→25.7 t/s) es de antes de esos cambios y ya no es comparable contra el "Normal" de arriba
+- Con MTP: cifra sin remedir tras las mejoras de XeonGEMM/staging; la última medición (+34%, 19.3→25.7 t/s) es de antes de esos cambios y ya no es comparable contra el "Normal" de arriba
 
 La generación de modelos MoE híbridos está limitada por el ancho de banda de la RAM: una GPU más potente no la mejora, pero RAM DDR5 sí (hasta ~2×).
 """),
@@ -397,9 +397,9 @@ The **AMD Flash Attention kernel** toggle runs attention — both prompt process
 
 **External** — Any `llama-server` binary of yours, for testing custom builds.
 
-**ToshGEMM**, on by default, is a custom tiled matrix-multiply kernel for prompt processing on AMD GPUs; on this GPU it took an 8B's prompt speed from ~101 to ~470 t/s (~5×). It's not a toggle: it always runs when a model processes its prompt on the GPU.
+**XeonGEMM**, on by default, is a custom tiled matrix-multiply kernel for prompt processing on AMD GPUs; on this GPU it took an 8B's prompt speed from ~101 to ~470 t/s (~5×). It's not a toggle: it always runs when a model processes its prompt on the GPU.
 
-For MoE models with experts in RAM (ncmoe > 0), the **MoE expert prefetch** toggle (Settings → Inference & context, on by default) raises prompt processing an additional 1.8×-4.4× on top of ToshGEMM, at no generation cost, by overlapping weight uploads to the GPU with compute.
+For MoE models with experts in RAM (ncmoe > 0), the **MoE expert prefetch** toggle (Settings → Inference & context, on by default) raises prompt processing an additional 1.8×-4.4× on top of XeonGEMM, at no generation cost, by overlapping weight uploads to the GPU with compute.
 """),
         DocSection(title: "Profiles", icon: "person.2", body: """
 A profile saves **everything**: model, engine, memory and context parameters. Create them in Settings → Profiles by typing a name and pressing "Save current".
@@ -514,14 +514,14 @@ Terminal agents and SDKs built on the Anthropic format, not just OpenAI's. The e
         DocSection(title: "Math tools and the agent", icon: "function", body: """
 With **Symbolic math (SymPy)** or **Scientific computing (NumPy and SciPy)** on (chat settings → Agents), the engine carries ten tools with 70 operations: expressions, equations, matrices and verification with SymPy; numerical integrals and equations, optimization, fitting, statistics and signals with SciPy. Infinity is written `oo` and `-oo`.
 
-#### The Tosh agent
+#### The Xeon agent
 The engine runs the turn, not the app: it decides whether the question asks for a computation, makes it go through a tool or ask for what is missing, checks every call against your message before running it, and only lets the answer state numbers from your message or from a validated result. The app's chat and the web chat use it; the tool cards show each call, what was read and whether it was validated or refused.
 
 The math tools are used without asking, since they only compute; you can turn that off with **Use the math tools without asking**. The chat then asks before each call and runs the turn itself, with the same rules, since the engine cannot ask you.
 
 #### From outside the app
-- **Agent**: `/v1/chat/completions` with the header `X-Tosh-Agent: on`. Without the header too, if **Answer with the tools over the API** is on. The reply carries a `tosh` object with `version`, `intent`, `outcome`, the calls with their `status`, the `validated_results` and the model passes.
-- **Raw inference**: with `X-Tosh-Agent: off`, or with `tools`, `grammar`, `json_schema` or `response_format` in the request. It is the model as it is, without any of those guarantees.
+- **Agent**: `/v1/chat/completions` with the header `X-Xeon-Agent: on`. Without the header too, if **Answer with the tools over the API** is on. The reply carries a `xeon` object with `version`, `intent`, `outcome`, the calls with their `status`, the `validated_results` and the model passes.
+- **Raw inference**: with `X-Xeon-Agent: off`, or with `tools`, `grammar`, `json_schema` or `response_format` in the request. It is the model as it is, without any of those guarantees.
 - **Direct tools**: `GET /tools` and `POST /tools` `{"tool": "scientific_compute", "params": {...}}`. One call, no model.
 
 When streaming, progress chunks with an empty `delta` arrive first and the whole answer at the end, already checked. Closing the connection stops the turn.
@@ -529,7 +529,7 @@ When streaming, progress chunks with an empty `delta` arrive first and the whole
 The `_source`, `_reviewed` and `_trust` fields are internal: the engine sets them with a key no client sees, and a client that sends them has them dropped.
 
 ```
-curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Tosh-Agent: on' \\
+curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Xeon-Agent: on' \\
   -H 'Content-Type: application/json' \\
   -d '{"messages":[{"role":"user","content":"Integrate x^3/(e^x-1) from 0 to infinity"}]}'
 ```
@@ -537,12 +537,12 @@ curl http://127.0.0.1:8080/v1/chat/completions -H 'X-Tosh-Agent: on' \\
         DocSection(title: "Reference performance", icon: "gauge.high", body: """
 Numbers measured on the development machine (RX 6700 XT 12 GB, DDR4, macOS):
 
-**Qwen3-8B Q4** (fully in VRAM, with ToshGEMM): ~476 t/s prompt, ~60 t/s generation
+**Qwen3-8B Q4** (fully in VRAM, with XeonGEMM): ~476 t/s prompt, ~60 t/s generation
 
 **Qwen3.6-35B-A3B Q4** (hybrid MoE, ncmoe 24):
 - Normal: ~197 t/s prompt, ~25 t/s generation
 - With MoE expert prefetch: ~470 t/s prompt (2.4×), generation unchanged
-- With MTP: not re-measured since the ToshGEMM/staging fixes; the last measurement (+34%, 19.3→25.7 t/s) predates those and isn't comparable to the "Normal" line above anymore
+- With MTP: not re-measured since the XeonGEMM/staging fixes; the last measurement (+34%, 19.3→25.7 t/s) predates those and isn't comparable to the "Normal" line above anymore
 
 Hybrid MoE generation is RAM-bandwidth-bound: a faster GPU won't improve it, but DDR5 RAM will (up to ~2×).
 """),

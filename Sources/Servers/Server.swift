@@ -8,7 +8,7 @@ import Metal
 
 extension Notification.Name {
     /// Posted when a fresh engine process has launched (KV slots are empty).
-    static let engineDidStart = Notification.Name("toshEngineDidStart")
+    static let engineDidStart = Notification.Name("xeonEngineDidStart")
 }
 
 struct GPUDevice: Identifiable, Hashable {
@@ -84,7 +84,7 @@ struct ServerSettings {
     /// Legacy profile field kept for decoding older saved settings. MTP is now
     /// selected automatically from model capability and expert offload.
     var specMTP: Bool = false
-    /// Route attention through the AMD Metal Flash-Attention kernel (TOSH_FA_AMD).
+    /// Route attention through the AMD Metal Flash-Attention kernel (XEON_FA_AMD).
     var faAmd: Bool = true
     /// MoE-offload prefill boost: overlap expert uploads with compute
     /// (GGML_SCHED_PREFETCH_EXPERTS) and keep CPU experts unpacked so their
@@ -123,13 +123,13 @@ struct ServerSettings {
     /// prompt speed without paying the per-layer wait across every card.
     var splitGroupSize: Int = 0
     /// Hand off activations between GPUs with shared Metal events instead of
-    /// draining both queues on every copy (TOSH_MGPU_EVENTS). Only a tensor split
+    /// draining both queues on every copy (XEON_MGPU_EVENTS). Only a tensor split
     /// hands off often enough for it to pay; on a layer split it deadlocks the
     /// split above a few hundred prompt tokens, so it is gated off there.
     var mgpuEvents: Bool = true
     /// When two split GPUs share a Metal peer group (Infinity Fabric Link, e.g. a
     /// W6800X/Vega II Duo), copy activations die-to-die instead of via host
-    /// (TOSH_MGPU_PEER). Only set when the cards actually share a peer group; measured
+    /// (XEON_MGPU_PEER). Only set when the cards actually share a peer group; measured
     /// effect on a non-bridged pair was 0.00, so an unbridged split skips it.
     var mgpuPeer: Bool = true
     /// Force VRAM-resident (private) Metal buffers. The backend forces shared ones
@@ -732,16 +732,16 @@ struct ServerSettings {
         env["GGML_SCHED_PREFETCH_EXPERTS"] = "1"
         env["GGML_CPU_NO_REPACK"] = "1"
         guard plan.usesDynamicMoE else { return env }
-        env["TOSH_DMOE_CACHE_MIB"] = "auto"
-        env["TOSH_DMOE_RESERVE_MIB"] = String(Int(plan.reserveMib))
-        env["TOSH_DMOE_MIN_ARENA_MIB"] = String(Int(plan.minArenaMib))
-        env["TOSH_DMOE_RARE_ROWS"] = "auto"
-        env["TOSH_DMOE_RARE_TAIL"] = "0"
+        env["XEON_DMOE_CACHE_MIB"] = "auto"
+        env["XEON_DMOE_RESERVE_MIB"] = String(Int(plan.reserveMib))
+        env["XEON_DMOE_MIN_ARENA_MIB"] = String(Int(plan.minArenaMib))
+        env["XEON_DMOE_RARE_ROWS"] = "auto"
+        env["XEON_DMOE_RARE_TAIL"] = "0"
         if plan.mode == "dmoe_bounded", let warm = plan.product?.dmoe.warmBytes, warm > 0 {
-            env["TOSH_DMOE_HOST_CACHE_MIB"] = String(warm / 1_048_576)
+            env["XEON_DMOE_HOST_CACHE_MIB"] = String(warm / 1_048_576)
             // batches of up to 8 tokens stay in mixed execution; the bank has no bytes for the CPU backend
             env["GGML_OP_OFFLOAD_MIN_BATCH"] = "9"
-            env["TOSH_DMOE_HOST_WARMUP_FILL_MIB"] = "max"
+            env["XEON_DMOE_HOST_WARMUP_FILL_MIB"] = "max"
         }
         return env
     }
@@ -830,7 +830,7 @@ struct ServerSettings {
         env["PATH"] = UserShellPath.merged(VideoRuntimeAvailability.augmentedPath(env["PATH"]))
         // The engine logs this, so a log pasted from a bug report identifies the
         // app build even when the engine binary is older than the app.
-        env["TOSH_APP_VERSION"] = AppInfo.version
+        env["XEON_APP_VERSION"] = AppInfo.version
         // the engine's memory plan keeps its own share of the card unless the user set one
         if vramReserveMB > 0 { env["GGML_METAL_VRAM_RESERVE_MB"] = String(vramReserveMB) }
         // Physical GPU selection (consumed by the patched Metal backend, which maps
@@ -926,15 +926,15 @@ struct ServerSettings {
             env["GGML_METAL_SHARED_BUFFERS_DISABLE"] = "1"
         }
         if effectiveFaAmd {
-            env["TOSH_FA_AMD"] = "1"
-            env.removeValue(forKey: "TOSH_FA_AMD_DISABLE")
+            env["XEON_FA_AMD"] = "1"
+            env.removeValue(forKey: "XEON_FA_AMD_DISABLE")
         } else {
-            env["TOSH_FA_AMD_DISABLE"] = "1"
+            env["XEON_FA_AMD_DISABLE"] = "1"
         }
         // Only a tensor split reduces across cards, which is the copy the bridge speeds up.
         // A layer split has nothing for it to carry.
         if mgpuPeer && usesGPUs && isSplitting && effectiveSplitMode == "tensor" && Self.peerBridgeAvailable {
-            env["TOSH_MGPU_PEER"] = "1"
+            env["XEON_MGPU_PEER"] = "1"
         }
         // Only a tensor split hands off activations often enough to matter, and on a
         // layer split it is not inert -- measured on a non-bridged pair (2x FirePro D700):
@@ -943,29 +943,29 @@ struct ServerSettings {
         // ran the same prompt at 23.1 t/s. At 27B the threshold was p >= 129. With events
         // off, both models run every prompt length tested.
         if mgpuEvents && usesGPUs && isSplitting && effectiveSplitMode == "tensor" {
-            env["TOSH_MGPU_EVENTS"] = "1"
+            env["XEON_MGPU_EVENTS"] = "1"
         }
         // Groups only mean anything inside a tensor split, and only when they are
         // smaller than the split itself and divide it evenly.
         if usesGPUs, effectiveSplitMode == "tensor", let g = effectiveSplitGroupSize {
-            env["TOSH_MGPU_TENSOR_GROUP"] = String(g)
+            env["XEON_MGPU_TENSOR_GROUP"] = String(g)
             // The default queue cap blocks the scheduler on one full group and stops the
             // prompt from pipelining into the next; a single GPU loses a little with it.
-            env["TOSH_MTL_QUEUE_DEPTH"] = "256"
+            env["XEON_MTL_QUEUE_DEPTH"] = "256"
         }
         // A DFlash draft runs its selector over the target's logits, so a head split by
         // vocabulary leaves no card holding a whole row and the engine aborts. Keep the head
         // on every card for that pairing; it costs its size per card and nothing otherwise.
         if usesGPUs, isSplitting, effectiveSplitMode == "tensor",
            dflashSelection(modelPath: modelPath, ncmoe: ncmoe) != nil {
-            env["TOSH_MIRROR_OUTPUT_HEAD"] = "1"
+            env["XEON_MIRROR_OUTPUT_HEAD"] = "1"
         }
         // Router mode has no single ncmoe (it's per-model, in the INI); the envs are
         // no-ops for dense models anyway.
         if usesAutoPlan {
-            // --dynamic-moe runs the plan; a forced mode or the retry without it rides on TOSH_AUTO
-            if planWithoutDMoE { env["TOSH_AUTO"] = "nodmoe" } else if executionMode == "dmoe" { env["TOSH_AUTO"] = "dmoe" }
-            env["TOSH_AUTO_KV"] = autoKVMode
+            // --dynamic-moe runs the plan; a forced mode or the retry without it rides on XEON_AUTO
+            if planWithoutDMoE { env["XEON_AUTO"] = "nodmoe" } else if executionMode == "dmoe" { env["XEON_AUTO"] = "dmoe" }
+            env["XEON_AUTO_KV"] = autoKVMode
             // Auto falls back to turbo4 only where F16 and Q8 leave the experts on the CPU.
             // An unset or mixed selection is judged over every card: a host placement names none.
             if autoKVMode == "auto", !Self.isAppleSilicon, Self.modelSupportsTurboKV(at: modelPath) {
@@ -974,11 +974,11 @@ struct ServerSettings {
                     ? ServerController.availableGPUs().map { GPUArchitectureClassifier.architecture(for: $0.name) }
                     : [arch]
                 if Self.turbo4AutoKVAllowed(architectures: archs) {
-                    env["TOSH_AUTO_KV_TURBO4"] = "1"
+                    env["XEON_AUTO_KV_TURBO4"] = "1"
                 }
             }
-            if dynamicMoeLeanRAM { env["TOSH_AUTO_HOST_BANK"] = "lean" }
-            env["TOSH_AUTO_PLAN_FILE"] = AutoMemoryPlan.planURL(port: port).path
+            if dynamicMoeLeanRAM { env["XEON_AUTO_HOST_BANK"] = "lean" }
+            env["XEON_AUTO_PLAN_FILE"] = AutoMemoryPlan.planURL(port: port).path
         } else if prefetchExperts && usesGPUs && ((ncmoe > 0 && !manualFullGPU) || routerMode) {
             // At/above the measured cliff the prefetch overlap collapses and stalls the
             // GPU, so stay below it. Router mode has no single ncmoe to compare.
@@ -1053,7 +1053,7 @@ struct ServerSettings {
 
     /// Whether any two of the GPUs that would carry a split are on a real bridge.
     ///
-    /// `TOSH_MGPU_PEER` trades a host hop for a die-to-die copy, which is only a win when
+    /// `XEON_MGPU_PEER` trades a host hop for a die-to-die copy, which is only a win when
     /// the cards can actually address each other. Measured on a non-bridged pair
     /// (2x FirePro D700, peer group 0) at 14B on a tensor split: pp 41.4 with peer off vs
     /// 43.1 with it on, but holding events on, peer alone moved pp by 0.00 and tg by 0.00
@@ -1488,7 +1488,7 @@ struct ServerSettings {
         return arch
     }
 
-    /// Whether the app may set TOSH_AUTO_KV_TURBO4, so Auto can try a turbo4 cache before it leaves
+    /// Whether the app may set XEON_AUTO_KV_TURBO4, so Auto can try a turbo4 cache before it leaves
     /// the experts on the host. On a 64-lane card (D700, GCN) a quantised KV costs decode: beta 8
     /// ticket 15 measured 4B tg128 d6144 at 12.13 t/s on f16 against 10.52 on q8_0, so the fallback
     /// stays off until a measurement says otherwise.
@@ -2417,12 +2417,12 @@ final class ServerController: ObservableObject {
             }
             return "\n card check: [\(result.index)] FAILED (\(result.detail)) — \(outcome)"
         }.joined()
-        let envKeys = ["TOSH_AUTO", "TOSH_AUTO_KV", "TOSH_AUTO_KV_TURBO4", "TOSH_AUTO_HOST_BANK", "GGML_METAL_VRAM_RESERVE_MB",
+        let envKeys = ["XEON_AUTO", "XEON_AUTO_KV", "XEON_AUTO_KV_TURBO4", "XEON_AUTO_HOST_BANK", "GGML_METAL_VRAM_RESERVE_MB",
                        "GGML_METAL_DEVICE_INDEX", "GGML_METAL_DEVICES", "GGML_METAL_DEVICE_LIST",
-                       "GGML_METAL_SHARED_BUFFERS_DISABLE", "TOSH_FA_AMD",
+                       "GGML_METAL_SHARED_BUFFERS_DISABLE", "XEON_FA_AMD",
                        "GGML_SCHED_PREFETCH_EXPERTS", "GGML_CPU_NO_REPACK",
                        "GGML_METAL_NCB",
-                       "TOSH_MGPU_PEER", "TOSH_MGPU_PEER_DISABLE", "TOSH_MGPU_EVENTS"]
+                       "XEON_MGPU_PEER", "XEON_MGPU_PEER_DISABLE", "XEON_MGPU_EVENTS"]
         let env = settings.environment
         // Include user-provided environment variables in diagnostic logs.
         let userKeys = settings.extraArgTokens.env.keys.filter { !envKeys.contains($0) }.sorted()
@@ -2630,7 +2630,7 @@ final class ServerController: ObservableObject {
             if tail.contains("ggml_gallocr_reserve") {
                 return "La tarjeta rechazó un bloque de memoria del grafo: reduce el contexto, y si el modelo tiene visión baja el tope de tokens por imagen / the card refused a graph memory block: reduce context, and lower the image token cap if the model has vision"
             }
-            return "La tarjeta rechazó un bloque de memoria demasiado grande: reduce el contexto, o arranca con TOSH_METAL_MAX_BUFFER_MB=1024 para repartirlo / the card refused a single oversized memory block: reduce context, or start with TOSH_METAL_MAX_BUFFER_MB=1024 to split it"
+            return "La tarjeta rechazó un bloque de memoria demasiado grande: reduce el contexto, o arranca con XEON_METAL_MAX_BUFFER_MB=1024 para repartirlo / the card refused a single oversized memory block: reduce context, or start with XEON_METAL_MAX_BUFFER_MB=1024 to split it"
         }
         if tail.contains("out of memory") || tail.contains("failed to allocate")
             || tail.contains("insufficient memory") || tail.contains("kiogpucommandbuffercallbackerroroutofmemory") {
@@ -2984,11 +2984,11 @@ final class ServerController: ObservableObject {
                     : "\(fitNoteText): \(reason)"
             }
             if state == .starting {
-                if line.contains("Tosh Dynamic MoE: mode=") || (line.contains("load_model: loading model") && startupPhase == .planning) {
+                if line.contains("Xeon Dynamic MoE: mode=") || (line.contains("load_model: loading model") && startupPhase == .planning) {
                     enterStartupPhase(.loadingWeights)
                 } else if line.contains("MiB locked for experts") || line.contains("expert bank locked") {
                     enterStartupPhase(.lockingMemory)
-                } else if line.contains("tosh_hostcache: ready") {
+                } else if line.contains("xeon_hostcache: ready") {
                     enterStartupPhase(.fillingCache)
                 }
             }

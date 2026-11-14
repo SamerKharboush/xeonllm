@@ -14,8 +14,8 @@
 # launches it without a drafter), with the app's flags (-ngld DRAFT_NGLD, default 99), -lv 4 and
 # DRAFT_EXTRA (e.g. "--split-mode layer", the app's fallback after exit 86), and checks the log
 # for where the drafter's borrowed head went. CELL_TIMEOUT (default 900 s) bounds each request.
-# Each mode gets the env the app builds for it: the tensor-only switches (TOSH_MGPU_EVENTS,
-# _PEER, _TENSOR_GROUP, TOSH_MIRROR_OUTPUT_HEAD) only on a tensor split, no card list at -ngl 0.
+# Each mode gets the env the app builds for it: the tensor-only switches (XEON_MGPU_EVENTS,
+# _PEER, _TENSOR_GROUP, XEON_MIRROR_OUTPUT_HEAD) only on a tensor split, no card list at -ngl 0.
 # NGL0_CELLS (e.g. "band16 band300 band1100") limits the ngl0 mode to those cells; CELLS does
 # the same for every other mode (for a repro of one failing cell).
 # After a model's modes, band16, band300 and band1100 of every mode are compared byte for byte
@@ -79,7 +79,7 @@ else
     ARGS=(-ngl 99 -c 32768 -t 10 -fa auto --load-mode none --jinja --no-reasoning-preserve
           --metrics --cache-ram 2048 --cache-reuse 256 --parallel 1 --split-mode tensor
           --tools all --ui-mcp-proxy -n 2048)
-    ENVS=(TOSH_FA_AMD=1)
+    ENVS=(XEON_FA_AMD=1)
 fi
 
 # the app always names both cards; keep whichever the caller wants
@@ -348,14 +348,14 @@ run_server() {
         case "${kv%%=*}" in
             # a model on the host leaves the cards out of the run
             GGML_METAL_DEVICE_LIST|GGML_METAL_DEVICE_INDEX|GGML_METAL_DEVICES) [ "$ngl" = 0 ] && continue ;;
-            # set only on a tensor split; TOSH_MGPU_EVENTS deadlocks a layer split (ticket 10)
-            TOSH_MGPU_PEER|TOSH_MGPU_EVENTS|TOSH_MGPU_TENSOR_GROUP|TOSH_MTL_QUEUE_DEPTH|TOSH_MIRROR_OUTPUT_HEAD)
+            # set only on a tensor split; XEON_MGPU_EVENTS deadlocks a layer split (ticket 10)
+            XEON_MGPU_PEER|XEON_MGPU_EVENTS|XEON_MGPU_TENSOR_GROUP|XEON_MTL_QUEUE_DEPTH|XEON_MIRROR_OUTPUT_HEAD)
                 { [ "$ngl" = 0 ] || [ "$split" != tensor ]; } && continue ;;
         esac
         runenv+=("$kv")
     done
     # a DFlash draft on a tensor split keeps the target's head on every card
-    if [ "$drafting" = 1 ] && [ "$ngl" != 0 ] && [ "$split" = tensor ]; then runenv+=(TOSH_MIRROR_OUTPUT_HEAD=1); fi
+    if [ "$drafting" = 1 ] && [ "$ngl" != 0 ] && [ "$split" = tensor ]; then runenv+=(XEON_MIRROR_OUTPUT_HEAD=1); fi
     echo "${runenv[*]}" > "$OUT/$(basename "$model" .gguf)-$label.env"
     echo "== $(basename "$model") [$label] port $port"
     # background env alone, not `cd && env`, so $! is the server (env execs it) and not a

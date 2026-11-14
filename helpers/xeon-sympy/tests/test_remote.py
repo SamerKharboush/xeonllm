@@ -1,9 +1,9 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for the relay to remote MCP servers, against local servers for each transport.
 
-    vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_remote.py
+    vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_remote.py
 """
 
 import http.server
@@ -16,7 +16,7 @@ import threading
 import unittest
 
 HELPERS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REMOTE = os.path.join(HELPERS, "tosh_sympy", "remote.py")
+REMOTE = os.path.join(HELPERS, "xeon_sympy", "remote.py")
 INIT = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
         "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}}
 READY = {"jsonrpc": "2.0", "method": "notifications/initialized"}
@@ -271,7 +271,7 @@ class RemoteTest(unittest.TestCase):
 
     def test_an_origin_is_the_scheme_host_and_effective_port(self):
         sys.path.insert(0, HELPERS)
-        from tosh_sympy import remote
+        from xeon_sympy import remote
         self.assertTrue(remote.same_origin("https://Example.com/mcp", "https://example.COM:443/x"))
         self.assertTrue(remote.same_origin("http://[::1]:8000/a", "http://[::1]:8000/b"))
         for other in ("http://example.com/mcp", "https://example.com:8443/mcp", "https://example.org/mcp",
@@ -290,7 +290,7 @@ class RemoteTest(unittest.TestCase):
 
     def test_header_values_come_from_the_environment_only(self):
         sys.path.insert(0, HELPERS)
-        from tosh_sympy import remote
+        from xeon_sympy import remote
         arguments = type("A", (), {"headers_env": "H", "header_env": ["X-Key=K", "X-None=MISSING"]})()
         headers = remote.headers_from(arguments, {"H": '{"Authorization": "Bearer a"}', "K": "k"})
         self.assertEqual(headers, {"Authorization": "Bearer a", "X-Key": "k"})

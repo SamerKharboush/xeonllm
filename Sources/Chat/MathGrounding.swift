@@ -154,7 +154,7 @@ enum MathGrounding {
         }.joined(separator: "\n")
     }
 
-    /// The answer Tosh writes itself when the model's own cannot be shown: the validated results and
+    /// The answer Xeon writes itself when the model's own cannot be shown: the validated results and
     /// what is left open, nothing else.
     static func safeAnswer(results: [ValidatedMathResult], calls: [ChatToolCall]) -> String {
         guard !results.isEmpty else { return MathTranscriptionService.unresolvedMessage() }

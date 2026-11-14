@@ -82,19 +82,19 @@ extension ChatStore {
         var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/v1/chat/completions")!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("on", forHTTPHeaderField: "X-Tosh-Agent")
+        req.setValue("on", forHTTPHeaderField: "X-Xeon-Agent")
         req.timeoutInterval = 120
         if let key = ServerSettings.activeAPIKey() {
             req.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
         }
         let body: [String: Any] = ["messages": [["role": "user", "content": question]], "stream": false,
-                                   "tosh": ["map_request": request]]
+                                   "xeon": ["map_request": request]]
         guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
         req.httpBody = payload
         guard let (data, response) = try? await URLSession.shared.data(for: req),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let layers = ((object["tosh"] as? [String: Any])?["map"] as? [String: Any])?["layers"] as? [[String: Any]]
+              let layers = ((object["xeon"] as? [String: Any])?["map"] as? [String: Any])?["layers"] as? [[String: Any]]
         else { return nil }
         let drawn = layers.compactMap { layer -> ChatMap.Layer? in
             let link = layer["link"] as? [String: Any]

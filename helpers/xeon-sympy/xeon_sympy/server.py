@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """MCP server over stdio for one set of math tools: "sympy" (the default) or "scientific".
@@ -27,9 +27,9 @@ if TOOLSET not in ("sympy", "scientific", "agent"):
     sys.exit(f"unknown tool set '{TOOLSET}'")
 # the agent computes nothing itself: it calls the engine, which calls the other two
 if TOOLSET == "agent":
-    from tosh_sympy import agent
+    from xeon_sympy import agent
 else:
-    schema = importlib.import_module(f"tosh_{TOOLSET}.schema")
+    schema = importlib.import_module(f"xeon_{TOOLSET}.schema")
 
 VERSION = "1.1.0"
 PROTOCOL = "2024-11-05"
@@ -47,7 +47,7 @@ def _setting(name, default, low, high):
         return default
 
 
-TIMEOUT_SECONDS = _setting("TOSH_SYMPY_TIMEOUT_MS", 15000, 100, 20000) / 1000
+TIMEOUT_SECONDS = _setting("XEON_SYMPY_TIMEOUT_MS", 15000, 100, 20000) / 1000
 # after a timeout a fresh worker gets this long to say what it still can about the request
 RECOVERY_SECONDS = 5
 # SymPy's heuristics walk sets, so with Python's random string hashing the same integral
@@ -56,9 +56,9 @@ RECOVERY_SECONDS = 5
 HASH_SEED = "1"
 # BLAS threads of the scientific worker. One is the only setting Accelerate keeps to: at two its
 # LAPACK routines already spread over five cores, and the model is using the machine too.
-THREADS = str(int(_setting("TOSH_SCIENTIFIC_THREADS", 1, 1, 16)))
-MEMORY_LIMIT = int(_setting("TOSH_SYMPY_MEMORY_MB", 1024, 64, 16384)) * 1024 * 1024
-IDLE_SECONDS = _setting("TOSH_SYMPY_IDLE_SECONDS", 300, 1, 86400)
+THREADS = str(int(_setting("XEON_SCIENTIFIC_THREADS", 1, 1, 16)))
+MEMORY_LIMIT = int(_setting("XEON_SYMPY_MEMORY_MB", 1024, 64, 16384)) * 1024 * 1024
+IDLE_SECONDS = _setting("XEON_SYMPY_IDLE_SECONDS", 300, 1, 86400)
 
 
 def _failure(operation, code, message):
@@ -112,13 +112,13 @@ class Worker:
         # -P -s instead of -I: the environment is the two variables below and nothing else,
         # and the hash seed has to get through
         environment = {"PYTHONHASHSEED": HASH_SEED,
-                       "TOSH_SYMPY_BACKSTOP_SECONDS": str(int(TIMEOUT_SECONDS) + 5)}
+                       "XEON_SYMPY_BACKSTOP_SECONDS": str(int(TIMEOUT_SECONDS) + 5)}
         if TOOLSET == "scientific":
             # OPENBLAS_MAIN_FREE is one NumPy would otherwise set itself, which the worker forbids
             environment.update(VECLIB_MAXIMUM_THREADS=THREADS, OMP_NUM_THREADS=THREADS,
                                OPENBLAS_NUM_THREADS=THREADS, OPENBLAS_MAIN_FREE="1")
         self.process = subprocess.Popen(
-            [sys.executable, "-P", "-s", "-B", os.path.join(HOME, "tosh_sympy", "worker.py"), TOOLSET],
+            [sys.executable, "-P", "-s", "-B", os.path.join(HOME, "xeon_sympy", "worker.py"), TOOLSET],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             cwd="/", close_fds=True, env=environment)
         ready = self._read(time.monotonic() + STARTUP_SECONDS)
@@ -204,7 +204,7 @@ class Worker:
 
 
 # the app starts this server with a key of its own; only a call carrying it may say what the user asked
-TRUST_KEY = os.environ.get("TOSH_TRUST_KEY", "")
+TRUST_KEY = os.environ.get("XEON_TRUST_KEY", "")
 _PRIVATE = ("_source", "_reviewed")
 
 
@@ -255,7 +255,7 @@ def _handle(message, worker):
         _respond(message_id, {
             "protocolVersion": PROTOCOL,
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": f"tosh-{TOOLSET}", "version": VERSION},
+            "serverInfo": {"name": f"xeon-{TOOLSET}", "version": VERSION},
         })
     elif method == "ping":
         _respond(message_id, {})
@@ -289,7 +289,7 @@ def _handle(message, worker):
         reply = worker.call(params.get("name"), arguments)
         if ignored and isinstance(reply, dict):
             reply["warnings"] = list(reply.get("warnings") or []) + [
-                "fields starting with _ are reserved for Tosh and were ignored"]
+                "fields starting with _ are reserved for Xeon and were ignored"]
         _respond(message_id, {
             "content": [{"type": "text", "text": json.dumps(reply)}],
             # a request that ran out of time or has no closed form was still a valid call

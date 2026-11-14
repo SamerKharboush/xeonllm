@@ -6,7 +6,7 @@ import CryptoKit
 import Foundation
 
 /// Extensions in the format of docs/extensions.md: folders with an extension.json that add MCP servers,
-/// an agent and a settings page to the engine. They come from inside the app (TOSH_APP_EXTENSIONS in
+/// an agent and a settings page to the engine. They come from inside the app (XEON_APP_EXTENSIONS in
 /// make-app.sh) and from a folder the person picks; the ones from the folder stay off until approved.
 enum EngineExtensions {
     struct Text: Decodable, Sendable {

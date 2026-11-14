@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Turns a parsed mathematical expression into a NumPy function.
@@ -44,7 +44,7 @@ def sympy():
 
 def parse(text, declared=(), functions=None):
     sympy()
-    from tosh_sympy.mathlang import Context, MathError, parse_expression
+    from xeon_sympy.mathlang import Context, MathError, parse_expression
     try:
         return parse_expression(_text(text), Context(None, functions, declared))
     except MathError as error:
@@ -54,7 +54,7 @@ def parse(text, declared=(), functions=None):
 def parse_equation(text, declared=(), functions=None):
     """left - right of "left = right"; a bare expression counts as "expression = 0"."""
     sp = sympy()
-    from tosh_sympy.mathlang import Context, MathError, parse_relation
+    from xeon_sympy.mathlang import Context, MathError, parse_relation
     try:
         relation = parse_relation(_text(text), Context(None, functions, declared))
     except MathError as error:
@@ -66,8 +66,8 @@ def parse_equation(text, declared=(), functions=None):
 
 def parse_relation(text, declared=()):
     sympy()
-    from tosh_sympy.mathlang import Context, MathError
-    from tosh_sympy.mathlang import parse_relation as parse_any
+    from xeon_sympy.mathlang import Context, MathError
+    from xeon_sympy.mathlang import parse_relation as parse_any
     try:
         return parse_any(_text(text), Context(None, None, declared))
     except MathError as error:
@@ -187,7 +187,7 @@ def compile_expression(expr, symbols):
 
 def symbols(names, what="variables"):
     sp = sympy()
-    from tosh_sympy.mathlang import MathError, check_identifier
+    from xeon_sympy.mathlang import MathError, check_identifier
     result = []
     for name in names:
         if not isinstance(name, str):

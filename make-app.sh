@@ -1,17 +1,17 @@
 #!/bin/zsh
 # Packages XeonLLM as a native .app bundle.
-# TOSH_ARCH=x86_64 ./make-app.sh  -> cross-compile (CI on Apple Silicon runners)
+# XEON_ARCH=x86_64 ./make-app.sh  -> cross-compile (CI on Apple Silicon runners)
 set -e
 cd "$(dirname "$0")"
 
 # Version: the VERSION file is the single source of truth. Each packaging
 # build bumps the last component automatically (0.81.1 -> 0.81.2). For a
-# minor/major release set it explicitly: TOSH_VERSION=0.82 ./make-app.sh
-# CI builds (CI=true) and TOSH_NO_BUMP=1 use the committed version as-is.
-if [ -n "$TOSH_VERSION" ]; then
-    VERSION="$TOSH_VERSION"
+# minor/major release set it explicitly: XEON_VERSION=0.82 ./make-app.sh
+# CI builds (CI=true) and XEON_NO_BUMP=1 use the committed version as-is.
+if [ -n "$XEON_VERSION" ]; then
+    VERSION="$XEON_VERSION"
     echo "$VERSION" > VERSION
-elif [ -z "$CI" ] && [ "$TOSH_NO_BUMP" != "1" ]; then
+elif [ -z "$CI" ] && [ "$XEON_NO_BUMP" != "1" ]; then
     VERSION=$(<VERSION)
     # a two-component version opens its patch series (0.86 -> 0.86.1) instead of
     # bumping the minor, which is what incrementing its last component would do
@@ -28,27 +28,27 @@ sed -i '' -E "s/static let version = \"[^\"]*\"/static let version = \"$VERSION\
 echo "version: $VERSION"
 
 # Stamp the no-AVX2 variant so the updater keeps it on its own channel (an AVX2 DMG
-# would SIGILL on those CPUs). Set via TOSH_NO_AVX2=1 alongside build-engines.sh.
-NOAVX2=$([ "$TOSH_NO_AVX2" = "1" ] && echo true || echo false)
+# would SIGILL on those CPUs). Set via XEON_NO_AVX2=1 alongside build-engines.sh.
+NOAVX2=$([ "$XEON_NO_AVX2" = "1" ] && echo true || echo false)
 echo "no-AVX2 variant: $NOAVX2"
 
-if [ "$TOSH_ARCH" = "universal" ]; then
+if [ "$XEON_ARCH" = "universal" ]; then
     swift build -c release --arch x86_64 --arch arm64
     SWIFT_BIN=".build/apple/Products/Release/XeonLLM"
-elif [ -n "$TOSH_ARCH" ]; then
-    swift build -c release --arch "$TOSH_ARCH"
-    SWIFT_BIN=".build/$TOSH_ARCH-apple-macosx/release/XeonLLM"
+elif [ -n "$XEON_ARCH" ]; then
+    swift build -c release --arch "$XEON_ARCH"
+    SWIFT_BIN=".build/$XEON_ARCH-apple-macosx/release/XeonLLM"
 else
     swift build -c release
     SWIFT_BIN=".build/release/XeonLLM"
 fi
 
 # Another product can be packaged from this tree without editing it: these set its name, bundle id,
-# data folder, version, icon, updater and defaults (TOSH_APP_DEFAULTS), and a plain build keeps XeonLLM's.
-APP_NAME="${TOSH_APP_NAME:-XeonLLM}"
-BUNDLE_ID="${TOSH_BUNDLE_ID:-dev.xeonllm.app}"
-PRODUCT_VERSION="${TOSH_PRODUCT_VERSION:-$VERSION}"
-APP_ICON="${TOSH_APP_ICON:-AppIcon.icon}"
+# data folder, version, icon, updater and defaults (XEON_APP_DEFAULTS), and a plain build keeps XeonLLM's.
+APP_NAME="${XEON_APP_NAME:-XeonLLM}"
+BUNDLE_ID="${XEON_BUNDLE_ID:-dev.xeonllm.app}"
+PRODUCT_VERSION="${XEON_PRODUCT_VERSION:-$VERSION}"
+APP_ICON="${XEON_APP_ICON:-AppIcon.icon}"
 
 APP="dist/$APP_NAME.app"
 rm -rf "$APP"
@@ -85,27 +85,27 @@ fi
 
 # Math runtime: CPython with SymPy, NumPy and SciPy (scripts/build-sympy.sh; optional).
 # The app only offers the settings when it is here.
-SYMPY_RUNTIME="vendor/tosh-sympy"
+SYMPY_RUNTIME="vendor/xeon-sympy"
 if [ -x "$SYMPY_RUNTIME/python/bin/python3" ]; then
-    SYMPY_ARCH="${TOSH_ARCH:-$(uname -m)}"
+    SYMPY_ARCH="${XEON_ARCH:-$(uname -m)}"
     if [ "$(awk '{print $NF}' "$SYMPY_RUNTIME/VERSION")" != "$SYMPY_ARCH" ]; then
-        echo "ERROR: vendor/tosh-sympy is not built for $SYMPY_ARCH; run ARCH=$SYMPY_ARCH ./scripts/build-sympy.sh" >&2
+        echo "ERROR: vendor/xeon-sympy is not built for $SYMPY_ARCH; run ARCH=$SYMPY_ARCH ./scripts/build-sympy.sh" >&2
         exit 1
     fi
-    cp -R "$SYMPY_RUNTIME" "$APP/Contents/Resources/tosh-sympy"
+    cp -R "$SYMPY_RUNTIME" "$APP/Contents/Resources/xeon-sympy"
     # The helpers come from helpers/, not from the runtime's copy, which only build-sympy.sh
     # refreshes; checked-hash bytecode is ignored if it ever disagrees with its source.
-    BUNDLED_SYMPY="$APP/Contents/Resources/tosh-sympy"
-    rm -rf "$BUNDLED_SYMPY/tosh_sympy" "$BUNDLED_SYMPY/tosh_scientific"
-    mkdir -p "$BUNDLED_SYMPY/tosh_sympy" "$BUNDLED_SYMPY/tosh_scientific"
-    cp helpers/tosh-sympy/tosh_sympy/*.py "$BUNDLED_SYMPY/tosh_sympy/"
-    cp helpers/tosh-scientific/tosh_scientific/*.py "$BUNDLED_SYMPY/tosh_scientific/"
+    BUNDLED_SYMPY="$APP/Contents/Resources/xeon-sympy"
+    rm -rf "$BUNDLED_SYMPY/xeon_sympy" "$BUNDLED_SYMPY/xeon_scientific"
+    mkdir -p "$BUNDLED_SYMPY/xeon_sympy" "$BUNDLED_SYMPY/xeon_scientific"
+    cp helpers/xeon-sympy/xeon_sympy/*.py "$BUNDLED_SYMPY/xeon_sympy/"
+    cp helpers/xeon-scientific/xeon_scientific/*.py "$BUNDLED_SYMPY/xeon_scientific/"
     if "$BUNDLED_SYMPY/python/bin/python3" -I -c pass 2>/dev/null; then
         "$BUNDLED_SYMPY/python/bin/python3" -I -m compileall -q -j 0 --invalidation-mode checked-hash \
-            "$BUNDLED_SYMPY/tosh_sympy" "$BUNDLED_SYMPY/tosh_scientific"
+            "$BUNDLED_SYMPY/xeon_sympy" "$BUNDLED_SYMPY/xeon_scientific"
     fi
     # which helper modules this runtime carries, for anyone who runs it to check
-    (cd "$BUNDLED_SYMPY" && shasum -a 256 tosh_sympy/*.py tosh_scientific/*.py) > "$BUNDLED_SYMPY/HELPERS.sha256"
+    (cd "$BUNDLED_SYMPY" && shasum -a 256 xeon_sympy/*.py xeon_scientific/*.py) > "$BUNDLED_SYMPY/HELPERS.sha256"
     echo "bundled math runtime ($(<"$SYMPY_RUNTIME/VERSION"), helpers $(shasum -a 256 < "$BUNDLED_SYMPY/HELPERS.sha256" | cut -c1-12))"
 else
     echo "WARNING: math runtime not built; run ./scripts/build-sympy.sh to include it"
@@ -135,7 +135,7 @@ cp Assets/rich-content/katex/dist/fonts/* \
 cp Assets/rich-content/marked/lib/marked.umd.js \
    "$APP/Contents/Resources/rich-content/marked/lib/"
 mkdir -p "$APP/Contents/Resources/rich-content/maplibre/licenses"
-cp Assets/rich-content/maplibre/map.html Assets/rich-content/maplibre/toshmap.js Assets/rich-content/maplibre/maplibre-gl.css \
+cp Assets/rich-content/maplibre/map.html Assets/rich-content/maplibre/xeonmap.js Assets/rich-content/maplibre/maplibre-gl.css \
    "$APP/Contents/Resources/rich-content/maplibre/"
 cp Assets/rich-content/maplibre/licenses/* "$APP/Contents/Resources/rich-content/maplibre/licenses/"
 
@@ -205,7 +205,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>CFBundleExecutable</key>      <string>XeonLLM</string>
     <key>CFBundleVersion</key>         <string>$PRODUCT_VERSION</string>
     <key>CFBundleShortVersionString</key> <string>$PRODUCT_VERSION</string>
-    <key>TOSHNoAVX2</key>              <$NOAVX2/>
+    <key>XEONNoAVX2</key>              <$NOAVX2/>
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>  <string>14.0</string>
     <key>NSHighResolutionCapable</key> <true/>
@@ -231,26 +231,26 @@ EOF
 # the app reads its identity from these keys; a plain build has none of them
 PLIST="$APP/Contents/Info.plist"
 if [ "$APP_NAME" != XeonLLM ]; then
-    /usr/libexec/PlistBuddy -c "Add :TOSHProductName string $APP_NAME" \
-        -c "Add :TOSHIdentifier string $BUNDLE_ID" \
-        -c "Add :TOSHDataFolder string ${TOSH_DATA_FOLDER:-$APP_NAME}" \
-        -c "Add :TOSHProductVersion string $PRODUCT_VERSION" "$PLIST"
+    /usr/libexec/PlistBuddy -c "Add :XEONProductName string $APP_NAME" \
+        -c "Add :XEONIdentifier string $BUNDLE_ID" \
+        -c "Add :XEONDataFolder string ${XEON_DATA_FOLDER:-$APP_NAME}" \
+        -c "Add :XEONProductVersion string $PRODUCT_VERSION" "$PLIST"
     echo "identity: $APP_NAME ($BUNDLE_ID) $PRODUCT_VERSION, built on XeonLLM $VERSION"
 fi
-if [ "$TOSH_UPDATES" = 0 ]; then
-    /usr/libexec/PlistBuddy -c "Add :TOSHUpdatesDisabled bool true" "$PLIST"
+if [ "$XEON_UPDATES" = 0 ]; then
+    /usr/libexec/PlistBuddy -c "Add :XEONUpdatesDisabled bool true" "$PLIST"
     echo "in-app updates: off"
 fi
 # a plist of settings keys whose defaults this product sets differently; what the user changes still wins
-if [ -n "${TOSH_APP_DEFAULTS:-}" ]; then
-    plutil -lint -s "$TOSH_APP_DEFAULTS"
-    cp "$TOSH_APP_DEFAULTS" "$APP/Contents/Resources/AppDefaults.plist"
-    echo "defaults from $TOSH_APP_DEFAULTS"
+if [ -n "${XEON_APP_DEFAULTS:-}" ]; then
+    plutil -lint -s "$XEON_APP_DEFAULTS"
+    cp "$XEON_APP_DEFAULTS" "$APP/Contents/Resources/AppDefaults.plist"
+    echo "defaults from $XEON_APP_DEFAULTS"
 fi
 # a folder of extensions in the format of docs/extensions.md, on by default inside the app
-if [ -n "$TOSH_APP_EXTENSIONS" ]; then
-    cp -R "$TOSH_APP_EXTENSIONS" "$APP/Contents/Resources/extensions"
-    echo "bundled extensions from $TOSH_APP_EXTENSIONS"
+if [ -n "$XEON_APP_EXTENSIONS" ]; then
+    cp -R "$XEON_APP_EXTENSIONS" "$APP/Contents/Resources/extensions"
+    echo "bundled extensions from $XEON_APP_EXTENSIONS"
 fi
 
 # macOS 26 Liquid Glass icon: compile the layered AppIcon.icon when the
@@ -279,8 +279,8 @@ fi
 # a binary built for a newer macOS than the app's floor fails to launch on the testers'
 # systems with a dyld symbol error, and only there, so refuse to package it
 for exe in "$APP/Contents/Resources/bin/"* "$APP/Contents/Resources/bin-image/"* "$APP/Contents/Resources/bin-audio/"* \
-           "$APP/Contents/Resources/tosh-sympy/python/bin/python3" \
-           "$APP/Contents/Resources/tosh-sympy/"**/*.(so|dylib)(.N); do
+           "$APP/Contents/Resources/xeon-sympy/python/bin/python3" \
+           "$APP/Contents/Resources/xeon-sympy/"**/*.(so|dylib)(.N); do
     [ -f "$exe" ] || continue
     case "$exe" in *.metallib) continue;; esac
     minos=$(otool -l "$exe" 2>/dev/null | awk '/LC_BUILD_VERSION/{f=1} f&&/^ *minos/{print $2; exit}')
@@ -294,10 +294,10 @@ done
 [ -x "$APP/Contents/Resources/bin/llama-server" ] && codesign --force -s - "$APP/Contents/Resources/bin/"*(.)
 [ -x "$APP/Contents/Resources/bin-image/sd-cli" ] && codesign --force -s - "$APP/Contents/Resources/bin-image/"*
 [ -x "$APP/Contents/Resources/bin-audio/whisper-cli" ] && codesign --force -s - "$APP/Contents/Resources/bin-audio/"*
-if [ -x "$APP/Contents/Resources/tosh-sympy/python/bin/python3" ]; then
+if [ -x "$APP/Contents/Resources/xeon-sympy/python/bin/python3" ]; then
     # NumPy and SciPy are made of extension modules and libraries: each is a Mach-O that needs its own signature
-    codesign --force -s - "$APP/Contents/Resources/tosh-sympy/"**/*.(so|dylib)(.N) \
-                          "$APP/Contents/Resources/tosh-sympy/python/bin/python3"
+    codesign --force -s - "$APP/Contents/Resources/xeon-sympy/"**/*.(so|dylib)(.N) \
+                          "$APP/Contents/Resources/xeon-sympy/python/bin/python3"
 fi
 codesign --force --entitlements XeonLLM.entitlements -s - "$APP"
 echo "Done: $APP"

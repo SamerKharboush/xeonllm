@@ -1,9 +1,9 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for the engine's math agent and its rules, with a scripted engine in place of the model.
 
-    vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_agent.py
+    vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_agent.py
 """
 
 import json
@@ -11,7 +11,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tosh_sympy import agent, policy  # noqa: E402
+from xeon_sympy import agent, policy  # noqa: E402
 
 REPORTED = r"""Calcula exactamente
 \[
@@ -214,9 +214,9 @@ def test_an_attachment_the_agent_cannot_read_goes_back_to_the_client():
                     [{"type": "text", "text": "Solve the equation in the photo."},
                      {"type": "input_audio", "input_audio": {"data": "AAAA", "format": "wav"}}]):
         # the app, which says it is one with its options, takes the turn back to its own loop
-        reply = agent.run({"request": {"messages": [{"role": "user", "content": content}], "tosh": {"locale": "en"}},
+        reply = agent.run({"request": {"messages": [{"role": "user", "content": content}], "xeon": {"locale": "en"}},
                            "base_url": "http://127.0.0.1:9"})
-        assert reply["tosh"]["outcome"] == "declined" and reply["choices"][0]["message"]["content"] == "", reply
+        assert reply["xeon"]["outcome"] == "declined" and reply["choices"][0]["message"]["content"] == "", reply
         # any other client, as the web chat, gets the model's answer to what it sent, never an empty one
         engine = Engine([{"content": "A cat on a sofa."}], {}, tools=False)
         original = agent.Engine
@@ -227,12 +227,12 @@ def test_an_attachment_the_agent_cannot_read_goes_back_to_the_client():
                                "base_url": "http://127.0.0.1:9"}, events.append)
         finally:
             agent.Engine = original
-        assert reply["tosh"]["outcome"] == "answered" and reply["choices"][0]["message"]["content"] == "A cat on a sofa."
+        assert reply["xeon"]["outcome"] == "answered" and reply["choices"][0]["message"]["content"] == "A cat on a sofa."
         assert engine.bodies[0]["messages"][0]["content"] == content and engine.bodies[0]["max_tokens"] == 50
         assert {"type": "delta", "content": "A cat on a sofa."} in events, events
 
 
-def test_the_texts_tosh_writes_follow_the_conversation():
+def test_the_texts_xeon_writes_follow_the_conversation():
     assert policy.language(["Calcula la integral de x^2 entre 0 y 1."]) == "es"
     assert policy.language(["Calculate the integral of x^2 from 0 to 1."]) == "en"
     assert policy.language(["¿Cuánto vale?"]) == "es" and policy.language(["Solve it."]) == "en"
@@ -451,7 +451,7 @@ def test_every_pass_goes_to_the_requested_model_with_its_sampling():
 def test_the_client_limit_on_passes_is_honoured():
     loop = [{"content": "", "tool_calls": [call("sympy_expression", operation="evaluate", expression="2+2")]}] * 5
     engine = Engine(loop, {"2+2": INTEGRAL})
-    turn = agent.Turn(engine, {"tosh": {"max_rounds": 3}, "messages": [{"role": "user", "content": "Evaluate 2+2."}]})
+    turn = agent.Turn(engine, {"xeon": {"max_rounds": 3}, "messages": [{"role": "user", "content": "Evaluate 2+2."}]})
     content, outcome = turn.run()
     assert turn.passes == 3 and outcome == "turn_limit", (turn.passes, outcome)
 
@@ -510,7 +510,7 @@ def test_an_answer_cut_at_its_token_limit_says_it_is_incomplete():
     reply = _run_with(Cut([{"content": "Once upon a time"}], {}, tools=False), "Tell me a long story.")
     assert reply["choices"][0]["finish_reason"] == "length", reply
     assert reply["choices"][0]["message"]["content"].endswith("so it is incomplete._"), reply
-    assert reply["tosh"]["outcome"] == "cut_at_limit"
+    assert reply["xeon"]["outcome"] == "cut_at_limit"
 
 
 def test_numbers_and_constants_are_read_as_in_the_app():
@@ -728,27 +728,27 @@ def test_a_conversation_that_no_longer_fits_leaves_out_its_oldest_exchanges_and_
     assert engine.tokens(sent) + 200 <= 1000, engine.tokens(sent)
     assert messages[0]["role"] == "system" and messages[0]["content"].startswith("Be brief.\n\nThe ")
     assert messages[1]["role"] == "user" and messages[-1]["content"].startswith("And the last one?")
-    left = reply["tosh"]["context"]["left_out"]
+    left = reply["xeon"]["context"]["left_out"]
     assert left > 0 and left % 2 == 0 and len(messages) == 2 + 20 - left, (left, len(messages))
     assert "Question 9" in json.dumps(messages) and "Question 0" not in json.dumps(messages)
     content = reply["choices"][0]["message"]["content"]
     assert content.startswith("The last one.") and f"The {left} oldest messages" in content, content
     # what the whole conversation takes, which no longer fits: a client that summarizes knows it has to
-    assert reply["tosh"]["context"]["n_ctx"] == 1000 and reply["tosh"]["context"]["used"] > 1000, reply["tosh"]
+    assert reply["xeon"]["context"]["n_ctx"] == 1000 and reply["xeon"]["context"]["used"] > 1000, reply["xeon"]
 
 
 def test_a_conversation_that_fits_is_sent_whole_and_not_counted():
     engine = Sized([{"content": "Fine."}], 100000)
     reply = _long(engine, turns=3)
     assert len(engine.bodies[0]["messages"]) == 1 + 6 + 1 and engine.counted == 0
-    assert reply["tosh"]["context"]["left_out"] == 0 and "oldest messages" not in reply["choices"][0]["message"]["content"]
+    assert reply["xeon"]["context"]["left_out"] == 0 and "oldest messages" not in reply["choices"][0]["message"]["content"]
 
 
 def test_without_a_count_the_engines_own_refusal_says_how_much_to_leave_out():
     engine = Sized([{"content": "The last one."}], 1000, counts=False)
     reply = _long(engine)
     assert reply["choices"][0]["message"]["content"].startswith("The last one."), reply
-    assert reply["tosh"]["context"]["left_out"] > 0 and engine.tokens(engine.bodies[0]) < 1000
+    assert reply["xeon"]["context"]["left_out"] > 0 and engine.tokens(engine.bodies[0]) < 1000
 
 
 def test_a_message_that_alone_does_not_fit_is_a_clear_error():
@@ -765,7 +765,7 @@ def test_an_answer_cut_by_a_full_context_is_told_from_one_cut_at_its_limit():
             reply["usage"]["completion_tokens"] = self.n_ctx - reply["usage"]["prompt_tokens"] - 1
             return reply
     reply = _long(Cut([{"content": "Once upon"}], 1000), turns=1)
-    assert reply["tosh"]["outcome"] == "cut_at_context", reply["tosh"]
+    assert reply["xeon"]["outcome"] == "cut_at_context", reply["xeon"]
     assert reply["choices"][0]["message"]["content"].endswith(
         "cut when the conversation filled the model's context, so it is incomplete._")
     assert reply["choices"][0]["finish_reason"] == "length"
@@ -796,7 +796,7 @@ def test_an_operation_a_service_only_accepted_is_never_said_to_be_done():
         agent.APPROVED = original_approved
     tool_message = [m for m in engine.bodies[-1]["messages"] if m["role"] == "tool"][0]["content"]
     assert tool_message.startswith(agent.ACCEPTED_NOTE), tool_message
-    assert reply["tosh"]["calls"][0]["status"] == "accepted", reply["tosh"]["calls"]
+    assert reply["xeon"]["calls"][0]["status"] == "accepted", reply["xeon"]["calls"]
 
 
 if __name__ == "__main__":

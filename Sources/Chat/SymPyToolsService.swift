@@ -19,7 +19,7 @@ enum SymPyToolsService {
 
     /// The runtime built by scripts/build-sympy.sh, or nil when this build does not carry it.
     static func runtimeDirectory(resources: URL? = Bundle.main.resourceURL) -> URL? {
-        guard let directory = resources?.appendingPathComponent("tosh-sympy"),
+        guard let directory = resources?.appendingPathComponent("xeon-sympy"),
               FileManager.default.isExecutableFile(
                 atPath: directory.appendingPathComponent("python/bin/python3").path)
         else { return nil }
@@ -46,25 +46,25 @@ enum SymPyToolsService {
               let runtime = runtimeDirectory(resources: resources)
         else { return [] }
         let python = runtime.appendingPathComponent("python/bin/python3").path
-        let helper = runtime.appendingPathComponent("tosh_sympy/server.py").path
+        let helper = runtime.appendingPathComponent("xeon_sympy/server.py").path
         let bundled = EngineExtensions.engineEntries(extensions, runtime: runtime, trustKey: trustKey)
         let enabled = enabled || bundled.mathTools
         let scientific = scientific || bundled.mathTools
         if enabled {
             servers[serverName] = ["command": python, "args": ["-I", "-B", helper], "timeout_ms": 30_000,
-                                   "env": ["TOSH_TRUST_KEY": trustKey]]
+                                   "env": ["XEON_TRUST_KEY": trustKey]]
         }
         if scientific {
             servers[ScientificToolsService.serverName] = [
                 "command": python, "args": ["-I", "-B", helper, ScientificToolsService.serverName],
-                "timeout_ms": 30_000, "env": ["TOSH_TRUST_KEY": trustKey],
+                "timeout_ms": 30_000, "env": ["XEON_TRUST_KEY": trustKey],
             ]
         }
         // a turn can take minutes: it runs every round and tool call of the answer
         servers[agentName] = ["command": python, "args": ["-I", "-B", helper, agentName],
                               "timeout_ms": 900_000,
-                              "env": ["TOSH_TRUST_KEY": trustKey,
-                                      "TOSH_AGENT_SERVERS": (approved + bundled.servers.keys.sorted()).joined(separator: ",")]]
+                              "env": ["XEON_TRUST_KEY": trustKey,
+                                      "XEON_AGENT_SERVERS": (approved + bundled.servers.keys.sorted()).joined(separator: ",")]]
         servers.merge(bundled.servers) { current, _ in current }
         if let replacement = bundled.agent { servers[agentName] = replacement }
         let agentOnly = approved + bundled.agentOnly
@@ -100,7 +100,7 @@ enum SymPyToolsService {
     static func relayEntry(runtime: URL, url: String, transport: String?, timeoutSeconds: Int,
                            headerArguments: [String]) -> [String: Any] {
         let python = runtime.appendingPathComponent("python/bin/python3").path
-        let relay = runtime.appendingPathComponent("tosh_sympy/remote.py").path
+        let relay = runtime.appendingPathComponent("xeon_sympy/remote.py").path
         var args = ["-I", "-B", relay, "--url", url, "--timeout", String(timeoutSeconds)]
         if let transport { args += ["--transport", transport] }
         return ["command": python, "args": args + headerArguments, "timeout_ms": timeoutSeconds * 1000]
@@ -118,7 +118,7 @@ enum SymPyToolsService {
     /// The relay reads a server's headers from this variable of the engine's environment, so a token
     /// never shows on a command line.
     static func headersVariable(_ server: MCPServer) -> String {
-        "TOSH_MCP_HEADERS_" + server.engineName.uppercased().replacingOccurrences(of: "-", with: "_")
+        "XEON_MCP_HEADERS_" + server.engineName.uppercased().replacingOccurrences(of: "-", with: "_")
     }
 
     /// The headers of every approved remote server, for the engine's environment.

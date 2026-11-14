@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The engine's math agent. llama-server started with --mcp-agent hands every
@@ -21,9 +21,9 @@ import uuid
 
 from . import policy
 
-TRUST_KEY = os.environ.get("TOSH_TRUST_KEY", "")
+TRUST_KEY = os.environ.get("XEON_TRUST_KEY", "")
 # MCP servers an administrator approved for the agent; the engine names their tools "<server>_<tool>"
-APPROVED = tuple(name + "_" for name in os.environ.get("TOSH_AGENT_SERVERS", "").split(",") if name)
+APPROVED = tuple(name + "_" for name in os.environ.get("XEON_AGENT_SERVERS", "").split(",") if name)
 MAX_ROUNDS = 10
 # what a client may set on a request that the agent passes on to each round
 _GENERATION = ("temperature", "top_p", "top_k", "min_p", "seed", "repeat_penalty", "presence_penalty",
@@ -205,11 +205,11 @@ class Engine:
             raise Cancelled()
         connection = http.client.HTTPConnection(self.host, self.port, timeout=timeout)
         # rounds of the agent are raw inference, never the agent again
-        headers = {"Content-Type": "application/json", "X-Tosh-Agent": "off"}
+        headers = {"Content-Type": "application/json", "X-Xeon-Agent": "off"}
         if self.api_key:
             headers["Authorization"] = "Bearer " + self.api_key
         if self.agent_key:
-            headers["X-Tosh-Agent-Key"] = self.agent_key
+            headers["X-Xeon-Agent-Key"] = self.agent_key
         # connected before it is shared, so a cancellation always finds a socket to close
         connection.connect()
         with self._lock:
@@ -341,7 +341,7 @@ def _media(request):
 
 def _parse(request):
     """(system, history, question) from a chat request. Tool messages are refused: the tools run
-    here, and a result sent by a client could otherwise pass for one Tosh computed."""
+    here, and a result sent by a client could otherwise pass for one Xeon computed."""
     messages = request.get("messages")
     if not isinstance(messages, list) or not messages:
         raise Invalid("messages must be a non-empty array")
@@ -351,7 +351,7 @@ def _parse(request):
             raise Invalid("each message must be an object")
         role = message.get("role")
         if role in ("tool", "function") or message.get("tool_calls") or message.get("function_call"):
-            raise Invalid("tool calls and tool results are not accepted: the tools run inside Tosh")
+            raise Invalid("tool calls and tool results are not accepted: the tools run inside Xeon")
         text = _text(message.get("content"))
         if role in ("system", "developer"):
             system.append(text)
@@ -504,8 +504,8 @@ class Turn:
         return message
 
     def _rounds(self):
-        """The client's own limit on model passes ("tosh": {"max_rounds": n}), as the app's agent turns setting."""
-        options = self.request.get("tosh")
+        """The client's own limit on model passes ("xeon": {"max_rounds": n}), as the app's agent turns setting."""
+        options = self.request.get("xeon")
         value = options.get("max_rounds") if isinstance(options, dict) else None
         return max(1, min(100, value)) if isinstance(value, int) and not isinstance(value, bool) else MAX_ROUNDS
 
@@ -766,12 +766,12 @@ def _media_answer(engine, request, emit, started):
     usage = {"prompt_tokens": (reply.get("usage") or {}).get("prompt_tokens", 0),
              "completion_tokens": (reply.get("usage") or {}).get("completion_tokens", 0)}
     emit({"type": "pass", "n": 1, "state": "end", **usage})
-    return {"id": "chatcmpl-tosh-" + uuid.uuid4().hex, "object": "chat.completion", "created": int(time.time()),
-            "model": str(request.get("model") or "tosh-agent"),
+    return {"id": "chatcmpl-xeon-" + uuid.uuid4().hex, "object": "chat.completion", "created": int(time.time()),
+            "model": str(request.get("model") or "xeon-agent"),
             "choices": [{"index": 0, "message": {"role": "assistant", "content": choice["message"].get("content") or ""},
                          "finish_reason": choice.get("finish_reason") or "stop"}],
             "usage": dict(usage, total_tokens=usage["prompt_tokens"] + usage["completion_tokens"]),
-            "tosh": {"version": 1, "intent": policy.NO_MATH, "outcome": "answered", "calls": [], "validated_results": [],
+            "xeon": {"version": 1, "intent": policy.NO_MATH, "outcome": "answered", "calls": [], "validated_results": [],
                      "passes": 1, "seconds": round(time.monotonic() - started, 3),
                      "context": {"used": usage["prompt_tokens"] + usage["completion_tokens"] or None,
                                  "n_ctx": engine.context(request.get("model")), "left_out": 0}}}
@@ -787,13 +787,13 @@ def run(arguments, emit=None, register=None):
         return {"status": 400, "error": {"message": "requests with tools are answered by the raw endpoint",
                                          "type": "invalid_request_error"}}
     started = time.monotonic()
-    if _media(request) and isinstance(request.get("tosh"), dict):
+    if _media(request) and isinstance(request.get("xeon"), dict):
         # the app sends the attachment to the model itself, with its math tools in its own loop
-        return {"id": "chatcmpl-tosh-" + uuid.uuid4().hex, "object": "chat.completion", "created": int(time.time()),
-                "model": str(request.get("model") or "tosh-agent"),
+        return {"id": "chatcmpl-xeon-" + uuid.uuid4().hex, "object": "chat.completion", "created": int(time.time()),
+                "model": str(request.get("model") or "xeon-agent"),
                 "choices": [{"index": 0, "message": {"role": "assistant", "content": ""}, "finish_reason": "stop"}],
                 "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-                "tosh": {"version": 1, "outcome": "declined", "seconds": 0.0, "passes": 0}}
+                "xeon": {"version": 1, "outcome": "declined", "seconds": 0.0, "passes": 0}}
     engine = Engine(str(arguments.get("base_url") or ""), arguments.get("api_key"), arguments.get("agent_key"))
     if register:
         register(engine)
@@ -829,13 +829,13 @@ def run(arguments, emit=None, register=None):
         used = whole or used
     results = policy.ledger(turn.calls)
     return {
-        "id": "chatcmpl-tosh-" + uuid.uuid4().hex,
+        "id": "chatcmpl-xeon-" + uuid.uuid4().hex,
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": str(request.get("model") or "tosh-agent"),
+        "model": str(request.get("model") or "xeon-agent"),
         "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": finish}],
         "usage": dict(turn.usage, total_tokens=turn.usage["prompt_tokens"] + turn.usage["completion_tokens"]),
-        "tosh": {
+        "xeon": {
             "version": 1,
             "intent": turn.intent,
             "outcome": outcome,

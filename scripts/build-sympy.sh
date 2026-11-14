@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds the self-contained math runtime in vendor/tosh-sympy: a pinned CPython, SymPy and
+# Builds the self-contained math runtime in vendor/xeon-sympy: a pinned CPython, SymPy and
 # mpmath for the symbolic tools, NumPy and SciPy for the scientific ones, and the helpers
 # from helpers/. Nothing here uses a Python from the system, and every download is checked
 # against a pinned SHA-256.
@@ -35,7 +35,7 @@ typeset -A SCIPY_SHA256=(
     arm64  ea324d9dd34c38bfb9bec8ca4d1b407db97dbb74029f566b8e322b1b6fe56fe6
 )
 
-OUT="$ROOT/vendor/tosh-sympy"
+OUT="$ROOT/vendor/xeon-sympy"
 CACHE="$ROOT/vendor/.downloads"
 STAMP="$PYTHON_VERSION+$PYTHON_RELEASE sympy-$SYMPY_VERSION mpmath-$MPMATH_VERSION numpy-$NUMPY_VERSION scipy-$SCIPY_VERSION $ARCH"
 mkdir -p "$CACHE"
@@ -147,11 +147,11 @@ find "$LIB/site-packages" -type f \( -name '*.pyi' -o -name '*.pxd' -o -name '*.
      -o -name '*.c' -o -name '*.typed' \) -delete
 rm -rf "$LIB/site-packages"/*.dist-info "$LIB/site-packages"/isympy.py "$LIB/site-packages"/bin(N)
 
-mkdir -p "$OUT/tosh_sympy" "$OUT/tosh_scientific"
-cp "$ROOT"/helpers/tosh-sympy/tosh_sympy/*.py "$OUT/tosh_sympy/"
-cp "$ROOT"/helpers/tosh-scientific/tosh_scientific/*.py "$OUT/tosh_scientific/"
-cp -R "$ROOT/helpers/tosh-sympy/licenses" "$OUT/licenses"
-cp -R "$ROOT"/helpers/tosh-scientific/licenses/* "$OUT/licenses/"
+mkdir -p "$OUT/xeon_sympy" "$OUT/xeon_scientific"
+cp "$ROOT"/helpers/xeon-sympy/xeon_sympy/*.py "$OUT/xeon_sympy/"
+cp "$ROOT"/helpers/xeon-scientific/xeon_scientific/*.py "$OUT/xeon_scientific/"
+cp -R "$ROOT/helpers/xeon-sympy/licenses" "$OUT/licenses"
+cp -R "$ROOT"/helpers/xeon-scientific/licenses/* "$OUT/licenses/"
 
 # The app bundle is read-only and signed, so the bytecode is built here and never checked
 # against the sources at run time. compileall needs its own sources, so it runs before they go.
@@ -164,12 +164,12 @@ if ! "$BUILD_PY" -I -c 'pass' 2>/dev/null; then
 fi
 "$BUILD_PY" -I -m compileall -q -b -j 0 --invalidation-mode unchecked-hash "$LIB"
 # the helpers keep their sources, so their bytecode is checked against them: a copied edit is never shadowed
-"$BUILD_PY" -I -m compileall -q -j 0 --invalidation-mode checked-hash "$OUT/tosh_sympy" "$OUT/tosh_scientific"
+"$BUILD_PY" -I -m compileall -q -j 0 --invalidation-mode checked-hash "$OUT/xeon_sympy" "$OUT/xeon_scientific"
 [ -n "$HOST" ] && rm -rf "$HOST"
 # the libraries ship as bytecode only: half the size and half the files to seal in the signature
 find "$LIB" -name '*.py' -delete
 
 echo "$STAMP" > "$OUT/VERSION"
 # which helper modules this runtime carries, for anyone who runs it to check
-(cd "$OUT" && shasum -a 256 tosh_sympy/*.py tosh_scientific/*.py) > "$OUT/HELPERS.sha256"
+(cd "$OUT" && shasum -a 256 xeon_sympy/*.py xeon_scientific/*.py) > "$OUT/HELPERS.sha256"
 echo "math runtime ready at $OUT ($(du -sh "$OUT" | cut -f1), $STAMP)"

@@ -134,9 +134,9 @@ actor MemoryArchiveHook {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("memory_archive", forHTTPHeaderField: "X-ToshLLM-Event")
+        request.setValue("memory_archive", forHTTPHeaderField: "X-XeonLLM-Event")
         if let id = (try? JSONDecoder().decode(Payload.self, from: body))?.delivery_id {
-            request.setValue(id, forHTTPHeaderField: "X-ToshLLM-Delivery")
+            request.setValue(id, forHTTPHeaderField: "X-XeonLLM-Delivery")
         }
         if let secret = Self.secret {
             request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")

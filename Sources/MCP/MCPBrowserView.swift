@@ -72,7 +72,7 @@ struct MCPBrowserView: View {
             MCPPromptForm(prompt: prompt) { arguments in
                 Task {
                     do {
-                        let value = try await ToshMCPService.shared.getPrompt(prompt, arguments: arguments)
+                        let value = try await XeonMCPService.shared.getPrompt(prompt, arguments: arguments)
                         await MainActor.run { insertPrompt(value); dismiss() }
                     } catch {
                         await MainActor.run { self.error = error.localizedDescription }
@@ -85,7 +85,7 @@ struct MCPBrowserView: View {
             MCPResourceTemplateForm(template: template) { arguments in
                 Task {
                     do {
-                        let attachment = try await ToshMCPService.shared.readTemplate(
+                        let attachment = try await XeonMCPService.shared.readTemplate(
                             template, arguments: arguments)
                         await MainActor.run {
                             addAttachment(attachment)
@@ -175,7 +175,7 @@ struct MCPBrowserView: View {
     }
 
     private func load() async {
-        catalog = await ToshMCPService.shared.catalog()
+        catalog = await XeonMCPService.shared.catalog()
         loading = false
     }
 
@@ -183,7 +183,7 @@ struct MCPBrowserView: View {
         readingID = resource.id
         Task {
             do {
-                let attachment = try await ToshMCPService.shared.readResource(resource)
+                let attachment = try await XeonMCPService.shared.readResource(resource)
                 await MainActor.run {
                     addAttachment(attachment)
                     attachedIDs.insert(resource.id)

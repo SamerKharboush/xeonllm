@@ -1,18 +1,18 @@
-# tosh-scientific
+# xeon-scientific
 
 Numerical tools for the engine, backed by [NumPy](https://numpy.org) and
-[SciPy](https://scipy.org). It is the same MCP server as [tosh-sympy](../tosh-sympy/README.md)
+[SciPy](https://scipy.org). It is the same MCP server as [xeon-sympy](../xeon-sympy/README.md)
 started with another tool set, so it has its own supervisor and its own worker:
 
 ```
 llama-server --mcp-servers-json '{"mcpServers":{"sympy":{...},"scientific":{...}}}'
-    ├── tosh_sympy/server.py                 SymPy tools, never loads NumPy or SciPy
-    └── tosh_sympy/server.py scientific      supervisor, imports no math library
-            └── tosh_sympy/worker.py scientific     NumPy on the first call, SciPy per operation
+    ├── xeon_sympy/server.py                 SymPy tools, never loads NumPy or SciPy
+    └── xeon_sympy/server.py scientific      supervisor, imports no math library
+            └── xeon_sympy/worker.py scientific     NumPy on the first call, SciPy per operation
 ```
 
 `scripts/build-sympy.sh` adds pinned NumPy and SciPy wheels to the runtime in
-`vendor/tosh-sympy`, next to the CPython and SymPy already there. There is one interpreter.
+`vendor/xeon-sympy`, next to the CPython and SymPy already there. There is one interpreter.
 BLAS and LAPACK come from the Accelerate framework of macOS, so no OpenBLAS is bundled. In
 the app the tools are off until **Scientific computing (NumPy and SciPy)** is switched on in
 the chat settings, under Agents, independently of the SymPy switch.
@@ -39,7 +39,7 @@ the tool definitions.
 | `scientific_ode` | solve_ivp (systems, and higher orders reduced to first order) |
 | `scientific_stats` | describe, percentile, correlation, regression, ttest, confidence_interval, distribution |
 
-The JSON schemas live in `tosh_scientific/schema.py`, about 1530 tokens in all. Some
+The JSON schemas live in `xeon_scientific/schema.py`, about 1530 tokens in all. Some
 arguments are accepted without being advertised (`max_values`, `parameters`, `method`,
 `tolerance`, `bounds`, filter `order`, peak `height`, `distance` and `prominence`, and others
 listed under `accepted` there).
@@ -65,7 +65,7 @@ doubt the call is refused or the reply carries a warning: values given for a var
 expression does not have, a spectrum asked for with a cutoff and no sampling rate, an
 optimum that ended on a bound.
 
-Calls are checked against the user's request before they run, as described in [tosh-sympy](../tosh-sympy/README.md#checking-the-call-against-the-request).
+Calls are checked against the user's request before they run, as described in [xeon-sympy](../xeon-sympy/README.md#checking-the-call-against-the-request).
 
 A failure is never reported as a value. A divergent integral, a solver that did not converge,
 a singular matrix, a root search without a sign change or a result holding NaN or infinity
@@ -101,12 +101,12 @@ deviation and both ends; `max_values` raises that up to 1000.
 ## What the model can and cannot send
 
 The model sends an operation name, numbers and options. Each operation is a Python function
-in `tosh_scientific/ops.py` reached through a fixed table; nothing in a request names a
+in `xeon_scientific/ops.py` reached through a fixed table; nothing in a request names a
 module, a function of NumPy or SciPy, an attribute or a path.
 
 A formula such as `a*exp(-b*x)` is parsed by the restricted grammar of the SymPy helper
-(`tosh_sympy/mathlang.py`) and the resulting tree is walked into closures over a fixed table
-of NumPy functions (`tosh_scientific/numeric.py`). No code is generated or evaluated, and
+(`xeon_sympy/mathlang.py`) and the resulting tree is walked into closures over a fixed table
+of NumPy functions (`xeon_scientific/numeric.py`). No code is generated or evaluated, and
 `lambdify` is not used. Text like `np.sin(x)`, `scipy.optimize.minimize(...)` or
 `__import__('os')` is rejected by the parser.
 
@@ -114,17 +114,17 @@ The worker has the same confinement as the SymPy one: macOS sandbox profile and 
 hook with no network, no file writes, no new processes and no reads under `/Users` or
 `/Volumes` outside the runtime. Nothing is unpickled and no file is loaded.
 
-- `TOSH_SYMPY_TIMEOUT_MS` (default 15000) and `TOSH_SYMPY_MEMORY_MB` (default 1024) apply to
+- `XEON_SYMPY_TIMEOUT_MS` (default 15000) and `XEON_SYMPY_MEMORY_MB` (default 1024) apply to
   this worker too: the supervisor kills it past either one and answers `timeout` or
   `memory_limit`. The next call starts a fresh worker.
-- `TOSH_SCIENTIFIC_THREADS` (default 1, at most 16) caps the threads of Accelerate. One
+- `XEON_SCIENTIFIC_THREADS` (default 1, at most 16) caps the threads of Accelerate. One
   thread keeps a long decomposition from competing with the model for cores.
-- The worker exits after `TOSH_SYMPY_IDLE_SECONDS` (default 300) without use.
+- The worker exits after `XEON_SYMPY_IDLE_SECONDS` (default 300) without use.
 
 ## Tests
 
 ```sh
 ./scripts/build-sympy.sh
-vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-scientific/tests/test_scientific.py
-TOSH_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
+vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-scientific/tests/test_scientific.py
+XEON_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
 ```

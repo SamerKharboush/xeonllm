@@ -1,6 +1,6 @@
 // The app's chat map: MapLibre on OpenFreeMap, on a style of its own or on PMTiles regions the app serves from its
 // map folder under tiles/, as the server does for the web chat, with the answer's layers on top.
-// scripts/build-map.sh builds it into toshmap.js.
+// scripts/build-map.sh builds it into xeonmap.js.
 import * as maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { layers, namedFlavor } from '@protomaps/basemaps';
@@ -98,7 +98,7 @@ function bounds(config: Config): maplibregl.LngLatBoundsLike | null {
 let map: maplibregl.Map | null = null;
 
 function render(config: Config): void {
-	maplibregl.setWorkerUrl(URL.createObjectURL(new Blob([host.TOSH_MAP_WORKER], { type: 'text/javascript' })));
+	maplibregl.setWorkerUrl(URL.createObjectURL(new Blob([host.XEON_MAP_WORKER], { type: 'text/javascript' })));
 
 	maplibregl.addProtocol('pmtiles', new Protocol().tile);
 
@@ -123,7 +123,7 @@ function render(config: Config): void {
 
 	created.on('style.load', () => {
 		config.layers.forEach((layer, index) => {
-			const id = `tosh-${index}`;
+			const id = `xeon-${index}`;
 
 			if (created.getSource(id)) return;
 
@@ -174,4 +174,4 @@ function render(config: Config): void {
 	else created.jumpTo({ center: [0, 0], zoom: 1 });
 }
 
-host.ToshMap = { render, resize: () => map?.resize() };
+host.XeonMap = { render, resize: () => map?.resize() };

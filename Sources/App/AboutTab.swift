@@ -8,9 +8,9 @@ import SwiftUI
 
 enum AppInfo {
     static let version = "0.87.31-beta.8"
-    /// True for the pre-AVX2 legacy build (Info.plist TOSHNoAVX2). Kept on its own
+    /// True for the pre-AVX2 legacy build (Info.plist XEONNoAVX2). Kept on its own
     /// update channel so it never pulls an AVX2 DMG that would SIGILL on those CPUs.
-    static let isNoAVX2 = Bundle.main.object(forInfoDictionaryKey: "TOSHNoAVX2") as? Bool ?? false
+    static let isNoAVX2 = identity.noAVX2
     static let developerName = "Samer Kharboush"
     static let developerHandle = "SamerKharboush"
     static let githubURL = "https://github.com/SamerKharboush"
@@ -21,23 +21,45 @@ enum AppInfo {
     static let donateNoteES = "XeonLLM es software libre. Puedes apoyar el proyecto con una estrella o una contribución en el repositorio."
     static let donateNoteEN = "XeonLLM is free software. You can support the project with a star or a contribution in the repository."
 
-    // A build packaged under another identity (TOSH_APP_NAME in make-app.sh) carries these keys;
+    // A build packaged under another identity (XEON_APP_NAME in make-app.sh) carries these keys;
     // a plain build has none of them and keeps XeonLLM's.
-    static let name = infoString("TOSHProductName") ?? "XeonLLM"
-    static let identifier = infoString("TOSHIdentifier") ?? "dev.xeonllm.app"
-    static let dataFolder = infoString("TOSHDataFolder") ?? "XeonLLM"
+    static let identity = Identity(values: Bundle.main.infoDictionary ?? [:])
+    static let name = identity.name ?? "XeonLLM"
+    static let identifier = identity.identifier ?? "dev.xeonllm.app"
+    static let dataFolder = identity.dataFolder ?? "XeonLLM"
     /// The build's own version; `version` stays the XeonLLM it is built on.
-    static let productVersion = infoString("TOSHProductVersion") ?? version
-    static let updatesEnabled = !(Bundle.main.object(forInfoDictionaryKey: "TOSHUpdatesDisabled") as? Bool ?? false)
+    static let productVersion = identity.productVersion ?? version
+    static let updatesEnabled = !identity.updatesDisabled
     static var isRebranded: Bool { name != "XeonLLM" }
+
+    /// The identity a bundle's Info.plist carries, under the keys `make-app.sh` writes.
+    /// `values` is the plist as a dictionary, so a test can read the keys the app looks for
+    /// without packaging an app.
+    struct Identity {
+        let noAVX2: Bool
+        let name: String?
+        let identifier: String?
+        let dataFolder: String?
+        let productVersion: String?
+        let updatesDisabled: Bool
+
+        init(values: [String: Any]) {
+            noAVX2 = values["XEONNoAVX2"] as? Bool ?? false
+            name = Self.string(values["XEONProductName"])
+            identifier = Self.string(values["XEONIdentifier"])
+            dataFolder = Self.string(values["XEONDataFolder"])
+            productVersion = Self.string(values["XEONProductVersion"])
+            updatesDisabled = values["XEONUpdatesDisabled"] as? Bool ?? false
+        }
+
+        private static func string(_ value: Any?) -> String? {
+            (value as? String).flatMap { $0.isEmpty ? nil : $0 }
+        }
+    }
 
     /// Interface text that names the app, with this build's name in it.
     static func branded(_ text: String) -> String {
         isRebranded ? text.replacingOccurrences(of: "XeonLLM", with: name) : text
-    }
-
-    private static func infoString(_ key: String) -> String? {
-        (Bundle.main.object(forInfoDictionaryKey: key) as? String).flatMap { $0.isEmpty ? nil : $0 }
     }
 }
 

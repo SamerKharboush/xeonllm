@@ -1,4 +1,4 @@
-# tosh-sympy
+# xeon-sympy
 
 Symbolic math tools for the engine, backed by [SymPy](https://www.sympy.org). It is an MCP
 server over stdio, so `llama-server` lists its tools on `/tools` next to its own and any
@@ -6,16 +6,16 @@ OpenAI-compatible client of the server can call them.
 
 ```
 llama-server --mcp-servers-json '{"mcpServers":{"sympy":{...}}}'
-    └── tosh_sympy/server.py     supervisor, never imports SymPy (about 8 MB)
-            └── tosh_sympy/worker.py     SymPy, started on the first call
+    └── xeon_sympy/server.py     supervisor, never imports SymPy (about 8 MB)
+            └── xeon_sympy/worker.py     SymPy, started on the first call
 ```
 
-`scripts/build-sympy.sh` builds the runtime in `vendor/tosh-sympy` from a pinned CPython,
-SymPy and mpmath, and `make-app.sh` copies it to `Contents/Resources/tosh-sympy`. No Python
+`scripts/build-sympy.sh` builds the runtime in `vendor/xeon-sympy` from a pinned CPython,
+SymPy and mpmath, and `make-app.sh` copies it to `Contents/Resources/xeon-sympy`. No Python
 from the system is used, to build or to run. In the app it is off until **Symbolic math
 (SymPy)** is switched on in the chat settings, under Agents.
 
-The same runtime carries NumPy and SciPy for the [numerical tools](../tosh-scientific/README.md).
+The same runtime carries NumPy and SciPy for the [numerical tools](../xeon-scientific/README.md).
 Those run as a second server, `server.py scientific`, with a worker of their own: this one
 never loads either library.
 
@@ -28,8 +28,8 @@ never loads either library.
 | `sympy_matrix` | determinant, inverse, transpose, rank, rref, nullspace, eigenvalues, eigenvectors, multiply, linear_solve |
 | `sympy_verify` | equivalent (two expressions), solution (values against equations) |
 
-With the six [numerical tools](../tosh-scientific/README.md) that makes ten tools and 70
-operations. The JSON schemas live in `tosh_sympy/schema.py` and nowhere else. They are kept short on
+With the six [numerical tools](../xeon-scientific/README.md) that makes ten tools and 70
+operations. The JSON schemas live in `xeon_sympy/schema.py` and nowhere else. They are kept short on
 purpose: every conversation that offers the tools carries them, about 1000 tokens in all. A
 few arguments are accepted without being advertised (`assumptions`, `precision` and
 `substitutions` on every tool, `transform_variable` on transforms).
@@ -78,7 +78,7 @@ value below it is not a closed form.
 
 ## What the model can and cannot send
 
-The model sends math, never code. `tosh_sympy/mathlang.py` tokenizes and parses each
+The model sends math, never code. `xeon_sympy/mathlang.py` tokenizes and parses each
 expression itself and builds SymPy objects from a fixed table of functions and constants.
 No text from the model reaches `sympify`, `parse_expr`, `eval` or `exec`, and `nsolve` runs on closures
 instead of `lambdify`. SymPy does compile code of its own while it works (polynomial kernels,
@@ -90,12 +90,12 @@ On top of that the worker:
 - runs under a macOS sandbox profile with no network, no file writes, no new processes and no
   reads under `/Users` or `/Volumes` outside the runtime;
 - has a Python audit hook that refuses the same things;
-- is killed by the supervisor after `TOSH_SYMPY_TIMEOUT_MS` (default 15000, at most 20000) or
-  above `TOSH_SYMPY_MEMORY_MB` (default 1024). After a timeout a fresh worker gets 5 s to
+- is killed by the supervisor after `XEON_SYMPY_TIMEOUT_MS` (default 15000, at most 20000) or
+  above `XEON_SYMPY_MEMORY_MB` (default 1024). After a timeout a fresh worker gets 5 s to
   report what it still can about the request;
 - runs with a fixed hash seed. SymPy's heuristics walk sets, and with Python's random string
   hashing the same integral took 0.6 s in one process and never finished in the next;
-- exits after `TOSH_SYMPY_IDLE_SECONDS` (default 300) without use.
+- exits after `XEON_SYMPY_IDLE_SECONDS` (default 300) without use.
 
 Inputs are capped at 4000 characters per expression and 64 KB per request, results at 6000
 characters per field.
@@ -106,7 +106,7 @@ A model sometimes writes a call that is not the user's problem: it drops a denom
 8 for infinity, adds an initial condition or loses a sample. The helper would compute that call
 correctly. So the agent passes the user's own message next to the arguments, as `_source`
 (`{"request": ..., "context": ...}`); the model's own `_` arguments are dropped first.
-`tosh_sympy/anchor.py` reads the formulas, numbers, lists, matrices, conditions and ranges out
+`xeon_sympy/anchor.py` reads the formulas, numbers, lists, matrices, conditions and ranges out
 of that text with the same restricted grammar and compares them with the call before it runs:
 
 - **inconsistent**: the call is not run and the reply says why (`transcription_mismatch`).
@@ -128,7 +128,7 @@ The chat card shows those lines under the result. A call without `_source`, as f
 client, runs as before.
 
 `_source` and `_reviewed` are honoured only next to `_trust` carrying the key the server was
-started with (`TOSH_TRUST_KEY` in the server's environment). The app makes a new key on every
+started with (`XEON_TRUST_KEY` in the server's environment). The app makes a new key on every
 launch. A client or a model that sets them without it gets them dropped, the call runs as a plain
 call, and `warnings` says the fields were ignored. A client cannot vouch for its own call.
 
@@ -136,15 +136,15 @@ call, and `warnings` says the fields were ignored. A client cannot vouch for its
 
 | Path | Who runs the loop | Checks of this page |
 |---|---|---|
-| Tosh agent, `/v1/chat/completions` | the engine (`server.py agent`) | all of them |
+| Xeon agent, `/v1/chat/completions` | the engine (`server.py agent`) | all of them |
 | Native chat of the app | the same engine agent | all of them |
-| Raw inference, `/v1/chat/completions` with `tools` or `X-Tosh-Agent: off` | the client | none |
+| Raw inference, `/v1/chat/completions` with `tools` or `X-Xeon-Agent: off` | the client | none |
 | Direct, `POST /tools` | nobody: one call | the call itself (a plain call, no `_source`) |
 
 Only the agent guarantees that a computed number in the answer came from a validated tool
 result. Raw inference is the model as it is, whatever tools the client gives it.
 
-### The Tosh agent
+### The Xeon agent
 
 Started with `--mcp-agent agent` and a third MCP server, `server.py agent`, the engine answers
 `/v1/chat/completions` the way the app's chat does: a request for a computed result has to go
@@ -157,8 +157,8 @@ Which requests it takes, per request:
 
 | Request | Answered by |
 |---|---|
-| `X-Tosh-Agent: off` (or `raw`) | the model, always |
-| `X-Tosh-Agent: on` | the agent; 400 if the engine runs none or the request brings tools |
+| `X-Xeon-Agent: off` (or `raw`) | the model, always |
+| `X-Xeon-Agent: on` | the agent; 400 if the engine runs none or the request brings tools |
 | no header, from a page in a browser (`Origin` or `Sec-Fetch-Site`) | the agent |
 | no header, any other client | the agent, unless the engine was started with `--mcp-agent-explicit` |
 | `tools`, `functions`, `grammar`, `json_schema` or `response_format`, without `on` | the model |
@@ -175,20 +175,20 @@ fields of the request (`temperature`, `top_p`, `top_k`, `min_p`, `seed`, the pen
 `samplers`, `max_tokens`, `chat_template_kwargs`, `model`...) go to every model pass of the
 turn; in router mode every pass goes to the requested model. `max_tokens` applies to each pass,
 as the client set it, never lowered. A turn takes at most 10 passes, or what the request sets in
-`"tosh": {"max_rounds": n}` (1 to 100); the app sends its **Maximum agent turns**.
+`"xeon": {"max_rounds": n}` (1 to 100); the app sends its **Maximum agent turns**.
 
 ### Streaming
 
 A streaming client gets ordinary `chat.completion.chunk` events. While the turn runs it gets
-`: keep-alive` comments and chunks with an empty `delta` and a `tosh.event`; the answer comes in
+`: keep-alive` comments and chunks with an empty `delta` and a `xeon.event`; the answer comes in
 one chunk at the end, once it is checked, never as a draft. Clients that ignore unknown fields
 see a normal stream with a slow first token.
 
 ```
 data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":null}],
-       "tosh":{"version":1,"event":{"type":"tool_call","pass":1,"call":{"tool":"scientific_compute","status":"ok",...}}}}
+       "xeon":{"version":1,"event":{"type":"tool_call","pass":1,"call":{"tool":"scientific_compute","status":"ok",...}}}}
 data: {"choices":[{"index":0,"delta":{"role":"assistant","content":"The integral is 6.49393940227..."}}],...}
-data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{...},"tosh":{"version":1,...}}
+data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{...},"xeon":{"version":1,...}}
 data: [DONE]
 ```
 
@@ -198,7 +198,7 @@ Event types: `intent`, `pass` (`state` `start` or `end`, with that pass's tokens
 Closing the connection stops the turn: the engine tells the agent, the agent drops the model
 pass in flight, and no further pass or call runs.
 
-### The `tosh` object
+### The `xeon` object
 
 Every agent answer carries it, next to the usual fields. `version` changes only when a field
 below changes meaning or goes away; new fields may appear.
@@ -227,8 +227,8 @@ An extension can bring its own agent in place of this one (see
 [`docs/extensions.md`](../../docs/extensions.md#the-agent)). The engine calls its `run` tool with
 `request` (the client's request as sent), `base_url`, `api_key` and `agent_key`, and takes back a
 chat completion or `{"status": n, "error": {...}}`. The agent reaches the model and the tools
-through `base_url` with `X-Tosh-Agent: off`, so its passes never come back to it, and sends
-`X-Tosh-Agent-Key: <agent_key>` on `/tools`: without it the tools of servers started with
+through `base_url` with `X-Xeon-Agent: off`, so its passes never come back to it, and sends
+`X-Xeon-Agent-Key: <agent_key>` on `/tools`: without it the tools of servers started with
 `--mcp-agent-only` are neither listed nor run. Progress goes out as MCP progress notifications whose
 message is one event as above; for a `tool_call`, `state` is `completed` or `failed`, and an
 optional `summary` is one readable line about the result that the app shows on the call.
@@ -237,30 +237,30 @@ A pass the agent streams goes out as `{"type": "delta", "content": "..."}` event
 calls tells the client to drop that text. The answer's content then starts with the text streamed since the
 last `retract`, and only the rest of it goes out at the end.
 
-When the app has tools of its own besides the math ones it sends `"tosh": {"client_tools": true}`.
+When the app has tools of its own besides the math ones it sends `"xeon": {"client_tools": true}`.
 An agent may then hand back a turn that is outside its field: it answers with empty content,
-runs nothing and sets `"tosh": {"version": 1, "outcome": "declined"}`, and the app answers that
+runs nothing and sets `"xeon": {"version": 1, "outcome": "declined"}`, and the app answers that
 turn with its own tools, as it would without the extension. Other clients never send the field,
 so they always get an answer.
 A turn whose last message brings images, audio or video is handed back the same way to a client that sends
-`tosh` options, as the app does; any other client gets the model's own answer to it.
+`xeon` options, as the app does; any other client gets the model's own answer to it.
 
 An answer whose words a later turn needs, such as the reference and the figures of what it traced, puts them in
-`"keep"` in its `tosh`, as written in the answer. A client that summarizes older messages to save context keeps
+`"keep"` in its `xeon`, as written in the answer. A client that summarizes older messages to save context keeps
 each one as it is, after a line `Kept from earlier answers, as written:` at the end of the summary, with a `---`
 line between them, so that the agent can still find what they name.
 
 An agent can offer a map of an answer without delaying it: it adds `"map_request": {"show": bool, ...}`
-to the answer's `tosh`, without any geometry. A client sends that object back as
-`"tosh": {"map_request": {...}}` in a request of its own, and the agent answers it, with no model
-pass, with `"tosh": {"map": {"layers": [...]}}`: each layer a GeoJSON FeatureCollection in
+to the answer's `xeon`, without any geometry. A client sends that object back as
+`"xeon": {"map_request": {...}}` in a request of its own, and the agent answers it, with no model
+pass, with `"xeon": {"map": {"layers": [...]}}`: each layer a GeoJSON FeatureCollection in
 longitude/latitude with an optional `title`, `subtitle` (which of its features these are), `fields`
 (`[{"name", "alias"}]`, the order and names to show a clicked feature's attributes in), `complete` (false when not
 every feature fit) and `link` (`{"title", "url"}`, the layer in its own viewer). The app draws it at once when `show` is
 true, the request having asked for a map, and otherwise offers it under the answer.
 
 Figures that no coordinates place on the ground, such as the tracts traced from a deed's calls, go in the answer's
-own `tosh` as `"sketches": [{"points": [[x, y], ...], "unit": "ft", "closed": bool, "title": "...", "corners": [...]}]`,
+own `xeon` as `"sketches": [{"points": [[x, y], ...], "unit": "ft", "closed": bool, "title": "...", "corners": [...]}]`,
 each the path east and north of its first point, in order. The app draws them under the answer without a map, small
 and several to a row, each one enlarged on request; it numbers `corners` (the points themselves when absent) from 1
 and, when `closed`, shows in red the gap between the last point and the first. A figure that lies in a coordinate
@@ -286,12 +286,12 @@ in them and adds its own. A forged `_trust` gets the fields dropped with a warni
 
 ```
 llama-server -m model.gguf --jinja --mcp-agent agent --mcp-servers-json '{"mcpServers":{
-  "sympy":      {"command": "python3", "args": ["-I", "-B", "tosh_sympy/server.py"],               "env": {"TOSH_TRUST_KEY": "<key>"}},
-  "scientific": {"command": "python3", "args": ["-I", "-B", "tosh_sympy/server.py", "scientific"], "env": {"TOSH_TRUST_KEY": "<key>"}},
-  "agent":      {"command": "python3", "args": ["-I", "-B", "tosh_sympy/server.py", "agent"],      "env": {"TOSH_TRUST_KEY": "<key>"},
+  "sympy":      {"command": "python3", "args": ["-I", "-B", "xeon_sympy/server.py"],               "env": {"XEON_TRUST_KEY": "<key>"}},
+  "scientific": {"command": "python3", "args": ["-I", "-B", "xeon_sympy/server.py", "scientific"], "env": {"XEON_TRUST_KEY": "<key>"}},
+  "agent":      {"command": "python3", "args": ["-I", "-B", "xeon_sympy/server.py", "agent"],      "env": {"XEON_TRUST_KEY": "<key>"},
                  "timeout_ms": 900000}}}'
 
-curl http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -H 'X-Tosh-Agent: on' \
+curl http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -H 'X-Xeon-Agent: on' \
   -d '{"messages":[{"role":"user","content":"Integrate x^3/(e^x-1) from 0 to infinity."}]}'
 
 curl http://127.0.0.1:8080/tools -H 'Content-Type: application/json' \
@@ -304,7 +304,7 @@ extra-headers option, or start the engine without `--mcp-agent-explicit`.
 ## Remote MCP servers
 
 `llama-server` only starts servers it talks to over stdio, so a remote one approved for the agent
-runs through `tosh_sympy/remote.py`, a local server that relays every message to its URL over
+runs through `xeon_sympy/remote.py`, a local server that relays every message to its URL over
 Streamable HTTP, or the older HTTP+SSE transport when the server lacks it. Headers come from
 environment variables the app sets on the engine (`--headers-env`, `--header-env Name=VAR`),
 never from arguments.
@@ -313,9 +313,9 @@ never from arguments.
 
 ```sh
 ./scripts/build-sympy.sh
-vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_helper.py
-vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_agent.py
-vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_remote.py
-TOSH_ENGINE_URL=http://127.0.0.1:8080 TOSH_ENGINE_AGENT=1 python3 helpers/tosh-sympy/tests/test_engine_api.py
-TOSH_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
+vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_helper.py
+vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_agent.py
+vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_remote.py
+XEON_ENGINE_URL=http://127.0.0.1:8080 XEON_ENGINE_AGENT=1 python3 helpers/xeon-sympy/tests/test_engine_api.py
+XEON_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
 ```

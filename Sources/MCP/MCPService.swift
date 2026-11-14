@@ -4,8 +4,8 @@
 
 import Foundation
 
-actor ToshMCPService {
-    static let shared = ToshMCPService()
+actor XeonMCPService {
+    static let shared = XeonMCPService()
 
     private struct Session {
         var server: MCPServer

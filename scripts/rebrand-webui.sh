@@ -154,11 +154,11 @@ k = target / max(bw, bh)
 ix = (512 - bw * k) / 2 - bx * k
 iy = (512 - bh * k) / 2 - by * k
 ours = ('`<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">'
-        '<defs><mask id="toshGlyphMask">'
+        '<defs><mask id="xeonGlyphMask">'
         f'<image x="{ix:.1f}" y="{iy:.1f}" width="{sw_px * k:.1f}" height="{sh_px * k:.1f}" '
         'href="data:image/png;base64,' + base64.b64encode(png256).decode() + '"/>'
         '</mask></defs>'
-        '<rect width="512" height="512" fill="currentColor" mask="url(#toshGlyphMask)"/></svg>`')
+        '<rect width="512" height="512" fill="currentColor" mask="url(#xeonGlyphMask)"/></svg>`')
 open(bundle, "w", encoding="utf-8").write(js[:m.start()] + ours + js[m.end():])
 
 sw = os.path.join(out, "sw.js")

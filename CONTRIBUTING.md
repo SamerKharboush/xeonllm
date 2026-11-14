@@ -37,7 +37,7 @@ XCTest ships only with Xcode, never with Command Line Tools.
 | `Assets/` | App icon source, web chat UI, donation QR |
 | `Assets/lang/` | Community UI translations — one JSON per language ([README](Assets/lang/README.md)) |
 | `patches/` | AMD Metal patches applied on top of upstream llama.cpp |
-| `helpers/` | Helper processes the engine runs as tools ([SymPy](helpers/tosh-sympy/README.md), [NumPy and SciPy](helpers/tosh-scientific/README.md)) |
+| `helpers/` | Helper processes the engine runs as tools ([SymPy](helpers/xeon-sympy/README.md), [NumPy and SciPy](helpers/xeon-scientific/README.md)) |
 | `scripts/` | Reproducible engine build + DMG packaging |
 | `.github/workflows/` | CI: build on push, DMG release on tags |
 

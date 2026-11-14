@@ -1053,11 +1053,11 @@ final class ChatStore: ObservableObject {
                         buffer.note()
                         continue
                     }
-                    if agentTurn, line.hasPrefix("data: "), line.contains("\"tosh\""),
+                    if agentTurn, line.hasPrefix("data: "), line.contains("\"xeon\""),
                        let object = try? JSONSerialization.jsonObject(with: Data(line.dropFirst(6).utf8)) as? [String: Any],
-                       let tosh = object["tosh"] as? [String: Any] {
-                        guard let event = tosh["event"] as? [String: Any] else {
-                            agentMeta = tosh
+                       let xeon = object["xeon"] as? [String: Any] {
+                        guard let event = xeon["event"] as? [String: Any] else {
+                            agentMeta = xeon
                             // a turn that ends with no answer after a draft keeps none of it
                             if drafted {
                                 accumulator.visible = ""
@@ -1130,7 +1130,7 @@ final class ChatStore: ObservableObject {
                     if memoryToolsEnabled { availableTools.append(contentsOf: ChatMemoryService.tools) }
                     if ChatMapTool.isEnabled { availableTools.append(ChatMapTool.tool) }
                     if ChatMapTool.isEnabled && ChatRoadRoute.isEnabled { availableTools.append(ChatRoadRoute.tool) }
-                    availableTools += await ToshMCPService.shared.discoverTools()
+                    availableTools += await XeonMCPService.shared.discoverTools()
                     if ToolSupport.isBlocked(ToolSupport.currentModelIdentity) { availableTools = [] }
                     if let enabledToolNames {
                         let selected = Set(enabledToolNames)
@@ -1153,7 +1153,7 @@ final class ChatStore: ObservableObject {
                 var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/v1/chat/completions")!)
                 req.httpMethod = "POST"
                 req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                req.setValue(agentTurn ? "on" : "off", forHTTPHeaderField: "X-Tosh-Agent")
+                req.setValue(agentTurn ? "on" : "off", forHTTPHeaderField: "X-Xeon-Agent")
                 req.timeoutInterval = 600
                 if let key = ServerSettings.activeAPIKey() {
                     req.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
@@ -1208,9 +1208,9 @@ final class ChatStore: ObservableObject {
                 if agentTurn {
                     body["messages"] = clientToolsAgent ? history : agentHistory
                     // the agent writes its progress in the app's language; its answer follows the user's
-                    var tosh: [String: Any] = ["max_rounds": agentTurnLimit, "locale": Localizer().language]
-                    if !clientToolsAgent && Self.hasOwnTools(availableTools) { tosh["client_tools"] = true }
-                    body["tosh"] = tosh
+                    var xeon: [String: Any] = ["max_rounds": agentTurnLimit, "locale": Localizer().language]
+                    if !clientToolsAgent && Self.hasOwnTools(availableTools) { xeon["client_tools"] = true }
+                    body["xeon"] = xeon
                 } else if let request, availableTools.contains(where: { MathTranscriptionService.isMathTool($0.name) }) {
                     let (intent, asked) = await MathIntent.decide(request, context: Array(userTexts.dropLast()), port: port)
                     AppLog.chat.notice("math intent \(intent.rawValue, privacy: .public)\(asked ? " (model)" : "", privacy: .public)")
@@ -1280,7 +1280,7 @@ final class ChatStore: ObservableObject {
                         if raw.count > 4000 { break }
                     }
                     // an engine started without the agent: this turn and the next ones run in the app
-                    retryWithoutAgent = agentTurn && status == 400 && raw.contains("runs no Tosh agent")
+                    retryWithoutAgent = agentTurn && status == 400 && raw.contains("runs no Xeon agent")
                     throw StreamError(message: Self.describeServerError(status: status, body: raw),
                                       gpu: Self.isGPUFailure(Self.errorObject(raw)),
                                       contextTokens: Self.contextTokens(Self.errorObject(raw)))
@@ -1737,7 +1737,7 @@ final class ChatStore: ObservableObject {
                 let result: ToolExecutionResult
                 if let tool = context.tools.first(where: { $0.name == request.name }),
                    let serverID = tool.mcpServerID, let remoteName = tool.remoteName {
-                    result = try await ToshMCPService.shared.call(
+                    result = try await XeonMCPService.shared.call(
                         serverID: serverID, name: remoteName, arguments: arguments)
                 } else if request.name == JavaScriptSandboxService.toolName {
                     result = await JavaScriptSandboxService.execute(arguments: arguments)
@@ -2342,7 +2342,7 @@ final class ChatStore: ObservableObject {
         var req = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/v1/chat/completions")!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("off", forHTTPHeaderField: "X-Tosh-Agent")
+        req.setValue("off", forHTTPHeaderField: "X-Xeon-Agent")
         if let key = ServerSettings.activeAPIKey() {
             req.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
         }
@@ -4544,7 +4544,7 @@ struct NativeChatView: View {
             tools.append(JavaScriptSandboxService.tool)
         }
         if ChatMemoryService.isEnabled { tools += ChatMemoryService.tools }
-        tools += await ToshMCPService.shared.discoverTools()
+        tools += await XeonMCPService.shared.discoverTools()
         var seen = Set<String>()
         availableTools = tools.filter { seen.insert($0.name).inserted }
         loadingTools = false

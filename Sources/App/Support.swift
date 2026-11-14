@@ -7,7 +7,7 @@ import CryptoKit
 import os
 import Security
 
-/// Defaults a product packaged from this tree sets differently (`TOSH_APP_DEFAULTS` in make-app.sh), registered
+/// Defaults a product packaged from this tree sets differently (`XEON_APP_DEFAULTS` in make-app.sh), registered
 /// at launch so that every `@AppStorage` falls back to them until the user changes the setting.
 enum ProductDefaults {
     static func values(in bundle: Bundle = .main) -> [String: Any] {

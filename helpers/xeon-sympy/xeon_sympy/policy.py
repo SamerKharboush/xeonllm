@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The rules a math turn follows, with no I/O: what a request asks of the tools, when a turn
@@ -190,7 +190,7 @@ _ENGLISH = re.compile(r"\b(?:the|of|and|what|is|are|with|for|to|calculate|solve|
 
 
 def language(texts):
-    """The language of the texts Tosh writes itself. English unless the user's own words are clearly Spanish."""
+    """The language of the texts Xeon writes itself. English unless the user's own words are clearly Spanish."""
     text = " ".join(str(t or "") for t in texts)[-4000:]
     spanish, english = len(_SPANISH.findall(text)), len(_ENGLISH.findall(text))
     return "es" if spanish >= 2 and spanish > 2 * english else "en"
@@ -452,7 +452,7 @@ def is_safe_answer(answer):
 
 
 def safe_answer(results, calls, lang="en"):
-    """The answer Tosh writes itself when the model's own cannot be shown."""
+    """The answer Xeon writes itself when the model's own cannot be shown."""
     if not results:
         return unresolved(lang=lang)
     lines = [text("header", lang), ""]

@@ -1,10 +1,10 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for the SymPy helper, driven over its MCP stdio protocol.
 
 Run with the bundled interpreter, which has no unittest:
-    vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-sympy/tests/test_helper.py [runtime dir]
+    vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-sympy/tests/test_helper.py [runtime dir]
 """
 
 import json
@@ -14,7 +14,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-RUNTIME = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "vendor", "tosh-sympy")
+RUNTIME = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "vendor", "xeon-sympy")
 PYTHON = os.path.join(RUNTIME, "python", "bin", "python3")
 
 
@@ -22,7 +22,7 @@ PYTHON = os.path.join(RUNTIME, "python", "bin", "python3")
 KEY = "test-trust-key"
 # CI runners are virtual and run this x86 runtime translated: wall-clock limits get three times the room
 SLOW = 3 if os.environ.get("CI") else 1
-SHARED = {"TOSH_SYMPY_TIMEOUT_MS": 20000} if SLOW > 1 else {}
+SHARED = {"XEON_SYMPY_TIMEOUT_MS": 20000} if SLOW > 1 else {}
 # a budget the next small calculation fits in; the heavy ones take seconds even on a fast machine
 SHORT = 100*SLOW
 
@@ -30,9 +30,9 @@ SHORT = 100*SLOW
 class Helper:
     def __init__(self, **environment):
         self.process = subprocess.Popen(
-            [PYTHON, "-I", "-B", os.path.join(RUNTIME, "tosh_sympy", "server.py")],
+            [PYTHON, "-I", "-B", os.path.join(RUNTIME, "xeon_sympy", "server.py")],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
-            env={"TOSH_TRUST_KEY": KEY, **{key: str(value) for key, value in environment.items()}})
+            env={"XEON_TRUST_KEY": KEY, **{key: str(value) for key, value in environment.items()}})
         self.next_id = 0
         self.rpc("initialize", {"protocolVersion": "2024-11-05", "capabilities": {}})
 
@@ -239,7 +239,7 @@ def test_invalid_expression(h):
 
 
 def test_code_injection(h):
-    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "tosh-sympy-injection-marker")
+    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "xeon-sympy-injection-marker")
     attempts = [
         "__import__('os').system('touch %s')" % marker,
         "__import__(\"os\").system(\"touch %s\")" % marker,
@@ -281,7 +281,7 @@ def test_output_is_bounded(h):
 
 
 def test_timeout_and_recovery(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=1500)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=1500)
     try:
         started = time.monotonic()
         reply = expression(helper, "expand", "(a + b + c + d + f + g)**90")
@@ -294,7 +294,7 @@ def test_timeout_and_recovery(_):
 
 
 def test_memory_limit(_):
-    helper = Helper(TOSH_SYMPY_MEMORY_MB=200, TOSH_SYMPY_TIMEOUT_MS=25000)
+    helper = Helper(XEON_SYMPY_MEMORY_MB=200, XEON_SYMPY_TIMEOUT_MS=25000)
     try:
         assert error_code(expression(helper, "expand", "(a + b + c + d + f + g)**90")) == "memory_limit"
         assert expression(helper, "factor", "x**2 - 1")["success"] is True
@@ -376,7 +376,7 @@ def test_nsolve_never_guesses(h):
 
 
 def test_timed_out_indefinite_integral(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=SHORT)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=SHORT)
     try:
         # slow under every hash order: the worker runs with -I, so its seed is random and some orders
         # let SymPy give up on simpler integrands in milliseconds
@@ -390,7 +390,7 @@ def test_timed_out_indefinite_integral(_):
 
 
 def test_timed_out_definite_integral_gets_a_number(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=SHORT)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=SHORT)
     try:
         reply = expression(helper, "integrate", "exp(sin(x)**2)/(1 + x**3)", variable="x", lower="0", upper="1")
         assert reply["success"] is True and reply["exact"] is None, reply
@@ -407,7 +407,7 @@ def test_timed_out_definite_integral_gets_a_number(_):
 
 
 def test_timed_out_series_reports_what_finished(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=SHORT)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=SHORT)
     try:
         reply = expression(helper, "series", "exp(exp(sin(x)))*log(x)", point="1", order=8)
         assert error_code(reply) == "timeout" and reply["timed_out"] is True and reply["exact"] is None, reply
@@ -420,7 +420,7 @@ def test_timed_out_series_reports_what_finished(_):
 
 
 def test_timed_out_ode(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=SHORT)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=SHORT)
     try:
         reply = helper.call("solve", operation="dsolve", equations=["y''' + y = tan(x)"])
         assert error_code(reply) == "timeout" and reply["timed_out"] is True, reply
@@ -449,7 +449,7 @@ def test_same_answer_in_every_worker(_):
 
 def test_the_check_knows_every_name_of_the_grammar(_):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from tosh_sympy import anchor, mathlang
+    from xeon_sympy import anchor, mathlang
     assert anchor._KNOWN == set(mathlang.FUNCTIONS) | set(mathlang.CONSTANTS)
 
 
@@ -490,7 +490,7 @@ def test_a_call_that_does_not_say_what_the_request_says_is_not_run(h):
 
 def _check(text, operation, **arguments):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from tosh_sympy import anchor
+    from xeon_sympy import anchor
     return anchor.check(text, "", operation, arguments)
 
 
@@ -615,7 +615,7 @@ def test_definitions_stay_small(h):
 
 
 def test_idle_worker_is_released(_):
-    helper = Helper(TOSH_SYMPY_IDLE_SECONDS=1)
+    helper = Helper(XEON_SYMPY_IDLE_SECONDS=1)
     try:
         expression(helper, "factor", "x**2 - 1")
         children = lambda: subprocess.run(["/usr/bin/pgrep", "-P", str(helper.process.pid)],
@@ -632,7 +632,7 @@ def test_worker_is_confined(_):
     probe = r'''
 import os, sys
 sys.path.insert(0, sys.argv[1])
-from tosh_sympy import worker
+from xeon_sympy import worker
 import sympy
 print(worker._sandbox())
 sys.addaudithook(worker._audit)
@@ -650,7 +650,7 @@ attempt(lambda: __import__("socket").create_connection(("127.0.0.1", 9), 1))
 attempt(lambda: os.listdir(os.path.expanduser("~")))
 attempt(lambda: sympy.integrate(sympy.Symbol("x") ** 2))
 '''
-    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "tosh-sympy-write-marker")
+    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "xeon-sympy-write-marker")
     lines = subprocess.run([PYTHON, "-I", "-B", "-c", probe, RUNTIME, marker],
                            capture_output=True, text=True).stdout.split()
     home_is_inside_runtime = os.path.expanduser("~").startswith(RUNTIME)

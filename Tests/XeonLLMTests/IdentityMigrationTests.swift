@@ -210,6 +210,37 @@ final class IdentityMigrationTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "aRealSetting"), "kept")
     }
 
+    /// The migration still names ToshLLM's own data: that is the one place the old name stays.
+    func testTheMigrationStillNamesToshLLMsOwnData() {
+        XCTAssertEqual(IdentityMigration.oldIdentifier, "dev.engel.toshllm")
+        XCTAssertEqual(IdentityMigration.oldDataFolder, "ToshLLM")
+        XCTAssertEqual(IdentityMigration.markerKey, "migratedFromToshLLM")
+        XCTAssertEqual(IdentityMigration.folderMarkerKey, "migratedFromToshLLMFolderV2")
+    }
+
+    /// A beta 8 profile is already under XeonLLM's name: the upgrade has no old folder to merge, so
+    /// the new folder is left exactly as it is. The old domain's settings still travel once: they
+    /// are the one thing the marker copies, folder or no folder.
+    func testABeta8ProfileKeepsItsOwnFolder() throws {
+        let newFolder = try makeNewDataFolder()
+        try writeJSON([["id": "a", "title": "beta-8"]],
+                      to: newFolder.appendingPathComponent("conversations.json"))
+        let before = try Data(contentsOf: newFolder.appendingPathComponent("conversations.json"))
+
+        IdentityMigration.run(defaults: defaults,
+                              oldDomain: ["theme": "dark"],
+                              supportDir: supportDir, newDataFolder: "XeonLLM", keychain: false)
+
+        XCTAssertEqual(try Data(contentsOf: newFolder.appendingPathComponent("conversations.json")), before)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: newFolder.path).sorted(),
+                       ["conversations.json"])
+        // No ToshLLM folder is created, so nothing was merged into this profile.
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: supportDir.appendingPathComponent("ToshLLM").path))
+        XCTAssertEqual(defaults.string(forKey: "theme"), "dark")
+        XCTAssertTrue(try XCTUnwrap(defaults.bool(forKey: IdentityMigration.markerKey) as Bool?))
+    }
+
     func testKeychainItemsAreCopiedNotMovedOrOverwritten() throws {
         let old = "xeonllm-test-old-\(UUID().uuidString)", new = "xeonllm-test-new-\(UUID().uuidString)"
         func add(_ service: String, _ account: String, _ value: String) {

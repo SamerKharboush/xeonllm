@@ -8,7 +8,7 @@ import XCTest
 /// The chat's own summary against a running engine: a conversation that keeps growing past 70% of the context is
 /// summarized with the model, the meter follows it, and every turn after it still gets an answer.
 ///
-///     TOSH_COMPACT_E2E_PORT=8099 TOSH_COMPACT_E2E_CTX=8192 ./scripts/test.sh --filter CompactionEngineTests
+///     XEON_COMPACT_E2E_PORT=8099 XEON_COMPACT_E2E_CTX=8192 ./scripts/test.sh --filter CompactionEngineTests
 final class CompactionEngineTests: XCTestCase {
     private static let words = ("the crew walked the north fence line and noted posts leaning after the storm while the "
         + "creek ran high along the lower pasture and the gate by the county road needed a new hinge before the next "
@@ -22,10 +22,10 @@ final class CompactionEngineTests: XCTestCase {
     @MainActor
     func testALongConversationIsSummarizedAndGoesOn() async throws {
         let environment = ProcessInfo.processInfo.environment
-        guard let port = environment["TOSH_COMPACT_E2E_PORT"].flatMap(Int.init) else {
-            throw XCTSkip("Set TOSH_COMPACT_E2E_PORT to a running engine to run this test")
+        guard let port = environment["XEON_COMPACT_E2E_PORT"].flatMap(Int.init) else {
+            throw XCTSkip("Set XEON_COMPACT_E2E_PORT to a running engine to run this test")
         }
-        let context = environment["TOSH_COMPACT_E2E_CTX"].flatMap(Int.init) ?? 8192
+        let context = environment["XEON_COMPACT_E2E_CTX"].flatMap(Int.init) ?? 8192
         let defaults = UserDefaults.standard
         let saved = [SettingsKeys.ctx, SettingsKeys.chatAutoCompact, SettingsKeys.agentToolsEnabled,
                      SettingsKeys.memoryToolsEnabled].map { ($0, defaults.object(forKey: $0)) }
@@ -34,14 +34,14 @@ final class CompactionEngineTests: XCTestCase {
         defaults.set(true, forKey: SettingsKeys.chatAutoCompact)
         defaults.set(false, forKey: SettingsKeys.agentToolsEnabled)
         defaults.set(false, forKey: SettingsKeys.memoryToolsEnabled)
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-compact-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-compact-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = ChatStore(storageDirectory: directory)
         var sampling = ChatSamplingSettings()
         sampling.reasoningEffort = "off"
         var rows: [[String: Any]] = []
         var summarizedAt: Int?
-        for turn in 1...Int(environment["TOSH_COMPACT_E2E_TURNS"] ?? "12")! {
+        for turn in 1...Int(environment["XEON_COMPACT_E2E_TURNS"] ?? "12")! {
             store.send(text: Self.section(turn), port: port, temperature: 0, maxTokens: 256, system: "",
                        thinking: false, sampling: sampling)
             let deadline = Date().addingTimeInterval(600)
@@ -61,7 +61,7 @@ final class CompactionEngineTests: XCTestCase {
             XCTAssertNil(store.lastError, "turn \(turn): \(store.lastError ?? "")")
             XCTAssertFalse(answer.isEmpty, "turn \(turn) has no answer")
         }
-        if let path = environment["TOSH_COMPACT_E2E_TRACE"],
+        if let path = environment["XEON_COMPACT_E2E_TRACE"],
            let data = try? JSONSerialization.data(withJSONObject: rows, options: [.prettyPrinted, .sortedKeys]) {
             try data.write(to: URL(fileURLWithPath: path))
         }

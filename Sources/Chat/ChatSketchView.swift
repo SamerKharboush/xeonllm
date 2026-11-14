@@ -46,7 +46,7 @@ struct ChatSketch: Codable, Equatable {
         self.standing = standing
     }
 
-    /// One of an agent's `tosh.sketches`, or nil when it is not a figure that can be drawn.
+    /// One of an agent's `xeon.sketches`, or nil when it is not a figure that can be drawn.
     init?(_ object: [String: Any]) {
         func pairs(_ value: Any?) -> [[Double]]? {
             guard let items = value as? [Any], (2...Self.maximumPoints).contains(items.count) else { return nil }

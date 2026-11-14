@@ -4,7 +4,7 @@
 
 import Foundation
 
-/// The engine's context-first memory plan (TOSH_AUTO). The app previews it with the exact
+/// The engine's context-first memory plan (XEON_AUTO). The app previews it with the exact
 /// launch arguments before starting the server, and the engine confirms what it really did
 /// in `<plan>.runtime`; the runtime file is the authority.
 struct AutoMemoryPlan: Decodable, Equatable {
@@ -135,7 +135,7 @@ struct AutoMemoryPlan: Decodable, Equatable {
                 p.executableURL = URL(fileURLWithPath: settings.serverBinary)
                 p.arguments = settings.arguments
                 var env = settings.environment
-                env["TOSH_AUTO_DRY_RUN"] = "exit"
+                env["XEON_AUTO_DRY_RUN"] = "exit"
                 p.environment = env
                 let out = Pipe()
                 p.standardOutput = out

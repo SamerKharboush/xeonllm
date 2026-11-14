@@ -8,12 +8,12 @@ import XCTest
 final class AudioVideoExportIntegrationTests: XCTestCase {
     @MainActor
     func testCaptionedVideoExportWhenFixtureIsProvided() async throws {
-        guard let path = ProcessInfo.processInfo.environment["TOSH_AUDIO_VIDEO_FIXTURE"] else {
-            throw XCTSkip("Set TOSH_AUDIO_VIDEO_FIXTURE to run the video export integration test")
+        guard let path = ProcessInfo.processInfo.environment["XEON_AUDIO_VIDEO_FIXTURE"] else {
+            throw XCTSkip("Set XEON_AUDIO_VIDEO_FIXTURE to run the video export integration test")
         }
         let source = URL(fileURLWithPath: path)
         let output = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-captioned-\(UUID().uuidString).mov")
+            .appendingPathComponent("xeon-captioned-\(UUID().uuidString).mov")
         defer { try? FileManager.default.removeItem(at: output) }
         let exporter = SubtitleVideoExporter()
         exporter.export(

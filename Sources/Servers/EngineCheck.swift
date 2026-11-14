@@ -161,7 +161,7 @@ final class EngineChecker: ObservableObject {
 
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)
-        // The engine's own environment: without TOSH_FA_AMD the attention kernels are
+        // The engine's own environment: without XEON_FA_AMD the attention kernels are
         // never instantiated and the check would silently skip them.
         p.environment = settings.environment
 

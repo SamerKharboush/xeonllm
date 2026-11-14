@@ -16,7 +16,7 @@ final class MCPRemoteOriginTests: XCTestCase {
     }
 
     override func tearDown() async throws {
-        for server in configured { await ToshMCPService.shared.disconnect(server.id) }
+        for server in configured { await XeonMCPService.shared.disconnect(server.id) }
         for listener in listeners { listener.stop() }
         UserDefaults.standard.set(previous, forKey: SettingsKeys.mcpServers)
     }
@@ -55,7 +55,7 @@ final class MCPRemoteOriginTests: XCTestCase {
         let found = Found()
         let done = expectation(description: "discovery of \(server.url) returned")
         Task {
-            found.names = await ToshMCPService.shared.discoverTools().map(\.name)
+            found.names = await XeonMCPService.shared.discoverTools().map(\.name)
             done.fulfill()
         }
         await fulfillment(of: [done], timeout: 10)

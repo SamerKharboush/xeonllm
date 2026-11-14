@@ -154,7 +154,7 @@ enum LogPresentationParser {
         case "slot": "Slot"
         case "sampler": "Sampler"
         case "spec": "Speculative"
-        case "tosh": "XeonLLM"
+        case "xeon": "XeonLLM"
         default: source
         }
     }

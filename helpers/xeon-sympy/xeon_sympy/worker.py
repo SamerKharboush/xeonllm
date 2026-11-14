@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The process that holds the math libraries of one tool set. One JSON request per line on
@@ -53,7 +53,7 @@ def _sandbox():
 
 def _checked(ops, toolset, operation, plain, source, reviewed):
     """Runs the call unless it does not say what the request said. The reply always carries what was read."""
-    from tosh_sympy import anchor
+    from xeon_sympy import anchor
     interpreted = anchor.interpret(operation, plain)
     if isinstance(source, dict) and isinstance(source.get("request"), str):
         status, reasons = anchor.check(source["request"], str(source.get("context") or ""), operation, plain)
@@ -85,14 +85,14 @@ def _checked(ops, toolset, operation, plain, source, reviewed):
 def main():
     sys.path.insert(0, HOME)
     toolset = sys.argv[1] if len(sys.argv) > 1 else "sympy"
-    ops = importlib.import_module(f"tosh_{toolset}.ops")
-    schema = importlib.import_module(f"tosh_{toolset}.schema")
+    ops = importlib.import_module(f"xeon_{toolset}.ops")
+    schema = importlib.import_module(f"xeon_{toolset}.schema")
 
     sandboxed = _sandbox()
     sys.addaudithook(_audit)
 
     # the kernel ends this process if a call outlives its supervisor
-    backstop = int(float(os.environ.get("TOSH_SYMPY_BACKSTOP_SECONDS", "60")))
+    backstop = int(float(os.environ.get("XEON_SYMPY_BACKSTOP_SECONDS", "60")))
 
     reply_stream = sys.stdout
     print(json.dumps({"ready": True, "sandboxed": sandboxed}), file=reply_stream, flush=True)

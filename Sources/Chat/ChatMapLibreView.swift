@@ -45,9 +45,9 @@ enum MapBase {
 /// Serves the map page from the app and the map folder under tiles/, in byte ranges, as the server does for the web
 /// chat. MapLibre's worker does not start on a file:// page.
 final class MapPageScheme: NSObject, WKURLSchemeHandler {
-    static let name = "toshmap"
-    static let page = URL(string: "toshmap://app/map.html")!
-    private static let pageFiles: Set<String> = ["map.html", "toshmap.js", "maplibre-gl.css"]
+    static let name = "xeonmap"
+    static let page = URL(string: "xeonmap://app/map.html")!
+    private static let pageFiles: Set<String> = ["map.html", "xeonmap.js", "maplibre-gl.css"]
     private var running = Set<ObjectIdentifier>()
 
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
@@ -168,7 +168,7 @@ struct ChatMapLibreCanvas: NSViewRepresentable {
         guard let data = try? JSONSerialization.data(withJSONObject: config) else { return }
         let scripts = view.configuration.userContentController
         scripts.removeAllUserScripts()
-        scripts.addUserScript(WKUserScript(source: "window.TOSH_MAP_CONFIG = \(String(decoding: data, as: UTF8.self));",
+        scripts.addUserScript(WKUserScript(source: "window.XEON_MAP_CONFIG = \(String(decoding: data, as: UTF8.self));",
                                            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         view.load(URLRequest(url: MapPageScheme.page))
     }

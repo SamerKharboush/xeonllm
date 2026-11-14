@@ -12,8 +12,8 @@ import XCTest
 final class WhisperTranscriptTests: XCTestCase {
     func testWhisperRuntimeForcesAMDFlashAttentionAndSafeMetalPolicy() {
         let environment = SpeechDictationController.runtimeEnvironment(base: [:])
-        XCTAssertEqual(environment["TOSH_FA_AMD"], "1")
-        XCTAssertNil(environment["TOSH_FA_AMD_DISABLE"])
+        XCTAssertEqual(environment["XEON_FA_AMD"], "1")
+        XCTAssertNil(environment["XEON_FA_AMD_DISABLE"])
         XCTAssertEqual(environment["GGML_METAL_CONCURRENCY_DISABLE"], "1")
         XCTAssertEqual(environment["GGML_METAL_SHARED_BUFFERS_DISABLE"], "1")
     }
@@ -1147,7 +1147,7 @@ final class ServerSettingsTests: XCTestCase {
     /// A sparse file of the given size: the placement rule reads the size, not the data.
     private func sparseModel(bytes: Int64) throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-placement-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-placement-\(UUID().uuidString).gguf")
         FileManager.default.createFile(atPath: url.path, contents: Data())
         let handle = try FileHandle(forWritingTo: url)
         try handle.truncate(atOffset: UInt64(bytes))
@@ -1173,7 +1173,7 @@ final class ServerSettingsTests: XCTestCase {
     /// went onto both D700s at -ngl 99 and the Mac panicked (2026-11-04). The rule sizes the target.
     private func symlink(to target: URL) throws -> URL {
         let link = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-placement-link-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-placement-link-\(UUID().uuidString).gguf")
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
         addTeardownBlock { try? FileManager.default.removeItem(at: link) }
         return link
@@ -1231,7 +1231,7 @@ final class ServerSettingsTests: XCTestCase {
 
     func testAutoKVMayFallBackToTurbo4OnlyWhereTheModelSupportsIt() throws {
         let model = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-auto-turbo-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-auto-turbo-\(UUID().uuidString).gguf")
         try writeMinimalMoEGGUF(model, extra: [("qwen35moe.embedding_length", 2048),
                                                ("qwen35moe.attention.head_count", 16)])
         defer { try? FileManager.default.removeItem(at: model) }
@@ -1242,14 +1242,14 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertTrue(s.usesAutoPlan)
         // the model has a head size turbo4 supports; what the card allows is the branch rule's
         if supports {
-            XCTAssertEqual(s.environment["TOSH_AUTO_KV_TURBO4"],
+            XCTAssertEqual(s.environment["XEON_AUTO_KV_TURBO4"],
                            ServerSettings.turbo4AutoKVAllowed(architectures: Self.machineArchitectures) ? "1" : nil)
         } else {
-            XCTAssertNil(s.environment["TOSH_AUTO_KV_TURBO4"], "no head size to tell whether turbo4 fits")
+            XCTAssertNil(s.environment["XEON_AUTO_KV_TURBO4"], "no head size to tell whether turbo4 fits")
         }
-        XCTAssertNil(s.environment["TOSH_AUTO_HOST_BANK"], "the whole bank stays in RAM unless asked")
+        XCTAssertNil(s.environment["XEON_AUTO_HOST_BANK"], "the whole bank stays in RAM unless asked")
         s.dynamicMoeLeanRAM = true
-        XCTAssertEqual(s.environment["TOSH_AUTO_HOST_BANK"], "lean")
+        XCTAssertEqual(s.environment["XEON_AUTO_HOST_BANK"], "lean")
     }
 
     /// The branch rule behind the env: a known 32-lane card takes the turbo4 fallback, a 64-lane one
@@ -1288,12 +1288,12 @@ final class ServerSettingsTests: XCTestCase {
     func testLaunchEnvCarriesTheTurbo4FallbackKey() throws {
         var s = makeSettings()
         s.modelPath = try writeAutoPlanModel()
-        XCTAssertEqual(s.environment["TOSH_AUTO_KV_TURBO4"],
+        XCTAssertEqual(s.environment["XEON_AUTO_KV_TURBO4"],
                        ServerSettings.turbo4AutoKVAllowed(architectures: Self.machineArchitectures) ? "1" : nil,
                        "the env follows the branch rule, not the model")
         // a manually chosen cache keeps the env out, whatever the card
         s.autoKVMode = "q8_0"
-        XCTAssertNil(s.environment["TOSH_AUTO_KV_TURBO4"], "a cache chosen by hand is kept")
+        XCTAssertNil(s.environment["XEON_AUTO_KV_TURBO4"], "a cache chosen by hand is kept")
     }
 
     /// A sparse MoE model with a head size the turbo4 KV supports (head dim 128).
@@ -1417,7 +1417,7 @@ final class ServerSettingsTests: XCTestCase {
 
     func testAutoMemoryPlanOwnsOffloadBatchAndCacheOnMoEModels() throws {
         let model = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-auto-plan-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-auto-plan-\(UUID().uuidString).gguf")
         try writeMinimalMoEGGUF(model)
         defer { try? FileManager.default.removeItem(at: model) }
         var s = makeSettings()
@@ -1425,34 +1425,34 @@ final class ServerSettingsTests: XCTestCase {
         s.ubatch = 2048
         s.cacheTypeK = "q8_0"
         XCTAssertFalse(s.usesAutoPlan, "Dynamic MoE is opt-in")
-        XCTAssertNil(s.environment["TOSH_AUTO"])
+        XCTAssertNil(s.environment["XEON_AUTO"])
         XCTAssertFalse(s.arguments.contains("--dynamic-moe"))
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "--n-cpu-moe")! + 1], "24", "off keeps the standard offload")
         s.dynamicMoeEnabled = true
 
         XCTAssertTrue(s.usesAutoPlan)
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "--dynamic-moe")! + 1], "on")
-        XCTAssertNil(s.environment["TOSH_AUTO"], "the switch is the flag; TOSH_AUTO stays a developer override")
-        XCTAssertEqual(s.environment["TOSH_AUTO_KV"], "auto")
-        XCTAssertNil(s.environment["TOSH_AUTO_HOST_BANK"], "the whole bank stays in RAM unless asked")
+        XCTAssertNil(s.environment["XEON_AUTO"], "the switch is the flag; XEON_AUTO stays a developer override")
+        XCTAssertEqual(s.environment["XEON_AUTO_KV"], "auto")
+        XCTAssertNil(s.environment["XEON_AUTO_HOST_BANK"], "the whole bank stays in RAM unless asked")
         s.dynamicMoeLeanRAM = true
-        XCTAssertEqual(s.environment["TOSH_AUTO_HOST_BANK"], "lean")
+        XCTAssertEqual(s.environment["XEON_AUTO_HOST_BANK"], "lean")
         s.dynamicMoeLeanRAM = false
-        XCTAssertEqual(s.environment["TOSH_AUTO_PLAN_FILE"], AutoMemoryPlan.planURL(port: s.port).path)
+        XCTAssertEqual(s.environment["XEON_AUTO_PLAN_FILE"], AutoMemoryPlan.planURL(port: s.port).path)
         XCTAssertFalse(s.arguments.contains("--n-cpu-moe"), "the plan decides the offload")
         XCTAssertFalse(s.arguments.contains("--ubatch-size"), "the plan decides the batch")
         XCTAssertFalse(s.arguments.contains("-ctk"), "the plan decides the cache type")
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
 
         s.executionMode = "dmoe"
-        XCTAssertEqual(s.environment["TOSH_AUTO"], "dmoe")
+        XCTAssertEqual(s.environment["XEON_AUTO"], "dmoe")
         s.planWithoutDMoE = true
-        XCTAssertEqual(s.environment["TOSH_AUTO"], "nodmoe")
+        XCTAssertEqual(s.environment["XEON_AUTO"], "nodmoe")
 
         s.executionMode = "full"
         XCTAssertFalse(s.usesAutoPlan)
         XCTAssertTrue(s.manualFullGPU)
-        XCTAssertNil(s.environment["TOSH_AUTO"])
+        XCTAssertNil(s.environment["XEON_AUTO"])
         XCTAssertFalse(s.arguments.contains("--n-cpu-moe"), "manual full GPU offloads nothing")
 
         s.executionMode = "legacy"
@@ -1482,7 +1482,7 @@ final class ServerSettingsTests: XCTestCase {
 
     func testDynamicMoeBenchmarkFollowsThePlan() throws {
         let model = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-bench-plan-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-bench-plan-\(UUID().uuidString).gguf")
         try writeMinimalMoEGGUF(model)
         defer { try? FileManager.default.removeItem(at: model) }
         var s = makeSettings()
@@ -1497,9 +1497,9 @@ final class ServerSettingsTests: XCTestCase {
         XCTAssertTrue(args.contains(ServerSettings.expertsOnHostOverride))
         XCTAssertFalse(args.contains("-ncmoe"))
         let env = s.benchmarkEnvironment
-        XCTAssertEqual(env["TOSH_DMOE_CACHE_MIB"], "auto")
-        XCTAssertEqual(env["TOSH_DMOE_RESERVE_MIB"], "975")
-        XCTAssertEqual(env["TOSH_DMOE_HOST_CACHE_MIB"], "14336")
+        XCTAssertEqual(env["XEON_DMOE_CACHE_MIB"], "auto")
+        XCTAssertEqual(env["XEON_DMOE_RESERVE_MIB"], "975")
+        XCTAssertEqual(env["XEON_DMOE_HOST_CACHE_MIB"], "14336")
         XCTAssertEqual(env["GGML_OP_OFFLOAD_MIN_BATCH"], "9")
     }
 
@@ -1888,7 +1888,7 @@ final class ServerSettingsTests: XCTestCase {
             s.gpuList = gpus
             s.splitMode = mode
             s.splitGroupSize = group
-            return s.environment["TOSH_MTL_QUEUE_DEPTH"]
+            return s.environment["XEON_MTL_QUEUE_DEPTH"]
         }
         XCTAssertEqual(depth(gpus: [0, 1, 2, 3], mode: "tensor", group: 2), "256", "dos grupos TP2")
         XCTAssertNil(depth(gpus: [0, 1], mode: "tensor", group: 2), "un solo grupo TP2")
@@ -1901,10 +1901,10 @@ final class ServerSettingsTests: XCTestCase {
         s.gpuList = [0, 1, 2, 3]
         s.splitMode = "tensor"
         s.splitGroupSize = 2
-        XCTAssertEqual(s.environment["TOSH_MTL_QUEUE_DEPTH"], "256")
+        XCTAssertEqual(s.environment["XEON_MTL_QUEUE_DEPTH"], "256")
         s.gpuList = []
         s.gpuIndex = 0
-        XCTAssertNil(s.environment["TOSH_MTL_QUEUE_DEPTH"], "volver a una GPU no hereda la cola")
+        XCTAssertNil(s.environment["XEON_MTL_QUEUE_DEPTH"], "volver a una GPU no hereda la cola")
     }
 
     func testTensorSplitModeReachesServerAndBenchmark() {
@@ -1922,20 +1922,20 @@ final class ServerSettingsTests: XCTestCase {
 
     func testFastHandOffOnlyTravelsWithASplit() {
         var s = makeSettings()
-        XCTAssertNil(s.environment["TOSH_MGPU_EVENTS"], "sin reparto no hay traspaso entre GPUs")
+        XCTAssertNil(s.environment["XEON_MGPU_EVENTS"], "sin reparto no hay traspaso entre GPUs")
 
         s.multiGPU = true
         s.splitMode = "tensor"
-        XCTAssertEqual(s.environment["TOSH_MGPU_EVENTS"], "1")
+        XCTAssertEqual(s.environment["XEON_MGPU_EVENTS"], "1")
 
         s.mgpuEvents = false
-        XCTAssertNil(s.environment["TOSH_MGPU_EVENTS"])
+        XCTAssertNil(s.environment["XEON_MGPU_EVENTS"])
 
         // And the gate that came out of measurement: a layer split does not hand off
         // often enough to pay, and forcing it deadlocked the split outright.
         s.mgpuEvents = true
         s.splitMode = "layer"
-        XCTAssertNil(s.environment["TOSH_MGPU_EVENTS"])
+        XCTAssertNil(s.environment["XEON_MGPU_EVENTS"])
     }
 
     override func setUp() {
@@ -1959,18 +1959,18 @@ final class ServerSettingsTests: XCTestCase {
         s.mgpuEvents = true
         s.mgpuPeer = true
         s.splitMode = "tensor"
-        XCTAssertEqual(s.environment["TOSH_MGPU_EVENTS"], "1")
-        XCTAssertEqual(s.environment["TOSH_MGPU_PEER"], "1",
+        XCTAssertEqual(s.environment["XEON_MGPU_EVENTS"], "1")
+        XCTAssertEqual(s.environment["XEON_MGPU_PEER"], "1",
                        "con puente declarado, el tensor split lo lleva al motor")
 
         // A layer split never reduces across cards, so the bridge must stay out of the way.
         s.splitMode = "layer"
-        XCTAssertNil(s.environment["TOSH_MGPU_PEER"],
+        XCTAssertNil(s.environment["XEON_MGPU_PEER"],
                      "el puente no aporta nada por capas y ahí solo añade presión de memoria")
         // Events are off for a layer split too, and not for symmetry: the shared-event
         // hand-off deadlocked it at p >= 257 on a pair of D700s, and the generic host
         // staging path ran the same prompt at 23.1 t/s.
-        XCTAssertNil(s.environment["TOSH_MGPU_EVENTS"],
+        XCTAssertNil(s.environment["XEON_MGPU_EVENTS"],
                      "el traspaso compartido colgaba el reparto por capas")
     }
 
@@ -2201,8 +2201,8 @@ final class ServerSettingsTests: XCTestCase {
 
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
         XCTAssertEqual(s.benchmarkArguments[s.benchmarkArguments.firstIndex(of: "-fa")! + 1], "1")
-        XCTAssertNil(s.environment["TOSH_FA_AMD"])
-        XCTAssertEqual(s.environment["TOSH_FA_AMD_DISABLE"], "1")
+        XCTAssertNil(s.environment["XEON_FA_AMD"])
+        XCTAssertEqual(s.environment["XEON_FA_AMD_DISABLE"], "1")
     }
 
     func testAmdFlashAttentionIsOnlyUserToggle() {
@@ -2213,19 +2213,19 @@ final class ServerSettingsTests: XCTestCase {
 
         XCTAssertFalse(s.effectiveFaAmd)
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
-        XCTAssertNil(s.environment["TOSH_FA_AMD"])
-        XCTAssertEqual(s.environment["TOSH_FA_AMD_DISABLE"], "1")
+        XCTAssertNil(s.environment["XEON_FA_AMD"])
+        XCTAssertEqual(s.environment["XEON_FA_AMD_DISABLE"], "1")
 
         s.faAmd = true
         XCTAssertTrue(s.effectiveFaAmd)
         XCTAssertEqual(s.arguments[s.arguments.firstIndex(of: "-fa")! + 1], "1")
-        XCTAssertEqual(s.environment["TOSH_FA_AMD"], "1")
-        XCTAssertNil(s.environment["TOSH_FA_AMD_DISABLE"])
+        XCTAssertEqual(s.environment["XEON_FA_AMD"], "1")
+        XCTAssertNil(s.environment["XEON_FA_AMD_DISABLE"])
     }
 
     func testMicroBatchOnlyAppliesToMoEModels() throws {
         let model = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-ubatch-\(UUID().uuidString).gguf")
+            .appendingPathComponent("xeon-ubatch-\(UUID().uuidString).gguf")
         try writeMinimalMoEGGUF(model)
         defer { try? FileManager.default.removeItem(at: model) }
 
@@ -3110,7 +3110,7 @@ final class BenchAndProfileTests: XCTestCase {
             purpose: "benchmark", challengeId: "CID", nonce: "NONCE", payload: payload)
         let text = String(data: msg, encoding: .utf8)!
         let expectedHash = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-        XCTAssertEqual(text, "toshllm-benchmark-v2\nbenchmark\nCID\nNONCE\n\(expectedHash)")
+        XCTAssertEqual(text, "xeonllm-benchmark-v2\nbenchmark\nCID\nNONCE\n\(expectedHash)")
         XCTAssertFalse(text.hasSuffix("\n"))
     }
 

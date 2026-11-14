@@ -1,4 +1,4 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The numerical operations behind the scientific tools.
@@ -897,7 +897,7 @@ def _ode(args):
         missing = [name for name, order in orders.items() if order == 0][0]
         raise SciError("invalid_arguments", f"no equation contains a derivative of '{missing}'")
     highest = [sp.Derivative(applied[name], (variable, orders[name])) for name in names]
-    placeholders = sp.symbols(f"tosh_h0:{len(names)}")
+    placeholders = sp.symbols(f"xeon_h0:{len(names)}")
     isolated = [equation.subs(dict(zip(highest, placeholders))) for equation in equations]
     solved = sp.solve(isolated, placeholders, dict=True)
     if len(solved) != 1:
@@ -906,7 +906,7 @@ def _ode(args):
     state, replace = [], {}
     for name in names:
         for order in range(orders[name]):
-            symbol = sp.Symbol(f"tosh_s_{name}_{order}")
+            symbol = sp.Symbol(f"xeon_s_{name}_{order}")
             state.append((name, order, symbol))
             replace[sp.Derivative(applied[name], (variable, order)) if order else applied[name]] = symbol
     lower_first = sorted(replace.items(), key=lambda item: -len(getattr(item[0], "variables", ())))
@@ -914,7 +914,7 @@ def _ode(args):
     right = []
     for name, order, _ in state:
         if order + 1 < orders[name]:
-            right.append(sp.Symbol(f"tosh_s_{name}_{order + 1}"))
+            right.append(sp.Symbol(f"xeon_s_{name}_{order + 1}"))
         else:
             right.append(solved[0][placeholders[names.index(name)]].subs(lower_first))
     for expr in right:

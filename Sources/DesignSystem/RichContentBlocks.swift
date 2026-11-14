@@ -259,17 +259,17 @@ struct RichWebView: NSViewRepresentable {
             <script src="marked/lib/marked.umd.js"></script>
             <script>
             \#(RichText.inlineMathScript)
-            const { text: tokenized, formulas } = toshTokenizeMath(\#(encoded));
+            const { text: tokenized, formulas } = xeonTokenizeMath(\#(encoded));
             const escaped = tokenized.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
             document.getElementById('content').innerHTML = marked.parseInline(escaped, {gfm:true, breaks:true});
             const walker = document.createTreeWalker(document.getElementById('content'), NodeFilter.SHOW_TEXT);
             const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
             for (const node of nodes) {
-              const pieces = node.nodeValue.split(/(TOSHMATH\d+TOKEN)/g);
+              const pieces = node.nodeValue.split(/(XEONMATH\d+TOKEN)/g);
               if (pieces.length === 1) continue;
               const fragment = document.createDocumentFragment();
               for (const piece of pieces) {
-                const match = /^TOSHMATH(\d+)TOKEN$/.exec(piece);
+                const match = /^XEONMATH(\d+)TOKEN$/.exec(piece);
                 if (!match) { fragment.append(document.createTextNode(piece)); continue; }
                 const span = document.createElement('span'); span.className = 'inline-math';
                 katex.render(formulas[Number(match[1])], span, {displayMode:false, throwOnError:false});
@@ -277,7 +277,7 @@ struct RichWebView: NSViewRepresentable {
               }
               node.replaceWith(fragment);
             }
-            const probe = document.createElement('span'); probe.id = 'toshBaseline';
+            const probe = document.createElement('span'); probe.id = 'xeonBaseline';
             document.getElementById('content').prepend(probe);
             for (const anchor of document.querySelectorAll('a[href]')) {
               const protocol = new URL(anchor.href).protocol;
@@ -321,7 +321,7 @@ struct RichWebView: NSViewRepresentable {
         body { padding:\(bodyPadding); font:\(bold ? "bold " : "")\(fontSize)px -apple-system, BlinkMacSystemFont, sans-serif; color:CanvasText; }
         #content { display:flow-root; min-width:\(minimumWidth); transform-origin:top left; overflow-wrap:anywhere; }
         #content p { margin:0; } .inline-math { white-space:nowrap; }
-        #toshBaseline { display:inline-block; width:0; height:0; }
+        #xeonBaseline { display:inline-block; width:0; height:0; }
         svg, .svg-content { display:block; max-width:none; height:auto; }
         </style></head><body><div id="content"></div>
         <script>\(heightScript)</script>
@@ -335,8 +335,8 @@ extension RichWebView {
     /// Measures the content itself: the document's scroll height never drops
     /// below the frame, so a report based on it could only grow.
     static let heightScript = """
-    let toshPending = false, toshLast = '';
-    function toshMeasure() {
+    let xeonPending = false, xeonLast = '';
+    function xeonMeasure() {
       const content = document.getElementById('content');
       const body = getComputedStyle(document.body);
       const scrollbar = Math.max(0, window.innerHeight - document.documentElement.clientHeight);
@@ -344,15 +344,15 @@ extension RichWebView {
         + parseFloat(body.paddingTop) + parseFloat(body.paddingBottom) + scrollbar);
     }
     function report() {
-      if (toshPending) return;
-      toshPending = true;
+      if (xeonPending) return;
+      xeonPending = true;
       requestAnimationFrame(() => {
-        toshPending = false;
-        const probe = document.getElementById('toshBaseline');
+        xeonPending = false;
+        const probe = document.getElementById('xeonBaseline');
         const baseline = probe ? Math.round(probe.getBoundingClientRect().bottom + window.scrollY) : 0;
-        const sizes = { height: toshMeasure(), baseline };
+        const sizes = { height: xeonMeasure(), baseline };
         const key = sizes.height + ':' + baseline;
-        if (key !== toshLast) { toshLast = key; webkit.messageHandlers.height.postMessage(sizes); }
+        if (key !== xeonLast) { xeonLast = key; webkit.messageHandlers.height.postMessage(sizes); }
       });
     }
     """

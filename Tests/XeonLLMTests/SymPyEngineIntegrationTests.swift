@@ -6,7 +6,7 @@ import XCTest
 @testable import XeonLLM
 
 /// Runs the real engine with the math runtime from vendor/, both tool sets on. Needs a tool-calling model:
-///   TOSH_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
+///   XEON_SYMPY_E2E_MODEL=~/models/Qwen3-4B-Q4_K_M.gguf ./scripts/test.sh --filter SymPyEngine
 final class SymPyEngineIntegrationTests: XCTestCase {
     private static let port = 18_433
     private static var server: Process?
@@ -20,11 +20,11 @@ final class SymPyEngineIntegrationTests: XCTestCase {
     override class func setUp() {
         super.setUp()
         let environment = ProcessInfo.processInfo.environment
-        guard let model = environment["TOSH_SYMPY_E2E_MODEL"] else {
-            skipReason = "Set TOSH_SYMPY_E2E_MODEL to run the engine integration tests"
+        guard let model = environment["XEON_SYMPY_E2E_MODEL"] else {
+            skipReason = "Set XEON_SYMPY_E2E_MODEL to run the engine integration tests"
             return
         }
-        let binary = environment["TOSH_BIN"]
+        let binary = environment["XEON_BIN"]
             ?? repository.appendingPathComponent("vendor/llama.cpp/build-static/bin/llama-server").path
         let sympy = SymPyToolsService.serverArguments(
             enabled: true, scientific: true, resources: repository.appendingPathComponent("vendor"))
@@ -252,7 +252,7 @@ final class SymPyEngineIntegrationTests: XCTestCase {
 
     func testFileAndShellToolsStillWork() async throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-tools-\(UUID().uuidString)")
+            .appendingPathComponent("xeon-tools-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cwd = directory.path
@@ -348,7 +348,7 @@ final class SymPyEngineIntegrationTests: XCTestCase {
     @MainActor
     private func agentTurn(_ text: String, maxTokens: Int = 4096) async throws
         -> (messages: [ChatMessage], passes: Int, seconds: Double, intent: MathIntent?) {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-agent-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-agent-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = ChatStore(storageDirectory: directory)
         var sampling = ChatSamplingSettings()
@@ -379,10 +379,10 @@ final class SymPyEngineIntegrationTests: XCTestCase {
         else { UserDefaults.standard.removeObject(forKey: SettingsKeys.mathToolsAllowed) }
     }
 
-    private static var serverPath: Bool { ProcessInfo.processInfo.environment["TOSH_AGENT_PATH"] == "server" }
+    private static var serverPath: Bool { ProcessInfo.processInfo.environment["XEON_AGENT_PATH"] == "server" }
 
     private func record(_ line: [String: Any], to destination: String? = nil) {
-        guard let path = destination ?? ProcessInfo.processInfo.environment["TOSH_AGENT_TRACE"] else { return }
+        guard let path = destination ?? ProcessInfo.processInfo.environment["XEON_AGENT_TRACE"] else { return }
         if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil) }
         guard let file = FileHandle(forWritingAtPath: path),
               let data = try? JSONSerialization.data(withJSONObject: line, options: [.sortedKeys]) else { return }
@@ -392,13 +392,13 @@ final class SymPyEngineIntegrationTests: XCTestCase {
     }
 
     /// A reported request through the chat's own agent loop, with the settings of the report:
-    /// math tools only, no reasoning. TOSH_AGENT_RUNS repeats it, since the model samples.
+    /// math tools only, no reasoning. XEON_AGENT_RUNS repeats it, since the model samples.
     @MainActor
     func testReportedImproperIntegralThroughTheAgent() async throws {
         UserDefaults.standard.set(false, forKey: SettingsKeys.agentToolsEnabled)
         UserDefaults.standard.set(false, forKey: SettingsKeys.memoryToolsEnabled)
         defer { UserDefaults.standard.removeObject(forKey: SettingsKeys.memoryToolsEnabled) }
-        let runs = Int(ProcessInfo.processInfo.environment["TOSH_AGENT_RUNS"] ?? "") ?? 1
+        let runs = Int(ProcessInfo.processInfo.environment["XEON_AGENT_RUNS"] ?? "") ?? 1
         // the same request through the app's own loop and through the engine's agent
         for (server, run) in [false, true].flatMap({ server in (1...max(1, runs)).map { (server, $0) } }) {
             try await useServerAgent(server)
@@ -447,7 +447,7 @@ final class SymPyEngineIntegrationTests: XCTestCase {
         UserDefaults.standard.set(false, forKey: SettingsKeys.memoryToolsEnabled)
         defer { UserDefaults.standard.removeObject(forKey: SettingsKeys.memoryToolsEnabled) }
         try await useServerAgent(nil)
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-agent-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-agent-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = ChatStore(storageDirectory: directory)
         var sampling = ChatSamplingSettings()
@@ -473,7 +473,7 @@ final class SymPyEngineIntegrationTests: XCTestCase {
         UserDefaults.standard.set(false, forKey: SettingsKeys.memoryToolsEnabled)
         defer { UserDefaults.standard.removeObject(forKey: SettingsKeys.memoryToolsEnabled) }
         try await useServerAgent(true)
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-agent-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-agent-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = ChatStore(storageDirectory: directory)
         var sampling = ChatSamplingSettings()
@@ -508,7 +508,7 @@ final class SymPyEngineIntegrationTests: XCTestCase {
         defer { UserDefaults.standard.removeObject(forKey: SettingsKeys.memoryToolsEnabled) }
         let prompts = ["Factoriza x^2 - 5x + 6.", "Integra numéricamente exp(-x^2) de 0 a 1.",
                        "Calcula el determinante de [[2, 1], [1, 3]].", "Escribe una frase sobre el mar."]
-        let runs = Int(ProcessInfo.processInfo.environment["TOSH_AGENT_RUNS"] ?? "") ?? 1
+        let runs = Int(ProcessInfo.processInfo.environment["XEON_AGENT_RUNS"] ?? "") ?? 1
         for run in 1...max(1, runs) {
             for prompt in prompts {
                 let (messages, passes, seconds, _) = try await agentTurn(prompt)
@@ -526,20 +526,20 @@ final class SymPyEngineIntegrationTests: XCTestCase {
         }
     }
 
-    /// A frozen suite through the chat's own loop: TOSH_SUITE is the suite, TOSH_SUITE_OUT gets one line per prompt.
+    /// A frozen suite through the chat's own loop: XEON_SUITE is the suite, XEON_SUITE_OUT gets one line per prompt.
     @MainActor
     func testFrozenSuiteThroughTheAgent() async throws {
         let environment = ProcessInfo.processInfo.environment
-        guard let suitePath = environment["TOSH_SUITE"], let outPath = environment["TOSH_SUITE_OUT"] else {
-            throw XCTSkip("Set TOSH_SUITE and TOSH_SUITE_OUT to run a frozen suite")
+        guard let suitePath = environment["XEON_SUITE"], let outPath = environment["XEON_SUITE_OUT"] else {
+            throw XCTSkip("Set XEON_SUITE and XEON_SUITE_OUT to run a frozen suite")
         }
         UserDefaults.standard.set(false, forKey: SettingsKeys.agentToolsEnabled)
         UserDefaults.standard.set(false, forKey: SettingsKeys.memoryToolsEnabled)
         defer { UserDefaults.standard.removeObject(forKey: SettingsKeys.memoryToolsEnabled) }
         try await useServerAgent(Self.serverPath)
         let suite = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: suitePath))) as? [[String: String]])
-        let only = environment["TOSH_SUITE_ONLY"].map { Set($0.split(separator: ",").map(String.init)) }
-        let runs = Int(environment["TOSH_AGENT_RUNS"] ?? "") ?? 1
+        let only = environment["XEON_SUITE_ONLY"].map { Set($0.split(separator: ",").map(String.init)) }
+        let runs = Int(environment["XEON_AGENT_RUNS"] ?? "") ?? 1
         for run in 1...max(1, runs) {
             for item in suite where only?.contains(item["id"] ?? "") ?? true {
                 let prompt = item["prompt"] ?? ""

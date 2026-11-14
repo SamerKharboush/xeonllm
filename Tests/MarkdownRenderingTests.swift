@@ -198,7 +198,7 @@ final class InlineMathRuleTests: XCTestCase {
             "Set $HOME and then export $PATH.", "Cuesta entre $10-$25 al mes.", "$25 USD",
             "Escrito como \\(e^{i\\pi} + 1 = 0\\)", "Usa $\\frac{a}{b}$ y $x_1$", "US$10 y US$20$", "el factor $1/84$ y $10 - $25",
         ]
-        let tokenize = try XCTUnwrap(context.objectForKeyedSubscript("toshTokenizeMath"))
+        let tokenize = try XCTUnwrap(context.objectForKeyedSubscript("xeonTokenizeMath"))
         for line in corpus {
             let result = tokenize.call(withArguments: [line])
             let formulas = result?.objectForKeyedSubscript("formulas")?.toArray() as? [String]
@@ -226,7 +226,7 @@ final class RichContentHeightTests: XCTestCase {
         let assets = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().appendingPathComponent("Assets/rich-content")
         let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-rich-\(UUID().uuidString)")
+            .appendingPathComponent("xeon-rich-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: folder) }
         for name in ["katex", "marked"] {
@@ -255,7 +255,7 @@ final class RichContentHeightTests: XCTestCase {
     private func measure(_ view: WKWebView, size: NSSize) throws -> CGFloat {
         view.setFrameSize(size)
         var result: Result<Any, Error>?
-        view.callAsyncJavaScript("await document.fonts.ready; return toshMeasure();",
+        view.callAsyncJavaScript("await document.fonts.ready; return xeonMeasure();",
                                  arguments: [:], in: nil, in: .page) { result = $0 }
         let deadline = Date().addingTimeInterval(20)
         while result == nil, Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
@@ -290,7 +290,7 @@ final class RichContentHeightTests: XCTestCase {
             XCTAssertEqual(try measure(view, size: NSSize(width: 420, height: fitted)), fitted)
         }
         var probe: Any?
-        view.evaluateJavaScript("document.getElementById('toshBaseline').getBoundingClientRect().bottom") { v, _ in probe = v ?? 0 }
+        view.evaluateJavaScript("document.getElementById('xeonBaseline').getBoundingClientRect().bottom") { v, _ in probe = v ?? 0 }
         while probe == nil { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
         let baseline = CGFloat(truncating: (probe as? NSNumber) ?? 0)
         XCTAssertGreaterThan(baseline, 0)

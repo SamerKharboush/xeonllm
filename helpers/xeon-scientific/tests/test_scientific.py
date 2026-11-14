@@ -1,9 +1,9 @@
-# ToshLLM - run LLMs locally on Intel Macs with AMD GPUs
+# XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 # Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Tests for the scientific helper, driven over its MCP stdio protocol against known answers.
 
-    vendor/tosh-sympy/python/bin/python3 -I helpers/tosh-scientific/tests/test_scientific.py [runtime dir]
+    vendor/xeon-sympy/python/bin/python3 -I helpers/xeon-scientific/tests/test_scientific.py [runtime dir]
 """
 
 import json
@@ -14,7 +14,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-RUNTIME = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "vendor", "tosh-sympy")
+RUNTIME = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "vendor", "xeon-sympy")
 PYTHON = os.path.join(RUNTIME, "python", "bin", "python3")
 
 
@@ -22,15 +22,15 @@ PYTHON = os.path.join(RUNTIME, "python", "bin", "python3")
 KEY = "test-trust-key"
 # CI runners are virtual and run this x86 runtime translated: wall-clock limits get three times the room
 SLOW = 3 if os.environ.get("CI") else 1
-SHARED = {"TOSH_SYMPY_TIMEOUT_MS": 20000} if SLOW > 1 else {}
+SHARED = {"XEON_SYMPY_TIMEOUT_MS": 20000} if SLOW > 1 else {}
 
 
 class Helper:
     def __init__(self, toolset="scientific", **environment):
         self.process = subprocess.Popen(
-            [PYTHON, "-I", "-B", os.path.join(RUNTIME, "tosh_sympy", "server.py"), toolset],
+            [PYTHON, "-I", "-B", os.path.join(RUNTIME, "xeon_sympy", "server.py"), toolset],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
-            env={"TOSH_TRUST_KEY": KEY, **{key: str(value) for key, value in environment.items()}})
+            env={"XEON_TRUST_KEY": KEY, **{key: str(value) for key, value in environment.items()}})
         self.next_id = 0
         self.rpc("initialize", {"protocolVersion": "2024-11-05", "capabilities": {}})
 
@@ -463,7 +463,7 @@ def test_threads_are_capped(_):
 
 
 def test_timeout_and_recovery(_):
-    helper = Helper(TOSH_SYMPY_TIMEOUT_MS=400)
+    helper = Helper(XEON_SYMPY_TIMEOUT_MS=400)
     try:
         started = time.monotonic()
         # a Python callback per solver step over ~10^7 periods: seconds on any machine, unlike linear algebra
@@ -480,7 +480,7 @@ def test_timeout_and_recovery(_):
 
 
 def test_memory_limit(_):
-    helper = Helper(TOSH_SYMPY_MEMORY_MB=64, TOSH_SYMPY_TIMEOUT_MS=20000)
+    helper = Helper(XEON_SYMPY_MEMORY_MB=64, XEON_SYMPY_TIMEOUT_MS=20000)
     try:
         big = {name: {"linspace": [0, 1, 1000000]} for name in "abcdefgh"}
         # the server samples the footprint every 50 ms, which a plain sum can finish under: this holds the
@@ -494,7 +494,7 @@ def test_memory_limit(_):
 
 
 def test_idle_worker_is_released(_):
-    helper = Helper(TOSH_SYMPY_IDLE_SECONDS=1)
+    helper = Helper(XEON_SYMPY_IDLE_SECONDS=1)
     try:
         helper.call("stats", "describe", values=[1, 2, 3])
         assert len(helper.children()) == 1
@@ -509,7 +509,7 @@ def test_worker_is_confined(_):
     probe = r'''
 import os, sys
 sys.path.insert(0, sys.argv[1])
-from tosh_sympy import worker
+from xeon_sympy import worker
 print(worker._sandbox())
 sys.addaudithook(worker._audit)
 import numpy, scipy.linalg, scipy.optimize, scipy.signal, scipy.stats, scipy.integrate, scipy.interpolate
@@ -528,7 +528,7 @@ attempt(lambda: os.listdir(os.path.expanduser("~")))
 attempt(lambda: __import__("ctypes").CDLL("/usr/lib/libz.dylib"))
 attempt(lambda: scipy.linalg.solve(numpy.eye(3), numpy.ones(3)))
 '''
-    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "tosh-scientific-write-marker")
+    marker = os.path.join(os.environ.get("TMPDIR", "/tmp"), "xeon-scientific-write-marker")
     lines = subprocess.run([PYTHON, "-P", "-s", "-B", "-c", probe, RUNTIME, marker], capture_output=True, text=True,
                            env={"OPENBLAS_MAIN_FREE": "1", "VECLIB_MAXIMUM_THREADS": "2"}).stdout.split()
     inside = os.path.expanduser("~").startswith(RUNTIME)

@@ -48,7 +48,7 @@ final class MathGroundingTests: XCTestCase {
         XCTAssertTrue(note.contains("value: 6.49393940227") && note.contains("error_estimate: 9.32511651849e-11"), note)
         XCTAssertTrue(note.contains("limits: [0, +oo)") && !note.contains("pi**4"), note)
         XCTAssertEqual(step(messages, "", closing: MathTranscriptionService.unresolvedMessage()), .finalize(note))
-        // the last round can only state it; with nothing usable Tosh states it itself
+        // the last round can only state it; with nothing usable Xeon states it itself
         guard case .replace(let safe) = step(messages, " ", finalizing: true) else { return XCTFail() }
         XCTAssertTrue(safe.contains("6.49393940227") && safe.contains("9.32511651849e-11"), safe)
         XCTAssertTrue(safe.contains("Integral(x**3/(exp(x) - 1), (x, 0, oo))") && !safe.contains("pi"), safe)

@@ -58,17 +58,17 @@ enum ChatJSONL {
             "name": conversation.title, "lastModified": conversation.updated.timeIntervalSince1970 * 1000,
             "currNode": conversation.messages.last?.id.uuidString ?? rootID,
             "pinned": conversation.pinned ?? false,
-            "toshCreated": conversation.created.timeIntervalSince1970 * 1000,
+            "xeonCreated": conversation.created.timeIntervalSince1970 * 1000,
         ]
-        if let value = conversation.systemPrompt { header["toshSystemPrompt"] = value }
-        if let value = conversation.summary { header["toshSummary"] = value }
-        if let value = conversation.summarizedCount { header["toshSummarizedCount"] = value }
+        if let value = conversation.systemPrompt { header["xeonSystemPrompt"] = value }
+        if let value = conversation.summary { header["xeonSummary"] = value }
+        if let value = conversation.summarizedCount { header["xeonSummarizedCount"] = value }
         if let blocks = conversation.archived, !blocks.isEmpty,
            let data = try? JSONEncoder().encode(blocks),
            let json = try? JSONSerialization.jsonObject(with: data) {
-            header["toshArchived"] = json
+            header["xeonArchived"] = json
         }
-        if let value = conversation.enabledToolNames { header["toshEnabledToolNames"] = value }
+        if let value = conversation.enabledToolNames { header["xeonEnabledToolNames"] = value }
 
         let root: [String: Any] = [
             "id": rootID, "convId": conversation.id.uuidString, "type": "root",
@@ -151,7 +151,7 @@ enum ChatJSONL {
         let currentMessages = currentID.flatMap { byID[$0] == nil ? nil : path(to: $0) }
             ?? leaves.first.map(path) ?? []
         let allPaths = leaves.map(path).filter { !$0.isEmpty }
-        let createdMS = header["toshCreated"] as? Double
+        let createdMS = value(header, "xeonCreated", "toshCreated", as: Double.self)
         let modifiedMS = header["lastModified"] as? Double
         var conversation = Conversation(
             id: UUID(uuidString: header["id"] as? String ?? "") ?? UUID(),
@@ -159,12 +159,12 @@ enum ChatJSONL {
             messages: currentMessages,
             created: createdMS.map { Date(timeIntervalSince1970: $0 / 1000) } ?? currentMessages.first?.date ?? .now,
             updated: modifiedMS.map { Date(timeIntervalSince1970: $0 / 1000) } ?? currentMessages.last?.date ?? .now,
-            summary: header["toshSummary"] as? String,
-            summarizedCount: header["toshSummarizedCount"] as? Int,
+            summary: value(header, "xeonSummary", "toshSummary", as: String.self),
+            summarizedCount: value(header, "xeonSummarizedCount", "toshSummarizedCount", as: Int.self),
             pinned: header["pinned"] as? Bool,
-            systemPrompt: header["toshSystemPrompt"] as? String,
-            enabledToolNames: header["toshEnabledToolNames"] as? [String])
-        if let json = header["toshArchived"],
+            systemPrompt: value(header, "xeonSystemPrompt", "toshSystemPrompt", as: String.self),
+            enabledToolNames: value(header, "xeonEnabledToolNames", "toshEnabledToolNames", as: [String].self))
+        if let json = header["xeonArchived"] ?? header["toshArchived"],
            let data = try? JSONSerialization.data(withJSONObject: json),
            let blocks = try? JSONDecoder().decode([ArchivedBlock].self, from: data) {
             conversation.archived = ChatMemoryService.clamped(blocks, toCount: currentMessages.count)
@@ -175,6 +175,13 @@ enum ChatJSONL {
             conversation.activeBranchID = zip(branches, allPaths).first(where: { $0.1 == currentMessages })?.0.id
         }
         return conversation
+    }
+
+    /// A header field under its current name, falling back to the name beta 8 wrote. A file
+    /// saved by beta 8 keeps its created date, system prompt, summary, archive flag and enabled
+    /// tools; only the new names are ever written back.
+    private static func value<T>(_ header: [String: Any], _ key: String, _ beta8: String, as type: T.Type) -> T? {
+        (header[key] ?? header[beta8]) as? T
     }
 
     private static func message(from record: [String: Any], id: UUID) -> ChatMessage {

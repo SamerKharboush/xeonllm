@@ -30,7 +30,7 @@ final class EngineExtensionsTests: XCTestCase {
     }
 
     private func folder() throws -> URL {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("tosh-ext-test-\(UUID().uuidString)")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("xeon-ext-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         return root
@@ -63,7 +63,7 @@ final class EngineExtensionsTests: XCTestCase {
 
     private func runtime() throws -> URL {
         let resources = try folder()
-        let bin = resources.appendingPathComponent("tosh-sympy/python/bin")
+        let bin = resources.appendingPathComponent("xeon-sympy/python/bin")
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
         try FileManager.default.copyItem(atPath: "/usr/bin/true", toPath: bin.appendingPathComponent("python3").path)
         return resources
@@ -178,7 +178,7 @@ final class EngineExtensionsTests: XCTestCase {
         XCTAssertEqual(on.agentOnly, ["maps"])
         XCTAssertEqual(on.agent?["args"] as? [String], [path.path + "/agent.py", "--runtime", "/rt"])
         let cloud = try XCTUnwrap(on.servers["cloud"] as? [String: Any])
-        XCTAssertEqual(cloud["args"] as? [String], ["-I", "-B", "/rt/tosh_sympy/remote.py", "--url", "https://mcp.example/mcp",
+        XCTAssertEqual(cloud["args"] as? [String], ["-I", "-B", "/rt/xeon_sympy/remote.py", "--url", "https://mcp.example/mcp",
                                                     "--timeout", "20", "--transport", "http",
                                                     "--header-env", "Authorization=TEST_MAPS_TOKEN"])
 
@@ -244,7 +244,7 @@ final class EngineExtensionsTests: XCTestCase {
         let servers = try XCTUnwrap((JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])?["mcpServers"]
             as? [String: Any])
         let env = (servers[SymPyToolsService.agentName] as? [String: Any])?["env"] as? [String: String]
-        XCTAssertEqual(env?["TOSH_AGENT_SERVERS"], "cloud,maps")
+        XCTAssertEqual(env?["XEON_AGENT_SERVERS"], "cloud,maps")
     }
 
     func testWithoutExtensionsNothingChanges() throws {

@@ -16,8 +16,8 @@ final class SymPyToolsTests: XCTestCase {
 
     private func makeRuntime() throws -> URL {
         let resources = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tosh-sympy-test-\(UUID().uuidString)")
-        let bin = resources.appendingPathComponent("tosh-sympy/python/bin")
+            .appendingPathComponent("xeon-sympy-test-\(UUID().uuidString)")
+        let bin = resources.appendingPathComponent("xeon-sympy/python/bin")
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
         try FileManager.default.copyItem(atPath: "/usr/bin/true",
                                          toPath: bin.appendingPathComponent("python3").path)
@@ -48,9 +48,9 @@ final class SymPyToolsTests: XCTestCase {
         let config = try XCTUnwrap(JSONSerialization.jsonObject(
             with: Data(try XCTUnwrap(arguments.dropFirst().first).utf8)) as? [String: Any])
         let server = try XCTUnwrap((config["mcpServers"] as? [String: Any])?["sympy"] as? [String: Any])
-        let runtime = resources.appendingPathComponent("tosh-sympy").path
+        let runtime = resources.appendingPathComponent("xeon-sympy").path
         XCTAssertEqual(server["command"] as? String, runtime + "/python/bin/python3")
-        XCTAssertEqual(server["args"] as? [String], ["-I", "-B", runtime + "/tosh_sympy/server.py"])
+        XCTAssertEqual(server["args"] as? [String], ["-I", "-B", runtime + "/xeon_sympy/server.py"])
     }
 
     func testScientificServerRunsBesideSymPy() throws {
@@ -114,7 +114,7 @@ final class SymPyToolsTests: XCTestCase {
         XCTAssertEqual(gis["env"] as? [String: String], ["TOKEN": "abc"])
         XCTAssertEqual(gis["timeout_ms"] as? Int, 30_000)
         let agentEnv = (servers["agent"] as? [String: Any])?["env"] as? [String: String]
-        XCTAssertEqual(agentEnv?["TOSH_AGENT_SERVERS"], "city-gis")
+        XCTAssertEqual(agentEnv?["XEON_AGENT_SERVERS"], "city-gis")
 
         // only the agent may list and run them
         let arguments = SymPyToolsService.serverArguments(enabled: true, resources: resources, shared: shared)
@@ -144,12 +144,12 @@ final class SymPyToolsTests: XCTestCase {
                                                                        shared: [remote, socket]))
         XCTAssertEqual(Set(servers.keys), ["agent", "cloud-gis"])
         let entry = try XCTUnwrap(servers["cloud-gis"] as? [String: Any])
-        let runtime = resources.appendingPathComponent("tosh-sympy")
+        let runtime = resources.appendingPathComponent("xeon-sympy")
         XCTAssertEqual(entry["command"] as? String, runtime.appendingPathComponent("python/bin/python3").path)
-        XCTAssertEqual(entry["args"] as? [String], ["-I", "-B", runtime.appendingPathComponent("tosh_sympy/remote.py").path,
+        XCTAssertEqual(entry["args"] as? [String], ["-I", "-B", runtime.appendingPathComponent("xeon_sympy/remote.py").path,
                                                     "--url", "https://mcp.example/mcp", "--timeout", "45",
                                                     "--transport", "sse"])
-        XCTAssertEqual(SymPyToolsService.headersVariable(remote), "TOSH_MCP_HEADERS_CLOUD_GIS")
+        XCTAssertEqual(SymPyToolsService.headersVariable(remote), "XEON_MCP_HEADERS_CLOUD_GIS")
     }
 
     func testTogglingApprovalAddsAndRemovesTheServer() throws {

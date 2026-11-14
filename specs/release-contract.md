@@ -20,7 +20,7 @@ GEMM, and nobody chatted with the shipped app. The engine reported itself as bet
 | About: Donate | opens <https://github.com/SamerKharboush/xeonllm>; shows no other person's payment ID, QR code or sponsor link |
 | credit | the About tab, README, AUTHORS.md and THIRD_PARTY_NOTICES.md credit ToshLLM by Engelbert Delgado (<https://github.com/engeldlgado/toshllm>) as the upstream; GPL copyright headers in source files are kept, never removed |
 | engine banner | `llama-server` logs `XeonLLM engine <VERSION>` and `llama-bench` prints the same; `<VERSION>` equals the `VERSION` file |
-| kept on purpose | `TOSH_*` env switches, `TOSH*` plist keys, `X-ToshLLM-*` webhook headers, the `toshllm-settings` import format, CITATION.cff / .zenodo.json (they describe upstream's record) |
+| names | one name only: every switch is `XEON_*`, every plist key `XEON*`, the agent headers `X-Xeon-Agent`/`-Key`, the webhook headers `X-XeonLLM-Event`/`-Delivery`; no `TOSH_*` alias is read anywhere. The two exceptions are data the user already owns and upstream's own record: the `toshllm-settings` import format (an archive the importer accepts, whatever its tag) and CITATION.cff / .zenodo.json, which describe upstream's release |
 
 ## 2. The optimisations that must be in every release
 
@@ -36,17 +36,17 @@ checked on the shipped binaries, not the dev tree.
 - **The 64-lane paths are live.** A server log on this Mac shows, for each card:
   `probed SIMD-group width = 64`, `wave64 decode ON`, `aligned mat-vec reads ON`.
 - **The DFlash drafter head on the card** (spec/0073): with a host target and a drafter on a
-  card, `-lv 4` prints `dflash lm head copied to`; with `TOSH_DFLASH_HEAD_HOST=1` it prints
+  card, `-lv 4` prints `dflash lm head copied to`; with `XEON_DFLASH_HEAD_HOST=1` it prints
   `kept on the host`.
-- **The mat-vec thresholds** (metal/0074 and its predecessors): `TOSH_MV_ROWS8_DISABLE=1`
+- **The mat-vec thresholds** (metal/0074 and its predecessors): `XEON_MV_ROWS8_DISABLE=1`
   changes tg128 on Qwen3-4B-Q4_K_M by more than the noise, proving the rule is in the binary.
-- **Full threadgroups for the element-wise kernels** (metal/0076): `TOSH_FULL_TG_DISABLE=1`
+- **Full threadgroups for the element-wise kernels** (metal/0076): `XEON_FULL_TG_DISABLE=1`
   changes tg128 on Nemotron-3.5-Bolt-E4B-Q4_K_M by more than the noise (13.74 against 13.51
   on the dev build, card 1), and greedy text is byte-identical with and without it.
 - **Shorter prefill command buffers on a discrete card** (metal/0078): a server log at `-lv 4`
-  shows `batch graphs use 5 command buffers (TOSH_MTL_PREFILL_CB=4)` for each card, and the
+  shows `batch graphs use 5 command buffers (XEON_MTL_PREFILL_CB=4)` for each card, and the
   Qwen3-14B-Q4_K_M layer split at `-c 32768` answers a ~5.4k-token prompt with 200 and no
-  `kIOAccelCommandBufferCallbackErrorTimeout`, while `TOSH_MTL_PREFILL_CB=1` on the same run
+  `kIOAccelCommandBufferCallbackErrorTimeout`, while `XEON_MTL_PREFILL_CB=1` on the same run
   reproduces the timeout and HTTP 500 (the control). Greedy text is byte-identical with and
   without it, and tg128 on Qwen3-4B-Q4_K_M stays within the noise.
 - **The context fits the cards** (ticket 75, `Estimator.cardFitCtx`): the app's server log
@@ -54,7 +54,7 @@ checked on the shipped binaries, not the dev tree.
   `context: 32768 -> 16384 (f16 KV, 2 cards, 6144 MiB each: …)` and `args:` carry `-c 16384`;
   Qwen3-8B-Q4_K_M at the same launch keeps `-c 32768`; the 14B stress cells of section 4 on
   that launch end with no `kIOAccelCommandBufferCallbackErrorTimeout` and no HTTP 500.
-- **The app's launch defaults.** The server log header shows `TOSH_FA_AMD=1`, the placement
+- **The app's launch defaults.** The server log header shows `XEON_FA_AMD=1`, the placement
   rule (`placement: card` or `host` per the ticket 67 rule), and the DFlash auto line.
 - **The data migration** from ToshLLM (see section 5).
 - **LFM3** (model/0079): LFM3-1.7B-F16 loads at `-ngl 99` on card 0 and on card 1 and answers
@@ -64,8 +64,8 @@ checked on the shipped binaries, not the dev tree.
   one token prints `ggml_cpu: multi-row dot ON for <type> (AVX1)`; with `GGML_CPU_NO_MULTI_DOT=1`
   it prints nothing, and the greedy text is byte-identical either way.
 - **Bounded batch command buffers** (metal/0081 and the app's 128-token dense card batch):
-  `TOSH_MTL_CB_STATS=1` on Qwen3-4B-Q4_K_M, card 1, `-c 8192`, a ~6000-token prompt, logs every
-  batch with `max` at most 200 ms at the app's `-ub 128`, while `TOSH_MTL_CB_TARGET_MS=0 -ub 512`
+  `XEON_MTL_CB_STATS=1` on Qwen3-4B-Q4_K_M, card 1, `-c 8192`, a ~6000-token prompt, logs every
+  batch with `max` at most 200 ms at the app's `-ub 128`, while `XEON_MTL_CB_TARGET_MS=0 -ub 512`
   (the control) logs a `max` above 1000 ms; the generated text is byte-identical in both. The
   app's `args:` for a dense card launch carry `--ubatch-size 128`.
 - **Prompt offload for host-placed models, with a compute-buffer cap** (core/0082 and the app's
@@ -76,17 +76,17 @@ checked on the shipped binaries, not the dev tree.
   header for a host-placed dense model names `prompt offload: card <i>`.
 - **Decomposed prefill for head 64/128 on 64-lane cards** (metal/0083, beta 8 ticket 21):
   Qwen3-4B-Q4_K_M on card 1, `-fa 1 -ub 128`, llama-bench pp512 at depth 6144 reads above
-  `TOSH_FA_PF_W64=1`'s (the old block; 56.4 vs 27.6 tok/s on the build-fa engine) with tg128 the
+  `XEON_FA_PF_W64=1`'s (the old block; 56.4 vs 27.6 tok/s on the build-fa engine) with tg128 the
   same, and a ~6000-token greedy prompt gives byte-identical text in both.
 - **Gated-delta-net state fusion off across several cards** (metal/0084, beta 8 ticket 16): the
   dense qwen35 27B Q6_K with `GGML_METAL_DEVICE_LIST=0,1 -ngl 12 --split-mode layer`, greedy, answers
-  coherent text identical to the one-card `-ngl 12` run; `TOSH_GDN_STATE_FUSION_MULTI=1` (the control)
+  coherent text identical to the one-card `-ngl 12` run; `XEON_GDN_STATE_FUSION_MULTI=1` (the control)
   answers "0000..." again. On one card the fused `rows=1_fold=1` kernel is still compiled.
 - **Decomposed prefill KQ capped at 256 MiB on 64-lane cards** (metal/0085, beta 8 ticket 23):
   the gates' repro (Qwen3-14B Q4_K_M layer split over both cards, `-c 32768`, ~5.4k-token prompt)
-  answers coherent text (not `@@@@`) with decode near `TOSH_FA_PF_W64=1`'s (3.39-3.41 both ways in
-  evidence/23, against 0.49 without the cap); `TOSH_FA_PF_DECOMP_MAX_MB` overrides the cap. Known
-  limit: at the default `-ub 512` this prompt reads 12.6 vs 17.1 tok/s with `TOSH_FA_PF_W64=1`;
+  answers coherent text (not `@@@@`) with decode near `XEON_FA_PF_W64=1`'s (3.39-3.41 both ways in
+  evidence/23, against 0.49 without the cap); `XEON_FA_PF_DECOMP_MAX_MB` overrides the cap. Known
+  limit: at the default `-ub 512` this prompt reads 12.6 vs 17.1 tok/s with `XEON_FA_PF_W64=1`;
   at the app's `-ub 128` 22.6 vs 21.4-21.8.
 - **The launch card check** (f512e24): `XEONLLM_CARD_FAULT=1` on the built app leaves card 1 out
   of the engine environment and shows the banner (the test in `swift test` covers the path).
@@ -99,7 +99,7 @@ commit.
 All with `dist/XeonLLM.app/Contents/Resources/bin/*`, `GGML_METAL_DEVICE_INDEX=0` then `=1`.
 
 1. `test-backend-ops -b MTL0` **for every op**, not only MUL_MAT / MUL_MAT_ID / FLASH_ATTN_EXT:
-   0 FAIL. Also once with `TOSH_FA_AMD=1`.
+   0 FAIL. Also once with `XEON_FA_AMD=1`.
 2. **Kernel coverage.** `scripts/check-kernel-coverage.sh`: for every quant type the Metal
    backend accepts, and every batch size class (1, 2-8, 9-32, 33-191, 192-447, 448-1023,
    >= 1024) at row counts below and above every row floor (2048, 4096), the pipeline name the
@@ -158,7 +158,7 @@ answers). Greedy text is byte-identical across the split modes of one backend (l
 tensor), and byte-identical to the previous release's text for the same prompt, model and
 backend. A patch that changes which route or backend computes `-ngl 0` may move that text only
 when its opt-out restores the previous release's text on every moved cell, and the notes name it.
-Beta 8 (ticket 25): metal/0083 moves the head-64/128 models (`TOSH_FA_PF_W64=1` restores beta.7's
+Beta 8 (ticket 25): metal/0083 moves the head-64/128 models (`XEON_FA_PF_W64=1` restores beta.7's
 text) and core/0082's prompt offload moves Ternary-Bonsai-2-27B (`--no-op-offload` restores it).
 A launch with dynamic MoE (`--dynamic-moe on`, the 35B) is the exception: which experts sit on a
 card is planned at load from free VRAM (card 0 shares it with the display) and routing, so the
@@ -180,6 +180,9 @@ cell -> pass/fail with the log line that failed.
   items absent in the new folder are copied, `conversations.json` and `projects.json` are
   merged by id with the new copy winning, nothing of ToshLLM's is moved or deleted, and the
   copy is idempotent. Users already migrated by the beta.5 logic get the folder merge once.
+  A conversation file written by beta 8 (header fields `toshCreated`, `toshSystemPrompt`,
+  `toshSummary`, `toshSummarizedCount`, `toshArchived`, `toshEnabledToolNames`) still opens with
+  every one of those fields; the app writes only the `xeon*` names back.
 - **Tool servers start.** The engine and the app's MCP transport start `npx`/`uvx` servers
   installed in the user's own PATH (`~/.local/bin`, a node in `~/.nvm`, `~/.volta`,
   `~/.9remote/node/bin`, Homebrew, ...): the PATH comes from the user's login shell, read once
@@ -187,7 +190,7 @@ cell -> pass/fail with the log line that failed.
   UI by name, not only in the log.
 - **Remote MCP over HTTPS** either works or is refused with a message the user sees (the
   engine is built without `CPPHTTPLIB_OPENSSL_SUPPORT`).
-- The mounted DMG: bundle id, version, `TOSHNoAVX2` and `TOSHUpdatesDisabled` true,
+- The mounted DMG: bundle id, version, `XEONNoAVX2` and `XEONUpdatesDisabled` true,
   `codesign --verify --deep`, the DMG window layout read from `.DS_Store` (the method in
   ticket 73).
 - **One real chat in the built app**: launch `dist/XeonLLM.app` against a test profile, load

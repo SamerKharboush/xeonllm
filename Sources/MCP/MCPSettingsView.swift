@@ -129,7 +129,7 @@ struct MCPSettingsSection: View {
                     Keychain.set(headers, account: updated.credentialAccount)
                 }
                 persist()
-                Task { await ToshMCPService.shared.disconnect(updated.id) }
+                Task { await XeonMCPService.shared.disconnect(updated.id) }
             }
             .environmentObject(loc)
         }
@@ -141,15 +141,15 @@ struct MCPSettingsSection: View {
         servers.removeAll { $0.id == server.id }
         MCPServerStore.deleteCredentials(for: server)
         persist()
-        Task { await ToshMCPService.shared.disconnect(server.id) }
+        Task { await XeonMCPService.shared.disconnect(server.id) }
     }
 
     private func test(_ server: MCPServer) {
         testingID = server.id
         status[server.id] = loc.t("Conectando…", "Connecting…")
         Task {
-            await ToshMCPService.shared.disconnect(server.id)
-            let tools = await ToshMCPService.shared.discoverTools()
+            await XeonMCPService.shared.disconnect(server.id)
+            let tools = await XeonMCPService.shared.discoverTools()
             await MainActor.run {
                 testingID = nil
                 let count = tools.filter { $0.mcpServerID == server.id }.count
