@@ -2043,7 +2043,14 @@ final class ServerController: ObservableObject {
     var runningPort: Int? { state == .running ? currentPort : nil }
     private var discoveryService: NetService?
     private var discoveryEnabled = false
-    private let fileLog = RotatingFileLog(name: "server.log")
+    /// Session-log writer. Injectable so tests can assert a refused plan still opens,
+    /// writes and closes a session file; production uses the rotating file log.
+    let fileLog: any SessionLogWriter
+
+    init(fileLog: any SessionLogWriter = RotatingFileLog(name: "server.log")) {
+        self.fileLog = fileLog
+    }
+
     /// Pre-warm slot 0 across restarts for external clients (VS Code/Cline resend a
     /// fixed 15-19k-token prefix every request). Off for MTP models: the extra KV
     /// breaks slot restore.
@@ -2218,11 +2225,11 @@ final class ServerController: ObservableObject {
             planned.placement = settings.resolvePlacement(on: hardware)
             if planned.usesAutoPlan {
                 guard let plan = await AutoMemoryPlan.preview(settings: planned) else {
-                    self?.failAutoPlan(nil)
+                    self?.failAutoPlan(nil, settings: planned)
                     return
                 }
                 guard !plan.isUnsupported else {
-                    self?.failAutoPlan(plan)
+                    self?.failAutoPlan(plan, settings: planned)
                     return
                 }
                 planned.plannedMode = plan.mode
@@ -2318,9 +2325,19 @@ final class ServerController: ObservableObject {
         }
     }
 
-    private func failAutoPlan(_ plan: AutoMemoryPlan?) {
+    /// A plan refusal never launched an engine, so without this no session file would
+    /// exist for Settings → log or the gates to read. Open one, write the verdict and
+    /// the host budget behind it, then close it.
+    func failAutoPlan(_ plan: AutoMemoryPlan?, settings: ServerSettings) {
         guard state == .starting else { return }
         autoPlan = plan
+        if let plan, plan.isUnsupported {
+            let text = AutoMemoryText.refusalLog(model: settings.modelPath, plan: plan)
+            fileLog.startSession()
+            consume(text)
+            fileLog.closeSession()
+            AppLog.server.error("auto memory plan refused this launch: model \(URL(fileURLWithPath: settings.modelPath).lastPathComponent), state \(plan.state) \(plan.reason)")
+        }
         state = .failed(plan.map { AutoMemoryText.reason($0) }
             ?? "The engine could not plan memory for this model; check the log.")
     }

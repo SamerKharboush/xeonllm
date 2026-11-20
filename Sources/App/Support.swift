@@ -357,6 +357,14 @@ enum AppSupport {
 
 /// Rotating plain-text log for the engine output, so crashes can be diagnosed
 /// after the fact and exported from Settings.
+protocol SessionLogWriter: AnyObject {
+    var fileURL: URL { get }
+    var directory: URL { get }
+    func startSession()
+    func append(_ text: String)
+    func closeSession()
+}
+
 /// Per-session log files kept under Application Support/logs, named with the start
 /// timestamp (e.g. `server-2026-06-19_15-30-45.log`). Each server run writes its own
 /// file, so a Mac crash leaves the session's log intact for later inspection. Files
@@ -391,6 +399,14 @@ final class RotatingFileLog: @unchecked Sendable {
             let stamp = Self.stampFormatter.string(from: Date())
             currentURL = dir.appendingPathComponent("\(prefix)-\(stamp).log")
             cleanup()
+        }
+    }
+
+    /// Closes the session's file. `append` writes on this queue, so a close queued
+    /// after the last append always lands after it.
+    func closeSession() {
+        queue.async { [self] in
+            try? handle?.close(); handle = nil
         }
     }
 
@@ -445,6 +461,8 @@ final class RotatingFileLog: @unchecked Sendable {
         return f
     }()
 }
+
+extension RotatingFileLog: SessionLogWriter {}
 
 /// Single accumulating benchmark history file (`benchmarks.txt`), pruned to the
 /// last `retentionDays` of runs so it stays a useful, shareable record without

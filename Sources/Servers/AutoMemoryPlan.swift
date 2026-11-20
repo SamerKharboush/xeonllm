@@ -21,6 +21,17 @@ struct AutoMemoryPlan: Decodable, Equatable {
         let arenaMib: Double
     }
 
+    /// Host-memory pressure as the engine recorded it in the plan JSON. Optional fields:
+    /// older plans (and test fixtures) carry no `host` block.
+    struct Host: Decodable, Equatable {
+        let pressure: String?
+        let swapGrowing: Bool?
+        let fullHost: String?
+        let dynamicCapMib: Double?
+        let effectiveMib: Double?
+        let staticReserveMib: Double?
+    }
+
     /// The engine's stable view of the plan (schema 1): codes and bytes, no sentences.
     struct Product: Decodable, Equatable {
         struct Memory: Decodable, Equatable {
@@ -67,6 +78,7 @@ struct AutoMemoryPlan: Decodable, Equatable {
 
     let planSchemaVersion: Int?
     let product: Product?
+    let host: Host?
     let state: String
     let mode: String
     let reason: String
@@ -278,6 +290,44 @@ enum AutoMemoryText {
         }
         if !plan.fallback.isEmpty { s += " (\(plan.fallback))" }
         return s
+    }
+
+    /// The session-log header written when the preview refuses to launch: the model, the
+    /// verdict, the exact host budget it refused on, and the pressure fields behind it.
+    static func refusalLog(model: String, plan: AutoMemoryPlan) -> String {
+        let name = URL(fileURLWithPath: model).lastPathComponent
+        let bytes: String
+        if let u = plan.product?.unsupported {
+            let need = Double(u.requiredHostBytes) / 1048576
+            let have = Double(u.availableHostBytes) / 1048576
+            bytes = "required \(u.requiredHostBytes) B (\(gib(need))) · available \(u.availableHostBytes) B (\(gib(have)))"
+        } else {
+            bytes = "required \(Int64(plan.hostRequiredMib * 1048576)) B (\(gib(plan.hostRequiredMib))) · available bytes not reported"
+        }
+        let pressure: String
+        if let h = plan.host {
+            var parts: [String] = []
+            if let v = h.pressure { parts.append("pressure \(v)") }
+            if let v = h.swapGrowing { parts.append("swap_growing \(v)") }
+            if let v = h.fullHost { parts.append("full_host \(v)") }
+            if let v = h.dynamicCapMib { parts.append("dynamic_cap_mib \(String(format: "%.0f", v))") }
+            if let v = h.effectiveMib { parts.append("effective_mib \(String(format: "%.0f", v))") }
+            if let v = h.staticReserveMib { parts.append("static_reserve_mib \(String(format: "%.0f", v))") }
+            pressure = parts.isEmpty ? "host pressure not reported" : parts.joined(separator: " ")
+        } else {
+            pressure = "host pressure not reported"
+        }
+        return """
+        ========================================================
+         XeonLLM \(AppInfo.version) — server refused: no engine started
+         model  : \(name)
+         plan   : \(plan.state) (\(plan.product?.mode ?? plan.mode)) — \(plan.reason)
+         reason : \(reason(plan))
+         host   : \(bytes)
+         host pressure: \(pressure)
+        ========================================================
+
+        """
     }
 
     /// A structured engine refusal, in words for the UI.
