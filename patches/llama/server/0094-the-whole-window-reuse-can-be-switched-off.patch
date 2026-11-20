@@ -1,0 +1,15 @@
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index 244299f67..f838eda1c 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -3757,8 +3757,8 @@ private:
+                                     SLT_WRN(slot, "%s\n", st1.str().c_str());
+                                 }
+ 
+-                                // a sliding window that still starts at 0 has dropped nothing and goes on from n_past
+-                                const bool swa_whole = n_swa > 0 && pos_min == 0;
++                                // opt-out (XEON_SWA_WHOLE_DISABLE=1): moves -ngl 0 text on hybrid SWA models, release contract section 4
++                                const bool swa_whole = getenv("XEON_SWA_WHOLE_DISABLE") == nullptr && n_swa > 0 && pos_min == 0;
+ 
+                                 if (pos_min >= pos_min_thold && !swa_whole) {
+                                     // search for a context checkpoint
