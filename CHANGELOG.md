@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.1.0] - 2026-11-20
+
+XeonLLM's first release under its own name and version numbering — not a beta. The fork
+is renamed everywhere from ToshLLM to XeonLLM (no compatibility aliases), the UI is English
+only, the app icon is new, and upstream ToshLLM 0.87.32–0.87.34 fixes and features are
+ported. The llama.cpp series is 104 patches on the pin `d81235049`; the new ones since
+beta 8 are `metal/0087`–`0089`, `core/0090`, `moe/0091`, `core/0092`, `server/0093`,
+`server/0094`, and `image/0062` is updated to upstream's version.
+
+### Added
+
+- **Whole-window checkpoint reuse** (`server/0093`): the server reuses a checkpoint when
+  a sliding window has dropped nothing (`pos_min == 0`). `XEON_SWA_WHOLE_DISABLE=1`
+  restores beta 8 text (`server/0094`).
+- **Turbo4 auto KV** (`moe/0091`): Auto tries a turbo4 KV cache before leaving experts
+  on the host, on cards that are not 64-lane. Fails closed on 64-lane/unknown cards.
+- **Cheaper exact checkpoints** (`core/0092`): recurrent-state checkpoints use f32 while
+  ≥8 fit, then q8_0; one read batch.
+- **Refused memory-plan session log**: when the memory planner cannot create a viable
+  plan, the app writes a server log explaining why no engine started.
+- **Release notes in the app** ordered by publish date, not version number.
+
+### Changed
+
+- **Renamed tosh → xeon**: every `TOSH_*` environment switch and Info.plist key is now
+  `XEON_*`; the old names are no longer read. A full old → new table is in the release
+  notes. Info.plist: `TOSHNoAVX2` → `XEONNoAVX2`, `TOSHUpdatesDisabled` →
+  `XEONUpdatesDisabled`, `TOSHDataFolder` → `XEONDataFolder`.
+- **English-only UI**: the bilingual string helper and language packs are removed.
+- **New icon** everywhere: app, DMG, web UI, README.
+- **Site links** point to `https://samerkharboush.github.io/xeonllm-site/`.
+- **Donate** through GitHub Sponsors (`SamerKharboush`) and PayPal
+  (`https://paypal.me/Samerelnady`); Binance Pay / USDT removed.
+- **Online benchmark sharing off** (the XeonLLM site has no API); benchmarks still
+  recorded locally.
+- **Upstream port** (`metal/0087`–`0089`, `core/0090`, `image/0062`): metal `acc`/`set`
+  whole-row copies, Qwen3.5 tiled ssm_conv prefill (32-lane only), conv concat/cpy
+  reshaping (32-lane only), a model without its MTP head loads, Qwen-Image 2.1 f16 inputs.
+- **Nemotron-3.5-Bolt-E4B `-ngl 0` text** moved since beta 8 (`server/0093`'s whole-window
+  reuse changes prefill batching order); `XEON_SWA_WHOLE_DISABLE=1` restores beta 8 text.
+
+### Removed
+
+- **Binance Pay / USDT** donate option.
+- **Non-English language packs** (English only).
+- **The old ToshLLM icon assets**.
+- **TOSH_* environment switch names** (replaced by XEON_*; no aliases).
+- **Online benchmark sharing** (XeonLLM site has no API).
+
 ## [0.87.31-beta.8] - 2026-11-13
 
 Deep prompts on the D700s read faster, a model in RAM reads its prompt on a card, a dense model
