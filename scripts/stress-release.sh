@@ -13,7 +13,9 @@
 # file <model stem>.dflash.gguf beside the model (a model without one gets a SKIP row, as the app
 # launches it without a drafter), with the app's flags (-ngld DRAFT_NGLD, default 99), -lv 4 and
 # DRAFT_EXTRA (e.g. "--split-mode layer", the app's fallback after exit 86), and checks the log
-# for where the drafter's borrowed head went. CELL_TIMEOUT (default 900 s) bounds each request.
+# for where the drafter's borrowed head went. singlecard is the app's one-card Auto MoE launch
+# (GGML_METAL_DEVICE_INDEX=1, no GGML_METAL_DEVICE_LIST; the model's expert tier stays on the
+# host, so the CPU computes the non-resident rows). CELL_TIMEOUT (default 900 s) bounds each request.
 # Each mode gets the env the app builds for it: the tensor-only switches (XEON_MGPU_EVENTS,
 # _PEER, _TENSOR_GROUP, XEON_MIRROR_OUTPUT_HEAD) only on a tensor split, no card list at -ngl 0.
 # NGL0_CELLS (e.g. "band16 band300 band1100") limits the ngl0 mode to those cells; CELLS does
@@ -354,6 +356,17 @@ run_server() {
         esac
         runenv+=("$kv")
     done
+    # the app's single-card Auto MoE launch: one card, no card list, Auto KV
+    if [ "$label" = singlecard ]; then
+        local filtered=()
+        for kv in "${runenv[@]}"; do
+            case "${kv%%=*}" in
+                GGML_METAL_DEVICE_LIST|GGML_METAL_DEVICE_INDEX|GGML_METAL_DEVICES|XEON_AUTO_KV|XEON_FA_AMD) continue ;;
+            esac
+            filtered+=("$kv")
+        done
+        runenv=(${filtered[@]+"${filtered[@]}"} GGML_METAL_DEVICE_INDEX=1 XEON_AUTO_KV=auto XEON_FA_AMD=1)
+    fi
     # a DFlash draft on a tensor split keeps the target's head on every card
     if [ "$drafting" = 1 ] && [ "$ngl" != 0 ] && [ "$split" = tensor ]; then runenv+=(XEON_MIRROR_OUTPUT_HEAD=1); fi
     echo "${runenv[*]}" > "$OUT/$(basename "$model" .gguf)-$label.env"
@@ -369,6 +382,13 @@ run_server() {
         sleep 1
     done
     if [ "$up" != 1 ]; then
+        # the engine refused before starting: on one card the Dynamic MoE plan is refused (ticket 20)
+        if grep -q 'ONE_CARD_DMOE_DISABLED' "$log"; then
+            echo -e "$(basename "$model")\t$label\t(all)\tSKIP\trefused before start (one-card Dynamic MoE, ticket 20): $(grep -m1 -oE 'reason=.*' "$log" | cut -c1-180)\t0" >> "$TABLES/raw.tsv"
+            kill_server "$pid"
+            sleep 5
+            return 0
+        fi
         echo -e "$(basename "$model")\t$label\tFAIL\tserver did not start; see $log" >> "$TABLES/raw.tsv"
         kill_server "$pid"
         sleep 20
@@ -475,6 +495,7 @@ for model in "${MODELS[@]}"; do
             # -ngl 0 with the prompt kept off the cards (core/0082 offloads it by default):
             # the pure CPU backend, for comparing with releases before 0082
             ngl0nopo) run_server "$model" "ngl0nopo" -ngl 0 --no-op-offload ;;
+            singlecard) run_server "$model" "singlecard" ;;
             draft)
                 # the app's rule: the drafter is <stem>.dflash.gguf next to the model
                 draft="${model%.gguf}.dflash.gguf"
