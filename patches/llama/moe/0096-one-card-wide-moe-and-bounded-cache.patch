@@ -1,0 +1,85 @@
+--- a/common/xeon-plan.cpp
++++ b/common/xeon-plan.cpp
+@@ -820,7 +820,6 @@
+     const xeon_plan base = p;
+ 
+     // the decision from one host memory snapshot; run again when memory changed before committing
+-    bool one_card_dmoe = false;   // a Dynamic MoE plan was refused because one device is visible (ticket 20)
+     auto decide = [&](const host_mem & hi) -> const xeon_plan_candidate * {
+     p = base;
+     p.host_available_mib = hi.available_mib;
+@@ -1158,17 +1157,6 @@
+                     head_off = sel != nullptr;
+                     p.mtp_head_arena = head_off;
+                 }
+-            }
+-            // Ticket 20: on one card the Dynamic MoE wide publish sends the rows its host
+-            // executor computes as expert -1, and the CPU MUL_MAT_ID groups them under that id
+-            // (ggml-cpu.c), storing before the row table: the first wide prompt crashes. Two
+-            // cards pin every ffn_moe_ op to its layer's card, so the CPU never sees the
+-            // sentinel. Refuse the candidate on one device and let the legacy plan, or the
+-            // refusal below, answer. Both the full-host and the bounded bank fail the same way
+-            // (evidence/20/opt2/L1,L2b).
+-            if (sel != nullptr && sel->mode == "dmoe" && n_dev < 2) {
+-                sel = nullptr;
+-                one_card_dmoe = true;
+             }
+         }
+         if (sel == nullptr && (pass == 2 || force == "legacy") && (force.empty() || force == "legacy")) {
+@@ -1203,9 +1191,7 @@
+         p.state  = XEON_PLAN_UNSUPPORTED;
+         p.mode   = "none";
+         p.code   = "PLAN_UNSUPPORTED";
+-        p.reason = one_card_dmoe
+-            ? "one-card Dynamic MoE is disabled until ticket 20: the CPU expert row grouping reads the publish sentinel as expert -1 and crashes; name both cards (GGML_METAL_DEVICE_LIST) or run where the display card has room"
+-            : "no configuration fits the requested context with the minimum reserve";
++        p.reason = "no configuration fits the requested context with the minimum reserve";
+     } else {
+         p.mode = sel->mode; p.kv = sel->kv; p.ubatch = sel->ubatch; p.ncmoe = sel->ncmoe;
+         p.arena_mib = sel->arena_mib; p.private_mib = sel->private_mib; p.free_mib = sel->free_mib;
+@@ -1256,11 +1242,7 @@
+         const char * code = c.reason.rfind("VRAM_LIMIT", 0) == 0 ? "VRAM_LIMIT" : host_limit(c.reason);
+         if (std::find(p.limits.begin(), p.limits.end(), code) == p.limits.end()) p.limits.push_back(code);
+     }
+-    if (sel == nullptr) {
+-        p.limits.push_back("NO_SAFE_FALLBACK");
+-        if (one_card_dmoe && std::find(p.limits.begin(), p.limits.end(), "ONE_CARD_DMOE_DISABLED") == p.limits.end())
+-            p.limits.push_back("ONE_CARD_DMOE_DISABLED");
+-    }
++    if (sel == nullptr) p.limits.push_back("NO_SAFE_FALLBACK");
+ 
+     // product view: the mode, why it and not the preferred one, and what to watch
+     auto has_limit = [&](const char * l) { return std::find(p.limits.begin(), p.limits.end(), l) != p.limits.end(); };
+@@ -1402,9 +1384,18 @@
+             setenv("XEON_DMOE_HOST_WARMUP_FILL_MIB", "max", 0);
+         }
+ #endif
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++        if (p.mode == "dmoe_bounded") {
++            // The bounded host cache starts with a zero arena on one card: every expert
++            // MUL_MAT_ID stays on the GPU and the split uploads only the routed experts.
++            if (p.devices.size() <= 1) setenv("XEON_DMOE_MIN_ARENA_MIB", "0", 1);
++        }
++#endif
+         setenv("XEON_DMOE_CACHE_MIB", "auto", 1);
+         setenv("XEON_DMOE_RESERVE_MIB", string_format("%.0f", p.reserve_mib).c_str(), 1);
+-        setenv("XEON_DMOE_MIN_ARENA_MIB", string_format("%.0f", p.min_arena_mib).c_str(), 1);
++        if (p.mode != "dmoe_bounded" || p.devices.size() > 1) {
++            setenv("XEON_DMOE_MIN_ARENA_MIB", string_format("%.0f", p.min_arena_mib).c_str(), 1);
++        }
+         setenv("XEON_DMOE_RARE_ROWS", "auto", 0);
+         setenv("XEON_DMOE_RARE_TAIL", "0", 0);
+         setenv("GGML_SCHED_PREFETCH_EXPERTS", "1", 0);
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2305,7 +2305,10 @@
+     }
+     // and on a GPU-sized batch its rarely routed, non-resident experts run on the host
+     ggml_tensor * dmoe_wide = nullptr;
++    // one card keeps the expert bank on the host, so the wide MUL_MAT_ID runs on the CPU and
++    // the publish's -1 rows crash it; the plain graph computes every row on the host instead
+     if (dmoe_bank != nullptr && dmoe == nullptr && dmoe_shape_ok && llama_xeon_dmoe_rare_rows() > 0 &&
++        xeon_dmoe_moe_devices() > 1 &&
+         n_tokens >= llama_xeon_dmoe_wide_min_tokens() && n_tokens <= XEON_DMOE_WIDE_MAX_TOKENS) {
+         ggml_tensor * cur_2d = ggml_is_contiguous(cur) ? cur : ggml_cont(ctx0, cur);
+         dmoe_wide = ggml_xeon_dmoe_publish_wide(ctx0, cur_2d, selected_experts, dmoe_bank->residency, il,
