@@ -1,0 +1,63 @@
+# 0097: one-card wide Dynamic MoE
+#
+# Cause: the wide publish marks rows for rare, non-resident experts as expert id -1.
+# With 0086 keeping host-weight MUL_MAT_ID on the CPU, those rows reach the CPU
+# grouper (ggml-cpu.c), which indexes matrix_rows[-1] and segfaults (ticket 20).
+# 0096 hid it by disabling the wide publish on one card, costing prompt throughput.
+#
+# Fix: skip -1 rows in the CPU grouper (defense), keep the wide MUL_MAT_ID offloadable
+# when src2 is a wide publish, and lift 0096's one-card gate. Measured one card
+# (GGML_METAL_DEVICE_INDEX=1, PLAN_FULL_HOST_DMOE, ub512): 75.88 t/s prompt,
+# 13.34 t/s gen, N=3, max cb 53.5 ms.
+#
+--- a/ggml/src/ggml-backend.cpp
++++ b/ggml/src/ggml-backend.cpp
+@@ -1163,7 +1163,17 @@
+                 // (GGML_ASSERT id < n_expert) once core/0082 let MUL_MAT_ID offload. Cause not
+                 // isolated; not reproduced with one card. XEON_OFFLOAD_MOE=1 allows it.
+                 static const bool moe_off = getenv("XEON_OFFLOAD_MOE") != nullptr;
+-                const bool off_ok = tensor->op != GGML_OP_MUL_MAT_ID || moe_off;
++                bool wide_moe_off = false;
++#ifdef XEON_ENABLE_DYNAMIC_MOE
++                // 0097: the wide publish marks host-computed rows as -1. They must reach the
++                // Metal skip path, not the CPU grouper; keep this one MUL_MAT_ID offloadable.
++                if (tensor->op == GGML_OP_MUL_MAT_ID && tensor->src[2] != nullptr &&
++                    tensor->src[2]->op == GGML_OP_XEON_DMOE_PUBLISH &&
++                    ggml_get_op_params_i32(tensor->src[2], 1) > 0) {
++                    wide_moe_off = true;
++                }
++#endif
++                const bool off_ok = tensor->op != GGML_OP_MUL_MAT_ID || moe_off || wide_moe_off;
+                 if (sched->op_offload && src_on_host && ggml_backend_buffer_is_host(src->buffer) && off_ok) {
+                     for (int b = 0; b < src_backend_id; b++) {
+                         if (ggml_backend_supports_op(sched->backends[b], tensor) && ggml_backend_offload_op(sched->backends[b], tensor)) {
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -1753,8 +1753,13 @@
+             for (int id = 0; id < n_ids; ++id) {
+                 const int32_t i02 = *(const int32_t *) ((const char *) ids->data + iid1*ids->nb[1] + id*ids->nb[0]);
+ 
+-                assert(i02 >= 0 && i02 < n_as);
++                // a negative id is a row the host executor computes (the wide Dynamic MoE publish marks it -1)
++                if (i02 < 0) {
++                    continue;
++                }
+ 
++                assert(i02 < n_as);
++
+                 MMID_MATRIX_ROW(i02, matrix_row_counts[i02]) = (struct mmid_row_mapping) {id, iid1};
+                 matrix_row_counts[i02] += 1;
+             }
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2305,10 +2305,7 @@
+     }
+     // and on a GPU-sized batch its rarely routed, non-resident experts run on the host
+     ggml_tensor * dmoe_wide = nullptr;
+-    // one card keeps the expert bank on the host, so the wide MUL_MAT_ID runs on the CPU and
+-    // the publish's -1 rows crash it; the plain graph computes every row on the host instead
+     if (dmoe_bank != nullptr && dmoe == nullptr && dmoe_shape_ok && llama_xeon_dmoe_rare_rows() > 0 &&
+-        xeon_dmoe_moe_devices() > 1 &&
+         n_tokens >= llama_xeon_dmoe_wide_min_tokens() && n_tokens <= XEON_DMOE_WIDE_MAX_TOKENS) {
+         ggml_tensor * cur_2d = ggml_is_contiguous(cur) ? cur : ggml_cont(ctx0, cur);
+         dmoe_wide = ggml_xeon_dmoe_publish_wide(ctx0, cur_2d, selected_experts, dmoe_bank->residency, il,
