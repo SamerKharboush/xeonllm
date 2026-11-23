@@ -141,7 +141,7 @@ struct XeonLLMApp: App {
                 .tint(AppTheme.accent(appAccentRaw))
                 .frame(minWidth: 760, minHeight: 540)
                 .task {
-                    await obj.updates.check()
+                    await obj.updates.checkAutomatic()
                     obj.updates.startPeriodicChecks()
                 }
         }

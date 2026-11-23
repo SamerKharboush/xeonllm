@@ -1,4 +1,4 @@
-// XeonLLM - run LLMs (fork of ToshLLM) locally on Intel Macs with AMD GPUs
+// XeonLLM - run LLMs locally on Intel Macs with AMD GPUs
 // Copyright (C) 2026 Engelbert Delgado <engeldlgado@gmail.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -18,120 +18,165 @@ struct ReleaseNote: Identifiable {
     var id: String { version }
 }
 
-/// Checks GitHub Releases for a newer published version and installs it:
-/// verified download, mount, copy into /Applications and relaunch.
-@MainActor
-final class UpdateChecker: ObservableObject {
-    @Published var latestVersion: String?
-    @Published var releaseURL: URL?
-    @Published var checking = false
-    @Published var installing = false
-    @Published var installError: String?
+/// A published release, as read from the feed's JSON. The feed is injected so a
+/// test can serve a release without touching GitHub.
+struct ReleaseInfo {
+    let version: String
+    let releaseURL: URL?
+    let dmgURL: URL?
+    let checksumsURL: URL?
+    /// Set when GitHub refused the request (403/429); a rate limit is never "up to date".
+    let rateLimited: Bool
+}
 
-    private var dmgURL: URL?
-    private var checksumsURL: URL?
-    private var periodicTask: Task<Void, Never>?
+/// The release-feed seam: latest-release JSON and the release list used for notes.
+protocol UpdateFeed {
+    func latestRelease() async throws -> ReleaseInfo
+    func releaseNotes() async throws -> [(String, String, Date)]
+}
 
-    static let releasesAPI = "https://api.github.com/repos/SamerKharboush/xeonllm/releases/latest"
+/// The clock seam: now and the persisted timestamp of the last successful check.
+protocol UpdateClock {
+    func now() -> Date
+    func lastSuccessfulCheck() -> Date?
+    func recordSuccessfulCheck(_ date: Date)
+}
 
-    /// Re-checks every hour while the app stays open, for people who never
-    /// relaunch. Silent: it only lights up the existing update badge.
-    func startPeriodicChecks(interval: TimeInterval = 3600) {
-        guard AppInfo.updatesEnabled, periodicTask == nil else { return }
-        periodicTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
-                guard !Task.isCancelled else { return }
-                let enabled = UserDefaults.standard.object(forKey: SettingsKeys.updateAutoCheck) == nil
-                    || UserDefaults.standard.bool(forKey: SettingsKeys.updateAutoCheck)
-                if enabled { await self?.check() }
+/// The installer seam: download, verify, identity-check, swap and relaunch.
+protocol UpdateInstalling: AnyObject {
+    func install(dmg: URL, checksums: URL?, expectedVersion: String) async throws -> URL
+    func relaunch(_ url: URL)
+    /// Stops only the engine this app started; never another llama-server.
+    @MainActor func stopOwnServer()
+}
+
+/// The app's feed: GitHub Releases, with the channel picked from this build's
+/// no-AVX2 flag so an AVX-only Mac can never receive an AVX2 DMG.
+struct GitHubUpdateFeed: UpdateFeed {
+    let api = "https://api.github.com/repos/SamerKharboush/xeonllm"
+    let isNoAVX2: Bool
+
+    func latestRelease() async throws -> ReleaseInfo {
+        guard let url = URL(string: api + "/releases/latest") else {
+            throw UpdateError(message: "Invalid release feed URL")
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 403 || status == 429 {
+            throw UpdateError(message: "GitHub rate limit reached (HTTP \(status)). Try again later.")
+        }
+        guard status == 200 else {
+            throw UpdateError(message: "Could not check for updates (HTTP \(status))")
+        }
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = obj["tag_name"] as? String else {
+            throw UpdateError(message: "The release feed returned an unexpected response")
+        }
+        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        let picks = Self.pickAssets(from: obj["assets"] as? [[String: Any]] ?? [], isNoAVX2: isNoAVX2)
+        return ReleaseInfo(version: version,
+                           releaseURL: (obj["html_url"] as? String).flatMap(URL.init(string:)),
+                           dmgURL: picks.dmg, checksumsURL: picks.checksums, rateLimited: false)
+    }
+
+    /// Picks the DMG asset on this build's channel (a no-AVX2 build takes only
+    /// `-noavx2`, an AVX2 build never does) plus the shared checksums.txt.
+    static func pickAssets(from assets: [[String: Any]], isNoAVX2: Bool) -> (dmg: URL?, checksums: URL?) {
+        var dmg: URL?
+        var checksums: URL?
+        for asset in assets {
+            guard let name = asset["name"] as? String,
+                  let urlString = asset["browser_download_url"] as? String,
+                  let assetURL = URL(string: urlString) else { continue }
+            // Each build stays on its own channel: pick the asset matching this
+            // bundle's variant so a no-AVX2 install never grabs an AVX2 DMG.
+            if name.hasSuffix(".dmg"), name.contains("-noavx2") == isNoAVX2 { dmg = assetURL }
+            if name == "checksums.txt" { checksums = assetURL }
+        }
+        return (dmg, checksums)
+    }
+
+    func releaseNotes() async throws -> [(String, String, Date)] {
+        guard let url = URL(string: api + "/releases?per_page=30") else { return [] }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 403 || status == 429 {
+            throw UpdateError(message: "GitHub rate limit reached (HTTP \(status)). Try again later.")
+        }
+        guard status == 200,
+              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            throw UpdateError(message: "Could not load the release notes")
+        }
+        return list.compactMap { obj in
+            guard let tag = obj["tag_name"] as? String,
+                  let published = obj["published_at"] as? String,
+                  let date = UpdateChecker.isoDate.date(from: published) else { return nil }
+            let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+            return (version, obj["body"] as? String ?? "", date)
+        }
+    }
+}
+
+/// Defaults-backed clock: the running app's own UserDefaults, written with the
+/// normal API (never `defaults write` from a shell).
+struct UserDefaultsUpdateClock: UpdateClock {
+    let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+
+    func now() -> Date { Date() }
+    func lastSuccessfulCheck() -> Date? {
+        let raw = defaults.double(forKey: SettingsKeys.updateLastCheck)
+        return raw > 0 ? Date(timeIntervalSince1970: raw) : nil
+    }
+    func recordSuccessfulCheck(_ date: Date) {
+        defaults.set(date.timeIntervalSince1970, forKey: SettingsKeys.updateLastCheck)
+    }
+}
+
+/// Mounts a verified DMG, checks the app inside it against this build's identity,
+/// swaps it in, then relaunches. The old app stays aside until the new one is
+/// copied and verified, and is restored on any failure.
+final class RealUpdateInstaller: UpdateInstalling {
+    private let stopServer: @MainActor () -> Void
+
+    init(stopServer: @escaping @MainActor () -> Void = { ServerManager.shared.stopAllImmediately() }) {
+        self.stopServer = stopServer
+    }
+
+    @MainActor func stopOwnServer() { stopServer() }
+
+    func relaunch(_ url: URL) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "sleep 1; /usr/bin/open \"\(url.path)\""]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+
+    func install(dmg: URL, checksums: URL?, expectedVersion: String) async throws -> URL {
+        let stop = stopServer
+        return try await withCheckedThrowingContinuation { continuation in
+            Task.detached {
+                do {
+                    continuation.resume(returning: try Self.install(
+                        dmg: dmg, checksums: checksums, expectedVersion: expectedVersion,
+                        beforeSwap: {
+                            // Every check has passed: stop only this app's engine, then swap.
+                            DispatchQueue.main.sync { MainActor.assumeIsolated { stop() } }
+                        }))
+                } catch { continuation.resume(throwing: error) }
             }
         }
     }
 
-    func check() async {
-        guard AppInfo.updatesEnabled, !checking else { return }
-        checking = true
-        defer { checking = false }
-
-        guard let url = URL(string: Self.releasesAPI),
-              let (data, response) = try? await URLSession.shared.data(from: url),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tag = obj["tag_name"] as? String else { return }
-
-        let remote = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-        if Self.isVersion(remote, newerThan: AppInfo.version) {
-            latestVersion = remote
-            releaseURL = (obj["html_url"] as? String).flatMap(URL.init(string:))
-            if let assets = obj["assets"] as? [[String: Any]] {
-                // A release carries both DMGs (AVX2 + no-AVX2, suffix "-noavx2").
-                // Each build stays on its own channel: pick the asset matching this
-                // bundle's variant so a no-AVX2 install never grabs an AVX2 DMG.
-                for asset in assets {
-                    guard let name = asset["name"] as? String,
-                          let urlString = asset["browser_download_url"] as? String,
-                          let url = URL(string: urlString) else { continue }
-                    if name.hasSuffix(".dmg"),
-                       name.contains("-noavx2") == AppInfo.isNoAVX2 { dmgURL = url }
-                    if name == "checksums.txt" { checksumsURL = url }
-                }
-            }
+    nonisolated private static func install(dmg: URL, checksums: URL?, expectedVersion: String,
+                                             beforeSwap: () -> Void) throws -> URL {
+        guard let checksums else {
+            throw UpdateError(message: "No checksums.txt in the release: update refused")
         }
-    }
+        let listing = try String(contentsOf: checksums, encoding: .utf8)
+        let actual = try checksum(actual: FileHash.sha256(of: dmg) ?? "", dmg: dmg, listing: listing)
 
-    /// Downloads the release DMG to ~/Downloads, verifies it against the
-    /// published checksums, installs the app into place and relaunches it.
-    func downloadAndInstall() async {
-        guard !installing else { return }
-        // The DMG asset may not have been uploaded yet when the release was
-        // first detected (CI uploads it after creating the release); refresh
-        // before giving up and sending the user to the website.
-        if dmgURL == nil { await check() }
-        guard let dmgURL else {
-            if let releaseURL { NSWorkspace.shared.open(releaseURL) }
-            return
-        }
-        installing = true
-        installError = nil
-        defer { installing = false }
-
-        do {
-            let (temp, _) = try await URLSession.shared.download(from: dmgURL)
-            let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-            let dest = downloads.appendingPathComponent(dmgURL.lastPathComponent)
-            try? FileManager.default.removeItem(at: dest)
-            try FileManager.default.moveItem(at: temp, to: dest)
-
-            if let checksumsURL,
-               let (data, _) = try? await URLSession.shared.data(from: checksumsURL),
-               let listing = String(data: data, encoding: .utf8) {
-                let expected = listing.split(separator: "\n")
-                    .first { $0.contains(dmgURL.lastPathComponent) }?
-                    .split(separator: " ").first.map(String.init)
-                let actual = await Task.detached { FileHash.sha256(of: dest) }.value
-                if let expected, let actual, expected.lowercased() != actual.lowercased() {
-                    try? FileManager.default.removeItem(at: dest)
-                    installError = "Checksum mismatch: download discarded"
-                    return
-                }
-            }
-
-            let installed = try await Task.detached { try Self.install(dmgAt: dest) }.value
-            // Installed OK: drop the downloaded DMG so it doesn't pile up in Downloads.
-            // Any failure above leaves it in place (the catch keeps it for retry/inspection).
-            try? FileManager.default.removeItem(at: dest)
-            relaunch(installed)
-        } catch {
-            installError = error.localizedDescription
-        }
-    }
-
-    /// Mounts the DMG, copies the app bundle into place (the running bundle's
-    /// location when it lives in /Applications, /Applications otherwise) and
-    /// unmounts. The old copy is moved aside first so the running process is
-    /// never half-overwritten, and restored if the copy fails.
-    nonisolated private static func install(dmgAt dmg: URL) throws -> URL {
         let plist = try run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly", "-plist"])
         guard let data = plist.data(using: .utf8),
               let obj = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
@@ -147,27 +192,97 @@ final class UpdateChecker: ObservableObject {
         }
         let source = mount + "/" + appName
 
+        // Identity checks happen on the mounted app, before anything is swapped.
+        // All four must pass; any refusal keeps the DMG for inspection.
+        guard let info = NSDictionary(contentsOfFile: source + "/Contents/Info.plist") else {
+            throw UpdateError(message: "The DMG app has no Info.plist: update refused")
+        }
+        let bundleID = try identity(bundleID: info["CFBundleIdentifier"] as? String)
+        _ = try identity(noAVX2: AppInfo.Identity(values: info as? [String: Any] ?? [:]).noAVX2,
+                         expected: AppInfo.isNoAVX2)
+        let candidateVersion = AppInfo.Identity(values: info as? [String: Any] ?? [:]).productVersion
+            ?? info["CFBundleShortVersionString"] as? String
+        _ = try identity(version: candidateVersion, newerThan: expectedVersion)
+        do {
+            _ = try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", source])
+        } catch {
+            throw UpdateError(message: "Code signature verification failed: update refused")
+        }
+
         let bundle = Bundle.main.bundleURL
         let target = bundle.path.hasPrefix("/Applications/")
             ? bundle
             : URL(fileURLWithPath: "/Applications").appendingPathComponent(appName)
 
-        if fm.fileExists(atPath: target.path) {
-            let aside = target.deletingPathExtension().appendingPathExtension("old.app")
+        let aside = target.deletingPathExtension().appendingPathExtension("old.app")
+        beforeSwap()
+        try swapApp(target: target, aside: aside, copy: { try copyStripped(source: source, target: $0) },
+                    verify: { _ = try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", $0.path]) })
+        return target
+    }
+
+    /// Verifies the download against its checksums.txt entry. A missing file or
+    /// line is as fatal as a mismatch: an unverified download is never installed.
+    /// The mismatched file is removed. Returns the matched (lowercased) checksum.
+    nonisolated static func checksum(actual: String, dmg: URL, listing: String) throws -> String {
+        let expected = listing.split(separator: "\n")
+            .first { $0.contains(dmg.lastPathComponent) }?
+            .split(whereSeparator: { $0 == " " || $0 == "\t" }).first.map(String.init)
+        guard let expected else {
+            throw UpdateError(message: "No checksum for \(dmg.lastPathComponent): update refused")
+        }
+        guard !actual.isEmpty, expected.lowercased() == actual.lowercased() else {
+            try? FileManager.default.removeItem(at: dmg)
+            throw UpdateError(message: "Checksum mismatch: download discarded")
+        }
+        return expected.lowercased()
+    }
+
+    /// Validates the DMG app's bundle id. Returns it on success.
+    nonisolated static func identity(bundleID: String?) throws -> String {
+        guard let bundleID, bundleID == AppInfo.identifier else {
+            throw UpdateError(message: "Wrong bundle identifier in the DMG: update refused")
+        }
+        return bundleID
+    }
+
+    /// An AVX2 app must never replace a no-AVX2 one (or the reverse): the flags
+    /// must be equal.
+    nonisolated static func identity(noAVX2 candidate: Bool, expected: Bool) throws {
+        guard candidate == expected else {
+            throw UpdateError(message: "Wrong no-AVX2 variant in the DMG: update refused")
+        }
+    }
+
+    /// A DMG must be strictly newer than the running version.
+    nonisolated static func identity(version candidate: String?, newerThan current: String) throws {
+        guard let candidate, UpdateChecker.isVersion(candidate, newerThan: current) else {
+            throw UpdateError(message: "The DMG app is not newer than \(current): update refused")
+        }
+    }
+
+    /// Moves the old app aside, copies the new one, verifies it and deletes the
+    /// aside copy. The old app stays at `aside` until the copy is verified, and is
+    /// restored on any failure (including verification).
+    nonisolated static func swapApp(target: URL, aside: URL,
+                                    copy: (URL) throws -> Void,
+                                    verify: (URL) throws -> Void) throws {
+        let fm = FileManager.default
+        let hadOld = fm.fileExists(atPath: target.path)
+        if hadOld {
             try? fm.removeItem(at: aside)
             try fm.moveItem(at: target, to: aside)
-            do {
-                try copyStripped(source: source, target: target)
-            } catch {
-                try? fm.removeItem(at: target)
-                try? fm.moveItem(at: aside, to: target)
-                throw error
-            }
-            try? fm.removeItem(at: aside)
-        } else {
-            try copyStripped(source: source, target: target)
         }
-        return target
+        do {
+            try copy(target)
+            // Keep the old app until the new copy is in place and verified.
+            try verify(target)
+        } catch {
+            try? fm.removeItem(at: target)
+            if hadOld { try? fm.moveItem(at: aside, to: target) }
+            throw error
+        }
+        if hadOld { try? fm.removeItem(at: aside) }
     }
 
     nonisolated private static func copyStripped(source: String, target: URL) throws {
@@ -194,15 +309,133 @@ final class UpdateChecker: ObservableObject {
         }
         return String(data: data, encoding: .utf8) ?? ""
     }
+}
 
-    /// Launches the freshly installed copy and quits this one. The engine is
-    /// stopped by applicationWillTerminate on the way out.
-    private func relaunch(_ url: URL) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", "sleep 1; /usr/bin/open \"\(url.path)\""]
-        try? p.run()
-        NSApp.terminate(nil)
+/// Checks GitHub Releases for a newer published version and installs it. The
+/// feed, clock and installer are injected seams; production uses the GitHub,
+/// UserDefaults and real-installer defaults.
+@MainActor
+final class UpdateChecker: ObservableObject {
+    @Published var latestVersion: String?
+    @Published var releaseURL: URL?
+    @Published var checking = false
+    @Published var installing = false
+    @Published var installError: String?
+    @Published var checkError: String?
+    @Published var lastChecked: Date?
+
+    private var dmgURL: URL?
+    private var checksumsURL: URL?
+    private var periodicTask: Task<Void, Never>?
+
+    let feed: UpdateFeed
+    let clock: UpdateClock
+    let installer: UpdateInstalling
+    private let autoCheck: () -> Bool
+
+    init(feed: UpdateFeed? = nil, clock: UpdateClock? = nil, installer: UpdateInstalling? = nil,
+         autoCheck: @escaping () -> Bool = {
+             UserDefaults.standard.object(forKey: SettingsKeys.updateAutoCheck) == nil
+                 || UserDefaults.standard.bool(forKey: SettingsKeys.updateAutoCheck)
+         }) {
+        self.feed = feed ?? GitHubUpdateFeed(isNoAVX2: AppInfo.isNoAVX2)
+        self.clock = clock ?? UserDefaultsUpdateClock()
+        self.installer = installer ?? RealUpdateInstaller()
+        self.autoCheck = autoCheck
+        self.lastChecked = self.clock.lastSuccessfulCheck()
+    }
+
+    /// True when an automatic check may hit the network: the toggle is on and the
+    /// last successful check is older than 24 h (or has never happened).
+    func isDue(now: Date? = nil) -> Bool {
+        let current = now ?? clock.now()
+        guard let last = lastChecked ?? clock.lastSuccessfulCheck() else { return true }
+        return current.timeIntervalSince(last) > Self.dailyInterval
+    }
+
+    nonisolated static let dailyInterval: TimeInterval = 24 * 3600
+
+    /// Checks at launch and then hourly, but only hits the network when due.
+    /// A disabled toggle makes no network call at all.
+    func startPeriodicChecks(interval: TimeInterval = 3600) {
+        guard AppInfo.updatesEnabled, periodicTask == nil else { return }
+        periodicTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                guard !Task.isCancelled, let self else { return }
+                await self.checkAutomatic()
+            }
+        }
+    }
+
+    func checkAutomatic() async {
+        guard AppInfo.updatesEnabled, autoCheck(), isDue() else { return }
+        await check()
+    }
+
+    /// "Check for updates" always checks, regardless of the toggle or due date.
+    func check() async {
+        guard AppInfo.updatesEnabled, !checking else { return }
+        checking = true
+        checkError = nil
+        defer { checking = false }
+        do {
+            let release = try await feed.latestRelease()
+            lastChecked = clock.now()
+            clock.recordSuccessfulCheck(lastChecked!)
+            if Self.isVersion(release.version, newerThan: AppInfo.version) {
+                latestVersion = release.version
+                releaseURL = release.releaseURL
+                dmgURL = release.dmgURL
+                checksumsURL = release.checksumsURL
+            } else {
+                latestVersion = nil
+                releaseURL = nil
+                dmgURL = nil
+                checksumsURL = nil
+            }
+        } catch let error as UpdateError {
+            checkError = error.message
+        } catch {
+            checkError = "Could not check for updates: \(error.localizedDescription)"
+        }
+    }
+
+    /// Downloads the release DMG, verifies it, installs the app and relaunches.
+    func downloadAndInstall() async {
+        guard !installing else { return }
+        // The DMG asset may not have been uploaded yet when the release was
+        // first detected (CI uploads it after creating the release); refresh
+        // before giving up and sending the user to the website.
+        if dmgURL == nil { await check() }
+        guard let dmgURL else {
+            if checkError == nil { checkError = "No \(AppInfo.isNoAVX2 ? "no-AVX2" : "AVX2") DMG found in the release" }
+            if let releaseURL { NSWorkspace.shared.open(releaseURL) }
+            return
+        }
+        installing = true
+        installError = nil
+        defer { installing = false }
+
+        do {
+            let (temp, _) = try await URLSession.shared.download(from: dmgURL)
+            let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+            let dest = downloads.appendingPathComponent(dmgURL.lastPathComponent)
+            try? FileManager.default.removeItem(at: dest)
+            try FileManager.default.moveItem(at: temp, to: dest)
+            // The feed's checksums URL is passed to the installer, which refuses
+            // a missing or mismatched entry. The DMG stays on failure for inspection.
+            // The installer stops only this app's own engine, and only after every
+            // check has passed, just before the swap; a refused update leaves it running.
+            let installed = try await installer.install(dmg: dest, checksums: checksumsURL,
+                                                        expectedVersion: AppInfo.version)
+            try? FileManager.default.removeItem(at: dest)
+            installer.relaunch(installed)
+        } catch let error as UpdateError {
+            installError = error.message
+        } catch {
+            installError = error.localizedDescription
+        }
     }
 
     // MARK: release notes
@@ -222,19 +455,13 @@ final class UpdateChecker: ObservableObject {
         guard !loadingNotes else { return }
         loadingNotes = true
         defer { loadingNotes = false }
-        guard let url = URL(string: "https://api.github.com/repos/SamerKharboush/xeonllm/releases?per_page=30"),
-              let (data, response) = try? await URLSession.shared.data(from: url),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-        let all = list.compactMap { obj -> (String, String, Date)? in
-            guard let tag = obj["tag_name"] as? String,
-                  let published = obj["published_at"] as? String,
-                  let date = Self.isoDate.date(from: published) else { return nil }
-            let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-            return (version, obj["body"] as? String ?? "", date)
+        do {
+            let all = try await feed.releaseNotes()
+            releaseNotes = Self.notesToShow(all: all, current: AppInfo.version)
+                .map { ReleaseNote(version: $0.0, published: $0.2, body: $0.1) }
+        } catch {
+            releaseNotes = []
         }
-        releaseNotes = Self.notesToShow(all: all, current: AppInfo.version)
-            .map { ReleaseNote(version: $0.0, published: $0.2, body: $0.1) }
     }
 
     /// Releases published after the running version's own release, newest

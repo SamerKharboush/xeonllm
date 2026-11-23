@@ -224,9 +224,14 @@ if [ "$APP_NAME" != XeonLLM ]; then
         -c "Add :XEONProductVersion string $PRODUCT_VERSION" "$PLIST"
     echo "identity: $APP_NAME ($BUNDLE_ID) $PRODUCT_VERSION, built on XeonLLM $VERSION"
 fi
-if [ "$XEON_UPDATES" = 0 ]; then
+# In-app updates are on for release builds by default. XEON_UPDATES=0 keeps a
+# build on its own (test/gate) channel by writing XEONUpdatesDisabled=1, which
+# the app reads as updatesEnabled = false.
+if [ "${XEON_UPDATES:-1}" = 0 ]; then
     /usr/libexec/PlistBuddy -c "Add :XEONUpdatesDisabled bool true" "$PLIST"
     echo "in-app updates: off"
+else
+    echo "in-app updates: on"
 fi
 # a plist of settings keys whose defaults this product sets differently; what the user changes still wins
 if [ -n "${XEON_APP_DEFAULTS:-}" ]; then

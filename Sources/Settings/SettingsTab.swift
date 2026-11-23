@@ -478,8 +478,8 @@ struct SettingsView: View {
                     }
                     if AppInfo.updatesEnabled {
                         SettingsRow(icon: "arrow.triangle.2.circlepath",
-                                    title: AppInfo.branded("Check for updates hourly"),
-                                    help: AppInfo.branded("Besides the launch check, silently re-checks every hour while the app is open and lights the update badge when a new version exists. Never downloads or installs on its own.")) {
+                                    title: AppInfo.branded("Check for updates daily"),
+                                    help: AppInfo.branded("Checks once a day across relaunches: the app checks at launch and every hour while open, but only reaches the network when the last check is over 24 h old. Never downloads or installs on its own.")) {
                             SettingsToggle(isOn: $updateAutoCheck)
                         }
                     }

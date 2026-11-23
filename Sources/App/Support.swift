@@ -189,8 +189,12 @@ enum SettingsKeys {
     /// Where to surface per-GPU VRAM in the menu bar: "off" | "icon" | "panel".
     static let menuBarGPU = "menuBarGPU"
     static let autoStart = "autoStart"
-    /// Hourly silent update check while the app stays open (default on).
+    /// Daily automatic update check: the app checks at launch and hourly, but only
+    /// reaches the network when the last successful check is over 24 h old (default on).
     static let updateAutoCheck = "updateAutoCheck"
+    /// Timestamp of the last *successful* update check (timeIntervalSince1970). The
+    /// daily scheduler reads it; an absent key means never checked.
+    static let updateLastCheck = "updateLastCheck"
     /// Brand accent for the whole UI (AppTheme palette key).
     static let appAccent = "appAccent"
     static let chatTemp = "chatTemp"

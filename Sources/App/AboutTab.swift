@@ -107,6 +107,7 @@ struct AboutView: View {
                             .foregroundStyle(.secondary)
                         updateBadge
                     }
+                    updateStatusLine
                     Text(AppInfo.branded("Local language models with Metal acceleration on Intel Macs with AMD GPUs."))
                         .font(.system(size: 15, weight: .medium))
                         .lineLimit(2)
@@ -124,7 +125,7 @@ struct AboutView: View {
                         .glassButton()
                         .popover(isPresented: $showNotes, arrowEdge: .bottom) { ReleaseNotesPopover() }
                     }
-                    if let error = updates.installError {
+                    if let error = updates.installError ?? updates.checkError {
                         Text(error).font(.caption).foregroundStyle(.red).lineLimit(2)
                     }
                 }
@@ -147,12 +148,24 @@ struct AboutView: View {
     @ViewBuilder private var updateBadge: some View {
         if !AppInfo.updatesEnabled {
             EmptyView()
+        } else if updates.checking {
+            Text(AppInfo.branded("Checking…"))
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .foregroundStyle(.secondary)
+                .background(Color.secondary.opacity(0.10), in: Capsule())
         } else if let latest = updates.latestVersion {
             Text(AppInfo.branded("\(latest) available"))
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 8).padding(.vertical, 3)
                 .foregroundStyle(.orange)
                 .background(Color.orange.opacity(0.12), in: Capsule())
+        } else if updates.lastChecked != nil {
+            Text(AppInfo.branded("Up to date"))
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .foregroundStyle(.green)
+                .background(Color.green.opacity(0.12), in: Capsule())
         } else {
             Text(AppInfo.branded("Latest"))
                 .font(.caption.weight(.semibold))
@@ -160,6 +173,37 @@ struct AboutView: View {
                 .foregroundStyle(.green)
                 .background(Color.green.opacity(0.12), in: Capsule())
         }
+    }
+
+    /// Current version, latest version (or "up to date"), and when the last check ran.
+    @ViewBuilder private var updateStatusLine: some View {
+        if AppInfo.updatesEnabled {
+            VStack(alignment: .leading, spacing: 2) {
+                if let latest = updates.latestVersion {
+                    Text(AppInfo.branded("Latest version: \(latest)"))
+                } else if updates.lastChecked != nil {
+                    Text(AppInfo.branded("Up to date"))
+                }
+                Text(lastCheckedLine)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var lastCheckedLine: String {
+        guard let last = updates.lastChecked else {
+            return AppInfo.branded("Last checked: never")
+        }
+        return AppInfo.branded("Last checked: \(Self.RelativeFormatters.checked.localizedString(for: last, relativeTo: Date()))")
+    }
+
+    private enum RelativeFormatters {
+        static let checked: RelativeDateTimeFormatter = {
+            let f = RelativeDateTimeFormatter()
+            f.unitsStyle = .abbreviated
+            return f
+        }()
     }
 
     @ViewBuilder private var updateButton: some View {
@@ -174,12 +218,12 @@ struct AboutView: View {
             } label: {
                 Label(updates.installing
                       ? AppInfo.branded("Updating…")
-                      : AppInfo.branded("Download \(latest)"),
+                      : AppInfo.branded("Download and install \(latest)"),
                       systemImage: updates.installing ? "arrow.down.circle" : "arrow.down.app")
                     .spinningSymbol(updates.installing)
             }
             .glassButton(prominent: true)
-            .disabled(updates.installing)
+            .disabled(updates.installing || updates.checking)
         } else {
             Button {
                 Task { await updates.check() }
