@@ -1197,7 +1197,7 @@ struct ServerSettings {
     /// 512 to 2048, against 455 to 862 for the same model on plain expert offload.
     var effectiveUbatch: Int? {
         if !routerMode && !Self.modelIsMoE(at: modelPath) {
-            return placement == .card && usesGPUs ? Self.denseCardUbatch : nil
+            return placement == .card && usesGPUs ? Self.denseCardUbatchForModel(at: modelPath, ctx: ctx) : nil
         }
         guard ubatch > 0 else { return nil }
         return ubatch
@@ -1210,6 +1210,32 @@ struct ServerSettings {
     /// longest buffer of a 6k prompt measured 127 ms against 497, and pp512 read 88.0 against
     /// 82.5-83.0 tok/s (4B Q4_K_M, card 1, two processes each).
     static let denseCardUbatch = 128
+    /// Measured safe ceiling per model, 0.1.1 engine, 6k depth, card 1 unless noted:
+    /// MiniCPM5 1B Q8_0 35.2 ms; Qwen3 0.6B Q8_0 75.8 ms; LFM3 1.7B F16 96.4 ms;
+    /// Qwen3 4B Q6_K 127.7 ms at 256 (178.4 ms at 512), card 0 149.8 ms at 256.
+    /// The size/quant bands below keep those ceilings without a per-file measurement.
+    static func denseCardUbatchForModel(at path: String, ctx: Int) -> Int {
+        let band = denseCardBand(at: path)
+        // The 6k bands do not hold at the app's 16k default: XEON_MTL_CB_STATS max cb at 16k
+        // (0.1.1) was 288 ms for MiniCPM5 ub512 (both cards), 511 ms for Qwen3 0.6B ub512
+        // and 488 ms for LFM3 F16 ub512 (card 1). A batch's attention work grows with depth,
+        // so the bands apply only up to a 4096 context (inside the measured 6k depth); any
+        // larger context keeps the beta 8 value. Nothing between 6k and 16k was measured.
+        return ctx <= 4096 ? band : denseCardUbatch
+    }
+
+    private static func denseCardBand(at path: String) -> Int {
+        guard let metadata = GGUFMetadataCache.metadata(at: path) else { return denseCardUbatch }
+        let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        let bytes = ((try? FileManager.default.attributesOfItem(atPath: resolved))?[.size] as? NSNumber)?.int64Value ?? 0
+        guard bytes > 0 else { return denseCardUbatch }
+        let gb = Double(bytes) / 1_073_741_824
+        let f16 = ["F16", "BF16"].contains(metadata.fileTypeLabel ?? "")
+        if f16 && gb <= 4.0 { return 512 }
+        if gb <= 1.5 { return 512 }
+        if gb <= 3.5 { return 256 }
+        return denseCardUbatch
+    }
     /// Template defaults for requests that set none; the request's own kwargs override them key by key.
     var defaultTemplateKwargs: String? {
         switch defaultReasoning {

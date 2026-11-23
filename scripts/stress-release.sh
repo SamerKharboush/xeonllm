@@ -134,6 +134,7 @@ for ((i = 0; i < ${#ARGS[@]}; i++)); do
 done
 
 free_port() {
+    [ -n "${PORT:-}" ] && { echo "$PORT"; return; }  # caller pins 18200-18299 for GPU runs
     python3 - <<'PY'
 import socket
 s = socket.socket()
