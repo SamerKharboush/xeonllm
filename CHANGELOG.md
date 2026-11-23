@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.1.1] - 2026-11-22
+
+A bug-fix release: the app's one-card expert-tier launch of a Dynamic MoE model that does not
+fit the cards no longer crashes the engine on its first prompt. The llama.cpp series is 106 patches on the pin `d81235049`; the
+new ones are `moe/0095` and `moe/0096`.
+
+### Fixed
+
+- **A MoE model on one card crashed the engine on its first prompt** (`moe/0095`, `moe/0096`).
+  When Auto launches a mixture-of-experts model that does not fit in the cards on one card —
+  its "expert tier" launch, one card holding attention and the hot experts and the CPU computing
+  the rest — the engine crashed with `SIGSEGV` in the CPU `MUL_MAT_ID` before any token: the
+  Dynamic MoE wide publish writes `-1` for the expert rows the host executor computes, and the
+  CPU row grouping indexed its row table with that id. Two cards never hit it, because there
+  every `ffn_moe_` op is pinned to its layer's card. 0.1.1 skips the wide publish on one card
+  (the CPU `MUL_MAT_ID` then sees the original expert ids), and a one-card bounded plan sets
+  `XEON_DMOE_MIN_ARENA_MIB=0`. `moe/0095` was the interim refusal; `moe/0096` lifts it. Both-card
+  plans are unchanged.
+
+### Changed
+
+- **The 35B's draft-mode text differs from 0.1.0's on two prompt bands**; draft now matches
+  tensor byte for byte, and tensor matches 0.1.0. Dynamic MoE text is reported, not gated.
+
+### Added
+
+- **`scripts/check-exact-decoding.sh`, the exact-decoding gate**: runs a drafting server, a
+  slot-save-and-restore server and a two-concurrent-request server against a no-draft
+  reference, with a second no-draft start as the determinism control. It fails on any token-id
+  divergence; an arm with no accepted drafts or no restore is VOID.
+- **README measured KV cache quality table**: measured KL divergence and top-token agreement
+  per KV cache type, with the method line.
+
 ## [0.1.0] - 2026-11-20
 
 XeonLLM's first release under its own name and version numbering — not a beta. The fork
