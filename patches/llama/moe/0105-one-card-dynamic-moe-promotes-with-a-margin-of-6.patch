@@ -1,0 +1,27 @@
+# 0105: one-card Dynamic MoE promotes with a margin of 6
+#
+# 0.2 ticket 06 (P-JAN-Evict study + policy sweep, evidence/06a, 06b). On one card the 35B
+# (ornith-1.0-35b Q6_K, PLAN_FULL_HOST_DMOE, 16 arena slots/layer) promoted ~18 experts per token
+# (~44.5 MiB over PCIe), 47.7% of them re-promotions, at a 36.8% decode hit rate. Freezing the arena
+# (XEON_DMOE_PROMO_STOP=0, 19.6% hits) was already faster than that, so the copies cost more than
+# the hits they buy. A victim margin keeps the hits and drops the churn.
+# Card 1, app launch args (ctx 16384, -ub 512, --dynamic-moe on), bench-builds real mode, 1 warm-up
+# + 3 reps, n-predict 128, each config after a stock run, 3 rounds, gen t/s:
+#   stock 15.04 (14.98-15.08, 12 runs)   margin 3 15.23   6 15.27   10 15.29   20 15.27
+#   hits 36.8% / 35.5 / 34.2 / 33.3 / 29.1     promotions per token 18.1 / 7.1 / 4.0 / 1.9 / 0.9
+# 6 is the start of the plateau with the most hits kept. Two-card plans keep 0 until measured.
+# XEON_DMOE_MARGIN still overrides.
+--- a/src/llama-xeon-dmoe.cpp	2026-11-24 19:26:16
++++ b/src/llama-xeon-dmoe.cpp	2026-11-24 19:26:17
+@@ -2380,7 +2380,10 @@
+         pol->decay        = (float) envf("XEON_DMOE_DECAY", 0.98);
+         // a promotion costs about one reuse of token time, so 1.8 keeps a margin against churn
+         pol->admit_fixed  = envf("XEON_DMOE_ADMIT", 1.8);
+-        pol->margin       = (float) envf("XEON_DMOE_MARGIN", 0.0);
++        // one card: a promotion copies ~2.5 MiB over PCIe into the token's own GPU time, and on the 35B
++        // (16 slots/layer) a margin of 6 cut promotions 18 -> 4 per token for +0.23 t/s decode; two-card
++        // plans keep 0 until measured
++        pol->margin       = (float) envf("XEON_DMOE_MARGIN", g_moe_devices.size() <= 1 ? 6.0 : 0.0);
+         // 0: no per-graph cap; the stage ring still bounds the uploads in flight
+         pol->budget       = (int) envf("XEON_DMOE_BUDGET", 0);
+         if (pol->budget <= 0) pol->budget = n_layer*n_expert;
