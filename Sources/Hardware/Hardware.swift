@@ -547,25 +547,39 @@ enum Estimator {
     /// 2688 MiB KV + 284 MiB compute = 6926 MiB per card against 6144, and a long
     /// chat then ran a command buffer past the GPU watchdog (ticket 75).
     ///
-    /// Per card need(ctx) = weights/devices + KV(ctx)*kvScale/devices + 300 MiB
-    /// compute (the 284 MiB measured, rounded up), against perCardVramMB - 256.
-    /// For that 14B row it predicts 4291 + 2560 + 300 = 7151 MiB, 3% above the
-    /// measured 6926 (the file size counts tensors the engine keeps on the host),
-    /// so it errs toward a smaller context. Returns `requested` when it fits,
-    /// else the largest multiple of 1024 that fits, never below 4096 (and never
-    /// above `requested`).
+    /// Per card need(ctx) = weights/devices + KV(ctx)*kvScale/devices + compute(ctx),
+    /// with compute(ctx) = 300 + 0.02*ctx MiB: the compute buffer grows with the
+    /// context, so a fixed 300 under-counts at long contexts. 02d measured the GPU
+    /// compute buffer on a D700 (card 1, -ub 128, f16 KV, -ngl 99): Qwen3-4B Q6_K
+    /// 327.76 MiB at 16384 and 631.76 at 32768 (204.04 without patch 0090);
+    /// Qwen3-0.6B Q8_0 186.51 / 362.51; LFM3-1.7B F16 178.02 / 338.02;
+    /// MiniCPM5-1B Q8_0 165.51 / 317.51. 300 + 0.02*ctx covers every one of them
+    /// (e.g. 32k -> 955 MiB against the 631.76 worst row).
+    ///
+    /// Budget = perCardVramMB - 512 (5632 MiB on a D700: the 6144 MiB card less the
+    /// 512 MiB the one-card working set keeps free; release contract §3.3,
+    /// scripts/stress-release.sh ONECARD). For the 14B row it predicts 4291 + 2560 +
+    /// 955 = 7806 MiB per card, above the measured 6926, so it errs toward a smaller
+    /// context. Returns `requested` when it fits, else the largest multiple of 1024
+    /// that fits, never above `requested`. The 4096 floor stays only when 4096 itself
+    /// fits; below that the value is rounded down to 1024 (minimum 1024) rather than
+    /// a context that overflows. A model whose weights alone exceed the budget returns
+    /// the minimum (1024), not `requested`.
     static func cardFitCtx(spec: ModelSpec, perCardVramMB: Int, devices: Int,
                            requested: Int, kvScale: Double) -> Int {
         let n = Double(max(1, devices))
         let weightsMiB = spec.weightsGB * 1024
         let kvPerTokenMiB = kvCache(spec: spec, ctx: 1) * 1024 * kvScale
-        let budgetMiB = Double(perCardVramMB - 256)
-        func need(_ c: Int) -> Double { weightsMiB / n + Double(c) * kvPerTokenMiB / n + 300 }
-        guard requested > 4096, perCardVramMB > 0, kvPerTokenMiB > 0,
-              need(requested) > budgetMiB else { return requested }
-        let fit = (budgetMiB - 300 - weightsMiB / n) * n / kvPerTokenMiB
+        let budgetMiB = Double(perCardVramMB - 512)
+        // compute is per card and grows with the context, so it is not divided by devices
+        let perTokenMiB = kvPerTokenMiB / n + 0.02
+        func need(_ c: Int) -> Double { weightsMiB / n + Double(c) * perTokenMiB + 300 }
+        guard perCardVramMB > 0, kvPerTokenMiB > 0, need(requested) > budgetMiB else {
+            return requested
+        }
+        let fit = (budgetMiB - 300 - weightsMiB / n) / perTokenMiB
         let rounded = fit.isFinite && fit > 0 ? Int(fit / 1024) * 1024 : 0
-        return min(requested, max(4096, rounded))
+        return min(requested, max(1024, rounded))
     }
 }
 

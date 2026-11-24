@@ -599,40 +599,91 @@ final class EstimatorTests: XCTestCase {
     /// Per-card need in MiB, the formula cardFitCtx documents.
     private func need(_ spec: ModelSpec, ctx: Int, devices: Int, kvScale: Double) -> Double {
         spec.weightsGB * 1024 / Double(devices)
-            + spec.kvBytesPerToken * Double(ctx) / 1_048_576 * kvScale / Double(devices) + 300
+            + spec.kvBytesPerToken * Double(ctx) / 1_048_576 * kvScale / Double(devices)
+            + 300 + 0.02 * Double(ctx)
+    }
+    private let cardBudgetMiB = 6144 - 512
+
+    private func qwen4B() -> ModelSpec {
+        var spec = ModelSpec(fileGB: 3306260704 / 1_073_741_824, paramsB: 4.0,
+                             layers: 36, isMoE: false)
+        spec.kvBytesPerToken = Double(36 * 8 * 128 * 2 * 2)   // 147456 B/token, f16
+        return spec
+    }
+
+    func testQwen4BAt16KOnOneCardGetsALowerContextThatFits() {
+        // 02d: 3147.42 + 2304 + 327.76 = 5779 MiB, over the 5632 line
+        let spec = qwen4B()
+        XCTAssertGreaterThan(need(spec, ctx: 16384, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+        let c = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
+                                     requested: 16384, kvScale: 1)
+        XCTAssertEqual(c, 13312)
+        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+        XCTAssertGreaterThan(need(spec, ctx: c + 1024, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+    }
+
+    func testQwen4BAt32KOnOneCardGetsALowerContextThatFits() {
+        // 02d: 3147.42 + 4608 + 631.76 (patch 0090) is far over the line
+        let spec = qwen4B()
+        let c = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
+                                     requested: 32768, kvScale: 1)
+        XCTAssertLessThan(c, 32768)
+        XCTAssertEqual(c % 1024, 0)
+        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+        XCTAssertGreaterThan(need(spec, ctx: c + 1024, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+    }
+
+    func testSmallModelAt16KKeepsItsContextOnOneCard() {
+        // Qwen3-0.6B Q8_0, 02d: 604.15 + 1792 + 186.51 fits the 5632 line
+        var spec = ModelSpec(fileGB: 0.6 / 0.57, paramsB: 0.6, layers: 28, isMoE: false)
+        spec.kvBytesPerToken = Double(28 * 8 * 128 * 2 * 2)
+        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
+                                            requested: 16384, kvScale: 1), 16384)
     }
 
     func testThe14BAt32KOnBothCardsGetsALowerContextThatFits() {
         // measured 6926 MiB per card at this launch against 6144: it paged and hit the watchdog
         let spec = qwen14B()
-        XCTAssertGreaterThan(need(spec, ctx: 32768, devices: 2, kvScale: 1), 6144 - 256)
+        XCTAssertGreaterThan(need(spec, ctx: 32768, devices: 2, kvScale: 1), Double(cardBudgetMiB))
         let c = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 32768, kvScale: 1)
-        XCTAssertEqual(c, 16384)
+        XCTAssertEqual(c, 10240)
         XCTAssertEqual(c % 1024, 0)
-        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 2, kvScale: 1), 6144 - 256)
-        XCTAssertGreaterThan(need(spec, ctx: c + 1024, devices: 2, kvScale: 1), 6144 - 256)
+        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 2, kvScale: 1), Double(cardBudgetMiB))
+        XCTAssertGreaterThan(need(spec, ctx: c + 1024, devices: 2, kvScale: 1), Double(cardBudgetMiB))
     }
 
-    func testThe8BAt32KOnBothCardsKeepsItsContext() {
-        // Qwen3-8B-Q4_K_M, 5027783488 bytes; it ran every stress cell at this launch
+    func testThe8BAt32KOnBothCardsGetsALowerContextThatFits() {
+        // Qwen3-8B-Q4_K_M, 5027783488 bytes; 5120+1536+300+0.02*ctx per card vs 5632
         var spec = ModelSpec(fileGB: 5027783488 / 1_073_741_824, paramsB: 8.2, layers: 36, isMoE: false)
         spec.kvBytesPerToken = 36 * 8 * 128 * 2 * 2
         XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
-                                            requested: 32768, kvScale: 1), 32768)
+                                            requested: 32768, kvScale: 1), 31744)
     }
 
     func testAContextThatFitsOrIsSmallIsLeftAlone() {
         let spec = qwen14B()
         XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
                                             requested: 8192, kvScale: 1), 8192)
-        XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
-                                            requested: 2048, kvScale: 1), 2048)
     }
 
-    func testWeightsOverTheBudgetFloorAt4096() {
+    func testA4096RequestThatDoesNotFitIsLowered() {
+        // one card, 4.7 GiB weights + KV at 4096 overflow the 5632 line: the floor
+        // no longer saves it, the value drops to the 1024 step that fits
+        var spec = ModelSpec(fileGB: 4.7, paramsB: 4.0, layers: 36, isMoE: false)
+        spec.kvBytesPerToken = 147456
+        XCTAssertGreaterThan(need(spec, ctx: 4096, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+        let c = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1,
+                                     requested: 4096, kvScale: 1)
+        XCTAssertEqual(c, 3072)
+        XCTAssertLessThan(c, 4096)
+        XCTAssertLessThanOrEqual(need(spec, ctx: c, devices: 1, kvScale: 1), Double(cardBudgetMiB))
+    }
+
+    func testWeightsOverTheBudgetReturnsTheMinimum() {
+        // 20 GiB weights on two 6 GiB cards: nothing fits, so 1024 not the request
         let spec = ModelSpec(fileGB: 20, paramsB: 25, layers: 40, isMoE: false)
         XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
-                                            requested: 32768, kvScale: 1), 4096)
+                                            requested: 32768, kvScale: 1), 1024)
     }
 
     func testAQuantizedCacheHoldsMoreContext() {
@@ -641,10 +692,10 @@ final class EstimatorTests: XCTestCase {
         let q8 = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 65536,
                                       kvScale: Estimator.kvTypeScale("q8_0"))
         XCTAssertGreaterThan(q8, f16)
-        // conservative: the file size counts tensors the engine keeps on the host, so q8_0 at
-        // 32768 (measured 5666 MiB per card) comes out a step under, not over
+        XCTAssertEqual(f16, 10240)
+        XCTAssertEqual(q8, 16384)
         XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2, requested: 32768,
-                                            kvScale: Estimator.kvTypeScale("q8_0")), 30720)
+                                            kvScale: Estimator.kvTypeScale("q8_0")), 16384)
     }
 
     func testOneCardHasHalfTheRoom() {
@@ -653,9 +704,9 @@ final class EstimatorTests: XCTestCase {
         let one = Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 1, requested: 32768, kvScale: 1)
         XCTAssertLessThan(one, 32768)
         XCTAssertEqual(one % 1024, 0)
-        XCTAssertLessThanOrEqual(need(spec, ctx: one, devices: 1, kvScale: 1), 6144 - 256)
+        XCTAssertLessThanOrEqual(need(spec, ctx: one, devices: 1, kvScale: 1), 6144 - 512)
         XCTAssertEqual(Estimator.cardFitCtx(spec: spec, perCardVramMB: 6144, devices: 2,
-                                            requested: 32768, kvScale: 1), 32768)
+                                            requested: 32768, kvScale: 1), 31744)
     }
 }
 
