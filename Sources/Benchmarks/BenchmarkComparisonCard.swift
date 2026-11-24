@@ -48,9 +48,11 @@ struct BenchmarkComparisonCard: View, Equatable {
                     }
                     HStack(spacing: 12) {
                         ComparisonMetric(title: "Prompt", first: first.pp, second: second.pp,
-                                         color: Color.chartSecondary)
+                                         color: Color.chartSecondary,
+                                         mismatch: first.notLikeForLikeReason(vs: second))
                         ComparisonMetric(title: AppInfo.branded("Generation"),
-                                         first: first.tg, second: second.tg, color: Color.appAccent)
+                                         first: first.tg, second: second.tg, color: Color.appAccent,
+                                         mismatch: first.notLikeForLikeReason(vs: second))
                     }
                     HStack(alignment: .top, spacing: 12) {
                         ComparisonRunDetails(result: first, label: "A")
@@ -91,6 +93,8 @@ private struct ComparisonMetric: View {
     let first: Double
     let second: Double
     let color: Color
+    /// When the two runs are not like for like, the reason to show instead of a bare percentage.
+    var mismatch: String?
 
     private var delta: Double { first == 0 ? 0 : ((second - first) / first) * 100 }
 
@@ -99,10 +103,19 @@ private struct ComparisonMetric: View {
             HStack {
                 Text(title).font(.headline)
                 Spacer()
-                Label(String(format: "%+.1f%%", delta),
-                      systemImage: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(delta >= 0 ? Color.green : Color.orange)
+                if let mismatch {
+                    Label(mismatch,
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .help(AppInfo.branded("not like for like: \(mismatch)"))
+                } else {
+                    Label(String(format: "%+.1f%%", delta),
+                          systemImage: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(delta >= 0 ? Color.green : Color.orange)
+                }
             }
             HStack(alignment: .firstTextBaseline) {
                 Text("A").font(.caption).foregroundStyle(.secondary)

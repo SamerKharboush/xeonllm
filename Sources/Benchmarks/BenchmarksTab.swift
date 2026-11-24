@@ -1410,6 +1410,7 @@ private struct BenchmarkResultTableRow: View, Equatable {
                 Text(gpuLine)
                     .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 workloadText
+                identityText
                 storageText
             }
             .frame(width: 180, alignment: .leading)
@@ -1432,6 +1433,7 @@ private struct BenchmarkResultTableRow: View, Equatable {
                 Text("\(engineLine) · \(gpuLine)")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 workloadText
+                identityText
                 storageText
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1483,17 +1485,25 @@ private struct BenchmarkResultTableRow: View, Equatable {
     private var gpuLine: String { result.gpu ?? AppInfo.branded("Default GPU") }
 
     private var workloadText: some View {
-        Text(workloadLine)
+        Text(result.workloadDisplayLine)
             .font(.system(size: 10, design: .monospaced))
-            .foregroundStyle(.secondary).lineLimit(1)
-            .help(workloadLine)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .help(result.workloadDisplayLine)
+    }
+
+    private var identityText: some View {
+        Text(result.engineIdentityLine)
+            .font(.system(size: 10, design: .monospaced))
+            .foregroundStyle(.tertiary).lineLimit(1)
+            .help(result.engineIdentityLine)
     }
 
     private var storageText: some View {
-        Text(storageAndVersionLine)
+        Text(result.storageLine)
             .font(.system(size: 10, design: .monospaced))
             .foregroundStyle(.tertiary).lineLimit(1)
-            .help(storageAndVersionLine)
+            .help(result.storageLine)
     }
 
     private var metrics: some View {
@@ -1521,35 +1531,8 @@ private struct BenchmarkResultTableRow: View, Equatable {
         return engine
     }
 
-    /// A nil workload is the old on-disk format, which was always pp512/tg128/d0.
-    private var workloadLine: String {
-        let pp = result.ppN ?? 512
-        let tg = result.tgN ?? 128
-        let depth = result.depth ?? 0
-        var values = ["pp\(pp)", "tg\(tg)", "d\(depth)"]
-        if let accept = result.accept {
-            values.append("MTP \(Int((accept * 100).rounded()))%")
-        }
-        if let dynamic = result.dynamicMoeLabel {
-            values.append(dynamic)
-        } else if let dmoe = result.dmoeK, dmoe > 0 {
-            values.append("dMoE K\(dmoe)")
-        } else if result.ncmoe > 0 {
-            values.append("ncmoe \(result.ncmoe)")
-        }
-        return values.joined(separator: " · ")
-    }
-
-    private var storageAndVersionLine: String {
-        let key = result.ctk ?? "—"
-        let value = result.ctv ?? "—"
-        var values = ["KV \(key)/\(value)", "v\(result.appVersion ?? "—")"]
-        if result.peer == true { values.append("IF Link") }
-        return values.joined(separator: " · ")
-    }
-
     private var completeConfiguration: String {
-        [engineLine, gpuLine, workloadLine, storageAndVersionLine].joined(separator: "\n")
+        [engineLine, gpuLine, result.workloadDisplayLine, "\(result.engineIdentityLine) · \(result.storageLine)"].joined(separator: "\n")
     }
 
     private func tableMetric(value: Double, maximum: Double, color: Color) -> some View {
@@ -1667,10 +1650,15 @@ private struct BenchHistoryRow: View, Equatable {
                     }
                 }
                 HStack(spacing: 5) {
-                    Text(r.configLabel)
+                    Text(r.workloadDisplayLine)
                         .font(.system(size: 10, design: .monospaced))
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(.quaternary.opacity(0.6), in: Capsule())
+                    if !r.engineIdentityLine.isEmpty {
+                        Text(r.engineIdentityLine)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                     if let gpu = r.gpu {
                         Label(gpu, systemImage: "cpu")
                             .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)

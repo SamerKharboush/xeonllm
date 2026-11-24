@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import Foundation
+import os
 
 struct BenchResult: Codable, Identifiable {
     var id = UUID()
@@ -36,6 +37,20 @@ struct BenchResult: Codable, Identifiable {
     var kind: String?      // "real" = server generation; nil = raw llama-bench
     var accept: Double?    // MTP acceptance 0-1, real runs only
     var shared: Bool?      // published to the community from the share flow
+    /// First 16 hex characters of the SHA-256 of the engine binary that produced
+    /// this run (cached per path and modification date); nil when unreadable.
+    var engineSha16: String?
+    /// Ubatch size (`--ubatch-size`) the run used; nil on runs that did not record it.
+    var ubatch: Int?
+    /// Batch size (`--batch-size`) the run used; nil on runs that did not record it.
+    var batch: Int?
+    /// Split mode (`--split-mode`, e.g. "none", "row", "layer"); nil when not split.
+    var splitMode: String?
+    /// Device selection passed to the engine (`-ngl` is separate; this is the
+    /// `-D`/device list / card index, e.g. "metal", "0", "0,1", or "none").
+    var device: String?
+    /// CPU threads (`-t`); nil on runs that did not record it.
+    var threads: Int?
     /// App version that produced the run, so engine changes stay comparable.
     /// Nil on results saved before this was recorded.
     var appVersion: String? = AppInfo.version
@@ -90,6 +105,70 @@ struct BenchResult: Codable, Identifiable {
         case "off": return nil
         default: return nil
         }
+    }
+
+    /// Workload line shown next to every figure: always pp/tg/depth and a
+    /// "real"/"llama-bench" badge, plus MTP / Dynamic MoE / ncmoe when set.
+    /// A raw llama-bench result with nil sizes is the old on-disk format, which
+    /// was always pp512/tg128/d0. A real-generation run sends a fixed prompt, so
+    /// it has no pp size; its generation length is tgN.
+    var workloadDisplayLine: String {
+        var values: [String]
+        if kind == "real" {
+            values = ["fixed prompt/tg\(tgN.map(String.init) ?? "?")", "real"]
+        } else {
+            values = ["pp\(ppN ?? 512)/tg\(tgN ?? 128)", "d\(depth ?? 0)", "llama-bench"]
+        }
+        if kind == "real", let depth, depth > 0 { values.insert("d\(depth)", at: 1) }
+        if let accept { values.append("MTP \(Int((accept * 100).rounded()))%") }
+        if let dynamic = dynamicMoeLabel {
+            values.append(dynamic)
+        } else if let dmoe = dmoeK, dmoe > 0 {
+            values.append("dMoE K\(dmoe)")
+        } else if ncmoe > 0 {
+            values.append("ncmoe \(ncmoe)")
+        }
+        return values.joined(separator: " · ")
+    }
+
+    /// Secondary line: app version, engine sha16, ubatch, KV cache and IF Link.
+    /// Old results without engine identity still show their KV and version (if any).
+    var engineIdentityLine: String {
+        var values: [String] = []
+        if let appVersion { values.append("v\(appVersion)") }
+        if let engineSha16 { values.append("sha:\(engineSha16)") }
+        if let ubatch { values.append("ub:\(ubatch)") }
+        return values.joined(separator: " · ")
+    }
+
+    /// Storage / cache line: KV cache types and Infinity Fabric link marker.
+    var storageLine: String {
+        let key = ctk ?? "—"
+        let value = ctv ?? "—"
+        var values = ["KV \(key)/\(value)"]
+        if peer == true { values.append("IF Link") }
+        return values.joined(separator: " · ")
+    }
+
+    /// One-line reason two runs are not like for like, or nil when they match.
+    /// Fields compared in order: workload (pp/tg/depth), engine sha16, ubatch,
+    /// batch, split mode, device, threads, FA route, and kind.
+    func notLikeForLikeReason(vs other: BenchResult) -> String? {
+        // Workload: compare ppN, tgN, depth (nil vs value is a mismatch too).
+        if kind != other.kind { return "kind \(kind ?? "llama-bench") vs \(other.kind ?? "llama-bench")" }
+        let mine = kind == "real" ? "tg\(tgN.map(String.init) ?? "?")" : "pp\(ppN ?? 512)/tg\(tgN ?? 128)"
+        let theirs = kind == "real" ? "tg\(other.tgN.map(String.init) ?? "?")" : "pp\(other.ppN ?? 512)/tg\(other.tgN ?? 128)"
+        if mine != theirs { return "workload \(mine) vs \(theirs)" }
+        let d1 = depth ?? 0, d2 = other.depth ?? 0
+        if d1 != d2 { return "depth \(d1) vs \(d2)" }
+        if let e1 = engineSha16, let e2 = other.engineSha16, e1 != e2 { return "engine sha \(e1) vs \(e2)" }
+        if let u1 = ubatch, let u2 = other.ubatch, u1 != u2 { return "ub \(u1) vs \(u2)" }
+        if let b1 = batch, let b2 = other.batch, b1 != b2 { return "batch \(b1) vs \(b2)" }
+        if let s1 = splitMode, let s2 = other.splitMode, s1 != s2 { return "split \(s1) vs \(s2)" }
+        if let d1 = device, let d2 = other.device, d1 != d2 { return "device \(d1) vs \(d2)" }
+        if let t1 = threads, let t2 = other.threads, t1 != t2 { return "threads \(t1) vs \(t2)" }
+        if let f1 = fa, let f2 = other.fa, f1 != f2 { return "FA \(f1) vs \(f2)" }
+        return nil
     }
 }
 
@@ -362,7 +441,13 @@ final class BenchmarkController: ObservableObject {
                                        fa: s.benchmarkFlashAttentionRoute,
                                        gpu: s.gpuLabel, peer: s.mgpuPeer && s.isSplitting, profile: base.makeProfile(name: name),
                                        ppN: nil, tgN: s.benchTGClamped,
-                                       kind: "real", accept: accept),
+                                       kind: "real", accept: accept,
+                                        engineSha16: Self.engineSha16(for: s.serverBinary),
+                                        ubatch: Self.launchShape(settings: s).ubatch,
+                                        batch: Self.launchShape(settings: s).batch,
+                                        splitMode: Self.launchShape(settings: s).splitMode,
+                                        device: Self.launchShape(settings: s).device,
+                                        threads: Self.launchShape(settings: s).threads),
                            at: 0)
             save()
             let accLine = accept.map { String(format: " · MTP %.0f%%", $0 * 100) } ?? ""
@@ -445,7 +530,13 @@ final class BenchmarkController: ObservableObject {
                                        fa: settings.benchmarkFlashAttentionRoute,
                                        gpu: settings.gpuLabel, peer: settings.mgpuPeer && settings.isSplitting, profile: settings.makeProfile(name: name),
                                        ppN: settings.benchPPClamped, tgN: settings.benchTGClamped,
-                                       depth: settings.benchDepthClamped),
+                                       depth: settings.benchDepthClamped,
+                                       engineSha16: Self.engineSha16(for: settings.serverBinary),
+                                       ubatch: Self.launchShape(settings: settings).ubatch,
+                                       batch: Self.launchShape(settings: settings).batch,
+                                       splitMode: Self.launchShape(settings: settings).splitMode,
+                                       device: Self.launchShape(settings: settings).device,
+                                       threads: Self.launchShape(settings: settings).threads),
                            at: 0)
             save()
             fileLog.append(String(format: "→ result: %@ = %.1f t/s · %@ = %.1f t/s\n\n", ppTest, pp, tgTest, tg))
@@ -531,6 +622,41 @@ final class BenchmarkController: ObservableObject {
         let slots = 650.0
         return (model + compute + kv + rs + slots) / total
     }
+
+    /// Launch-shape snapshot for a run: the engine binary, ubatch, batch, split mode,
+    /// device selection and thread count. Engine sha16 is computed off the main thread
+    /// by the caller; this returns the launch shape only.
+    nonisolated static func launchShape(settings: ServerSettings)
+        -> (ubatch: Int?, batch: Int?, splitMode: String?, device: String?, threads: Int?) {
+        let env = settings.benchmarkEnvironment
+        let device: String?
+        if let list = env["GGML_METAL_DEVICE_LIST"], !list.isEmpty {
+            device = list
+        } else if let idx = env["GGML_METAL_DEVICE_INDEX"] {
+            device = idx
+        } else {
+            device = nil
+        }
+        let ub = settings.effectiveUbatch
+        return (ub, ub,
+                settings.isSplitting ? settings.effectiveSplitMode : nil,
+                device,
+                settings.threads)
+    }
+
+    /// Short engine-binary digest, hashed once per binary path and modification
+    /// date: runs finish on the main actor, and rehashing the engine each time
+    /// would stall the UI for nothing.
+    nonisolated static func engineSha16(for path: String) -> String? {
+        let url = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        let mtime = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+        let key = "\(url.path)|\(mtime?.timeIntervalSince1970 ?? 0)"
+        if let hit = engineShaCache.withLock({ $0[key] }) { return hit }
+        let sha = BenchEngineIdentity.sha16(of: url)
+        if let sha { engineShaCache.withLock { $0[key] = sha } }
+        return sha
+    }
+    private nonisolated static let engineShaCache = OSAllocatedUnfairLock(initialState: [String: String]())
 
     nonisolated static func bestSweepCandidate(pp: [Int: Double], vram: [Int: Double], ceiling: Double) -> Int? {
         pp.keys
@@ -656,7 +782,14 @@ final class BenchmarkController: ObservableObject {
                                        engine: engine, fa: finalSettings.benchmarkFlashAttentionRoute,
                                        gpu: finalSettings.gpuLabel, peer: finalSettings.mgpuPeer && finalSettings.isSplitting,
                                        profile: finalSettings.makeProfile(name: "\(name) ncmoe \(recommended)"),
-                                       ppN: finalSettings.benchPPClamped, tgN: finalSettings.benchTGClamped),
+                                       ppN: finalSettings.benchPPClamped, tgN: finalSettings.benchTGClamped,
+                                       depth: finalSettings.benchDepthClamped,
+                                       engineSha16: Self.engineSha16(for: finalSettings.serverBinary),
+                                       ubatch: Self.launchShape(settings: finalSettings).ubatch,
+                                       batch: Self.launchShape(settings: finalSettings).batch,
+                                       splitMode: Self.launchShape(settings: finalSettings).splitMode,
+                                       device: Self.launchShape(settings: finalSettings).device,
+                                       threads: Self.launchShape(settings: finalSettings).threads),
                            at: 0)
             save()
 
@@ -697,7 +830,13 @@ final class BenchmarkController: ObservableObject {
                                    ctk: cfg.cacheTypeK, ctv: cfg.cacheTypeV, engine: engine,
                                    fa: cfg.benchmarkFlashAttentionRoute,
                                    gpu: cfg.gpuLabel, peer: cfg.mgpuPeer && cfg.isSplitting, profile: cfg.makeProfile(name: name),
-                                   ppN: nil, tgN: nil, kind: nil, accept: nil, shared: true),
+                                   ppN: nil, tgN: nil, kind: nil, accept: nil, shared: true,
+                                    engineSha16: Self.engineSha16(for: cfg.serverBinary),
+                                    ubatch: Self.launchShape(settings: cfg).ubatch,
+                                    batch: Self.launchShape(settings: cfg).batch,
+                                    splitMode: Self.launchShape(settings: cfg).splitMode,
+                                    device: Self.launchShape(settings: cfg).device,
+                                    threads: Self.launchShape(settings: cfg).threads),
                        at: 0)
         save()
     }

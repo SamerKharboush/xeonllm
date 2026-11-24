@@ -655,6 +655,17 @@ enum FileHash {
     }
 }
 
+/// Identity of the engine binary that produced a benchmark run. The first 16
+/// hex characters of the SHA-256 are enough to tell two engine builds apart
+/// without carrying a multi-gigabyte digest in every saved result.
+enum BenchEngineIdentity {
+    /// Short digest of the engine binary at `url`. Nil when the file cannot be read.
+    static func sha16(of url: URL) -> String? {
+        guard let hex = FileHash.sha256(of: url) else { return nil }
+        return String(hex.prefix(16))
+    }
+}
+
 // MARK: - Keychain (API key storage)
 
 enum Keychain {
