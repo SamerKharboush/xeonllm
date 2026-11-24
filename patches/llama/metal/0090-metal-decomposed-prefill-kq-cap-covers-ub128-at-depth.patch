@@ -1,0 +1,54 @@
+# 0090: the decomposed prefill KQ cap is 512 MiB for batches of <= 128 tokens
+#
+# Cause: 0085 capped the decomposed prefill KQ (f32 [n_tokens, n_kv, n_head]) at 256 MiB.
+# At the app's dense batch (-ub 128) that cap is crossed at depth: n_kv just above 32768 for
+# 16 heads, 16384 for 32 heads. Past it the batch uses the flash-attention tile kernel, whose
+# command buffer grows with depth (060e886: long buffers panic this Mac).
+#
+# Fix: 512 MiB for batches of at most 128 tokens; larger batches keep 256 MiB, so 0085's
+# Qwen3-14B -ub 512 case takes the same path as before. XEON_FA_PF_DECOMP_MAX_MB still
+# overrides both.
+#
+# Measured (0.2 ticket 02d, card 1, -ub 128 -b 128, llama-bench pp512 at depth, N=1,
+# XEON_MTL_CB_STATS steady max cb = max over graphs after the first), 0.1.1 engine vs a
+# test engine with the cap at 512 MiB for every batch size (same path as this patch at -ub 128):
+#   Qwen3-4B Q6_K    depth 16384  336.8 -> 200.7 ms (first graph 41.0 -> 131.3 ms)
+#   Qwen3-0.6B Q8_0  depth 32768  259.0 ->  89.4 ms
+#   LFM3-1.7B F16    depth 32768  268.4 ->  86.5 ms
+#   MiniCPM5-1B Q8_0 depth 32768  262.3 ->  78.6 ms
+#   unchanged (both under 256 MiB): the three small models at 16384, Qwen3-4B at 12288 (ub 128/64).
+# Memory: compute buffer at load, card 1: Qwen3-4B at 32768 204.0 -> 631.8 MiB (+427.7);
+# every other model/ctx above within 1 MiB. The KQ is bounded by the cap, so the increase
+# is at most 512 MiB on configurations that took the tile kernel before.
+#
+# This patch as written (engine XeonLLM-v0.1.2-0090b, 0.2 ticket 02e, card 1, same method):
+#   steady max cb: Qwen3-0.6B 32768 88.5, LFM3 32768 86.1, MiniCPM5 32768 77.6, Qwen3-4B 12288 88.6 ms.
+#   pp512/tg128 at depth 0, -r 3, 0.1.1 -> 0090b (repeat run in brackets):
+#     MiniCPM5 352.90/58.35 -> 354.45/58.38 (355.19/58.34)   Qwen3-0.6B 489.93/57.61 -> 492.36/58.01 (491.32/57.86)
+#     LFM3 250.44/23.06 -> 250.48/23.05 (250.42/23.06)       Qwen3-4B 87.18/13.87 -> 87.23/13.87 (87.20/13.87)
+#   all within the ticket 01 noise floor (MiniCPM5 pp 30.80 / tg 5.00, LFM3 pp 3.15 / tg 0.50).
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2885,12 +2885,19 @@
+ 
+ // Decomposed prefill materialises an f32 KQ of [n_tokens(q), n_kv(k), n_head(q)] (after the permutes).
+ // Only the 64-lane default is capped; the other conditions are checked by the caller.
++// Batches of at most 128 tokens (the app's dense card batch) get a 512 MiB cap instead of 256:
++// past 256 MiB they fell back to the flash-attention tile kernel, whose command buffer grows
++// with depth. Larger batches keep 0085's 256 MiB, so its -ub 512 case is unchanged.
++static constexpr int64_t decomposed_kq_small_batch = 128;
++
+ static bool decomposed_kq_bytes_ok(const ggml_tensor * q, const ggml_tensor * k) {
+-    static const size_t cap = []() {
++    static const long long env_mb = []() {
+         const char * e = getenv("XEON_FA_PF_DECOMP_MAX_MB");
+-        const long long v = e ? atoll(e) : 0;
+-        return v > 0 ? (size_t) v * 1024 * 1024 : (size_t) 256 * 1024 * 1024;
++        return e ? atoll(e) : 0LL;
+     }();
++    const size_t cap = env_mb > 0 ? (size_t) env_mb * 1024 * 1024
++                     : q->ne[1] <= decomposed_kq_small_batch ? (size_t) 512 * 1024 * 1024
++                     : (size_t) 256 * 1024 * 1024;
+     return q->ne[1] * k->ne[1] * q->ne[2] * 4 <= (int64_t) cap;
+ }
+ 
