@@ -473,6 +473,13 @@ struct ServerSettings {
         } else if Self.mtpEnabled(forModel: modelPath), Self.modelHasMTP(at: modelPath) {
             args += ["--spec-type", "draft-mtp"] + Self.mtpSamplingArgs
             args += Self.mtpDraftWidthArgs(forModel: modelPath, gpuArchitecture: selectedGPUArchitecture)
+        } else if Self.contextDraftEnabled(forModel: modelPath) {
+            // Draft-model-free n-gram speculation: the engine reuses text already in the
+            // conversation as drafts. A Dynamic MoE / auto plan that is not full_gpu keeps
+            // experts on the host, whose decode path a verify batch over 8 tokens leaves, so
+            // cap the draft at 7 (an 8-token verify). A user width in extra args still wins.
+            args += ["--spec-type", "ngram-simple"]
+            if usesAutoPlan && plannedMode != "full_gpu" { args += ["--spec-ngram-simple-size-m", "7"] }
         }
         args += Self.chatUIArgs
         args += extraArgTokens.cli
@@ -622,6 +629,12 @@ struct ServerSettings {
                 if let n = Self.mtpDraftWidth(forModel: path, gpuArchitecture: selectedGPUArchitecture) {
                     lines.append("spec-draft-n-max = \(n)")
                 }
+            } else if Self.contextDraftEnabled(forModel: path) {
+                // Draft-model-free n-gram speculation, opt-in per model. The INI has no plan,
+                // so n-cpu-moe > 0 is the "not full_gpu" signal: experts on the host leave the
+                // MoE decode path for a verify batch over 8 tokens, so cap the draft at 7.
+                lines.append("spec-type = ngram-simple")
+                if (ncmoeByPath[path] ?? 0) > 0 { lines.append("spec-ngram-simple-size-m = 7") }
             }
             sections.append(lines.joined(separator: "\n"))
         }
@@ -1594,6 +1607,25 @@ struct ServerSettings {
         if enabled { disabled.remove(path) } else { disabled.insert(path) }
         UserDefaults.standard.set(Array(disabled), forKey: SettingsKeys.mtpDisabledModels)
     }
+
+    /// Per-model opt-in for draft-model-free n-gram speculation. An ENABLED list, so
+    /// absent means off: the engine's `--spec-type ngram-simple` is only passed for a
+    /// model the user turned on. Output is byte-identical to stock decoding; it is a
+    /// speed trade, not a quality one, so it stays opt-in.
+    nonisolated static func contextDraftEnabled(forModel path: String) -> Bool {
+        if let forced = contextDraftEnabledOverride { return forced(path) }
+        return (UserDefaults.standard.stringArray(forKey: SettingsKeys.contextDraftModels) ?? []).contains(path)
+    }
+
+    nonisolated static func setContextDraftEnabled(_ enabled: Bool, forModel path: String) {
+        var enabledModels = Set(UserDefaults.standard.stringArray(forKey: SettingsKeys.contextDraftModels) ?? [])
+        if enabled { enabledModels.insert(path) } else { enabledModels.remove(path) }
+        UserDefaults.standard.set(Array(enabledModels), forKey: SettingsKeys.contextDraftModels)
+    }
+
+    /// Lets a test state the per-model n-gram opt-in instead of reading UserDefaults, the
+    /// same seam `peerBridgeOverride` gives the topology. Tests must not write the domain.
+    nonisolated(unsafe) static var contextDraftEnabledOverride: ((String) -> Bool)?
 
     /// True when the model's weights use a TurboQuant type (ggml_type 45/46). Read from
     /// the tensor types: these GGUFs carry no usable `general.file_type`. False on an

@@ -649,6 +649,13 @@ private struct ServerConfigurationWorkspace: View {
                     MTPControl(modelPath: settings.modelPath)
                 }
             }
+            if showAdvanced {
+                Divider()
+                ServerSettingRow(icon: "text.append", title: AppInfo.branded("Reuse conversation text"),
+                                 detail: AppInfo.branded("Draft-model-free speculation")) {
+                    ContextDraftControl(modelPath: settings.modelPath)
+                }
+            }
             if showAdvanced && facts.hasDflashDraft {
                 Divider()
                 ServerSettingRow(icon: "bolt.fill", title: "DFlash",

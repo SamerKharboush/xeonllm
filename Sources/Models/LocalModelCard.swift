@@ -188,6 +188,14 @@ private struct LocalModelSettingsPopover: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                Section {
+                    ContextDraftControl(modelPath: model.url.path, layout: .settings)
+                } header: {
+                    Text(AppInfo.branded("Reuse conversation text"))
+                } footer: {
+                    Text(AppInfo.branded("Faster when the reply reuses text already in the conversation; can be a little slower otherwise. Does not change the answer."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if traits.hasDflash {
                     Section {
                         DflashControl(modelPath: model.url.path, layout: .settings)
