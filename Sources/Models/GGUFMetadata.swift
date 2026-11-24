@@ -8,6 +8,16 @@ import Darwin
 struct GGUFMetadata: Sendable {
     fileprivate let strings: [String: String]
     fileprivate let integerValues: [String: UInt64]
+    /// Integer arrays keyed by metadata name (`<arch>.attention.head_count` is one array per
+    /// layer in some GGUFs instead of a single scalar).
+    fileprivate let integerArrays: [String: [UInt64]]
+
+    init(strings: [String: String], integerValues: [String: UInt64],
+         integerArrays: [String: [UInt64]] = [:]) {
+        self.strings = strings
+        self.integerValues = integerValues
+        self.integerArrays = integerArrays
+    }
 
     func string(for key: String) -> String? {
         strings[key]
@@ -17,6 +27,18 @@ struct GGUFMetadata: Sendable {
         let value = integerValues[suffix]
             ?? integerValues.first(where: { $0.key.hasSuffix(".\(suffix)") })?.value
         return value.flatMap(UInt32.init(exactly:))
+    }
+
+    /// The largest entry of an integer metadata array, or nil when the key is absent. The
+    /// widest layer is the one the prefill KQ bound has to fit, so callers read this instead
+    /// of `uint32(forSuffix:)` when the value may be a per-layer array.
+    func uint32Max(forSuffix suffix: String) -> UInt32? {
+        let values = integerArrays.reduce(into: [UInt64]()) { result, entry in
+            if entry.key == suffix || entry.key.hasSuffix(".\(suffix)") {
+                result.append(contentsOf: entry.value)
+            }
+        }
+        return values.max().flatMap(UInt32.init(exactly:))
     }
 
     fileprivate static let tensorCountKey = "gguf.tensor_count"
@@ -322,6 +344,7 @@ enum GGUFMetadataCache {
 
         var strings: [String: String] = [:]
         var integerValues: [String: UInt64] = [GGUFMetadata.tensorCountKey: tensorCount]
+        var integerArrays: [String: [UInt64]] = [:]
 
         for _ in 0..<metadataCount {
             guard let key = cursor.readString(maxLength: 1 << 20),
@@ -333,7 +356,8 @@ enum GGUFMetadataCache {
                 if let fileType = cursor.findUInt32MetadataValue(for: "general.file_type") {
                     integerValues["general.file_type"] = UInt64(fileType)
                 }
-                return GGUFMetadata(strings: strings, integerValues: integerValues)
+                return GGUFMetadata(strings: strings, integerValues: integerValues,
+                                    integerArrays: integerArrays)
             }
 
             switch valueType {
@@ -358,6 +382,9 @@ enum GGUFMetadataCache {
             case 8:
                 guard let value = cursor.readString(maxLength: 4 << 20) else { return nil }
                 strings[key] = value
+            case 9:
+                guard let values = cursor.readIntegerArray() else { return nil }
+                if !values.isEmpty { integerArrays[key] = values }
             case 10:
                 guard let value = cursor.readUInt64() else { return nil }
                 integerValues[key] = value
@@ -369,7 +396,8 @@ enum GGUFMetadataCache {
             }
         }
 
-        return GGUFMetadata(strings: strings, integerValues: integerValues)
+        return GGUFMetadata(strings: strings, integerValues: integerValues,
+                            integerArrays: integerArrays)
     }
 
     /// The other files of a split GGUF, in order. The first part carries the metadata and no
@@ -602,6 +630,48 @@ private struct GGUFDataCursor {
         guard skipIsValid(count: count) else { return false }
         offset += count
         return true
+    }
+
+    /// Reads a GGUF array (type 9) of integer values into UInt64s. Non-integer arrays
+    /// (strings, floats) are skipped and return empty, so the header parse continues; nil
+    /// means the data ended mid-array.
+    mutating func readIntegerArray() -> [UInt64]? {
+        guard let elementType = readUInt32(), elementType != 9,
+              let rawCount = readUInt64(), rawCount <= 100_000_000,
+              let count = Int(exactly: rawCount) else { return nil }
+        // Only short integer arrays are kept (per-layer values such as head_count); float
+        // arrays (6, 12) and long ones (tokenizer tables) are skipped, not stored.
+        switch elementType {
+        case 0, 1, 7, 2, 3, 4, 5, 10, 11:
+            if count > 4096 {
+                guard let elementSize = Self.primitiveSize(for: elementType) else { return nil }
+                guard skip(count: count * elementSize) else { return nil }
+                return []
+            }
+            var values: [UInt64] = []
+            values.reserveCapacity(min(count, 4096))
+            for _ in 0..<count {
+                let value: UInt64?
+                switch elementType {
+                case 0, 1, 7: value = readUInt8().map(UInt64.init)
+                case 2, 3: value = readUInt16().map(UInt64.init)
+                case 4, 5: value = readUInt32().map(UInt64.init)
+                default: value = readUInt64()
+                }
+                guard let value else { return nil }
+                values.append(value)
+            }
+            return values
+        case 8:
+            for _ in 0..<count { guard skipString(maxLength: 64 << 20) else { return nil } }
+            return []
+        default:
+            guard let elementSize = Self.primitiveSize(for: elementType) else { return nil }
+            let (byteCount, overflow) = rawCount.multipliedReportingOverflow(by: UInt64(elementSize))
+            guard !overflow, let n = Int(exactly: byteCount) else { return nil }
+            guard skip(count: n) else { return nil }
+            return []
+        }
     }
 
     mutating func skipValue(type: UInt32) -> Bool {

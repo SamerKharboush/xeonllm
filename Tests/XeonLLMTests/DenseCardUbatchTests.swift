@@ -100,10 +100,10 @@ final class DenseCardUbatchTests: XCTestCase {
         }
     }
 
-    /// The band holds at a shallow context but halves per doubling past 4096; the 128 floor
-    /// is the beta 8 panic-safe value (ticket 18), and the app's 16k default lands there.
+    /// The band holds at a shallow context; past 4096 the 0090 KQ bound decides (heads 16
+    /// keeps 128 through 65536), so the beta 8 value is not a floor.
     func testDenseCardUbatchShrinksWithContext() throws {
-        let model = try denseModel(fileType: 18, bytes: Int64(1.07 * 1_073_741_824))
+        let model = try denseModel(fileType: 18, bytes: Int64(1.07 * 1_073_741_824), headCount: 16)
         defer { try? FileManager.default.removeItem(at: model) }
         for (ctx, want) in [(4096, 512), (8192, 128), (16384, 128), (32768, 128), (65536, 128)] {
             XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: ctx), want, "ctx \(ctx)")
@@ -111,17 +111,85 @@ final class DenseCardUbatchTests: XCTestCase {
     }
 
     func testDenseCardUbatch256BandOnlyAt4K() throws {
-        let model = try denseModel(fileType: 18, bytes: Int64(3.07 * 1_073_741_824))
+        let model = try denseModel(fileType: 18, bytes: Int64(3.07 * 1_073_741_824), headCount: 16)
         defer { try? FileManager.default.removeItem(at: model) }
         for (ctx, want) in [(4096, 256), (8192, 128), (16384, 128), (32768, 128)] {
             XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: ctx), want, "ctx \(ctx)")
         }
     }
 
+    /// An unreadable model assumes 64 heads: 128 KQ still fits at 16384, halves at 32768.
     func testDenseCardUbatchUnknownModelStaysAt128() {
-        for ctx in [4096, 8192, 16384, 32768] {
-            XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: "/tmp/no-such-model.gguf", ctx: ctx), 128)
+        for (ctx, want) in [(4096, 128), (8192, 128), (16384, 128), (32768, 64)] {
+            XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: "/tmp/no-such-model.gguf", ctx: ctx), want, "ctx \(ctx)")
         }
+    }
+
+    /// The engine's 0090 KQ cap (512 MiB) is reached at ub128 x 65536 x 16 heads; 128 still
+    /// fits at that exact depth, but one extra padded block pushes it down to 64.
+    func testDeepContextBoundAt16Heads() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824), headCount: 16)
+        defer { try? FileManager.default.removeItem(at: model) }
+        for (ctx, want) in [(32768, 128), (65536, 128), (65792, 64)] {
+            XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: ctx), want, "ctx \(ctx)")
+        }
+    }
+
+    /// At 32 heads the KQ cap is reached at half the depth; at 1M it floors at 16.
+    func testDeepContextBoundAt32Heads() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824), headCount: 32)
+        defer { try? FileManager.default.removeItem(at: model) }
+        for (ctx, want) in [(16384, 128), (32768, 128), (131072, 32), (1048576, 16)] {
+            XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: ctx), want, "ctx \(ctx)")
+        }
+    }
+
+    /// A per-layer head_count array uses the widest layer, not the first one.
+    func testDeepContextBoundUsesMaxOfPerLayerHeadCounts() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824),
+                                   headCounts: [16, 40, 32])
+        defer { try? FileManager.default.removeItem(at: model) }
+        // 128 x 65536 x 40 x 4 = 1.25 GiB; 64 x 65536 x 40 x 4 = 625 MiB; 32 fits.
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: 65536), 32)
+    }
+
+    func testDeepContextBoundFloorsAt16For40HeadsAt1M() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824), headCount: 40)
+        defer { try? FileManager.default.removeItem(at: model) }
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: 1048576), 16)
+    }
+
+    /// No head_count in the header: assume 64 heads, so 128 KQ bytes exceed 512 MiB at 32k.
+    func testDeepContextBoundAssumes64HeadsWhenUnknown() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824))
+        defer { try? FileManager.default.removeItem(at: model) }
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: model.path, ctx: 32768), 64)
+    }
+
+    /// Shallow size/quant bands are untouched; a model whose band is below the deep bound
+    /// keeps its smaller value at a deeper context.
+    func testDeepContextBoundKeepsShallowBandsAndSmallerModels() throws {
+        let small = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824), headCount: 16)
+        defer { try? FileManager.default.removeItem(at: small) }
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: small.path, ctx: 4096), 512)
+        let mid = try denseModel(fileType: 18, bytes: Int64(3.07 * 1_073_741_824), headCount: 16)
+        defer { try? FileManager.default.removeItem(at: mid) }
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: mid.path, ctx: 4096), 256)
+        XCTAssertEqual(ServerSettings.denseCardUbatchForModel(at: mid.path, ctx: 16384), 128)
+    }
+
+    func testDeepContextBoundReachesBenchAndServerArguments() throws {
+        let model = try denseModel(fileType: 7, bytes: Int64(1.07 * 1_073_741_824), headCount: 32)
+        defer { try? FileManager.default.removeItem(at: model) }
+        var s = makeSettings()
+        s.modelPath = model.path
+        s.ctx = 65536
+        s.placement = .card
+        XCTAssertEqual(s.effectiveUbatch, 64)
+        XCTAssertEqual(value(after: "--ubatch-size", in: s.arguments), "64")
+        XCTAssertEqual(value(after: "--batch-size", in: s.arguments), "64")
+        XCTAssertEqual(value(after: "-ub", in: s.benchmarkArguments), "64")
+        XCTAssertEqual(value(after: "-b", in: s.benchmarkArguments), "64")
     }
 
     func testDenseCardLaunchUsesContextScaledUbatch() throws {
@@ -139,20 +207,28 @@ final class DenseCardUbatchTests: XCTestCase {
     }
 
     /// A dense GGUF header with the file type the app reads; the size stands in for weights.
-    private func denseModel(fileType: UInt32, bytes: Int64) throws -> URL {
+    private func denseModel(fileType: UInt32, bytes: Int64,
+                            headCount: UInt32? = nil, headCounts: [UInt32]? = nil) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("xeon-dense-ub-\(UUID().uuidString).gguf")
         var data = Data("GGUF".utf8)
         func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
         func u64(_ v: UInt64) { withUnsafeBytes(of: v.littleEndian) { data.append(contentsOf: $0) } }
         func string(_ s: String) { u64(UInt64(s.utf8.count)); data.append(contentsOf: s.utf8) }
-        let values: [(String, UInt32)] = [
+        var values: [(String, UInt32)] = [
             ("general.file_type", fileType),
             ("llama.block_count", 24),
         ]
-        u32(3); u64(0); u64(UInt64(values.count))
+        var arrays: [(String, [UInt32])] = []
+        if let headCount { values.append(("llama.attention.head_count", headCount)) }
+        if let headCounts { arrays.append(("llama.attention.head_count", headCounts)) }
+        u32(3); u64(0); u64(UInt64(values.count + arrays.count))
         for (key, value) in values {
             string(key); u32(4); u32(value)
+        }
+        for (key, value) in arrays {
+            string(key); u32(9); u32(4); u64(UInt64(value.count))
+            for v in value { u32(v) }
         }
         try data.write(to: url)
         let handle = try FileHandle(forWritingTo: url)

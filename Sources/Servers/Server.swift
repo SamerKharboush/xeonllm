@@ -1214,6 +1214,24 @@ struct ServerSettings {
     /// MiniCPM5 1B Q8_0 35.2 ms; Qwen3 0.6B Q8_0 75.8 ms; LFM3 1.7B F16 96.4 ms;
     /// Qwen3 4B Q6_K 127.7 ms at 256 (178.4 ms at 512), card 0 149.8 ms at 256.
     /// The size/quant bands below keep those ceilings without a per-file measurement.
+    ///
+    /// Deep context is bounded separately by the 0090 engine patch (commit 4bb3a39): the
+    /// decomposed prefill's f32 KQ is n_tokens(ubatch) x n_kv x n_head x 4 bytes and 0090
+    /// keeps that path while the buffer is <= 512 MiB for batches of <= 128 tokens. Past it
+    /// the engine uses the flash-attention tile kernel, whose command buffer grows with
+    /// depth and panics this Mac when long (commit 060e886: 497 ms buffers on 2026-11-07).
+    /// Measured on card 1, engine with 0090: MiniCPM5 1B Q8_0 -ub 128, depth 49152
+    /// has a steady max command buffer of 101.3 ms and pp512 51.9 t/s; at depth 65536
+    /// the buffer jumps to 510.6 ms and pp512 drops to 10.2 t/s. The same depth 65536
+    /// at -ub 64 measures 80.7 ms and pp512 34.5 t/s. The bound below keeps the KQ under
+    /// 512 MiB so the decomposed path (and its short buffers) holds at deep contexts.
+    ///
+    /// Above the measured 4096 boundary the ubatch is `min(128, deepUbatch)` where
+    /// `ctxPadded = ctx` rounded up to a multiple of 256 and `deepUbatch` is the largest
+    /// `u` in {128, 64, 32, 16} with `u * ctxPadded * nHead * 4 <= 512 MiB` (floor 16, so
+    /// the bound only ever lowers the 128 beta 8 value). `nHead` is the model's
+    /// `<arch>.attention.head_count` (max when a GGUF stores it per layer), defaulting to
+    /// 64 when unreadable; at 4096 and below the size/quant band above stands unchanged.
     static func denseCardUbatchForModel(at path: String, ctx: Int) -> Int {
         let band = denseCardBand(at: path)
         // The 6k bands do not hold at the app's 16k default: XEON_MTL_CB_STATS max cb at 16k
@@ -1221,7 +1239,34 @@ struct ServerSettings {
         // and 488 ms for LFM3 F16 ub512 (card 1). A batch's attention work grows with depth,
         // so the bands apply only up to a 4096 context (inside the measured 6k depth); any
         // larger context keeps the beta 8 value. Nothing between 6k and 16k was measured.
-        return ctx <= 4096 ? band : denseCardUbatch
+        guard ctx > 4096 else { return band }
+        // Above 4096 the 0090 depth bound, not the size band, keeps the decomposed KQ under
+        // 512 MiB; it only ever lowers the 128 beta 8 value.
+        return min(denseCardUbatch, deepContextUbatch(at: path, ctx: ctx))
+    }
+
+    /// Largest ubatch that keeps the 0090 decomposed KQ buffer at or under 512 MiB at this
+    /// context, from {128, 64, 32, 16}, floored at 16. Context is padded to 256 as the
+    /// engine's KV allocation is; an unknown head count assumes 64 (the widest common case).
+    private static func deepContextUbatch(at path: String, ctx: Int) -> Int {
+        let padded = ((max(0, ctx) + 255) / 256) * 256
+        let heads = attentionHeadCount(at: path) ?? 64
+        let cap = 512 * 1024 * 1024
+        for u in [128, 64, 32, 16] {
+            let bytes = Double(u) * Double(padded) * Double(heads) * 4
+            if bytes <= Double(cap) { return u }
+        }
+        return 16
+    }
+
+    /// `attention.head_count`, read through the cache; some GGUFs store one value per layer
+    /// as an array, in which case the widest layer decides the bound.
+    private static func attentionHeadCount(at path: String) -> Int? {
+        guard let metadata = GGUFMetadataCache.metadata(at: path) else { return nil }
+        if let heads = metadata.uint32Max(forSuffix: "attention.head_count"), heads > 0 {
+            return Int(heads)
+        }
+        return metadata.uint32(forSuffix: "attention.head_count").flatMap { $0 > 0 ? Int($0) : nil }
     }
 
     private static func denseCardBand(at path: String) -> Int {
