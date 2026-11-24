@@ -4,6 +4,7 @@
 
 import AppKit
 import CoreText
+import IOKit.pwr_mgt
 import Metal
 import PDFKit
 import XCTest
@@ -3555,6 +3556,42 @@ final class ModelNameTests: XCTestCase {
         XCTAssertEqual(ModelName("Qwen3.5-122B-A10B-UD-Q8_K_XL-00001-of-00005.gguf").title, "Qwen3.5 122B-A10B")
     }
 
+    func testRepoNameAndAuthorDisplay() {
+        let m = ModelName("Qwen3.8-35B-A3B-Distill", author: "empero-ai",
+                          repository: "empero-ai/Qwen3.8-35B-A3B-Distill")
+        XCTAssertEqual(m.title, "Qwen3.8 35B-A3B")
+        XCTAssertEqual(m.author, "empero-ai")
+        XCTAssertEqual(m.repository, "empero-ai/Qwen3.8-35B-A3B-Distill")
+        XCTAssertEqual(m.repositoryURL?.absoluteString, "https://huggingface.co/empero-ai/Qwen3.8-35B-A3B-Distill")
+        XCTAssertEqual(m.family, "Qwen")
+        XCTAssertTrue(m.badges.contains("Distill"))
+        XCTAssertTrue(m.badges.contains("MoE"))
+        XCTAssertTrue(m.display.contains("empero-ai"))
+
+        let qatModel = ModelName("Qwen3.8-35B-A3B-QAT", author: "empero-ai")
+        XCTAssertEqual(qatModel.title, "Qwen3.8 35B-A3B")
+        XCTAssertTrue(qatModel.badges.contains("QAT"))
+        XCTAssertTrue(qatModel.display.contains("QAT"))
+    }
+
+    func testHuggingFaceURLParsing() {
+        let resolveURL = "https://huggingface.co/empero-ai/Qwen3.8-35B-A3B-Distill-GGUF/resolve/main/Qwen3.8-35B-A3B-Q4_K_M.gguf"
+        let parsedResolve = ModelName.parseHuggingFaceURL(resolveURL)
+        XCTAssertEqual(parsedResolve?.author, "empero-ai")
+        XCTAssertEqual(parsedResolve?.repo, "Qwen3.8-35B-A3B-Distill")
+        XCTAssertEqual(parsedResolve?.rawRepo, "Qwen3.8-35B-A3B-Distill-GGUF")
+
+        let blobURL = "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+        let parsedBlob = ModelName.parseHuggingFaceURL(blobURL)
+        XCTAssertEqual(parsedBlob?.author, "bartowski")
+        XCTAssertEqual(parsedBlob?.repo, "Meta-Llama-3.1-8B-Instruct")
+
+        let repoURL = "https://huggingface.co/Qwen/Qwen3.6-35B-A3B"
+        let parsedRepo = ModelName.parseHuggingFaceURL(repoURL)
+        XCTAssertEqual(parsedRepo?.author, "Qwen")
+        XCTAssertEqual(parsedRepo?.repo, "Qwen3.6-35B-A3B")
+    }
+
     // MARK: engine check
 
     private var engineCheckSample: String {
@@ -3810,5 +3847,65 @@ final class PortHolderTests: XCTestCase {
         let (fd, port) = try listen()
         close(fd)
         XCTAssertNil(ServerController.portHolder(port))
+    }
+}
+
+
+@MainActor
+final class KeepAwakeTests: XCTestCase {
+    /// Idle-sleep assertions this process holds under `reason`.
+    private func idleSleepAssertions(_ reason: String) -> Int {
+        var raw: Unmanaged<CFDictionary>?
+        guard IOPMCopyAssertionsByProcess(&raw) == kIOReturnSuccess,
+              let all = raw?.takeRetainedValue() as NSDictionary?,
+              let mine = all[NSNumber(value: getpid())] as? [[String: Any]] else { return 0 }
+        return mine.filter {
+            $0[kIOPMAssertionTypeKey] as? String == kIOPMAssertionTypePreventUserIdleSystemSleep &&
+            $0[kIOPMAssertionNameKey] as? String == reason
+        }.count
+    }
+
+    func testHoldsIdleSleepOffOnlyWhileHeld() {
+        var held: KeepAwake? = KeepAwake.update(nil, active: true, reason: "keep-awake test")
+        XCTAssertEqual(idleSleepAssertions("keep-awake test"), 1)
+        XCTAssertTrue(KeepAwake.update(held, active: true, reason: "keep-awake test") === held,
+                      "an active job keeps the assertion it already holds")
+        held = KeepAwake.update(held, active: false, reason: "keep-awake test")
+        XCTAssertNil(held)
+        XCTAssertEqual(idleSleepAssertions("keep-awake test"), 0)
+    }
+
+    func testGeneratorsKeepTheMacAwakeOnlyWhileWorking() {
+        let video = VideoGenerator()
+        video.state = .generating
+        XCTAssertEqual(idleSleepAssertions("Generating a video"), 1)
+        video.state = .generating
+        XCTAssertEqual(idleSleepAssertions("Generating a video"), 1)
+        video.state = .failed("stopped")
+        XCTAssertEqual(idleSleepAssertions("Generating a video"), 0)
+
+        let upscaler = ImageUpscaler()
+        upscaler.state = .running
+        XCTAssertEqual(idleSleepAssertions("Upscaling an image"), 1)
+        upscaler.state = .done
+        XCTAssertEqual(idleSleepAssertions("Upscaling an image"), 0)
+    }
+
+    /// Our renamed controllers get the same hook; no engine is started by toggling the flag.
+    func testRenamedBenchmarkControllerKeepsAwakeWhileRunning() {
+        let controller = BenchmarkController()
+        controller.running = true
+        XCTAssertEqual(idleSleepAssertions("Running a benchmark"), 1)
+        controller.running = false
+        XCTAssertEqual(idleSleepAssertions("Running a benchmark"), 0)
+    }
+}
+
+
+final class ImageSizeSettingsMergeTests: XCTestCase {
+    func testMaximumImageSizeKeyAndBoundsAreUnchanged() {
+        XCTAssertEqual(SettingsKeys.chatMaxImageMegapixels, "chatMaxImageMegapixels")
+        XCTAssertEqual(min(4, max(0.25, 0.1)), 0.25)
+        XCTAssertEqual(min(4, max(0.25, 9)), 4)
     }
 }

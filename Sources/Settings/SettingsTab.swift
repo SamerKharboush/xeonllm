@@ -63,6 +63,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.autoKVMode) private var autoKVMode = "auto"
     @AppStorage(SettingsKeys.dynamicMoeLeanRAM) private var dynamicMoeLeanRAM = false
     @AppStorage(SettingsKeys.modelsDir) private var modelsDir = ""
+    @AppStorage(SettingsKeys.hubEndpoint) private var hubEndpoint = HubEndpoint.huggingFace
+    @AppStorage(SettingsKeys.hubEndpointCustom) private var hubEndpointCustom = ""
     @AppStorage(SettingsKeys.menuBarIcon) private var menuBarIcon = true
     @AppStorage(SettingsKeys.updateAutoCheck) private var updateAutoCheck = true
     @AppStorage(SettingsKeys.appAccent) private var appAccentRaw = AppTheme.defaultKey
@@ -109,6 +111,13 @@ struct SettingsView: View {
         if case .stopped = server.state { return true }
         if case .failed = server.state { return true }
         return false
+    }
+    private var hubEndpointNote: String? {
+        if hubEndpoint == HubEndpoint.custom && HubEndpoint.validBase(hubEndpointCustom) == nil {
+            return AppInfo.branded("Without a valid address, huggingface.co is used")
+        }
+        if hubEndpoint != HubEndpoint.huggingFace { return nil }
+        return HubEndpoint.currentBase.map { "HF_ENDPOINT: " + $0.absoluteString }
     }
     // Networking is a launch flag, so restart the running server to apply it now.
     private func setDiscoverable(_ on: Bool) {
@@ -508,6 +517,23 @@ struct SettingsView: View {
                             }
                             Button(AppInfo.branded("Change…")) { chooseModelsFolder() }
                                 .glassButton()
+                        }
+                    }
+                    SettingsRow(icon: "arrow.down.circle",
+                                title: AppInfo.branded("Download source"),
+                                subtitle: hubEndpointNote,
+                                help: AppInfo.branded("Server that models are downloaded and searched from. hf-mirror.com is a third-party mirror for networks where huggingface.co fails. The SHA-256 checksum is still verified, but the mirror serves both the file and its checksum, so use one you trust. With Hugging Face, HF_ENDPOINT is honored if the app was opened with that variable.")) {
+                        XeonDropdown(selection: $hubEndpoint, options: [
+                            .init(value: HubEndpoint.huggingFace, title: "Hugging Face"),
+                            .init(value: HubEndpoint.hfMirror, title: "hf-mirror.com"),
+                            .init(value: HubEndpoint.custom, title: AppInfo.branded("Custom"))
+                        ])
+                    }
+                    if hubEndpoint == HubEndpoint.custom {
+                        SettingsRow(icon: "link",
+                                    title: AppInfo.branded("Mirror address"),
+                                    help: AppInfo.branded("Base address of the mirror, such as https://hf-mirror.com. It receives the same paths as huggingface.co.")) {
+                            DeferredSettingsTextField("https://…", text: $hubEndpointCustom, width: 240)
                         }
                     }
                 }

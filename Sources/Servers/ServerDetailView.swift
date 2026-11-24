@@ -168,21 +168,46 @@ private struct ServerDetailHero: View {
                         .font(.system(size: 23, weight: .bold))
                     modelMenu
                 }
-                Text(model.quant.isEmpty ? AppInfo.branded("Configure a model for this instance") : model.quant)
-                    .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(model.quant.isEmpty ? AppInfo.branded("Configure a model for this instance") : model.quant)
+                        .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary)
+                    if !settings.modelPath.isEmpty {
+                        let fileName = URL(fileURLWithPath: settings.modelPath).lastPathComponent
+                        Text("·")
+                            .foregroundStyle(.tertiary)
+                        Text(fileName)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .help(settings.modelPath)
+                    }
+                }
                 WrappingFilterLayout(spacing: 7) {
                     if let params = model.paramsB { chip(String(format: "%.1fB params", params), "atom") }
                     chip(model.badges.contains("Vision") ? "Vision" : "Text & Chat", "bubble.left")
                     chip(model.family, "cpu")
+                    if let author = model.author, !author.isEmpty {
+                        chip(author, "person.2")
+                    }
                     chip("GGUF", "shippingbox")
                 }
                 Text(description(for: model))
                     .font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(2)
                 if let local = localModel(at: settings.modelPath) {
-                    Button(AppInfo.branded("View model details") + "  →") {
-                        inspectedModel = local
+                    HStack(spacing: 14) {
+                        Button(AppInfo.branded("View model details") + "  →") {
+                            inspectedModel = local
+                        }
+                        .buttonStyle(.plain).foregroundStyle(Color.appAccent).font(.system(size: 13, weight: .medium))
+
+                        Button {
+                            NSWorkspace.shared.activateFileViewerSelecting([local.url])
+                        } label: {
+                            Label(AppInfo.branded("Reveal in Finder"), systemImage: "folder")
+                        }
+                        .buttonStyle(.plain).foregroundStyle(.secondary).font(.system(size: 12))
+                        .help(AppInfo.branded("Opens the model's folder in Finder with the file selected."))
                     }
-                    .buttonStyle(.plain).foregroundStyle(Color.appAccent).font(.system(size: 13, weight: .medium))
                 }
             }
         }

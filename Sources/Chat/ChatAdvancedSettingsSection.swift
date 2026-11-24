@@ -364,15 +364,15 @@ struct ChatAdvancedSettingsSection: View {
                                    value: $pasteLongTextLength, range: 0...100_000, step: 500,
                                    zeroLabel: AppInfo.branded("Off"),
                                    help: AppInfo.branded("If you paste text longer than this (in characters), it becomes an attachment instead of filling the input box. 0 disables it."))
-                    LabeledContent(AppInfo.branded("Maximum image size (MP)")) {
-                        HStack(spacing: 8) {
-                            DeferredNumberField("1", value: $maxImageMegapixels, width: 90)
-                                .onChange(of: maxImageMegapixels) { _, value in
-                                    let clamped = min(4, max(0.25, value))
-                                    if clamped != value { maxImageMegapixels = clamped }
-                                }
-                            InfoTip(text: AppInfo.branded("Downsizes attached images to this megapixel maximum before sending, to save vision tokens (0.25–4)."))
-                        }
+                    SettingsRow(icon: "photo",
+                                title: AppInfo.branded("Maximum image size (MP)"),
+                                help: AppInfo.branded("Downsizes attached images to this megapixel maximum before sending, to save vision tokens (0.25–4).")) {
+                        DeferredNumberField("1", value: $maxImageMegapixels, width: 100)
+                            .onChange(of: maxImageMegapixels) { _, value in
+                                let clamped = min(4, max(0.25, value))
+                                if clamped != value { maxImageMegapixels = clamped }
+                            }
+                            .frame(width: Self.controlColumn, alignment: .trailing)
                     }
                     SettingsRow(icon: "doc.richtext",
                                 title: AppInfo.branded("PDF as images for vision models"),
