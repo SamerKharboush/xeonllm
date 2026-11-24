@@ -221,5 +221,7 @@ status=PASS
 [ -n "$med_tg" ] && [ -n "$med_pp" ] || status=FAIL
 [ "$rc" -eq 0 ] || status="FAIL(rc=$rc)"
 [ "$reject" != none ] && status="REJECTED"
-emit_row "1/$REPS" "$status" "$med_tg" "$med_pp" "${prompt_n:-server prompt}" "$NPRED" "$reject" "$log" \
+# emit_row takes pp then tg. Before 2026-11-24 this line passed tg then pp, so every
+# mode=real row written by tickets 01-02b has pp_ts and tg_ts swapped.
+emit_row "1/$REPS" "$status" "$med_pp" "$med_tg" "${prompt_n:-server prompt}" "$NPRED" "$reject" "$log" \
     "reps=$reps port=$PORT rc=$rc"
