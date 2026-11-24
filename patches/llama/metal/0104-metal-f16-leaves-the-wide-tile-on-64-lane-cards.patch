@@ -1,0 +1,24 @@
+# 0104: f16 leaves the wide prefill tile on 64-lane cards
+#
+# Found while checking 0098 (0.2 ticket 05). On the D700 (64 lanes) the wide mul_mm tile makes
+# f16 prefill slower: test-backend-ops MUL_MAT f16 m=4096 n=512 k=14336 596.0/595.5 GFLOPS with
+# the tile and 864.4 with XEON_MM_WIDE_DISABLE=1; LFM3 1.7B F16 pp512 at -ub 512 -b 512, card 1,
+# llama-bench -r 3, two runs: 233.39/233.16 t/s with it, 286.91/286.93 without.
+# The tile is only chosen from 448 tokens on 64 lanes, so -ub 128 (the app above ctx 4096) never
+# used it. 32-lane cards keep it. XEON_MM_F16_WIDE=1 restores the old choice.
+# This patch built (AVX1, whole series), card 1, -ub 512 -b 512, pp512/tg128 -r 3, steady max cb:
+#   depth 0     old 233.65 / 23.02, 96.3 ms   new 286.89 / 23.02, 99.3 ms
+#   depth 4096  old 217.22 / 22.04, 99.5 ms   new 260.79 / 22.05, 99.3 ms
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -1251,6 +1251,10 @@
+                 wide = simd_width == 32 || XEON_ENV("XEON_MM_BF16_WIDE") != nullptr;
+                 break;
+             case GGML_TYPE_F16:
++                // on 64 lanes the wide tile loses for f16: LFM3 1.7B F16 pp512 at -ub 512 reads
++                // 233.4/233.2 t/s with it and 286.9/286.9 without; XEON_MM_F16_WIDE=1 restores it
++                wide = simd_width == 32 || XEON_ENV("XEON_MM_F16_WIDE") != nullptr;
++                break;
+             case GGML_TYPE_Q8_0:
+             case GGML_TYPE_Q5_0:
+             case GGML_TYPE_Q5_1:
