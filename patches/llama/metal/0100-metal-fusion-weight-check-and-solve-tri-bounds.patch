@@ -1,0 +1,36 @@
+# 0100: fusion keeps weight operands out and solve_tri stays in bounds
+#
+# Upstream ef28b0f (row 8c). solve_tri could read src0 past N and read dst past the current
+# row when N is not a multiple of the simd width; the padded threadgroup tile made those
+# reads look valid. The bounds now guard both the load and the dot-product accumulation.
+#
+# The fusion half of the row is the ggml_metal_tensor_is_weight check in
+# ggml_metal_mul_mat_add_operand and the dst/expert/weight overlap rejection in
+# ggml_metal_fusion_check_moe_reduce. Both are already at our d8123504 pin after metal/0011
+# and metal/0057; this patch ports the remaining solve_tri hunk, no edit to an older patch.
+diff --git a/ggml/src/ggml-metal/kernels/solve_tri.metal b/ggml/src/ggml-metal/kernels/solve_tri.metal
+index 10526fb21..d818f228b 100644
+--- a/ggml/src/ggml-metal/kernels/solve_tri.metal
++++ b/ggml/src/ggml-metal/kernels/solve_tri.metal
+@@ -42,7 +42,9 @@ kernel void kernel_solve_tri_f32(
+ 
+             for (short t = 0; t*NW < N; ++t) {
+                 const short idx = t*NW + tiisg;
+-                sh0_cur[idx] = src0_ptr[idx];
++                if (rr + sgitg < N && idx < N) {
++                    sh0_cur[idx] = src0_ptr[idx];
++                }
+             }
+ 
+             src0_ptr += NSG*N;
+@@ -63,7 +65,9 @@ kernel void kernel_solve_tri_f32(
+ 
+             for (short t = 0; t*NW < r; ++t) {
+                 const short idx = t*NW + tiisg;
+-                sum += sh0_cur[idx] * dst_ptr[idx*K] * (idx < r);
++                if (idx < r) {
++                    sum += sh0_cur[idx] * dst_ptr[idx*K];
++                }
+             }
+ 
+             sum = simd_sum(sum);

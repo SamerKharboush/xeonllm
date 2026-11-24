@@ -1,0 +1,21 @@
+# 0102: the last streamed chunk keeps the client connection alive
+#
+# Upstream 15f49ae, core/0078 server-http hunk (row 9d). A chunked response provider that
+# returns false on the final chunk tells cpp-httplib to close the connection; a client reusing
+# it then races the close and loses the next request. Returning true after sink.done() keeps
+# the keep-alive open.
+#
+# Applies to XeonLLM's tools/server/server-http.cpp; one-line production change only.
+diff --git a/tools/server/server-http.cpp b/tools/server/server-http.cpp
+index f940e3bbb..b98689c53 100644
+--- a/tools/server/server-http.cpp
++++ b/tools/server/server-http.cpp
+@@ -666,7 +666,7 @@ static void process_handler_response(server_http_req_ptr && request, server_http
+                 sink.done();
+                 SRV_DBG("%s", "http: stream ended\n");
+             }
+-            return has_next;
++            return true;
+         };
+         const auto on_complete = [request = q_ptr, response = r_ptr](bool) mutable {
+             response->on_complete();

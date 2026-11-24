@@ -1,0 +1,34 @@
+# 0098: the BF16 wide prefill tile stays on 32-lane cards
+#
+# Upstream a7478ba (row 5). The wide BF16 prefill tile was built and measured on 32-lane
+# cards only. On the D700's 64 lanes, metal/0061 currently selects BF16 for the wide tile;
+# this patch narrows that choice to 32 lanes, matching upstream.
+#
+# XEON_MM_BF16_WIDE=1 restores the old wide choice on 64 lanes, so the orchestrator can A/B
+# the old and new prefill paths on card 1. Default is upstream's narrow tile on 64 lanes.
+#
+# F16 keeps the wide tile on every card (orchestrator fix: the first draft let F16 fall into
+# the BF16 branch, which would have narrowed F16 prefill on 64 lanes).
+#
+# Measured on the D700 (card 1, test-backend-ops, AVX1 engine with the whole series, 0.2 ticket 05):
+# MUL_MAT bf16 156/156 correct with and without XEON_MM_BF16_WIDE=1; m=4096 n=512 k=14336
+# 859.4/858.5 GFLOPS wide vs 861.1/857.5 narrow, and 860.1 with XEON_MM_WIDE_DISABLE=1, so at
+# that shape BF16 does not reach the wide tile either way: no effect shown on 64 lanes.
+#
+# Applies after metal/0061 and does not edit it.
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.cpp b/ggml/src/ggml-metal/ggml-metal-device.cpp
+index c88913e63..e2de35e7c 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -1247,6 +1247,10 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mm(ggml_meta
+         switch (tsrc0) {
+-            case GGML_TYPE_F16:
+             case GGML_TYPE_BF16:
++                // the wide bf16 tile was built and measured on 32 lanes only (F16 keeps it);
++                // XEON_MM_BF16_WIDE=1 restores the old wide choice on 64 lanes too
++                wide = simd_width == 32 || XEON_ENV("XEON_MM_BF16_WIDE") != nullptr;
++                break;
++            case GGML_TYPE_F16:
+             case GGML_TYPE_Q8_0:
+             case GGML_TYPE_Q5_0:
+             case GGML_TYPE_Q5_1:

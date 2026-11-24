@@ -1,0 +1,52 @@
+# 0099: tiled f32 transpose copy writes by linear index
+#
+# Upstream d115705 (row 6a), from the 0072 hunk. The old transposed copy addressed dst with
+# its byte strides; when a transposed view is reshaped to another shape, a row lands on the
+# wrong element. The linear index uses the destination's actual shape.
+#
+# Applies to XeonLLM after metal/0089: that patch ported the flat-copy and concat helpers but
+# not this kernel, so the kernel is added here with the fixed write. No lane gate, no 6b
+# training-backward hunk.
+diff --git a/ggml/src/ggml-metal/kernels/quantize.metal b/ggml/src/ggml-metal/kernels/quantize.metal
+index 9e8ad98e7..ef902d2be 100644
+--- a/ggml/src/ggml-metal/kernels/quantize.metal
++++ b/ggml/src/ggml-metal/kernels/quantize.metal
+@@ -661,3 +661,37 @@ kernel void kernel_concat_t0_f32(
+         }
+     }
+ }
++
++// a transposed f32 view into a contiguous tensor that may be reshaped: reads follow the source rows,
++// writes follow the destination rows, and the element goes to its linear index
++kernel void kernel_cpy_transpose_f32(
++        constant ggml_metal_kargs_cpy & args,
++        device  const char * src0,
++        device        char * dst,
++        threadgroup  float * tile [[threadgroup(0)]],
++        uint3   tgpig[[threadgroup_position_in_grid]],
++        ushort3 tpitg[[thread_position_in_threadgroup]]) {
++    const int b0 = tgpig.x*32;
++    const int b1 = tgpig.y*32;
++    const int i2 = tgpig.z % args.ne02;
++    const int i3 = tgpig.z / args.ne02;
++    const int tx = tpitg.x;
++    const int ty = tpitg.y;
++
++    // src(i0, i1) with i1 contiguous
++    FOR_UNROLL (short k = 0; k < 32; k += 8) {
++        const int i0 = b0 + ty + k;
++        const int i1 = b1 + tx;
++        tile[(ty + k)*33 + tx] = i0 < args.ne00 && i1 < args.ne01 ?
++            *(device const float *) (src0 + i3*args.nb03 + i2*args.nb02 + (uint64_t) i1*args.nb01 + (uint64_t) i0*args.nb00) : 0.0f;
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    FOR_UNROLL (short k = 0; k < 32; k += 8) {
++        const int i0 = b0 + tx;
++        const int i1 = b1 + ty + k;
++        if (i0 < args.ne00 && i1 < args.ne01) {
++            // dst is contiguous but may have another shape, so the element goes to its linear index
++            ((device float *) dst)[(((int64_t) i3*args.ne02 + i2)*args.ne01 + i1)*args.ne00 + i0] = tile[tx*33 + ty + k];
++        }
++    }
++}
+
