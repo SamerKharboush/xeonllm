@@ -1,0 +1,67 @@
+# 0106: XEON_DMOE_REPEATABLE=1 keeps the arena's load-time residency
+#
+# 0.2 ticket 10 (evidence/10/RESULT.md). The 35B under Dynamic MoE (one card) did not repeat its own
+# temperature-0 output: a routed expert runs on the CPU (AVX1 Q6_K x Q8_K) or in the VRAM arena
+# (Metal), the two round differently, and which one it takes depends on thread timing. CPU-only
+# experts repeat exactly (2 runs, 7/7). Three timing-driven residency changes were found: decode
+# promotions (stock: 7/7 prompts differ), prefill slot lending (frozen arena: later prompts take one
+# of two versions), and the first graph after launch, which XEON_DMOE_PROMO_STOP=0 does not freeze
+# (`now > stop_after`; 2 of 14 runs diverged in the first request). With all three off, 6 of 6
+# servers gave the same 7 outputs.
+# The switch freezes promotions from the first graph, turns off prefill promotion, lending and the
+# prefill reserve (4b, which evicts residents to make room for lending and, with lending off, left
+# them empty), and prints one line so a run shows it took effect. Off by default; the app sets it
+# from the per-model "Repeatable answers" setting.
+diff --git a/src/llama-xeon-dmoe.cpp b/src/llama-xeon-dmoe.cpp
+index a1f9f8590..9ae47eaeb 100644
+--- a/src/llama-xeon-dmoe.cpp
++++ b/src/llama-xeon-dmoe.cpp
+@@ -806,6 +806,9 @@ struct policy {
+     double admit_fixed = 0.0;   // 0: estimate from the running costs
+     int    budget = 8;
+     long   stop_after = -1;
++    // XEON_DMOE_REPEATABLE=1: the arena keeps the residency it had at load, so whether a routed expert runs
++    // on the CPU or in VRAM (which round differently) no longer depends on thread timing
++    bool   repeatable = false;
+     bool   warm_prefill = true;
+     float  tok_decay = 0.0f;              // per-token decay of prefill routing, 0 = one weight per chunk
+     int    reserve   = 0;                 // free slots per layer kept for bank uploads during prefill
+@@ -1197,7 +1200,7 @@ struct policy {
+         admit_used = admit_threshold();
+         // promotions wait for decode: during a wide batch they would compete with its uploads
+         const bool wide   = xeon_dmoe_wide();
+-        const bool frozen = (stop_after >= 0 && (long) now > stop_after) || (defer_wide && wide);
++        const bool frozen = repeatable || (stop_after >= 0 && (long) now > stop_after) || (defer_wide && wide);
+         if (!frozen && !cands.empty()) {
+             std::sort(cands.begin(), cands.end(), [](auto & a, auto & b) { return a.second < b.second; });
+             cands.erase(std::unique(cands.begin(), cands.end(), [](auto & a, auto & b) { return a.second == b.second; }), cands.end());
+@@ -1300,7 +1303,7 @@ struct policy {
+             }
+         }
+         // 4b. during prefill keep a few free slots per layer for the bank uploads to lend
+-        if (reserve > 0 && wide) {
++        if (reserve > 0 && wide && !repeatable) {
+             retiring_n.assign(n_layer, 0);
+             for (const int gs : retiring_slots) retiring_n[gs / Q]++;
+             for (int il = 0; il < n_layer; ++il) {
+@@ -1486,7 +1489,7 @@ static bool dmoe_bank_plan(const void * host, size_t size, xeon_dmoe_bank_plan *
+         std::lock_guard<std::mutex> lock(p.vp_mutex);
+         auto & lst = p.vplan[r.il];
+         auto & fl  = p.free_list[r.il];
+-        if (lend && rows && p.vmask[r.il] == 0 && !fl.empty()) {
++        if (lend && !p.repeatable && rows && p.vmask[r.il] == 0 && !fl.empty()) {
+             // free slots take the chunk's busiest host experts: the upload brings them into VRAM anyway
+             // the chunk's last tokens first, since decode continues from them; then its busiest experts
+             const float * tail = xeon_dmoe_chunk_tail();
+@@ -2396,6 +2399,11 @@ static void dmoe_init(std::vector<llama_layer> & layers, const llama_hparams & h
+         pol->verify_every = (long) envf("XEON_DMOE_VERIFY", 0);
+         pol->defer_wide   = envf("XEON_DMOE_DEFER_WIDE", 0) != 0;
+         pol->vram_promote = envf("XEON_DMOE_PREFILL_PROMOTE", 1) != 0;
++        pol->repeatable   = envf("XEON_DMOE_REPEATABLE", 0) != 0;
++        if (pol->repeatable) {
++            pol->vram_promote = false;
++            fprintf(stderr, "xeon_dmoe: repeatable residency: no promotions, no prefill promotions, no lending, no prefill reserve\n");
++        }
+         pol->vplan.resize(n_layer);
+         pol->vmask.assign(n_layer, 0);
+         pol->vmask_sync.assign(n_layer, 0);
