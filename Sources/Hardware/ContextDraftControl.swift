@@ -17,7 +17,7 @@ struct ContextDraftControl: View {
     @State private var enabled = false
 
     private var helpText: String {
-        AppInfo.branded("Faster when the reply reuses text already in the conversation, such as rewrites, edits or code changes; can be a little slower otherwise. Does not change the answer. Applies when the server restarts.")
+        AppInfo.branded("Faster when the reply reuses text already in the conversation, such as rewrites, edits or code changes; can be a little slower otherwise. The answer is usually the same, but a close word choice can come out differently. Applies when the server restarts.")
     }
 
     @ViewBuilder

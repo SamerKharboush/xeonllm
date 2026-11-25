@@ -193,7 +193,7 @@ private struct LocalModelSettingsPopover: View {
                 } header: {
                     Text(AppInfo.branded("Reuse conversation text"))
                 } footer: {
-                    Text(AppInfo.branded("Faster when the reply reuses text already in the conversation; can be a little slower otherwise. Does not change the answer."))
+                    Text(AppInfo.branded("Faster when the reply reuses text already in the conversation; can be a little slower otherwise. The answer is usually the same, but a close word choice can come out differently."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if traits.hasDflash {
