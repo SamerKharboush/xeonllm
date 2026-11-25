@@ -593,6 +593,13 @@ private struct ServerConfigurationWorkspace: View {
                     CompactIntegerStepper(value: ncmoe(settings), range: 0...99)
                 }
             }
+            if facts.isMoE {
+                Divider()
+                ServerSettingRow(icon: "arrow.triangle.2.circlepath", title: AppInfo.branded("Repeatable answers"),
+                                 detail: AppInfo.branded("Same answer at temperature 0; applies on its own server")) {
+                    RepeatableAnswersControl(modelPath: settings.modelPath)
+                }
+            }
         }
     }
 

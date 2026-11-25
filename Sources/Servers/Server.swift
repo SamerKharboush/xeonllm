@@ -1001,6 +1001,15 @@ struct ServerSettings {
                 env["GGML_CPU_NO_REPACK"] = "1"
             }
         }
+        // Repeatable answers (opt-in per model): under Dynamic MoE the arena keeps its
+        // load-time expert residency, so a temperature-0 request repeats. Only for a model
+        // the user turned on and a launch that runs Dynamic MoE; router mode is excluded.
+        // A user value in the extra arguments still wins, so it is read here and merged last.
+        if let repeatable = Self.repeatableAnswersEnv(forModel: modelPath, usesAutoPlan: usesAutoPlan,
+                                                      plannedMode: plannedMode, routerMode: routerMode,
+                                                      userEnv: extraArgTokens.env) {
+            env["XEON_DMOE_REPEATABLE"] = repeatable
+        }
         // KEY=VALUE tokens from Extra arguments become env vars (e.g. the GCN/Vega
         // wave64 safe-mode flag). Applied last so the user can override the above.
         for (k, v) in extraArgTokens.env { env[k] = v }
@@ -1629,6 +1638,73 @@ struct ServerSettings {
     /// Lets a test state the per-model n-gram opt-in instead of reading UserDefaults, the
     /// same seam `peerBridgeOverride` gives the topology. Tests must not write the domain.
     nonisolated(unsafe) static var contextDraftEnabledOverride: ((String) -> Bool)?
+
+    /// Per-model opt-in for repeatable temperature-0 answers under Dynamic MoE. An ENABLED
+    /// list, so absent means off: `XEON_DMOE_REPEATABLE=1` is only set for a model the user
+    /// turned on. The engine keeps its load-time expert residency, so the same request gives
+    /// the same answer; generation is somewhat slower, so it stays opt-in.
+    nonisolated static func repeatableAnswersEnabled(forModel path: String) -> Bool {
+        if let forced = repeatableAnswersEnabledOverride { return forced(path) }
+        return (UserDefaults.standard.stringArray(forKey: SettingsKeys.repeatableAnswersModels) ?? []).contains(path)
+    }
+
+    nonisolated static func setRepeatableAnswersEnabled(_ enabled: Bool, forModel path: String) {
+        var enabledModels = Set(UserDefaults.standard.stringArray(forKey: SettingsKeys.repeatableAnswersModels) ?? [])
+        if enabled { enabledModels.insert(path) } else { enabledModels.remove(path) }
+        UserDefaults.standard.set(Array(enabledModels), forKey: SettingsKeys.repeatableAnswersModels)
+    }
+
+    /// Lets a test state the per-model repeatable-answers opt-in instead of reading
+    /// UserDefaults, the same seam `contextDraftEnabledOverride` gives the n-gram opt-in.
+    /// Tests must not write the domain.
+    nonisolated(unsafe) static var repeatableAnswersEnabledOverride: ((String) -> Bool)?
+
+    /// The `XEON_DMOE_REPEATABLE` value for a launch, or nil to leave it unset. Set only when
+    /// the model opted in AND the launch runs Dynamic MoE: the auto plan is in use (the same
+    /// condition that adds `--dynamic-moe on`) and the planned mode is not full_gpu. Router
+    /// mode (several models in one process) is excluded, because the variable is per process,
+    /// not per model. A value the user put in the model's extra arguments wins, since those
+    /// env vars are merged after this one.
+    nonisolated static func repeatableAnswersEnv(forModel path: String, usesAutoPlan: Bool,
+                                                 plannedMode: String?, routerMode: Bool,
+                                                 userEnv: [String: String] = [:]) -> String? {
+        if let user = userEnv["XEON_DMOE_REPEATABLE"] { return user }
+        guard !routerMode, usesAutoPlan, plannedMode != "full_gpu",
+              repeatableAnswersEnabled(forModel: path) else { return nil }
+        return "1"
+    }
+
+    /// Whether a launch should send the one warm-up request: exactly when the env decision
+    /// above is "1". A user value other than "1" (or an unset one) means no throwaway.
+    nonisolated static func repeatableWarmupWanted(forModel path: String, usesAutoPlan: Bool,
+                                                   plannedMode: String?, routerMode: Bool,
+                                                   userEnv: [String: String] = [:]) -> Bool {
+        repeatableAnswersEnv(forModel: path, usesAutoPlan: usesAutoPlan, plannedMode: plannedMode,
+                             routerMode: routerMode, userEnv: userEnv) == "1"
+    }
+
+    /// The throwaway request a repeatable-answers launch sends once the engine is healthy, so
+    /// the first real request is not the one that lands during the engine's async warm-up
+    /// (evidence/10: the first request after launch differs in ~1 of 5 runs; a throwaway
+    /// absorbs it). A fixed string keeps the body byte-for-byte identical.
+    static let repeatableWarmupBody =
+        #"{"prompt":"Hello","n_predict":32,"temperature":0,"top_k":1,"seed":1,"cache_prompt":false}"#
+
+    /// Sends the warm-up to the server's own port and waits for it (120 s cap). Best-effort:
+    /// a failure or timeout logs one line and the launch continues. Never shown in a chat.
+    nonisolated static func sendRepeatableWarmup(port: Int) async {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/completion") else { return }
+        var req = URLRequest(url: url, timeoutInterval: 120)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let key = activeAPIKey() { req.setValue("Bearer " + key, forHTTPHeaderField: "Authorization") }
+        req.httpBody = Data(repeatableWarmupBody.utf8)
+        do {
+            _ = try await URLSession.shared.data(for: req)
+        } catch {
+            AppLog.server.error("repeatable-answers warm-up failed: \(error.localizedDescription)")
+        }
+    }
 
     /// True when the model's weights use a TurboQuant type (ggml_type 45/46). Read from
     /// the tensor types: these GGUFs carry no usable `general.file_type`. False on an
@@ -2941,6 +3017,19 @@ final class ServerController: ObservableObject {
                 if Task.isCancelled { return }
                 if let (data, _) = try? await URLSession.shared.data(from: url),
                    String(data: data, encoding: .utf8)?.contains("ok") == true {
+                    // A repeatable-answers launch sends one throwaway request before it is
+                    // marked ready: the first request after launch can differ from run to run
+                    // (cause not identified, 0.2 ticket 10) and every later one repeats.
+                    // The state stays .starting until it finishes,
+                    // so the chat (which gates on .running) cannot reach the server meanwhile.
+                    let warmup = await MainActor.run { () -> Bool in
+                        guard let settings = self?.launchedSettings else { return false }
+                        return ServerSettings.repeatableWarmupWanted(
+                            forModel: settings.modelPath, usesAutoPlan: settings.usesAutoPlan,
+                            plannedMode: settings.plannedMode, routerMode: settings.routerMode,
+                            userEnv: settings.extraArgTokens.env)
+                    }
+                    if warmup { await ServerSettings.sendRepeatableWarmup(port: port) }
                     await MainActor.run {
                         self?.state = .running
                         self?.startedAt = Date()

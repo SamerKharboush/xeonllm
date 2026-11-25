@@ -83,6 +83,9 @@ enum SettingsKeys {
     /// Per-model opt-in list for draft-model-free n-gram speculation (`--spec-type
     /// ngram-simple`). An ENABLED list: absent (or a model not in it) means off.
     static let contextDraftModels = "contextDraftModels"
+    /// Per-model opt-in list for repeatable temperature-0 answers under Dynamic MoE
+    /// (`XEON_DMOE_REPEATABLE=1`). An ENABLED list: absent (or a model not in it) means off.
+    static let repeatableAnswersModels = "repeatableAnswersModels"
     static let dflashWarningAcknowledged = "dflashWarningAcknowledged"
     static let port = "port"
     static let ngl = "ngl"
@@ -310,7 +313,7 @@ enum SettingsKeys {
         extraArgs, embeddings, agentToolsEnabled, toolsRuntime, jsSandboxEnabled, sympyEnabled, scientificEnabled, mathAgentEnabled, mathToolsAllowed, toolResultLimit,
         memoryToolsEnabled, chatMapToolEnabled, chatRoadRouteEnabled, mapStyle, mapFolder, toolsUnsupportedModels, mcpServers, uiMcpProxy,
         cacheTypeK, cacheTypeV, mlock, cacheRAM,
-        parallelSlots, separateKV, reasoningInline, serverDefaultReasoning, serverDefaultMaxTokens, specMTP, mtpDisabledModels, contextDraftModels, faAmd, prefetchExperts, ubatch,
+        parallelSlots, separateKV, reasoningInline, serverDefaultReasoning, serverDefaultMaxTokens, specMTP, mtpDisabledModels, contextDraftModels, repeatableAnswersModels, faAmd, prefetchExperts, ubatch,
         dynamicMoeEnabled, dynamicMoeLeanRAM, routerMode, routerModelsMax,
         persistCache, multiGPU, multiGPUCount, splitMode, splitGroupSize, mgpuEvents, mgpuPeer,
         forcePrivateBuffers, cacheReuse, apiKeyEnabled, localNetworkDiscovery,

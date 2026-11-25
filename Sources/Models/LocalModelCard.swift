@@ -88,7 +88,7 @@ struct LocalModelCard: View {
                 }
                 .glassButton().controlSize(.small)
             }
-            if traits.hasDflash || ServerSettings.mightSupportVision(modelPath: path) {
+            if traits.hasDflash || traits.isMoE || ServerSettings.mightSupportVision(modelPath: path) {
                 Button { showingSettings = true } label: {
                     Label(AppInfo.branded("Model settings"), systemImage: "slider.horizontal.3")
                 }
@@ -195,6 +195,16 @@ private struct LocalModelSettingsPopover: View {
                 } footer: {
                     Text(AppInfo.branded("Faster when the reply reuses text already in the conversation; can be a little slower otherwise. The answer is usually the same, but a close word choice can come out differently."))
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                if traits.isMoE {
+                    Section {
+                        RepeatableAnswersControl(modelPath: model.url.path, layout: .settings)
+                    } header: {
+                        Text(AppInfo.branded("Repeatable answers"))
+                    } footer: {
+                        Text(AppInfo.branded("For mixture-of-experts models: keeps experts where they were loaded so the same question at temperature 0 gives the same answer (the app sends one short warm-up request when the model loads). Generation is somewhat slower. Applies when the model runs on its own server, not in router mode."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 if traits.hasDflash {
                     Section {
