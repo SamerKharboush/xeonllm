@@ -1210,7 +1210,10 @@ struct ServerSettings {
     /// 512 to 2048, against 455 to 862 for the same model on plain expert offload.
     var effectiveUbatch: Int? {
         if !routerMode && !Self.modelIsMoE(at: modelPath) {
-            return placement == .card && usesGPUs ? Self.denseCardUbatchForModel(at: modelPath, ctx: ctx) : nil
+            // the context the engine is launched with: a card-fit lowered one when the saved
+            // context does not fit (the 14B on two cards: 32768 -> 10240 gets 128, not 64)
+            guard placement == .card && usesGPUs else { return nil }
+            return Self.denseCardUbatchForModel(at: modelPath, ctx: cardFit?.ctx ?? ctx)
         }
         guard ubatch > 0 else { return nil }
         return ubatch
