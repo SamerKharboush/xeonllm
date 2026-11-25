@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.2.0] - 2026-11-25
+
+A feature and correctness release: in-app updates from About, an opt-in conversation-text
+reuse setting, the ToshLLM 0.88.0 port, and the one-card 35B prompt fix. The llama.cpp series
+is 116 patches on the pin `d81235049`; the new ones are `metal/0090`, `moe/0097`,
+`0098`-`0103`, `metal/0104` and `moe/0105`.
+
+### Added
+
+- **In-app updates from the About page**: daily automatic check plus manual check, mandatory
+  DMG checksum, four identity refusals (bundle id, no-AVX2 flag, newer version, codesign), and
+  restore on a failed swap. 0.1.1 shipped with updates off, so 0.1.1 users install 0.2.0 once
+  by hand.
+- **Reuse conversation text**, an opt-in per-model n-gram speculation setting, off by default;
+  the answer can differ when the verify batch breaks a near-tie.
+- **ToshLLM 0.88.0 app rows** (keep-awake, Hugging Face mirror, model identity, image-size row)
+  and engine fixes `0098`-`0103`.
+- **Benchmark labels**: every result shows workload, app version, engine sha and ubatch.
+
+### Changed
+
+- **One-card wide Dynamic MoE on the 35B** (`moe/0097`) restores the beta-7-class prompt rate
+  (76.3-76.5 against 0.1.1's 16.0 tok/s; method in the release notes).
+- **One-card Dynamic MoE promotion margin 6** (`moe/0105`).
+- **`metal/0090`**: decomposed prefill KQ cap 512 MiB for batches of at most 128 tokens.
+- **`metal/0104`**: f16 leaves the wide prefill tile on 64-lane cards.
+- **Deep-context dense ubatch** shrinks above ctx 4096 to keep the KQ under 512 MiB.
+- **Card fit lowers contexts**: Qwen3-14B Q4_K_M on two cards now gets 10240 where 0.1.1 gave
+  16384; Qwen3-4B Q6_K on one card at 16384 gets 13312.
+
+### Fixed
+
+- The Ternary-Bonsai-2-27B 20k `evict` stress cell that timed out in 0.1.0/0.1.1 passes.
+- Deep-context ubatch reads the card-fit context the engine launches with.
+
+### Known issues
+
+- The one-card 35B at temperature 0 does not reproduce its output run to run (ticket 10).
+- `MCPStdioTransportTests.testAnswersRacingTheirDeadlinesResolveEachRequestOnce` remains a
+  known intermittent race.
+
 ## [0.1.1] - 2026-11-22
 
 A bug-fix release: the app's one-card expert-tier launch of a Dynamic MoE model that does not
