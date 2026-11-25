@@ -160,6 +160,7 @@ final class RealUpdateInstaller: UpdateInstalling {
                 do {
                     continuation.resume(returning: try Self.install(
                         dmg: dmg, checksums: checksums, expectedVersion: expectedVersion,
+                        installTarget: nil, expectedNoAVX2: AppInfo.isNoAVX2,
                         beforeSwap: {
                             // Every check has passed: stop only this app's engine, then swap.
                             DispatchQueue.main.sync { MainActor.assumeIsolated { stop() } }
@@ -169,8 +170,17 @@ final class RealUpdateInstaller: UpdateInstalling {
         }
     }
 
-    nonisolated private static func install(dmg: URL, checksums: URL?, expectedVersion: String,
-                                             beforeSwap: () -> Void) throws -> URL {
+    /// The whole verify-and-swap pipeline. `installTarget` is the seam a test uses
+    /// to redirect the swap away from /Applications; nil keeps the production path
+    /// (the running bundle when it lives under /Applications, else
+    /// /Applications/<appName>). `expectedNoAVX2`/`expectedIdentifier` are the
+    /// running build's identity, passed in so a test can check a DMG built with a
+    /// different one. Production passes AppInfo's own values, so the decision
+    /// logic is byte-for-byte unchanged.
+    nonisolated static func install(dmg: URL, checksums: URL?, expectedVersion: String,
+                                    installTarget: URL?, expectedNoAVX2: Bool,
+                                    expectedIdentifier: String = AppInfo.identifier,
+                                    beforeSwap: () -> Void) throws -> URL {
         guard let checksums else {
             throw UpdateError(message: "No checksums.txt in the release: update refused")
         }
@@ -197,9 +207,10 @@ final class RealUpdateInstaller: UpdateInstalling {
         guard let info = NSDictionary(contentsOfFile: source + "/Contents/Info.plist") else {
             throw UpdateError(message: "The DMG app has no Info.plist: update refused")
         }
-        let bundleID = try identity(bundleID: info["CFBundleIdentifier"] as? String)
+        let bundleID = try identity(bundleID: info["CFBundleIdentifier"] as? String,
+                                    expected: expectedIdentifier)
         _ = try identity(noAVX2: AppInfo.Identity(values: info as? [String: Any] ?? [:]).noAVX2,
-                         expected: AppInfo.isNoAVX2)
+                         expected: expectedNoAVX2)
         let candidateVersion = AppInfo.Identity(values: info as? [String: Any] ?? [:]).productVersion
             ?? info["CFBundleShortVersionString"] as? String
         _ = try identity(version: candidateVersion, newerThan: expectedVersion)
@@ -209,10 +220,12 @@ final class RealUpdateInstaller: UpdateInstalling {
             throw UpdateError(message: "Code signature verification failed: update refused")
         }
 
-        let bundle = Bundle.main.bundleURL
-        let target = bundle.path.hasPrefix("/Applications/")
-            ? bundle
-            : URL(fileURLWithPath: "/Applications").appendingPathComponent(appName)
+        let target = installTarget ?? {
+            let bundle = Bundle.main.bundleURL
+            return bundle.path.hasPrefix("/Applications/")
+                ? bundle
+                : URL(fileURLWithPath: "/Applications").appendingPathComponent(appName)
+        }()
 
         let aside = target.deletingPathExtension().appendingPathExtension("old.app")
         beforeSwap()
@@ -239,8 +252,8 @@ final class RealUpdateInstaller: UpdateInstalling {
     }
 
     /// Validates the DMG app's bundle id. Returns it on success.
-    nonisolated static func identity(bundleID: String?) throws -> String {
-        guard let bundleID, bundleID == AppInfo.identifier else {
+    nonisolated static func identity(bundleID: String?, expected: String = AppInfo.identifier) throws -> String {
+        guard let bundleID, bundleID == expected else {
             throw UpdateError(message: "Wrong bundle identifier in the DMG: update refused")
         }
         return bundleID
