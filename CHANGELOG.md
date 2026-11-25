@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.1] - 2026-11-26
+
+A small correctness release on top of 0.2.0: an opt-in setting that makes a mixture-of-experts model repeat its temperature-0 answers. The llama.cpp series is 117 patches on the pin `d81235049`; the new one is `moe/0106`.
+
+### Added
+
+- **"Repeatable answers"**, a per-model setting for mixture-of-experts models on their own server, off by default. It holds expert placement fixed and sends one short warm-up request at load; it does not apply in router mode. Method: in-app check, ornith-1.0-35b Q6_K, card 1, ctx 16384, warm-up excluded. With it on, 7 of 7 prompts were identical over 4 launches; with it off, 6 of 7 differed. Generation and the script observation are in the release notes.
+- **`XEON_DMOE_REPEATABLE=1`** (`moe/0106`) for people who launch `llama-server` themselves.
+
+### Known issues
+
+- The first request after a launch can still differ; the warm-up absorbs it. Two cards and contexts above 16384 were not measured with the setting.
+- The 35B tensor-split tools cell missed a tool call once in R3; 15 of 15 on rerun (method in the release notes). One card-0 CONV_2D f16 op-test case read 1.06x its tolerance on a first run, with 13990/13990 on the same binary's rerun and the same binary passing card 0 in 0.2.0. The `MCPStdioTransportTests` race remains.
+
 ## [0.2.0] - 2026-11-25
 
 A feature and correctness release: in-app updates from About, an opt-in conversation-text
