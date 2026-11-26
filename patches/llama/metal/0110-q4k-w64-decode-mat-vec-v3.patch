@@ -1,0 +1,572 @@
+# 0110: off-by-default Q4_K wave64 decode mat-vec V3 and value-selected variants
+#
+# Ticket .scratch/beta7-unified-performance/issues/07 step 2b. STUDY.md ranks the two top causes
+# of the 44-52 GB/s decode read rate as (1) the block header being reloaded once per row and
+# duplicated across every lane covering the block, and (2) 4-8 byte quant loads instead of the
+# 16-byte loads that reach 204-206 GB/s in the read4 probe. XEON_MV_Q4K_V3 picks a new kernel:
+#   1 = _L8r16_v3: 8 lanes/block, 16 B quant load/lane, one 16 B header load broadcast by 4 simd_shuffle; nr0=16
+#   2 = _L8r16_v3ns: same load shape, all 8 lanes load the same 16 B header, no shuffle; nr0=16
+#   3 = _L8r8_v3ns: same as 2 with nr0=8, so twice the threadgroups and fewer sumf registers
+#   4 = _L16r16_v3u2: 16 lanes/block, 8 B quant load/lane, every lane loads the header, nr0=16
+#
+# Load shape (per lane, per block, per row), next to the shipped kernels:
+#                        bytes/load  lanes/block  quant loads  header req/wave/row  act loads/lane/block
+#   _L16r8 (shipped)         4           16            2             64 x 16 B            16 x 4 B
+#   _r8 (shipped)            8            8            2             64 x 16 B            32 x 4 B
+#   _L16r16_v2 (0109)        4           16            2             64 x 16 B            16 x 4 B / 16 rows
+#   _L8r16_v3   (=1)        16            8            1              8 x 16 B + shuffle  8 x 16 B / 16 rows
+#   _L8r16_v3ns (=2)        16            8            1              8 x 16 B            8 x 16 B / 16 rows
+#   _L8r8_v3ns  (=3)        16            8            1              8 x 16 B            8 x 16 B / 8 rows
+#   _L16r16_v3u2(=4)         8           16            1             16 x 16 B            4 x 16 B / 16 rows
+#   Consecutive lanes read consecutive quant bytes; the runs sit 144 B apart, as the q4_K block
+#   layout requires. Unpacking uses the shipped Q4_K masks and scale folds, so the algebra is unchanged.
+#
+# Reduction order changed. Values 1-3 keep one low and one high 16-activation group per lane.
+# Value 4 keeps one low and one high 8-activation group per lane; the 64-lane simd_sum adds the
+# partial sums in a different order than _L16r8/v2, so last-bit differences are possible and
+# eval-mode tolerance decides. A CPU-only simulation of the value 4 mapping matched dequantize_row_q4_K
+# to 6e-14; no GPU program was run.
+#
+# Off by default; unset or any other value leaves the default path byte-for-byte unchanged. The
+# hook runs before V2, so every value wins when both switches are set. Selection needs Q4_K, n=1,
+# simd_width==64, wave64 decode, not the small path, rows a multiple of 16, ne00 a multiple of
+# QK_K, 16 B aligned src0/src1 row strides and data pointers. nr0/nsg are set in the picker and
+# carried by the kernel name, never overridden afterwards. Threadgroup memory stays 0 B and threads stay 64.
+# Adds one odd-nb q4_K eval shape (m=2560, n=1, k=2304) to test-backend-ops; 0109 already added the
+# three k=2560 decode shapes. Checked with xcrun -sdk macosx metal -c; no engine build was run.
+#
+# Measured round 1 by orchestrator (engine v0.2.1-0110-avx1, card 1, test-backend-ops perf, n=1):
+#   eval 1836/1836 with and without XEON_MV_Q4K_V3=1; 4B and 8B 256-token greedy text byte-identical;
+#   kernel_mul_mv_q4_K_f32_L8r16_v3_w64 loaded when the switch is set;
+#   us/run default -> v3: m=9728 k=2560 296.6 -> 546.1; m=4096 k=2560 134.8 -> 226.4;
+#   m=2560 k=2560 113.1 -> 152.5; m=14336 k=2560 423.7 -> 518.8; m=4096 k=4096 174.3 -> 182.8;
+#   m=12288 k=4096 457.4 -> 506.1; m=151936 k=4096 4904 -> 5792;
+#   4B decode (-p 0 -n 128 -r 5 -fa 1, six alternating processes): default 16.642-16.648, v3 13.796-13.815 tok/s.
+#   v3 is slower everywhere, worst at k=2560. Values 2-4 not yet measured.
+# Measured round 2 by orchestrator (engine v0.2.1-0110b-avx1 = pin d81235049 + series through 0110, card 1 only,
+#   GGML_METAL_DEVICE_INDEX=1; card 0 not run, needs the user's approval):
+# - eval test-backend-ops -o MUL_MAT: 1836/1836, 0 FAIL for default and values 1-4.
+# - perf us/run q4_K n=1 (one process each), default / v1 / v2 / v3 / v4:
+#   m=9728 k=2560 296.7 / 386.6 / 278.6 / 271.3 / 252.6;  m=4096 k=2560 134.7 / 154.1 / 116.1 / 122.4 / 122.1
+#   m=4096 k=4096 174.2 / 182.7 / 134.8 / 144.2 / 167.2;  m=8192 k=8192 659.6 / 658.1 / 493.2 / 524.9 / 633.1
+#   m=151936 k=4096 4897 / 5793 / 4364 / 4173 / 4121;    m=2560 k=2560 113.0 / 152.6 / 113.7 / 110.1 / 122.0
+# - decode llama-bench -ngl 99 -p 0 -n 128 -r 5 -fa 1, Qwen3 Q4_K_M, alternating processes, warmup discarded by llama-bench:
+#   4B (6 rounds): default 16.644-16.647, v2 16.881-16.904, v3 17.015-17.034, v4 16.941-16.978 t/s
+#   8B (4 rounds): default 10.223-10.225, v2 12.226-12.229, v3 11.802-11.806, v4 10.996-10.998 t/s
+# - 256-token greedy text via llama-server: 4B 91b358aa and 8B 3757ac38 for every arm (byte-identical).
+# - Positive control: llama-server -v logs show _L8r16_v3ns / _L8r8_v3ns / _L16r16_v3u2 loaded for values 2/3/4,
+#   _L16r8_w64 + _r8_w64 for the default.
+# - Value 1 vs 2 differ only in header broadcast (simd_shuffle) vs per-lane header load; 2 is faster on every
+#   shape: consistent with simd_shuffle being costly on GCN 1.0 Metal, not proven (no ISA read).
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -1811,6 +1811,36 @@
+                 const bool q4k_r4_wide = XEON_ENV("XEON_MV_Q4K_R4") != nullptr &&
+                                          XEON_ENV("XEON_MV_Q4K_R4_DISABLE") == nullptr;
+                 const bool q4k_small = ne00 <= 2048 || ne01 <= 2048 || q4k_r4_wide;
++
++                // XEON_MV_Q4K_V3 selects one of four off-by-default kernels. Value 1 is the
++                // original broadcast-header kernel; 2/3 drop the shuffle; 4 uses 16 lanes per
++                // block and 8-byte quant loads to shorten the tail pass at k=2560. This hook
++                // runs before V2, so every V3 value wins when both switches are set. nr0 is
++                // returned here and carried by the kernel name, never overridden afterwards.
++                static const int q4k_v3 = []() -> int {
++                    const char * v = XEON_ENV("XEON_MV_Q4K_V3");
++                    return v != nullptr && v[0] >= '1' && v[0] <= '4' && v[1] == '\0' ? v[0] - '0' : 0;
++                }();
++                if (q4k_v3 && simd_width == 64 &&
++                    ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode &&
++                    ne11 == 1 && ne12 == 1 && ne13 == 1 &&
++                    !q4k_small && ne01 >= 16 && ne01 % 16 == 0 &&
++                    ne00 % 256 == 0 && op->src[0]->nb[1] % 16 == 0 &&
++                    ((uintptr_t) op->src[0]->data % 16) == 0 &&
++                    op->src[1]->nb[1] % 16 == 0 && op->src[1]->nb[2] % 16 == 0 &&
++                    op->src[1]->nb[3] % 16 == 0 &&
++                    ((uintptr_t) op->src[1]->data % 16) == 0 &&
++                    XEON_ENV("XEON_MV_Q4K_W64_DISABLE") == nullptr) {
++                    nsg = 1;
++                    switch (q4k_v3) {
++                        case 1: nr0 = 16; suffix = "_L8r16_v3";     break;
++                        case 2: nr0 = 16; suffix = "_L8r16_v3ns";   break;
++                        case 3: nr0 =  8; suffix = "_L8r8_v3ns";    break;
++                        case 4: nr0 = 16; suffix = "_L16r16_v3u2";  break;
++                    }
++                    w64 = true;
++                    break;
++                }
+ 
+                 // XEON_MV_Q4K_V2=1: 16 rows per 64-lane simdgroup. The row count is carried by
+                 // the kernel name and returned in nr0, so the grid in ggml_metal_op_mul_mat
+--- a/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
++++ b/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
+@@ -878,6 +878,151 @@
+         }
+ 
+         y4 += NG * QK_K;
++    }
++
++    device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
++
++    for (int row = 0; row < nr0 && first_row + row < args.ne0; ++row) {
++        float sum_all = simd_sum(sumf[row]);
++        if (tiisg == 0) {
++            dst_f32[first_row + row] = sum_all;
++        }
++    }
++}
++
++// Off-by-default V3: eight lanes cover one block with a 16-byte quant load each, so the block's
++// qs array arrives as one contiguous 128-byte run. The 16-byte header is loaded by one lane and
++// broadcast; the row count is carried by the entry point name and the picker's nr0.
++template<short nr0, typename args_t>
++void kernel_mul_mv_q4_K_f32_v3_w64_impl(
++        args_t args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem,
++        uint3  tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    const short NSG = FC_mul_mv_nsg;
++
++    const short NG = FC_mul_mv_nw/8;
++    const short ix = tiisg/8;
++    const short it = tiisg%8;
++    const short p  = it/2;
++
++    const int nb = args.ne00/QK_K;
++
++    const int r0 = tgpig.x;
++    const int r1 = tgpig.y;
++    const int im = tgpig.z;
++
++    const int first_row = (r0 * NSG + sgitg) * nr0;
++
++    const uint i12 = im%FC_mul_mv_ne12;
++    const uint i13 = im/FC_mul_mv_ne12;
++
++    const uint64_t offset0 = first_row*args.nb01 + (i12/FC_mul_mv_r2)*args.nb02 + (i13/FC_mul_mv_r3)*args.nb03;
++    const uint64_t offset1 =        r1*args.nb11 + (i12        )*args.nb12 + (i13        )*args.nb13;
++
++    device const block_q4_K * x = (device const block_q4_K *) (src0 + offset0);
++    device const float     * y = (device const float      *) (src1 + offset1);
++
++    float yl[16];
++    float yh[16];
++
++    float sumf[nr0]={0.f};
++
++    // qs bytes 16*it..16*it+15: low nibbles are y[64*p + 16*(it%2) + 0..15],
++    // high nibbles are y[64*p + 32 + 16*(it%2) + 0..15]
++    const int lo = 64*p + 16*(it%2);
++    device const float * yl4 = y + ix*QK_K + lo;
++    device const float * yh4 = y + ix*QK_K + lo + 32;
++
++    for (int ib = ix; ib < nb; ib += NG) {
++        float sy0 = 0.f, sy1 = 0.f;
++
++        FOR_UNROLL (short i = 0; i < 4; ++i) {
++            const float4 a = *(device const float4 *)(yl4 + 4*i);
++            yl[4*i+0] = a[0]; yl[4*i+1] = a[1]; yl[4*i+2] = a[2]; yl[4*i+3] = a[3];
++            sy0 += a[0] + a[1] + a[2] + a[3];
++
++            const float4 b = *(device const float4 *)(yh4 + 4*i);
++            yh[4*i+0] = b[0]; yh[4*i+1] = b[1]; yh[4*i+2] = b[2]; yh[4*i+3] = b[3];
++            sy1 += b[0] + b[1] + b[2] + b[3];
++        }
++
++        device const uint4 * hp = (device const uint4 *) &x[ib];
++        device const uint4 * q  = (device const uint4 *) (x[ib].qs + 16*(int) it);
++
++        for (short row = 0; row < nr0; ++row) {
++            if (first_row + row >= args.ne0) {
++                break;
++            }
++
++            // one load for the 8 lanes covering this block, then a register broadcast
++            uint4 hdr = it == 0 ? *hp : uint4(0);
++            const ushort src = 8*(int) ix;
++            hdr.x = simd_shuffle(hdr.x, src);
++            hdr.y = simd_shuffle(hdr.y, src);
++            hdr.z = simd_shuffle(hdr.z, src);
++            hdr.w = simd_shuffle(hdr.w, src);
++
++            const half2 dm = as_type<half2>(hdr.x);
++
++            // same unpack as the shipped Q4_K kernels, with p mod 2 selecting the word half
++            const ushort shs = 16*(p & 1);
++            const uint16_t s0 = (uint16_t) (hdr.y >> shs);
++            const uint16_t s2 = (uint16_t) (hdr.z >> shs);
++            const uint16_t s4 = (uint16_t) (hdr.w >> shs);
++
++            float sc0, sc1, mn0, mn1;
++            if (p < 2) {
++                sc0 = (float) (s0 & 63);
++                sc1 = (float) ((s0 >> 8) & 63);
++                mn0 = (float) (s2 & 63);
++                mn1 = (float) ((s2 >> 8) & 63);
++            } else {
++                sc0 = (float) ((s4 & 15) | ((s0 & 0xc0) >> 2));
++                sc1 = (float) (((s4 >> 8) & 15) | (((s0 >> 8) & 0xc0) >> 2));
++                mn0 = (float) (((s4 >> 4) & 15) | ((s2 & 0xc0) >> 2));
++                mn1 = (float) (((s4 >> 12) & 15) | (((s2 >> 8) & 0xc0) >> 2));
++            }
++
++            const uint4 qv = *q;
++            thread const uint16_t * qh = (thread const uint16_t *) &qv;
++
++            float4 acc1 = {0.f, 0.f, 0.f, 0.f};
++            float4 acc2 = {0.f, 0.f, 0.f, 0.f};
++
++            FOR_UNROLL (short i = 0; i < 4; ++i) {
++                // bytes 0..7 of the chunk: low nibbles use sc0, high nibbles use sc1
++                const uint16_t v1 = qh[i];
++                acc1[0] += yl[2*i+0] * (v1 & 0x000F);
++                acc1[1] += yl[2*i+1] * (v1 & 0x0F00);
++                acc1[2] += yh[2*i+0] * (v1 & 0x00F0);
++                acc1[3] += yh[2*i+1] * (v1 & 0xF000);
++
++                // bytes 8..15: same two scale pairs, next eight activations
++                const uint16_t v2 = qh[i+4];
++                acc2[0] += yl[2*i+8] * (v2 & 0x000F);
++                acc2[1] += yl[2*i+9] * (v2 & 0x0F00);
++                acc2[2] += yh[2*i+8] * (v2 & 0x00F0);
++                acc2[3] += yh[2*i+9] * (v2 & 0xF000);
++            }
++
++            const float dl = (acc1[0] + 1.f/256.f*acc1[1]) +
++                             (acc2[0] + 1.f/256.f*acc2[1]);
++            const float dh = (acc1[2] + 1.f/256.f*acc1[3] +
++                              acc2[2] + 1.f/256.f*acc2[3]) * 1.f/16.f;
++
++            sumf[row] += dm[0] * (dl*sc0 + dh*sc1) - dm[1] * (sy0*mn0 + sy1*mn1);
++
++            q  = (device const uint4 *) ((device const char *) q  + args.nb01);
++            hp = (device const uint4 *) ((device const char *) hp + args.nb01);
++        }
++
++        yl4 += NG * QK_K;
++        yh4 += NG * QK_K;
+     }
+ 
+     device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
+@@ -890,6 +1035,252 @@
+     }
+ }
+ 
++// p indexes a 32-byte qs chunk. Its two scale/min pairs live in the same 16-bit words,
++// low pair in bits 0..5/8..13, high pair in bits 16..21/24..29.
++static inline float4 q4k_v3_scales(uint4 hdr, short p) {
++    const ushort shs = 16*(p & 1);
++    const uint16_t s0 = (uint16_t) (hdr.y >> shs);
++    const uint16_t s2 = (uint16_t) (hdr.z >> shs);
++    const uint16_t s4 = (uint16_t) (hdr.w >> shs);
++
++    if (p < 2) {
++        return {(float) (s0 & 63), (float) ((s0 >> 8) & 63),
++                (float) (s2 & 63), (float) ((s2 >> 8) & 63)};
++    }
++
++    return {(float) ((s4 & 15) | ((s0 & 0xc0) >> 2)),
++            (float) (((s4 >> 8) & 15) | (((s0 >> 8) & 0xc0) >> 2)),
++            (float) (((s4 >> 4) & 15) | ((s2 & 0xc0) >> 2)),
++            (float) (((s4 >> 12) & 15) | (((s2 >> 8) & 0xc0) >> 2))};
++}
++
++// XEON_MV_Q4K_V3=2/3: same 16-byte quant loads as V3, but every lane loads the 16-byte
++// header itself. Eight lanes hitting one address still form one cache line, and no
++// cross-lane broadcast is needed. nr0 is carried by the entry point name and the picker.
++template<short nr0, typename args_t>
++void kernel_mul_mv_q4_K_f32_v3ns_w64_impl(
++        args_t args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem,
++        uint3  tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    const short NSG = FC_mul_mv_nsg;
++
++    const short NG = FC_mul_mv_nw/8;
++    const short ix = tiisg/8;
++    const short it = tiisg%8;
++    const short p  = it/2;
++
++    const int nb = args.ne00/QK_K;
++
++    const int r0 = tgpig.x;
++    const int r1 = tgpig.y;
++    const int im = tgpig.z;
++
++    const int first_row = (r0 * NSG + sgitg) * nr0;
++
++    const uint i12 = im%FC_mul_mv_ne12;
++    const uint i13 = im/FC_mul_mv_ne12;
++
++    const uint64_t offset0 = first_row*args.nb01 + (i12/FC_mul_mv_r2)*args.nb02 + (i13/FC_mul_mv_r3)*args.nb03;
++    const uint64_t offset1 =        r1*args.nb11 + (i12        )*args.nb12 + (i13        )*args.nb13;
++
++    device const block_q4_K * x = (device const block_q4_K *) (src0 + offset0);
++    device const float     * y = (device const float      *) (src1 + offset1);
++
++    float yl[16];
++    float yh[16];
++
++    float sumf[nr0]={0.f};
++
++    // qs bytes 16*it..16*it+15: low nibbles are y[64*p + 16*(it%2) + 0..15],
++    // high nibbles are y[64*p + 32 + 16*(it%2) + 0..15]
++    const int lo = 64*p + 16*(it%2);
++    device const float * yl4 = y + ix*QK_K + lo;
++    device const float * yh4 = y + ix*QK_K + lo + 32;
++
++    for (int ib = ix; ib < nb; ib += NG) {
++        float sy0 = 0.f, sy1 = 0.f;
++
++        FOR_UNROLL (short i = 0; i < 4; ++i) {
++            const float4 a = *(device const float4 *)(yl4 + 4*i);
++            yl[4*i+0] = a[0]; yl[4*i+1] = a[1]; yl[4*i+2] = a[2]; yl[4*i+3] = a[3];
++            sy0 += a[0] + a[1] + a[2] + a[3];
++
++            const float4 b = *(device const float4 *)(yh4 + 4*i);
++            yh[4*i+0] = b[0]; yh[4*i+1] = b[1]; yh[4*i+2] = b[2]; yh[4*i+3] = b[3];
++            sy1 += b[0] + b[1] + b[2] + b[3];
++        }
++
++        device const uint4 * hp = (device const uint4 *) &x[ib];
++        device const uint4 * q  = (device const uint4 *) (x[ib].qs + 16*(int) it);
++
++        for (short row = 0; row < nr0; ++row) {
++            if (first_row + row >= args.ne0) {
++                break;
++            }
++
++            const uint4  hdr = *hp;
++            const half2  dm  = as_type<half2>(hdr.x);
++            const float4 sc  = q4k_v3_scales(hdr, p);
++
++            const uint4 qv = *q;
++            thread const uint16_t * qh = (thread const uint16_t *) &qv;
++
++            float4 acc1 = {0.f, 0.f, 0.f, 0.f};
++            float4 acc2 = {0.f, 0.f, 0.f, 0.f};
++
++            FOR_UNROLL (short i = 0; i < 4; ++i) {
++                const uint16_t v1 = qh[i];
++                acc1[0] += yl[2*i+0] * (v1 & 0x000F);
++                acc1[1] += yl[2*i+1] * (v1 & 0x0F00);
++                acc1[2] += yh[2*i+0] * (v1 & 0x00F0);
++                acc1[3] += yh[2*i+1] * (v1 & 0xF000);
++
++                const uint16_t v2 = qh[i+4];
++                acc2[0] += yl[2*i+8] * (v2 & 0x000F);
++                acc2[1] += yl[2*i+9] * (v2 & 0x0F00);
++                acc2[2] += yh[2*i+8] * (v2 & 0x00F0);
++                acc2[3] += yh[2*i+9] * (v2 & 0xF000);
++            }
++
++            const float dl = (acc1[0] + 1.f/256.f*acc1[1]) +
++                             (acc2[0] + 1.f/256.f*acc2[1]);
++            const float dh = (acc1[2] + 1.f/256.f*acc1[3] +
++                              acc2[2] + 1.f/256.f*acc2[3]) * 1.f/16.f;
++
++            sumf[row] += dm[0] * (dl*sc[0] + dh*sc[1]) - dm[1] * (sy0*sc[2] + sy1*sc[3]);
++
++            q  = (device const uint4 *) ((device const char *) q  + args.nb01);
++            hp = (device const uint4 *) ((device const char *) hp + args.nb01);
++        }
++
++        yl4 += NG * QK_K;
++        yh4 += NG * QK_K;
++    }
++
++    device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
++
++    for (int row = 0; row < nr0 && first_row + row < args.ne0; ++row) {
++        float sum_all = simd_sum(sumf[row]);
++        if (tiisg == 0) {
++            dst_f32[first_row + row] = sum_all;
++        }
++    }
++}
++
++// XEON_MV_Q4K_V3=4: sixteen lanes cover one block with an 8-byte quant load each, so the
++// 128-byte qs run still arrives in one pass but NG drops from 8 to 4 for short k. Each lane
++// handles eight low and eight high activations; simd_sum adds the partial sums.
++template<short nr0, typename args_t>
++void kernel_mul_mv_q4_K_f32_v3u2_w64_impl(
++        args_t args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem,
++        uint3  tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    const short NSG = FC_mul_mv_nsg;
++
++    const short NG = FC_mul_mv_nw/16;
++    const short ix = tiisg/16;
++    const short it = tiisg%16;
++    const short p  = it/4;
++    const short sub = it%4;
++
++    const int nb = args.ne00/QK_K;
++
++    const int r0 = tgpig.x;
++    const int r1 = tgpig.y;
++    const int im = tgpig.z;
++
++    const int first_row = (r0 * NSG + sgitg) * nr0;
++
++    const uint i12 = im%FC_mul_mv_ne12;
++    const uint i13 = im/FC_mul_mv_ne12;
++
++    const uint64_t offset0 = first_row*args.nb01 + (i12/FC_mul_mv_r2)*args.nb02 + (i13/FC_mul_mv_r3)*args.nb03;
++    const uint64_t offset1 =        r1*args.nb11 + (i12        )*args.nb12 + (i13        )*args.nb13;
++
++    device const block_q4_K * x = (device const block_q4_K *) (src0 + offset0);
++    device const float     * y = (device const float      *) (src1 + offset1);
++
++    float yv[16];
++
++    float sumf[nr0]={0.f};
++
++    // bytes 8*it..8*it+7 hold low nibbles for y[64*p + 8*sub + 0..7] and high
++    // nibbles for y[64*p + 32 + 8*sub + 0..7]
++    const int lo = 64*p + 8*sub;
++    device const float * y4 = y + ix*QK_K + lo;
++    device const float * y4h = y4 + 32;
++
++    for (int ib = ix; ib < nb; ib += NG) {
++        float sy0 = 0.f, sy1 = 0.f;
++
++        FOR_UNROLL (short i = 0; i < 2; ++i) {
++            const float4 a = *(device const float4 *)(y4 + 4*i);
++            yv[4*i+0] = a[0]; yv[4*i+1] = a[1]; yv[4*i+2] = a[2]; yv[4*i+3] = a[3];
++            sy0 += a[0] + a[1] + a[2] + a[3];
++
++            const float4 b = *(device const float4 *)(y4h + 4*i);
++            yv[8+4*i+0] = b[0]; yv[8+4*i+1] = b[1]; yv[8+4*i+2] = b[2]; yv[8+4*i+3] = b[3];
++            sy1 += b[0] + b[1] + b[2] + b[3];
++        }
++
++        device const uint4 * hp = (device const uint4 *) &x[ib];
++        device const uint2 * q  = (device const uint2 *) (x[ib].qs + 8*(int) it);
++
++        for (short row = 0; row < nr0; ++row) {
++            if (first_row + row >= args.ne0) {
++                break;
++            }
++
++            const uint4  hdr = *hp;
++            const half2  dm  = as_type<half2>(hdr.x);
++            const float4 sc  = q4k_v3_scales(hdr, p);
++
++            const uint2 qv = *q;
++            thread const uint16_t * qh = (thread const uint16_t *) &qv;
++
++            float4 acc = {0.f, 0.f, 0.f, 0.f};
++
++            FOR_UNROLL (short i = 0; i < 4; ++i) {
++                const uint16_t v = qh[i];
++                acc[0] += yv[2*i+0] * (v & 0x000F);
++                acc[1] += yv[2*i+1] * (v & 0x0F00);
++                acc[2] += yv[8+2*i+0] * (v & 0x00F0);
++                acc[3] += yv[8+2*i+1] * (v & 0xF000);
++            }
++
++            const float dl = acc[0] + 1.f/256.f*acc[1];
++            const float dh = (acc[2] + 1.f/256.f*acc[3]) * 1.f/16.f;
++
++            sumf[row] += dm[0] * (dl*sc[0] + dh*sc[1]) - dm[1] * (sy0*sc[2] + sy1*sc[3]);
++
++            q  = (device const uint2 *) ((device const char *) q  + args.nb01);
++            hp = (device const uint4 *) ((device const char *) hp + args.nb01);
++        }
++
++        y4  += NG * QK_K;
++        y4h += NG * QK_K;
++    }
++
++    device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
++
++    for (int row = 0; row < nr0 && first_row + row < args.ne0; ++row) {
++        float sum_all = simd_sum(sumf[row]);
++        if (tiisg == 0) {
++            dst_f32[first_row + row] = sum_all;
++        }
++    }
++}
++
+ // a few columns share one read of each block: sixteen lanes per block as above, the rows'
+ // quants and scales held in registers while the columns stream past them
+ template<int NR0, int NC>
+@@ -7837,8 +8228,54 @@
+         ushort tiisg[[thread_index_in_simdgroup]],
+         ushort sgitg[[simdgroup_index_in_threadgroup]]) {
+     kernel_mul_mv_q4_K_f32_L16_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
++// Off-by-default V3: 16-byte coalesced quant loads, one broadcast header per block per row,
++// sixteen rows per simdgroup. The L8r16 suffix must match NG=8 and nr0=16 in the picker.
++[[host_name("kernel_mul_mv_q4_K_f32_L8r16_v3_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_L8r16_v3_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0, device const char * src1, device char * dst,
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_v3_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
+ }
+ 
++[[host_name("kernel_mul_mv_q4_K_f32_L8r16_v3ns_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_L8r16_v3ns_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0, device const char * src1, device char * dst,
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_v3ns_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
++[[host_name("kernel_mul_mv_q4_K_f32_L8r8_v3ns_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_L8r8_v3ns_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0, device const char * src1, device char * dst,
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_v3ns_w64_impl<8, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
++[[host_name("kernel_mul_mv_q4_K_f32_L16r16_v3u2_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_L16r16_v3u2_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0, device const char * src1, device char * dst,
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_v3u2_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
+ [[host_name("kernel_mul_mv_q8_0_f32_L4r1_w64")]]
+ kernel void kernel_mul_mv_q8_0_f32_L4r1_w64(
+         constant ggml_metal_kargs_mul_mv & args,
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -10751,6 +10751,8 @@
+     for (int64_t m : {2560, 4096, 9728}) {
+         test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 1, 2560, {1, 1}, {1, 1}));
+     }
++    // V3 tail iteration: nb=9 blocks, so only lane group ix=0 takes the second outer pass
++    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 2560, 1, 2304, {1, 1}, {1, 1}));
+     // as is a view whose experts are strided by more rows than it uses
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F32, GGML_TYPE_F32, 4, 2, false, 8,  1, 64, 1.0f, 64));
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F16, GGML_TYPE_F32, 4, 2, false, 8, 16, 64, 1.0f, 64));
