@@ -1,0 +1,52 @@
+# 0108: on a wave64 card with 32 KB of threadgroup memory, ask for the flash-attention _lds32 twin first
+#
+# firellama-maxperf ticket 39. GCN 1.0 (FirePro D700: 32 KB threadgroup memory) refuses every 64-lane
+# kernel_flash_attn_ext_vec_amd_* (it does not fit), and the selector asked for it first in every
+# process before taking the twin (0039 caches the refusal, so once per kernel per process). With
+# maxThreadgroupMemoryLength <= 32768 the twin is now asked first; a card with more (Vega, 64 KB)
+# keeps plain-first, so its plain kernel with twice the simdgroups is not downgraded. A kernel
+# without a twin still falls back to the plain one. XEON_FA_AMD_LDS32=1 still forces the twin on
+# any wave64 card; XEON_FA_AMD_LDS32=0 restores the plain-first order.
+# Measured 2026-11-26, card 1, Qwen3-4B Q4_K_M, -ngl 99 -c 4096 -fa on, engine pin d81235049 + series
+# through 0108, 6 launches per arm alternated (evidence/t39): load (loading model -> model loaded)
+# twin-first 2.198-2.215 s (5 warm launches; the run's first launch, 4.699 s, paid the cold file
+# read) vs plain-first 2.515-2.556 s; refused line 0 vs 1 per launch; 64-token output identical in
+# all 12; generation 16.57-16.59 t/s both arms.
+--- a/ggml/src/ggml-metal/ggml-metal-ops.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-ops.cpp
+@@ -5682,21 +5682,32 @@
+ 
+         char lds_pipeline[112] = {0};
+         const char * fa_amd_name = fa_amd_nwg > 1 ? fa_amd_wg_pipeline : fa_amd_pipeline;
+-        auto pipeline = ggml_metal_fa_amd_pipeline(lib, fa_amd_name);
+         // 32 KB of threadgroup memory (GCN 1.0) does not hold the 64-lane kernel; its twin
+         // with half the simdgroups does. XEON_FA_AMD_LDS32=1 takes the twin on any wave64 card.
+-        static const bool lds32_force = XEON_ENV("XEON_FA_AMD_LDS32") != NULL;
++        // A wave64 card with 32 KB or less asks for the twin first, so the driver is not asked
++        // for a kernel it always refuses (one failed compile per kernel per process);
++        // XEON_FA_AMD_LDS32=0 restores the plain-first order.
++        static const char * lds32_env = XEON_ENV("XEON_FA_AMD_LDS32");
++        static const bool lds32_force = lds32_env != NULL && lds32_env[0] != '0';
++        static const bool lds32_plain_first = lds32_env != NULL && lds32_env[0] == '0';
++        const bool lds32_first = props_dev->simd_width == 64 && !lds32_plain_first &&
++                                 props_dev->max_theadgroup_memory_size <= 32768;
++        auto pipeline = lds32_first ? ggml_metal_pipeline_with_params{} : ggml_metal_fa_amd_pipeline(lib, fa_amd_name);
+         if ((!pipeline.pipeline || lds32_force) && props_dev->simd_width == 64) {
+             snprintf(lds_pipeline, sizeof(lds_pipeline), "%s_lds32", fa_amd_name);
+             auto lds = ggml_metal_fa_amd_pipeline(lib, lds_pipeline);
+             if (lds.pipeline) {
+-                if (!lds32_force && ggml_metal_fa_amd_first_time("refused", lds_pipeline)) {
++                if (!lds32_force && !lds32_first && ggml_metal_fa_amd_first_time("refused", lds_pipeline)) {
+                     GGML_LOG_WARN("%s: the driver refused %s; using %s\n", __func__, fa_amd_name, lds_pipeline);
+                 }
+                 pipeline = lds;
+                 fa_amd_name = lds_pipeline;
+                 fa_amd_nsg /= 2;
+             }
++        }
++        // no twin for this kernel: ask for the plain one after all
++        if (!pipeline.pipeline && lds32_first) {
++            pipeline = ggml_metal_fa_amd_pipeline(lib, fa_amd_name);
+         }
+ 
+         // dispatching more threads than the pipeline admits hangs the GPU, and how many
