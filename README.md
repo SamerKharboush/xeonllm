@@ -651,16 +651,16 @@ The kernel splits the KV stream across as many simdgroups as the threadgroup-mem
 
 With the AMD attention kernel running on the GPU, quantizing the KV cache stops being a trap on these cards (it no longer forces attention to the CPU), so it becomes a real lever for fitting long context into limited VRAM. What each type costs, measured as KL divergence from an f16 cache and how often the top token stays the same:
 
-| KV cache (K / V) | Qwen3-4B Q4_K_M, card, 2K–16K | Ornith 35B Q6_K, host, 2K |
+| KV cache (K / V) | Qwen3-4B Q4_K_M, card, 2K–16K | Ornith 35B Q6_K, host, 2K–8K |
 |---|---|---|
-| q8_0 / q8_0 | 0.000170–0.001905 · 99.413–99.670% | 0.005221 · 97.752% |
-| q8_0 / q4_0 | 0.003337–0.008382 · 97.361–98.010% | 0.009222 · 95.601% |
-| q4_0 / q8_0 | 0.068076–0.088457 · 92.088–92.375% | 0.009017 · 95.992% |
-| q4_0 / q4_0 | 0.069339–0.088247 · 91.306–92.003% | 0.011746 · 94.330% |
+| q8_0 / q8_0 | 0.000170–0.001905 · 99.413–99.670% | 0.004787–0.017133 · 97.215–97.949% |
+| q8_0 / q4_0 | 0.003337–0.008382 · 97.361–98.010% | 0.009222 · 95.601% (2K) |
+| q4_0 / q8_0 | 0.068076–0.088457 · 92.088–92.375% | 0.009017 · 95.992% (2K) |
+| q4_0 / q4_0 | 0.069339–0.088247 · 91.306–92.003% | 0.011746–0.027951 · 94.330–96.190% |
 | turbo4 / turbo4 (host, 2K) | 0.156613 · 86.217% | not run |
 | turbo3 / turbo3 (host, 2K) | 0.695198 · 70.186% | not run |
 
-On the dense model the keys set the cost: q4_0 keys cost about as much as q4_0 for both, while q4_0 values with q8_0 keys cost much less. On the 35B MoE the two mixes cost about the same at 2K, so this run does not show values setting the floor there. Method: `llama-perplexity` from this release (pin `d81235049`), `--kl-divergence` against an f16-KV base of the same model, placement and context; one text (llama.cpp's `docs/*.md` joined, technical English with code), one chunk per context of 2048/4096/8192/16384 tokens (the dense range spans those four; the 35B row is 2048 only), `-b 512 -ub 512 -t 12 -fa on`, N=1 per cell, no separate warmup. The dense card runs use card 1; host runs use no GPU. Running the same f16 cache on card instead of host moves KL by 0.000003–0.000010, well below every row above. turbo types were not run on the D700s. Settings suggests a KV type for the model you load.
+On the dense model the keys set the cost: q4_0 keys cost about as much as q4_0 for both, while q4_0 values with q8_0 keys cost much less. On the 35B MoE the two mixes cost about the same at 2K, so this run does not show values setting the floor there. Method: `llama-perplexity` from this release (pin `d81235049`), `--kl-divergence` against an f16-KV base of the same model, placement and context; one text (llama.cpp's `docs/*.md` joined, technical English with code), one chunk per context of 2048/4096/8192/16384 tokens (the dense range spans those four; the 35B column spans 2048/4096/8192 for the matched pairs and 2048 for the mixes), `-b 512 -ub 512 -t 12 -fa on`, N=1 per cell, no separate warmup. The dense card runs use card 1; host runs use no GPU. Running the same f16 cache on card instead of host moves KL by 0.000003–0.000010, well below every row above. On the host the same f16 cache run twice gives KL 0.000000 and 100% same top token on the 35B at 2K, 4K and 8K, so its column is not noise; the 0.2.1 binary reproduces the earlier 35B q8_0 cells exactly. turbo types were not run on the D700s. Settings suggests a KV type for the model you load.
 
 Below `q8_0` the bundled engine also offers the **TurboQuant** KV types ([Google Research](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/), Turbo3 and Turbo4), which pack the cache further with cooperative GPU writes, cache reuse and context shifts intact; the AMD attention path covers head sizes from 128 through 640 on wave32 and wave64.
 
