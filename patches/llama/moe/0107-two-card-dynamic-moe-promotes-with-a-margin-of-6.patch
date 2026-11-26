@@ -1,0 +1,28 @@
+# 0107: two-card Dynamic MoE promotes with a margin of 6 too
+#
+# 0.2 ticket 06 (evidence/06d). 0105 set the victim margin to 6 on one card and kept 0 on two cards
+# until measured. Measured 2026-11-26 (user-approved card-0 run): ornith-1.0-35b Q6_K, both D700s
+# (GGML_METAL_DEVICE_LIST=0,1), PLAN_FULL_HOST_DMOE vram=9.6GiB, engine v0.2.1-0106-avx1 (pin
+# d81235049 + series through 0106), args -ngl 99 -c 16384 -t 12 -fa auto --dynamic-moe on
+# --load-mode none -ub 512 -b 512, bench-builds real mode, 1 warm-up + 3 reps, n-predict 128,
+# 505-token prompt, stock/margin-6 alternated, 3 launches each; the log line shows margin 0.00 / 6.00:
+#   gen t/s    margin 0: 13.95 13.97 13.97    margin 6: 14.20 14.20 14.20
+#   prompt t/s margin 0: 68.11 68.39 68.46    margin 6: 68.76 68.97 69.06
+# Steady max command buffer <= 60.3 ms (MTL0), 49.4 ms (MTL1). XEON_DMOE_MARGIN still overrides.
+--- a/src/llama-xeon-dmoe.cpp
++++ b/src/llama-xeon-dmoe.cpp
+@@ -2383,10 +2383,10 @@
+         pol->decay        = (float) envf("XEON_DMOE_DECAY", 0.98);
+         // a promotion costs about one reuse of token time, so 1.8 keeps a margin against churn
+         pol->admit_fixed  = envf("XEON_DMOE_ADMIT", 1.8);
+-        // one card: a promotion copies ~2.5 MiB over PCIe into the token's own GPU time, and on the 35B
+-        // (16 slots/layer) a margin of 6 cut promotions 18 -> 4 per token for +0.23 t/s decode; two-card
+-        // plans keep 0 until measured
+-        pol->margin       = (float) envf("XEON_DMOE_MARGIN", g_moe_devices.size() <= 1 ? 6.0 : 0.0);
++        // a promotion copies ~2.5 MiB over PCIe into the token's own GPU time. On the 35B a margin of 6
++        // cut promotions 18 -> 4 per token for +0.23 t/s decode on one card (0105), and on two cards
++        // (0107: 13.95-13.97 -> 14.20 t/s, 3 launches each)
++        pol->margin       = (float) envf("XEON_DMOE_MARGIN", 6.0);
+         // 0: no per-graph cap; the stage ring still bounds the uploads in flight
+         pol->budget       = (int) envf("XEON_DMOE_BUDGET", 0);
+         if (pol->budget <= 0) pol->budget = n_layer*n_expert;
