@@ -8,20 +8,20 @@
 
 Native macOS app · Metal acceleration · No cloud, no accounts, no per-token costs
 
-[![Build & Release](https://img.shields.io/badge/build%20%26%20release-v0.1.0-2ea44f)](https://github.com/SamerKharboush/xeonllm/releases)
+[![Build & Release](https://img.shields.io/badge/build%20%26%20release-v0.2.1-2ea44f)](https://github.com/SamerKharboush/xeonllm/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B%20(Intel%20%2B%20AMD%20GPU)-lightgrey)](#requirements)
-[![Status: v0.1](https://img.shields.io/badge/status-v0.1-blue)](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.1.0)
+[![Status: v0.2](https://img.shields.io/badge/status-v0.2-blue)](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.2.1)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4%EF%B8%8F%20support%20the%20project-ea4aaa)](#support-the-project)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21908524.svg)](https://doi.org/10.5281/zenodo.21908524)
 
-### [⬇️ Download v0.1.0](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.1.0) · [📝 Changelog](CHANGELOG.md) · [🌐 Project site](https://samerkharboush.github.io/xeonllm-site/)
+### [⬇️ Download v0.2.1](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.2.1) · [📝 Changelog](CHANGELOG.md) · [🌐 Project site](https://samerkharboush.github.io/xeonllm-site/)
 
-> ### XeonLLM v0.1.0
+> ### XeonLLM v0.2.1
 >
-> **[⬇️ XeonLLM-v0.1.0-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.1.0/XeonLLM-v0.1.0-noavx2.dmg)**
-> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.1.0) ·
-> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.1.0/checksums.txt))
+> **[⬇️ XeonLLM-v0.2.1-noavx2.dmg](https://github.com/SamerKharboush/xeonllm/releases/download/v0.2.1/XeonLLM-v0.2.1-noavx2.dmg)**
+> ([release notes](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.2.1) ·
+> [checksums](https://github.com/SamerKharboush/xeonllm/releases/download/v0.2.1/checksums.txt))
 >
 > **This build is x86_64 only. It will not run on Apple Silicon.** There is no arm64 slice,
 > and Rosetta cannot help: an Apple GPU never enters the code the AMD workarounds in this
@@ -68,7 +68,7 @@ the two servers measured 13.67 and 14.05 tok/s of decode.
 
 The two left-hand columns are upstream's own published figures for an RX 6700 XT, quoted here
 as upstream published them; this project did not measure them. XeonLLM's column is measured
-here on beta 8, and the v0.1.0 figures replace it once the release gates have run. The three
+here on beta 8; each release's own figures, with their method lines, are in its release notes. The three
 columns were measured on different hardware and are **not** a speed comparison between the
 engines.
 
@@ -119,8 +119,8 @@ answer quality. Seen in the logs: the older engine logs `failed to create pipeli
 its AMD flash-attention kernels (324 per 14B short-prompt run, 1604 for the long prompt, 12
 per 35B run); beta 8 logs none.
 
-These figures were measured on beta 8. The v0.1.0 numbers replace them after the release
-gates.
+These figures were measured on beta 8. Each release's own figures, with their method lines, are
+in its release notes.
 
 ### Who it is for
 
@@ -203,7 +203,7 @@ The built-in benchmark runs prompt and generation tests for any configuration an
 
 ## Fork changes
 
-Everything below is this fork's own work on top of upstream 0.87.31 (upstream's 0.87.32–0.87.34 changes are ported into it). Measured on a dual-FirePro-D700 Mac Pro (Xeon E5-2697 v2, AVX1 no AVX2, 64 GB RAM).
+Everything below is this fork's own work on top of upstream 0.87.31 (upstream's 0.87.32–0.88.0 changes are ported into it; 0.87.16–0.87.18, merged during the beta, are credited in the [changelog](CHANGELOG.md)). Measured on a dual-FirePro-D700 Mac Pro (Xeon E5-2697 v2, AVX1 no AVX2, 64 GB RAM).
 
 ### Engine defects fixed
 
@@ -552,7 +552,7 @@ that replaces it.
 
 ## Install
 
-1. **[Download the `-noavx2` `.dmg`](https://github.com/SamerKharboush/xeonllm/releases/tag/v0.1.0)** from the v0.1.0 release, open it, and drag **XeonLLM** to Applications. It needs a CPU with AVX.
+1. **[Download the `-noavx2` `.dmg`](https://github.com/SamerKharboush/xeonllm/releases/latest)** from the latest release, open it, and drag **XeonLLM** to Applications. It needs a CPU with AVX.
 2. The app is fully self-contained — the inference engines ship inside the bundle. No Homebrew, no Python, nothing else to install.
 
 > **First launch:** builds are ad-hoc signed and not notarized, so macOS blocks the first
