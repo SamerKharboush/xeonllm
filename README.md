@@ -404,7 +404,7 @@ method is engine 0.87.11, `XEON_NO_AVX2=1`, `GGML_METAL_CONCURRENCY_DISABLE=1`, 
 | 35B Q6_K, one D700 (the headless card), the card path | R1 | prompt 6.5073 tok/s, generate 0.1465 tok/s, n=5 |
 | 35B Q6_K, both D700s, a tensor split | R3 | generate 0.4387 tok/s, against 0.1465 for the one-device cell |
 | the second D700, enrolled by hand | R9 | `GGML_METAL_DEVICES=2` with `GGML_METAL_DEVICE_LIST=0,1` registers it: `ggml_metal: device 1: AMD Radeon HD - FirePro D700`, 3.81 GB of VRAM on it during the two-device decode |
-| 35B Q6_K, the `--n-cpu-moe` and `-cmoe` cells | R12 | decode 5.9683 to 10.3336 tok/s, and the output collapses into one token repeated after about 250 characters; 400 generated tokens per cell against the `-ngl 0` reference |
+| 35B Q6_K, the `--n-cpu-moe` and `-cmoe` cells | R12 | decode 5.9683 to 10.3336 tok/s, and the output collapsed into one token repeated after about 250 characters; 400 generated tokens per cell against the `-ngl 0` reference (fixed since; see below) |
 | 35B Q6_K, everything on the host | R2 | prompt 23.4130 tok/s, generate 11.1015 tok/s |
 | 35B Q6_K, the launch the app builds, on the host | R24 | prompt 23.1305 tok/s, generate 10.1353 tok/s, the answer is coherent |
 | 8B Q4_K_M, the launch the app builds, on the cards | R25 | prompt 39.6722 tok/s, generate 9.0028 tok/s |
@@ -451,11 +451,16 @@ drafting, and this fork's wave64 work is what makes the card path 7.7% above the
 `GGML_METAL_DEVICE_LIST=0,1` registers it, and the backend then calls the devices `MTL0` and
 `MTL1`.
 
-**`--n-cpu-moe` and `-cmoe` do not compute the model** (R12). The cells that use them decode
-between 5.9683 and 10.3336 tok/s against 0.1450 in that same sweep, because the output
-collapses into one token repeated to the end of the answer after a correct first paragraph.
-The host-only row above is the placement to use, and it is the placement the app now chooses
-on its own: see "Where the app puts a model" below.
+**`--n-cpu-moe` and `-cmoe` did not compute the model on the engines of that sweep** (R12). The
+cells that used them decoded between 5.9683 and 10.3336 tok/s against 0.1450 in that same
+sweep, because the output collapsed into one token repeated to the end of the answer after a
+correct first paragraph. That no longer holds. Card 1, 35B Q6_K, `-c 4096 -ub 512 -t 12
+--dynamic-moe off`, temperature 0, 200 generated tokens per request: `--cpu-moe` on the 0.2.0
+engine (2 launches x 7 requests) and `--n-cpu-moe 38 --load-mode none` on the 0.2.1 engine
+(2 launches x 7 requests, generation 10.34-10.43 tok/s, warm-up excluded), both pin `d81235049`
+plus the fork's series, AVX1 build, answer coherently to the end. For a MoE model larger than
+the card, Dynamic MoE is still the placement the app chooses on its own: see "Where the app
+puts a model" below.
 
 ### A model that does not fit in VRAM belongs on the host too
 
