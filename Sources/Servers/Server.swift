@@ -477,9 +477,13 @@ struct ServerSettings {
             // Draft-model-free n-gram speculation: the engine reuses text already in the
             // conversation as drafts. A Dynamic MoE / auto plan that is not full_gpu keeps
             // experts on the host, whose decode path a verify batch over 8 tokens leaves, so
-            // cap the draft at 7 (an 8-token verify). A user width in extra args still wins.
+            // cap the draft at 7 (an 8-token verify). The engine drafts only when the draft
+            // can be at least size-n tokens long, so size-n must not exceed size-m.
+            // A user width in extra args still wins.
             args += ["--spec-type", "ngram-simple"]
-            if usesAutoPlan && plannedMode != "full_gpu" { args += ["--spec-ngram-simple-size-m", "7"] }
+            if usesAutoPlan && plannedMode != "full_gpu" {
+                args += ["--spec-ngram-simple-size-m", "7", "--spec-ngram-simple-size-n", "7"]
+            }
         }
         args += Self.chatUIArgs
         args += extraArgTokens.cli
@@ -633,8 +637,13 @@ struct ServerSettings {
                 // Draft-model-free n-gram speculation, opt-in per model. The INI has no plan,
                 // so n-cpu-moe > 0 is the "not full_gpu" signal: experts on the host leave the
                 // MoE decode path for a verify batch over 8 tokens, so cap the draft at 7.
+                // The engine drafts only when the draft can be at least size-n tokens long,
+                // so size-n must not exceed size-m.
                 lines.append("spec-type = ngram-simple")
-                if (ncmoeByPath[path] ?? 0) > 0 { lines.append("spec-ngram-simple-size-m = 7") }
+                if (ncmoeByPath[path] ?? 0) > 0 {
+                    lines.append("spec-ngram-simple-size-m = 7")
+                    lines.append("spec-ngram-simple-size-n = 7")
+                }
             }
             sections.append(lines.joined(separator: "\n"))
         }

@@ -7,8 +7,8 @@ import XCTest
 
 /// Draft-model-free n-gram speculation is opt-in per model. These tests build the launch
 /// arguments (and the router INI) and check the `--spec-type ngram-simple` branch: absent
-/// unless the model opted in, capped at size-m 7 only when experts run on the host, and
-/// never reached when DFlash or MTP already claimed `--spec-type`. The opt-in is read
+/// unless the model opted in, capped at size-m/size-n 7 only when experts run on the host,
+/// and never reached when DFlash or MTP already claimed `--spec-type`. The opt-in is read
 /// through `contextDraftEnabledOverride`, so no test writes UserDefaults.
 final class ContextDraftTests: XCTestCase {
     private var dir: URL!
@@ -52,6 +52,7 @@ final class ContextDraftTests: XCTestCase {
         s.placement = .card
         XCTAssertFalse(s.arguments.contains("ngram-simple"))
         XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-m"))
+        XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-n"))
     }
 
     func testOptedInDenseFullGPUModelPassesNgramWithoutSizeCap() throws {
@@ -61,6 +62,8 @@ final class ContextDraftTests: XCTestCase {
         XCTAssertEqual(value(after: "--spec-type", in: s.arguments), "ngram-simple")
         XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-m"),
                        "a full-GPU dense model keeps the engine's draft width")
+        XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-n"),
+                       "a full-GPU dense model keeps the engine's lookup width")
     }
 
     func testOptedInNonFullGPUAutoPlanCapsDraftAt7() throws {
@@ -70,6 +73,8 @@ final class ContextDraftTests: XCTestCase {
         XCTAssertTrue(s.usesAutoPlan)
         XCTAssertEqual(value(after: "--spec-type", in: s.arguments), "ngram-simple")
         XCTAssertEqual(value(after: "--spec-ngram-simple-size-m", in: s.arguments), "7")
+        XCTAssertEqual(value(after: "--spec-ngram-simple-size-n", in: s.arguments), "7",
+                       "size-n 7 with size-m 7 lets the engine draft")
     }
 
     func testFullGPUPlanLeavesDraftWidthUncapped() throws {
@@ -80,6 +85,16 @@ final class ContextDraftTests: XCTestCase {
         XCTAssertEqual(value(after: "--spec-type", in: s.arguments), "ngram-simple")
         XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-m"),
                        "a full_gpu plan is not the host decode path")
+        XCTAssertFalse(s.arguments.contains("--spec-ngram-simple-size-n"))
+    }
+
+    func testExtraArgsWidthComesAfterCap() throws {
+        ServerSettings.contextDraftEnabledOverride = { _ in true }
+        var s = settings(modelPath: try plainModel())
+        s.placement = .expertTier
+        s.extraArgs = "--spec-ngram-simple-size-n 12 --spec-ngram-simple-size-m 12"
+        XCTAssertEqual(Array(s.arguments.suffix(4)),
+                       ["--spec-ngram-simple-size-n", "12", "--spec-ngram-simple-size-m", "12"])
     }
 
     func testMTPChosenSkipsNgramArgs() throws {
@@ -103,6 +118,7 @@ final class ContextDraftTests: XCTestCase {
         let denseINI = dense.routerPresetINI(modelPaths: [model], ncmoeByPath: [model: 0])
         XCTAssertTrue(denseINI.contains("spec-type = ngram-simple"))
         XCTAssertFalse(denseINI.contains("spec-ngram-simple-size-m"))
+        XCTAssertFalse(denseINI.contains("spec-ngram-simple-size-n"))
 
         var offloaded = settings(modelPath: model)
         offloaded.routerMode = true
@@ -110,5 +126,18 @@ final class ContextDraftTests: XCTestCase {
         XCTAssertTrue(offINI.contains("spec-type = ngram-simple"))
         XCTAssertTrue(offINI.contains("spec-ngram-simple-size-m = 7"),
                       "n-cpu-moe > 0 is the INI's not-full-GPU signal")
+        XCTAssertTrue(offINI.contains("spec-ngram-simple-size-n = 7"),
+                      "size-n 7 with size-m 7 lets the engine draft")
+    }
+
+    func testRouterINIEmitsNoNgramSizesWhenOptedOut() throws {
+        ServerSettings.contextDraftEnabledOverride = { _ in false }
+        let model = try plainModel()
+        var s = settings(modelPath: model)
+        s.routerMode = true
+        let ini = s.routerPresetINI(modelPaths: [model], ncmoeByPath: [model: 4])
+        XCTAssertFalse(ini.contains("spec-type = ngram-simple"))
+        XCTAssertFalse(ini.contains("spec-ngram-simple-size-m"))
+        XCTAssertFalse(ini.contains("spec-ngram-simple-size-n"))
     }
 }
