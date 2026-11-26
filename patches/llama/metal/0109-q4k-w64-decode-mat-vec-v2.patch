@@ -1,0 +1,103 @@
+# 0109: an off-by-default 16-row Q4_K decode mat-vec for wave64
+#
+# Ticket .scratch/beta7-unified-performance/issues/07 step 2. The shipped Q4_K wave64 decode
+# kernels (_r8 and _L16r8) put eight rows in one simdgroup; the grid then dispatches one
+# threadgroup per eight rows. At q4_K m=9728 n=1 k=2560 this reads 14 MB of weights in
+# 296.10 us (beta8 evidence/17; orchestrator re-run 295.84 us), while one D700 streams
+# 204.42-206.06 GB/s with a plain 16-byte grid-stride read (beta7 evidence/02). The K-quant
+# kernels reload the row's activations and header once per row group, so this candidate gives
+# each 64-lane simdgroup sixteen rows instead of eight: the same lane mapping and per-row math
+# order, half the threadgroups, half the activation loads per row. It is a kernel entry point
+# named _L16r16_v2_w64 and nr0=16 is set in the picker, never after it; the earlier rejected
+# attempt changed nr0 under a kernel whose name still said r8.
+#
+# XEON_MV_Q4K_V2=1 selects it only for Q4_K, n=1, simd_width==64, rows a multiple of 16 and
+# not the small-matrix path. Unset means the default path is unchanged. Threadgroup memory
+# stays 0 (simd_sum reduction), threads per threadgroup stay 64, reduction order is unchanged.
+# Adds the three Qwen3-4B q4_K n=1 k=2560 shapes to test-backend-ops eval and perf lists
+# (m=9728 was already in perf). Syntax checked with xcrun -sdk macosx metal -c and clang++
+# -fsyntax-only.
+# Measured 2026-11-26 on card 1 (orchestrator; xeonllm-0-2 evidence/t07), engine pin d81235049 + series:
+#   test-backend-ops MUL_MAT eval 1835/1835 with the switch off and on.
+#   perf q4_K n=1 k=2560 us/run off -> on: m=4096 134.8 -> 128.6, 6144 191.7 -> 176.3, 8192 250.2 -> 253.5,
+#   9728 296.6 -> 275.8 (44.2 -> 47.5 GB/s), 10240 308.1 -> 283.9, 12288 365.9 -> 336.5, 14336 423.7 -> 390.9.
+#   Qwen3-4B Q4_K_M llama-bench -p 0 -n 128 -r 5 -fa 1, 6 alternating processes: tg 16.642-16.647 -> 16.724-16.726.
+#   256-token greedy text byte-identical on Qwen3-4B and Qwen3-8B Q4_K_M.
+# Stays off by default until test-backend-ops passes on card 0 as well.
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -1811,6 +1811,26 @@
+                 const bool q4k_r4_wide = XEON_ENV("XEON_MV_Q4K_R4") != nullptr &&
+                                          XEON_ENV("XEON_MV_Q4K_R4_DISABLE") == nullptr;
+                 const bool q4k_small = ne00 <= 2048 || ne01 <= 2048 || q4k_r4_wide;
++
++                // XEON_MV_Q4K_V2=1: 16 rows per 64-lane simdgroup. The row count is carried by
++                // the kernel name and returned in nr0, so the grid in ggml_metal_op_mul_mat
++                // and the kernel's first_row agree. Overriding nr0 after selection would leave
++                // rows uncomputed. Off by default; never taken outside n=1 wave64 decode.
++                static const bool q4k_v2 = []() -> bool {
++                    const char * v = XEON_ENV("XEON_MV_Q4K_V2");
++                    return v != nullptr && v[0] == '1';
++                }();
++                if (q4k_v2 && simd_width == 64 &&
++                    ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode &&
++                    ne11 == 1 && ne12 == 1 && ne13 == 1 &&
++                    !q4k_small && ne01 >= 16 && ne01 % 16 == 0 &&
++                    XEON_ENV("XEON_MV_Q4K_W64_DISABLE") == nullptr) {
++                    nsg    = 1;
++                    nr0    = 16;
++                    suffix = "_L16r16_v2";
++                    w64    = true;
++                    break;
++                }
+ 
+                 // 64 lanes have their own decomposition: sixteen cover a block instead of
+                 // eight, which brings the kernel from 246 registers down to 184. It does not
+--- a/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
++++ b/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
+@@ -7823,6 +7823,20 @@
+         ushort tiisg[[thread_index_in_simdgroup]],
+         ushort sgitg[[simdgroup_index_in_threadgroup]]) {
+     kernel_mul_mv_q4_K_f32_L16_w64_impl<8, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
++}
++
++// Off-by-default candidate: sixteen rows per simdgroup instead of eight. Same lane mapping and
++// same per-row math order as L16r8, so the activations are loaded once per block for twice as
++// many rows and the number of threadgroups halves. The r16 suffix must match nr0 in the picker.
++[[host_name("kernel_mul_mv_q4_K_f32_L16r16_v2_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_L16r16_v2_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0, device const char * src1, device char * dst,
++        threadgroup char * shmem [[threadgroup(0)]],
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_L16_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, shmem, tgpig, tiisg, sgitg);
+ }
+ 
+ [[host_name("kernel_mul_mv_q8_0_f32_L4r1_w64")]]
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -10746,6 +10746,11 @@
+     // the batches of a are padded, nb[2] is not a multiple of nb[1]
+     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_F32, GGML_TYPE_F32, 8, 1, 64, {8, 1}, {1, 1}, {0, 1, 2, 3}, 0, 1, false, 16, 16));
+     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_F16, GGML_TYPE_F32, 8, 16, 64, {8, 1}, {1, 1}, {0, 1, 2, 3}, 0, 1, false, 16, 16));
++
++    // Qwen3-4B Q4_K decode shapes (n=1), compared against the CPU backend in eval mode
++    for (int64_t m : {2560, 4096, 9728}) {
++        test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 1, 2560, {1, 1}, {1, 1}));
++    }
+     // as is a view whose experts are strided by more rows than it uses
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F32, GGML_TYPE_F32, 4, 2, false, 8,  1, 64, 1.0f, 64));
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_F16, GGML_TYPE_F32, 4, 2, false, 8, 16, 64, 1.0f, 64));
+@@ -12111,6 +12116,10 @@
+     }
+     // the qwen3-4b ffn_gate/up shape, between the k 2560 rows above
+     test_cases.emplace_back(new test_mul_mat_mv_perf(GGML_TYPE_Q4_K, GGML_TYPE_F32, 9728, 1, 2560, {1, 1}, {1, 1}));
++    // the other 4B Q4_K decode shapes at the same k, for the r8/r16 variant comparison
++    for (int64_t m : {2560, 4096}) {
++        test_cases.emplace_back(new test_mul_mat_mv_perf(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 1, 2560, {1, 1}, {1, 1}));
++    }
+ 
+     // qwen3-30b-a3b
+     for (int bs : {1, 4, 8, 32, 64, 128, 256, 512}) {
