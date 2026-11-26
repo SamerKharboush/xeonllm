@@ -10,7 +10,9 @@ OUT="$ROOT/Assets/web-ui"
 if [ -n "$1" ]; then
     SRC="$1"
 else
-    SRC="$(mktemp -d)/dist"
+    TMP="$(mktemp -d)"
+    trap 'rm -rf "$TMP"' EXIT
+    SRC="$TMP/dist"
     (cd "$ROOT/vendor/llama.cpp/tools/ui" && npm ci --no-audit --no-fund && LLAMA_UI_OUT_DIR="$SRC" npm run build)
 fi
 
