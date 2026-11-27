@@ -132,6 +132,8 @@
 #     n=1 m=2051 k=4096; n=1 k=2048 m=2051 (m tail); n=2,n=8; prefill mul_mm n=32,n=512;
 #     test_q6k_repack_rw: ~1 MB non-row-aligned chunked upload, non-row partial get crossing
 #     rows, partial RMW set, byte-exact whole get, then mul_mat on the repacked weight;
+#     m=1/m=2 use err() = max_j |a_j-b_j|/(E_j+F_j), E_j worst-case Q8_K rounding of src1,
+#     F_j=4e-5*sum|src0*src1|; max_nmse_err()=1.0 (at the reference rounding bound, not NMSE).
 #     3D Q6_K mul_mat_id (n_mats=8,k=2048) stays canonical and passes. use_weight_context()
 #     defaults to false (upstream); test_mul_mat and test_get_rows override it to env set &&
 #     Q6_K && 2D src0 and put src0 in ctx_weights, so the twins are actually reached (F1).
@@ -176,7 +178,6 @@
 #   5 of 6 runs; the off arm's first run differed by two words (d959b6f1), a Dynamic MoE cold-placement near-tie
 #   in the arm without the repack.
 # - Default variant set to 2 after these measurements (unset == KERNEL=2, the measured path).
-
 --- a/ggml/include/ggml-metal.h
 +++ b/ggml/include/ggml-metal.h
 @@ -56,6 +56,10 @@
@@ -541,7 +542,7 @@
 +            // F1 positive control: one line per tensor at mark time, off unless XEON_Q6K_REPACK_LOG=1.
 +            const bool log = getenv("XEON_Q6K_REPACK_LOG") != NULL;
 +            if (log) {
-+                fprintf(stderr, "q6k-repack: mark %s ne=%lld,%lld,%lld,%lld rows=%lld\n",
++                fprintf(stderr, "q6k-repack: mark %s ne=%lld,%lld,%lld,%lld nb1=%lld\n",
 +                        tensor->name,
 +                        (long long) tensor->ne[0], (long long) tensor->ne[1],
 +                        (long long) tensor->ne[2], (long long) tensor->ne[3],
@@ -1435,7 +1436,7 @@
              b = ggml_new_tensor_4d(ctx, type_b, k_physical, n,          bs[0]*nr[0], bs[1]*nr[1]);
  
              if (!ggml_is_quantized(type_a)) {
-@@ -5174,6 +5209,168 @@
+@@ -5174,6 +5209,220 @@
      std::string op_desc(ggml_tensor * t) override {
          GGML_UNUSED(t);
          return ggml_op_name(GGML_OP_MUL_MAT);
@@ -1451,6 +1452,8 @@
 +    const int64_t n;
 +    const int64_t k;
 +    bool raw_ok = true;
++    ggml_tensor * weight = nullptr;
++    ggml_tensor * act = nullptr;
 +
 +    std::string vars() override { return VARS_TO_STR3(m, n, k); }
 +
@@ -1459,7 +1462,55 @@
 +        return ggml_op_name(GGML_OP_MUL_MAT);
 +    }
 +
-+    double max_nmse_err() override { return 5e-4; }
++    // Not NMSE: 1.0 means the error reached the worst-case bound a correct result can hit.
++    // The CPU reference quantizes src1 to Q8_K, so a correct dot carries that rounding.
++    double max_nmse_err() override { return 1.0; }
++
++    double err(const float * a, const float * b, size_t n) override {
++        if (weight == nullptr || act == nullptr || n != (size_t) (weight->ne[1]*act->ne[1])) {
++            return nmse(a, b, n);
++        }
++        const std::vector<float> wa = tensor_to_float(weight);
++        const std::vector<float> wb = tensor_to_float(act);
++        const size_t k = (size_t) weight->ne[0];
++        const size_t nb = k/256; // QK_K = 256, blocks of src1 quantization
++        double worst = 0.0;
++        for (int64_t r0 = 0; r0 < weight->ne[1]; ++r0) {
++            const float * ar = wa.data() + (size_t) r0*k;
++            for (int64_t r1 = 0; r1 < act->ne[1]; ++r1) {
++                const float * br = wb.data() + (size_t) r1*k;
++                // d_b per 256-block, exactly as quantize_row_q8_K_ref: amax over |x|, d = -max/127.
++                double E = 0.0; // sum_i |a_i| * |d_b(block of i)| / 2
++                double S = 0.0; // sum_i |a_i * b_i|
++                for (size_t blk = 0; blk < nb; ++blk) {
++                    float amax = 0.0f;
++                    for (size_t j = 0; j < 256; ++j) {
++                        const float ax = fabsf(br[blk*256 + j]);
++                        if (ax > amax) {
++                            amax = ax;
++                        }
++                    }
++                    const double db_half = (double) amax/127.0/2.0;
++                    for (size_t j = 0; j < 256; ++j) {
++                        const size_t i = blk*256 + j;
++                        const double ai = ar[i] < 0 ? -ar[i] : ar[i];
++                        E += ai*db_half;
++                        const double t = ar[i]*br[i];
++                        S += t < 0 ? -t : t;
++                    }
++                }
++                const double F = 4e-5*S;
++                const size_t j = (size_t) (r1*weight->ne[1] + r0);
++                const double diff = a[j] - b[j];
++                const double adiff = diff < 0 ? -diff : diff;
++                const double e = adiff/(E + F);
++                if (e > worst) {
++                    worst = e;
++                }
++            }
++        }
++        return worst;
++    }
 +
 +    bool initialized_ok() override { return raw_ok; }
 +
@@ -1478,6 +1529,8 @@
 +        ggml_set_name(a, "a");
 +        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
 +        ggml_set_name(b, "b");
++        weight = a;
++        act = b;
 +        ggml_tensor * out = ggml_mul_mat(ctx, a, b);
 +        ggml_set_name(out, "out");
 +        return out;
@@ -1604,7 +1657,7 @@
      }
  };
  
-@@ -10507,6 +10704,21 @@
+@@ -10507,6 +10756,21 @@
      test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q6_K, GGML_TYPE_F32, 1027, 1, 12288, { 1, 1 }, { 1, 1 }));
      test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 6147, 1, 2560, { 1, 1 }, { 1, 1 }));
  
