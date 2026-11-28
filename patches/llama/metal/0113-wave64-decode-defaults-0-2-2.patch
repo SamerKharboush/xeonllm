@@ -1,0 +1,131 @@
+# 0113: wave64 decode wins on by default for 0.2.2 (XEON_MV_Q4K_V3=2, Q6_K repack)
+#
+# What. Two measured decode wins become the default on a 64-lane (wave64) card:
+#   a. XEON_MV_Q4K_V3 unset -> value 2 (the no-shuffle 16-row Q4_K mat-vec). "0" -> off
+#      (the pre-0.2.2 path). 1..4 unchanged. Anything else -> 2.
+#   b. XEON_Q6K_REPACK unset -> on. "0" -> off. "1" -> on. Anything else -> on.
+# Q4_K repack (XEON_Q4K_REPACK, 0112) is unchanged and stays off by default. When a Q4_K
+# tensor is Q4_K-repacked, V3 is irrelevant for it (the repack twin owns the dispatch); that
+# was already true and nothing here changes it.
+#
+# Why. Both arms were measured on card 1 and beat the 0.2.1 defaults on Q4_K_M decode with
+# byte-identical text. 0111a (unfused QVK on wave64) is already default; this patch only
+# flips the two remaining switches so a stock 0.2.2 launch gets the wins without env vars.
+#
+# Measured by orchestrator (engine v0.2.1-0112r2-avx1 = pin d81235049 + series through 0112,
+# card 1 only, GGML_METAL_DEVICE_INDEX=1), llama-bench -ngl 99 -p 0 -n 128
+# -fa 1, default context, arms alternating, warmup discarded by llama-bench.
+#   Qwen3-8B Q4_K_M: default 10.58 t/s; XEON_MV_Q4K_V3=2 + XEON_Q6K_REPACK=1 14.75 t/s (t07/q4rb2).
+#   Qwen3-4B Q4_K_M: default 17.13 t/s; V3=2 + Q6K repack 17.55 t/s (t07/q4rb2).
+#   LFM3-1.7B Q6_K:  Q6_K repack (variant 2) 32.8 -> 37.2-37.4 t/s (t07/rb4b).
+#   256-token greedy text byte-identical in every arm: 4B 91b358aa, 8B 3757ac38, LFM3 82d29582.
+#   Own build (engine v0.2.1-0113-avx1 = pin + series through 0113), evidence t07/d0113-c1, d0113-c0. Card 1,
+#   same llama-bench line, 3 alternating rounds (pp512: -p 512 -n 0 -r 3, 2 rounds), warmup discarded by llama-bench.
+#   Arms: D default; V0 XEON_MV_Q4K_V3=0; R0 XEON_Q6K_REPACK=0; F XEON_QVK_Q4K_W64_FUSE=1; OLD all three (0.2.1).
+#     Qwen3-8B Q4_K_M tg128: D 14.737-14.747  V0 12.681-12.683  R0 12.863-12.864  F 13.993-13.997  OLD 10.223-10.224
+#     Qwen3-4B Q4_K_M tg128: D 17.539-17.576  V0 17.128-17.132  R0 17.541-17.558 (no 4B Q6_K tensor is eligible:
+#                            n_embd 2560)  F 16.882-16.889  OLD 16.642-16.645
+#     pp512: 8B D 42.95-42.96, OLD 41.07-41.09; 4B D 86.54, OLD 86.43-86.45.
+#   Correctness, card 1 AND card 0 (display card, user-approved): test-backend-ops -b MTL0 -o MUL_MAT 1857/1857 with
+#   no env (18 Q6_K tensors repacked, raw-bytes check OK) and with all three opt-outs; -o GET_ROWS 232/232 both
+#   (no GET_ROWS case reaches a repacked Q6_K tensor). 256-token greedy text identical across all arms and both cards:
+#   4B 91b358aa, 8B 3757ac38 (card 1), LFM3 82d29582; 'q6k-repack: mark' 37 on the 8B and 71 on LFM3 by default, 0 with
+#   XEON_Q6K_REPACK=0.
+#
+# Opt-outs. XEON_MV_Q4K_V3=0 restores the pre-0.2.2 Q4_K decode path. XEON_Q6K_REPACK=0
+# restores the pre-0.2.2 Q6_K path (no repack). XEON_Q4K_REPACK stays off by default.
+#
+# Test gate. tests/test-backend-ops.cpp use_weight_context() now matches the engine: Q6_K repack
+# is active unless XEON_Q6K_REPACK=="0"; Q4_K repack is active only when XEON_Q4K_REPACK=="1".
+# So a stock `test-backend-ops -b MTL0` (no env) builds WEIGHTS contexts and exercises the
+# repacked Q6_K layout that now ships; XEON_Q6K_REPACK=0 falls back to plain contexts.
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.cpp b/ggml/src/ggml-metal/ggml-metal-device.cpp
+index c404a4a..2ca75aa 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -1938,14 +1938,17 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_mul_mv(ggml_meta
+                                          XEON_ENV("XEON_MV_Q4K_R4_DISABLE") == nullptr;
+                 const bool q4k_small = ne00 <= 2048 || ne01 <= 2048 || q4k_r4_wide;
+ 
+-                // XEON_MV_Q4K_V3 selects one of four off-by-default kernels. Value 1 is the
+-                // original broadcast-header kernel; 2/3 drop the shuffle; 4 uses 16 lanes per
+-                // block and 8-byte quant loads to shorten the tail pass at k=2560. This hook
+-                // runs before V2, so every V3 value wins when both switches are set. nr0 is
+-                // returned here and carried by the kernel name, never overridden afterwards.
++                // XEON_MV_Q4K_V3 selects one of four kernels. Default (unset) is 2. Value 1 is
++                // the original broadcast-header kernel; 2/3 drop the shuffle; 4 uses 16 lanes per
++                // block and 8-byte quant loads to shorten the tail pass at k=2560. "0" is the
++                // pre-0.2.2 off path; any other value falls back to 2. This hook runs before V2,
++                // so every V3 value wins when both switches are set. nr0 is returned here and
++                // carried by the kernel name, never overridden afterwards.
+                 static const int q4k_v3 = []() -> int {
+                     const char * v = XEON_ENV("XEON_MV_Q4K_V3");
+-                    return v != nullptr && v[0] >= '1' && v[0] <= '4' && v[1] == '\0' ? v[0] - '0' : 0;
++                    if (v == nullptr) return 2;
++                    if (v[0] == '0' && v[1] == '\0') return 0;
++                    return v[0] >= '1' && v[0] <= '4' && v[1] == '\0' ? v[0] - '0' : 2;
+                 }();
+                 if (q4k_v3 && simd_width == 64 &&
+                     ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode &&
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.h b/ggml/src/ggml-metal/ggml-metal-device.h
+index 0cc87c8..5343dbf 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.h
++++ b/ggml/src/ggml-metal/ggml-metal-device.h
+@@ -437,7 +437,7 @@ void   ggml_metal_buffer_free     (ggml_metal_buffer_t buf);
+ void * ggml_metal_buffer_get_base (ggml_metal_buffer_t buf);
+ bool   ggml_metal_buffer_is_shared(ggml_metal_buffer_t buf);
+ 
+-// Q6_K repack: off unless XEON_Q6K_REPACK=1 on a SIMD64 device.
++// Q6_K repack: on by default on a SIMD64 device; XEON_Q6K_REPACK=0 disables it.
+ bool   ggml_metal_repack_enabled      (void);
+ bool   ggml_metal_repack_candidate    (const struct ggml_tensor * t);
+ bool   ggml_metal_repack_is_tensor    (const struct ggml_tensor * t);
+diff --git a/ggml/src/ggml-metal/ggml-metal-device.m b/ggml/src/ggml-metal/ggml-metal-device.m
+index 96969cf..2d536ad 100644
+--- a/ggml/src/ggml-metal/ggml-metal-device.m
++++ b/ggml/src/ggml-metal/ggml-metal-device.m
+@@ -1999,8 +1999,12 @@ ggml_metal_device_t ggml_metal_device_init(int device, int n_devices) {
+                                     "(see the allowlist in ggml_metal_library_get_pipeline_mul_mv)\n");
+                 }
+ 
++                // Q6_K repack is on by default on a 64-lane device; "0" restores the pre-0.2.2
++                // off path, any other value (including "1") keeps it on. Q4_K repack (0112) stays
++                // off by default: it loses decode to V3=2.
+                 const char * q6k_repack = XEON_ENV("XEON_Q6K_REPACK");
+-                atomic_store(&g_xq6k_repack, dev->props.simd_width == 64 && q6k_repack != NULL && strcmp(q6k_repack, "1") == 0);
++                atomic_store(&g_xq6k_repack, dev->props.simd_width == 64 &&
++                             (q6k_repack == NULL || strcmp(q6k_repack, "0") != 0));
+                 const char * q4k_repack = XEON_ENV("XEON_Q4K_REPACK");
+                 atomic_store(&g_xq4k_repack, dev->props.simd_width == 64 && q4k_repack != NULL && strcmp(q4k_repack, "1") == 0);
+ 
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -2397,10 +2397,11 @@
+         : type(type), n(n), m(m), r(r), be1(be1), be2(be2), v(v), vs0(vs0), offset_cols(offset_cols) {}
+ 
+     // XEON_Q6K_REPACK / XEON_Q4K_REPACK: a 2D Q6_K/Q4_K src0 in the WEIGHTS context reaches
+-    // the get_rows twin.
++    // the get_rows twin. Q6_K repack is on unless XEON_Q6K_REPACK=="0"; Q4_K repack is on only
++    // when XEON_Q4K_REPACK=="1" (matches the engine defaults).
+     bool use_weight_context() override {
+-        static const bool q6k_repack = getenv("XEON_Q6K_REPACK") != nullptr;
+-        static const bool q4k_repack = getenv("XEON_Q4K_REPACK") != nullptr;
++        static const bool q6k_repack = [] { const char * v = getenv("XEON_Q6K_REPACK"); return v == nullptr || strcmp(v, "0") != 0; }();
++        static const bool q4k_repack = [] { const char * v = getenv("XEON_Q4K_REPACK"); return v != nullptr && strcmp(v, "1") == 0; }();
+         return ((q6k_repack && type == GGML_TYPE_Q6_K) || (q4k_repack && type == GGML_TYPE_Q4_K)) &&
+                !vs0 && be2 == 1 && offset_cols == 0;
+     }
+@@ -5116,9 +5117,11 @@
+ 
+     // XEON_Q6K_REPACK / XEON_Q4K_REPACK: put a 2D Q6_K/Q4_K src0 in the WEIGHTS-usage context so
+     // the repack path is reached. Only the plain 2D case (no permute/view/overlap) is eligible.
++    // Q6_K repack is on unless XEON_Q6K_REPACK=="0"; Q4_K repack is on only when
++    // XEON_Q4K_REPACK=="1" (matches the engine defaults).
+     bool use_weight_context() override {
+-        static const bool q6k_repack = getenv("XEON_Q6K_REPACK") != nullptr;
+-        static const bool q4k_repack = getenv("XEON_Q4K_REPACK") != nullptr;
++        static const bool q6k_repack = [] { const char * v = getenv("XEON_Q6K_REPACK"); return v == nullptr || strcmp(v, "0") != 0; }();
++        static const bool q4k_repack = [] { const char * v = getenv("XEON_Q4K_REPACK"); return v != nullptr && strcmp(v, "1") == 0; }();
+         return ((q6k_repack && type_a == GGML_TYPE_Q6_K) || (q4k_repack && type_a == GGML_TYPE_Q4_K)) &&
+                bs[1] == 1 && nr[1] == 1 &&
+                per[0] == 0 && per[1] == 1 && per[2] == 2 && per[3] == 3 &&

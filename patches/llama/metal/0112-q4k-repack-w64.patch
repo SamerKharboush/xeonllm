@@ -160,13 +160,17 @@
 #   - xcrun -sdk macosx metal -c on every changed .metal; clang++/clang -fsyntax-only on every
 #     changed C/C++/ObjC file (from a clean series-applied tree); no GPU test run here.
 #   - test-backend-ops cases added (minimal, reach repacked path when env set): Q4_K 2D n=1
-#     m in {1,2,64,2051} at k in {2560,4096} (2560 = the 4B n_embd); n=2,n=8; prefill mul_mm
+#     m in {64,2051} at k in {2560,4096} (2560 = the 4B n_embd); n=2,n=8; prefill mul_mm
 #     n=32,n=512 m=1027; test_q4k_repack_rw: ~1 MB non-row-aligned chunked upload, non-row
 #     partial get crossing rows, partial RMW set, byte-exact whole get, raw device bytes check,
-#     then mul_mat on the repacked weight; m=1/m=2 use err() = max_j |a_j-b_j|/(E_j+F_j), E_j
+#     then mul_mat on the repacked weight, at (m,n,k) = (64,1,4096),(1,1,4096),(2,1,2560),
+#     (1,1,2560),(2,1,4096); m=1/m=2 use err() = max_j |a_j-b_j|/(E_j+F_j), E_j
 #     worst-case Q8_K rounding of src1 (Q4_K vec_dot_type is Q8_K), F_j=4e-5*sum|src0*src1|;
-#     max_nmse_err()=1.0. get_rows Q4_K is covered by the all_types loop (use_weight_context
-#     override). XEON_Q4K_REPACK_LOG=1 prints one 'q4k-repack: mark <name> ...' line per tensor.
+#     max_nmse_err()=1.0. The plain test_mul_mat loop drops m=1/m=2 (its NMSE 5e-4 metric is
+#     ill-conditioned for one or two outputs against the Q8_K-rounded CPU reference); m=1/m=2
+#     are covered only by test_q4k_repack_rw with the Q8_K bound. get_rows Q4_K is covered by
+#     the all_types loop (use_weight_context override). XEON_Q4K_REPACK_LOG=1 prints one
+#     'q4k-repack: mark <name> ...' line per tensor.
 #     NOT RUN here (no cmake build, no test-backend-ops); compile-checked only.
 #   - mixed fused-QKV (q4_K/q6_K/q4_K): not added as a test-backend-ops case. The fused QKV path
 #     is reached only through a specific q/k/v graph with a shared src1 and single-token planes,
@@ -1514,15 +1518,15 @@
                          raw_ok = false;
                      }
                  }
-@@ -10771,6 +10990,23 @@
+@@ -10771,6 +10990,25 @@
      test_cases.emplace_back(new test_q6k_repack_rw(2, 1, 2048));
      test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_Q6_K, GGML_TYPE_F32, 8, 2, false, 32, 32, 2048));
  
 +    // XEON_Q4K_REPACK twins: 2D Q4_K weights. Q4_K rows are 144*nb (16 B aligned for any nb), so
-+    // no ne00%2048 gate. n=1 tails m in {1,2,64,2051} at k in {2560,4096}, n=2/n=8, prefill
++    // no ne00%2048 gate. n=1 tails m in {64,2051} at k in {2560,4096}, n=2/n=8, prefill
 +    // mul_mm at n=32 and n=512, m=1027. 3D mul_mat_id weights stay canonical.
 +    for (int64_t k : {2560, 4096}) {
-+        for (int64_t m : {1, 2, 64, 2051}) {
++        for (int64_t m : {64, 2051}) {
 +            test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 1, k, { 1, 1 }, { 1, 1 }));
 +        }
 +    }
@@ -1534,6 +1538,8 @@
 +    test_cases.emplace_back(new test_q4k_repack_rw(64, 1, 4096));
 +    test_cases.emplace_back(new test_q4k_repack_rw(1, 1, 4096));
 +    test_cases.emplace_back(new test_q4k_repack_rw(2, 1, 2560));
++    test_cases.emplace_back(new test_q4k_repack_rw(1, 1, 2560));
++    test_cases.emplace_back(new test_q4k_repack_rw(2, 1, 4096));
 +
      test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
      test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
