@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.2] - 2026-11-28
+
+A decode-speed release for the 64-lane FirePro D700 (wave64) cards: three measured decode wins become the default, and a 35B with Q4_K experts is documented as a configuration you can build. The llama.cpp series is 125 patches on the pin `d81235049`; the new ones are `metal/0108`-`0113` and `moe/0107`.
+
+### Changed
+
+- **Decode on a wave64 card, against 0.2.1's behaviour on the same engine:** Qwen3-8B Q4_K_M 10.22 -> 14.74 t/s, Qwen3-4B Q4_K_M 16.64 -> 17.56 t/s, text identical (method in the release notes).
+- **Q4_K decode value 2, Q6_K row-base repack and unfused QVK are on by default** on a wave64 card (opt-outs `XEON_MV_Q4K_V3=0`, `XEON_Q6K_REPACK=0`, `XEON_QVK_Q4K_W64_FUSE=1`). Method: shipped 0.2.2 engine, `llama-bench -ngl 99 -p 0 -n 128 -r 5 -fa 1`, card 1, warmup discarded. Qwen3-8B Q4_K_M 14.72 default against 12.67-12.85 with the opt-outs; Qwen3-4B Q4_K_M 17.52 against 16.86; text identical (the QVK opt-out text differs after ~375 chars on one prompt; the default matches 0.2.1).
+- **Flash-attention twin first on 32 KB cards** (`metal/0108`): load 2.20 against 2.52 s, generation unchanged (method in the release notes).
+- **Two-card Dynamic MoE margin 6** (`moe/0107`): 13.95-13.97 -> 14.20 t/s on the two-card 35B.
+
+### Added
+
+- **`XEON_MV_Q4K_V2=1`** (`metal/0109`) and **`XEON_Q4K_REPACK=1`** (`metal/0112`), both off by default; the Q4_K repack raises prefill (8B 41.08 -> 45.4 t/s) and lowers decode, so it stays off (method in the release notes).
+- **The 35B with Q6_K dense and Q4_K experts**, a measured configuration; the release ships no model files (numbers and method in the release notes).
+
+### Known issues
+
+- The QVK opt-out (`XEON_QVK_Q4K_W64_FUSE=1`) text differs from the default after ~375 chars on one prompt; the shipped default matches 0.2.1. The Q4_K repack loses decode and stays off. The first request after a launch can still differ with "Repeatable answers" on. The `MCPStdioTransportTests` race remains.
+
 ## [0.2.1] - 2026-11-26
 
 A small correctness release on top of 0.2.0: an opt-in setting that makes a mixture-of-experts model repeat its temperature-0 answers. The llama.cpp series is 117 patches on the pin `d81235049`; the new one is `moe/0106`.

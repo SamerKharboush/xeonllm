@@ -25,6 +25,9 @@
 #   Qwen3-8B Q4_K_M: unfused 10.579-10.581, fused 10.223-10.225 t/s
 #   256-token greedy text identical both arms: 4B 91b358aa, 8B 3757ac38, LFM3-1.7B 82d29582.
 #   test-backend-ops -b MTL0 -o MUL_MAT 1859/1859 and -o GET_ROWS 232/232 on the default arm.
+# Text is not identical on every prompt: the fused and unfused paths sum in a different order. 0.2.2 R2
+# (server, Qwen3-4B Q4_K_M, card 1, 256-token BST prompt): default and XEON_QVK_Q4K_W64_FUSE=1 split after
+# ~375 chars, both coherent; the 0.2.1 shipped engine matched the default byte for byte. gates-v022/R2-RESULT.md.
 diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-metal-ops.cpp
 index a72954261..be9a754ed 100644
 --- a/ggml/src/ggml-metal/ggml-metal-ops.cpp
