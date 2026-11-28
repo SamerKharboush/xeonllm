@@ -157,21 +157,21 @@ final class UpdateChannelTests: XCTestCase {
 
     func testNoAVX2BuildPicksOnlyNoAVX2DMG() {
         let picks = GitHubUpdateFeed.pickAssets(from: assets([
-            "XeonLLM-v0.2.1.dmg", "XeonLLM-v0.2.1-noavx2.dmg", "checksums.txt"
+            "XeonLLM-v0.2.2.dmg", "XeonLLM-v0.2.2-noavx2.dmg", "checksums.txt"
         ]), isNoAVX2: true)
-        XCTAssertEqual(picks.dmg?.lastPathComponent, "XeonLLM-v0.2.1-noavx2.dmg")
+        XCTAssertEqual(picks.dmg?.lastPathComponent, "XeonLLM-v0.2.2-noavx2.dmg")
         XCTAssertEqual(picks.checksums?.lastPathComponent, "checksums.txt")
     }
 
     func testAVX2BuildNeverPicksNoAVX2DMG() {
         let picks = GitHubUpdateFeed.pickAssets(from: assets([
-            "XeonLLM-v0.2.1.dmg", "XeonLLM-v0.2.1-noavx2.dmg", "checksums.txt"
+            "XeonLLM-v0.2.2.dmg", "XeonLLM-v0.2.2-noavx2.dmg", "checksums.txt"
         ]), isNoAVX2: false)
-        XCTAssertEqual(picks.dmg?.lastPathComponent, "XeonLLM-v0.2.1.dmg")
+        XCTAssertEqual(picks.dmg?.lastPathComponent, "XeonLLM-v0.2.2.dmg")
     }
 
     func testNoDMGOnThisChannelPicksNil() {
-        let picks = GitHubUpdateFeed.pickAssets(from: assets(["XeonLLM-v0.2.1.dmg"]),
+        let picks = GitHubUpdateFeed.pickAssets(from: assets(["XeonLLM-v0.2.2.dmg"]),
                                                 isNoAVX2: true)
         XCTAssertNil(picks.dmg, "a no-AVX2 build gets no AVX2 DMG")
         XCTAssertNil(picks.checksums)
@@ -195,17 +195,17 @@ final class UpdateChecksumTests: XCTestCase {
     }
 
     func testMatchingChecksumPasses() throws {
-        let dmg = makeDMG("XeonLLM-v0.2.1.dmg")
+        let dmg = makeDMG("XeonLLM-v0.2.2.dmg")
         // The real sha of the dummy file, so the match is computed not assumed.
         let actual = FileHash.sha256(of: dmg)!
-        let listing = "\(actual)  XeonLLM-v0.2.1.dmg"
+        let listing = "\(actual)  XeonLLM-v0.2.2.dmg"
         let out = try RealUpdateInstaller.checksum(actual: actual, dmg: dmg, listing: listing)
         XCTAssertEqual(out, actual)
     }
 
     func testMismatchIsRefusedAndFileRemoved() {
-        let dmg = makeDMG("XeonLLM-v0.2.1.dmg")
-        let listing = "0000  XeonLLM-v0.2.1.dmg"
+        let dmg = makeDMG("XeonLLM-v0.2.2.dmg")
+        let listing = "0000  XeonLLM-v0.2.2.dmg"
         XCTAssertThrowsError(try RealUpdateInstaller.checksum(actual: FileHash.sha256(of: dmg)!,
                                                               dmg: dmg, listing: listing)) { error in
             XCTAssertTrue(error.localizedDescription.contains("Checksum mismatch"))
@@ -215,7 +215,7 @@ final class UpdateChecksumTests: XCTestCase {
     }
 
     func testMissingChecksumLineIsRefused() throws {
-        let dmg = makeDMG("XeonLLM-v0.2.1.dmg")
+        let dmg = makeDMG("XeonLLM-v0.2.2.dmg")
         let listing = "deadbeef  Other.dmg"
         XCTAssertThrowsError(try RealUpdateInstaller.checksum(actual: FileHash.sha256(of: dmg)!,
                                                               dmg: dmg, listing: listing)) { error in
@@ -263,7 +263,7 @@ final class UpdateIdentityTests: XCTestCase {
     }
 
     func testNewerVersionPasses() throws {
-        try RealUpdateInstaller.identity(version: "0.2.2", newerThan: AppInfo.version)
+        try RealUpdateInstaller.identity(version: "0.2.3", newerThan: AppInfo.version)
     }
 }
 

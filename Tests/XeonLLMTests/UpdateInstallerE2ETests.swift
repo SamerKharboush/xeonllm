@@ -141,16 +141,16 @@ final class UpdateInstallerE2ETests: XCTestCase {
         let target = dir.appendingPathComponent("XeonLLM.app")
         try placeOldApp(at: target)
 
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         let installed = try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
                                        target: target, expectedNoAVX2: AppInfo.isNoAVX2)
         XCTAssertEqual(installed.path, target.path)
         let info = NSDictionary(contentsOfFile: target.appendingPathComponent("Contents/Info.plist").path)
-        XCTAssertEqual(info?["CFBundleShortVersionString"] as? String, "0.2.1")
+        XCTAssertEqual(info?["CFBundleShortVersionString"] as? String, "0.2.2")
         assertNoAppSwap(target, target.deletingPathExtension().appendingPathExtension("old.app"))
         try sh("/usr/bin/codesign", ["--verify", "--deep", "--strict", target.path])
     }
@@ -159,9 +159,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testSuccessWithNoExistingApp() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         let installed = try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -180,9 +180,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
         try Data("keep".utf8).write(to: sentinel)
         let before = try sha(sentinel)
 
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, "deadbeef")])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -197,9 +197,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testMissingChecksumLineRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([("Other.dmg", "deadbeef")])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -212,9 +212,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testNilChecksumsRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: nil, expectedVersion: "0.1.1",
                                             target: target, expectedNoAVX2: AppInfo.isNoAVX2)) { error in
@@ -227,9 +227,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testWrongBundleIdentifierRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: "dev.evil.app")
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -243,9 +243,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testWrongNoAVX2VariantRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: !AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: !AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -259,12 +259,12 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testEqualVersionRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
-        XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.2.1",
+        XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.2.2",
                                             target: target, expectedNoAVX2: AppInfo.isNoAVX2)) { error in
             XCTAssertTrue(error.localizedDescription.contains("not newer"))
         }
@@ -278,7 +278,7 @@ final class UpdateInstallerE2ETests: XCTestCase {
         let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.1.0")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
-        XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.2.1",
+        XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.2.2",
                                             target: target, expectedNoAVX2: AppInfo.isNoAVX2)) { error in
             XCTAssertTrue(error.localizedDescription.contains("not newer"))
         }
@@ -289,9 +289,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
 
     func testCodesignFailureRefuses() throws {
         let target = dir.appendingPathComponent("XeonLLM.app")
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier, tamper: true)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -310,7 +310,7 @@ final class UpdateInstallerE2ETests: XCTestCase {
         let sentinel = target.appendingPathComponent("Contents/keep.txt")
         try Data("old-bytes".utf8).write(to: sentinel)
         let before = try sha(sentinel)
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier)
 
         XCTAssertThrowsError(try RealUpdateInstaller.swapApp(
@@ -335,9 +335,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
         try Data("old-bytes".utf8).write(to: sentinel)
         let before = try sha(sentinel)
 
-        let newApp = try makeApp(name: "New", version: "0.2.1", noAVX2: AppInfo.isNoAVX2,
+        let newApp = try makeApp(name: "New", version: "0.2.2", noAVX2: AppInfo.isNoAVX2,
                                  identifier: AppInfo.identifier, tamper: true)
-        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.1")
+        let dmg = try makeDMG(app: newApp, name: "XeonLLM-v0.2.2")
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
 
         XCTAssertThrowsError(try runInstall(dmg: dmg, checksums: sums, expectedVersion: "0.1.1",
@@ -349,9 +349,9 @@ final class UpdateInstallerE2ETests: XCTestCase {
     // MARK: 10. the real release DMG (read-only)
 
     func testRealReleaseDMGInstalls() throws {
-        let dmg = URL(fileURLWithPath: "/Users/sam/firellama/dist/XeonLLM-v0.2.1-noavx2.dmg")
+        let dmg = URL(fileURLWithPath: "/Users/sam/firellama/dist/XeonLLM-v0.2.2-noavx2.dmg")
         guard fm.fileExists(atPath: dmg.path) else {
-            throw XCTSkip("dist/XeonLLM-v0.2.1-noavx2.dmg absent")
+            throw XCTSkip("dist/XeonLLM-v0.2.2-noavx2.dmg absent")
         }
         let sums = try checksumsFile([(dmg.lastPathComponent, try sha(dmg))])
         let target = dir.appendingPathComponent("XeonLLM.app")
@@ -360,7 +360,7 @@ final class UpdateInstallerE2ETests: XCTestCase {
                                        target: target, expectedNoAVX2: true)
         XCTAssertEqual(installed.path, target.path)
         let info = NSDictionary(contentsOfFile: target.appendingPathComponent("Contents/Info.plist").path)
-        XCTAssertEqual(info?["CFBundleShortVersionString"] as? String, "0.2.1")
+        XCTAssertEqual(info?["CFBundleShortVersionString"] as? String, "0.2.2")
         try sh("/usr/bin/codesign", ["--verify", "--deep", "--strict", target.path])
         assertNoAppSwap(target, target.deletingPathExtension().appendingPathExtension("old.app"))
     }
