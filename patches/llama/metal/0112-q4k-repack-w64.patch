@@ -1,0 +1,1540 @@
+# 0112: off-by-default Q4_K row-base repack for wave64 (XEON_Q4K_REPACK=1)
+#
+# What. On a 64-lane (SIMD-width-64) Metal device, 2D Q4_K weights in a private, WEIGHTS-usage
+# buffer are stored, on-card only, in a row-base "repacked" layout. The upload path permutes the
+# incoming bytes; every consumer that reads the quantized bytes was given a twin kernel reading
+# the repacked layout, or is routed off the Metal backend. The host-visible canonical bytes are
+# reproduced exactly on readback; tensor bytes on disk, nb01/nb1 and ggml_nbytes are unchanged.
+# No on-card copy is added. This generalises the 0111 Q6_K machinery over the type; it does not
+# copy it.
+#
+# Why. Q4_K spreads d/dmin/scales/qs across a 144-byte block, so a wave reads four scattered
+# pieces per block per row. Grouping each field once per row puts every 16-byte qs load on a
+# natural 16 B boundary and keeps whole fields contiguous, shortening the memory pipeline for the
+# decode (mul_mv n=1), n=2..8 (mul_mv_ext) and prefill (mul_mm) kernels. Most production models
+# are Q4_K_M, mostly Q4_K bytes, so this is the larger decode win.
+#
+# On-card layout. Per row, nb = ne00/256 Q4_K blocks, row length nb*144 B:
+#   canonical block-major:  for b in nb: [ d 2 B | dmin 2 B | scales 12 B | qs 128 B ]
+#   repacked field-major:   [ qs: nb*128 ][ scales: nb*12 ][ d: nb*2 ][ dmin: nb*2 ]
+# Total bytes and row stride are identical. Within a field the original order is preserved.
+# Rows are independent. Field order follows the kernel's loads: the decode (value-2 shape) reads
+# qs first and needs it 16 B aligned; scales are byte loads; d/dmin are half loads read last.
+# Alignment of every vector load: 144 = 9*16, so every row start is 16 B aligned for ANY nb; the
+# qs field (nb*128) and each block's 16 B qs window stay 16 B aligned. Eligibility therefore does
+# NOT need ne00 % 2048 (that gate was a Q6_K-only artifact of the 210-byte block).
+#
+# Range rule (B3/B4/B5). ggml_metal_repack_permute works on whole rows with offsets RELATIVE to
+# the span start (never absolute tensor offsets), so a partial range never overruns a scratch
+# buffer. Every set/get on a repacked tensor is row-granular read-modify-write:
+#   read  = read the whole rows covering [offset, offset+size), un-permute into a temp, copy out
+#           the requested bytes (ggml_metal_repack_read_canon).
+#   set   = read those rows, un-permute, overlay the new bytes, permute, write the rows back
+#           (ggml_metal_repack_write_canon). Edges of a chunked upload read rows not yet written;
+#           harmless because a later chunk overwrites them.
+# The set_tensor offset argument (not the buffer offset) decides the mark and must be 0; the
+# record stores the FULL ggml_nbytes(t) range and the row stride t->nb[1], so a later chunk at
+# offset > 0 resolves to the tensor and is permuted at row granularity.
+#
+# Eligibility (all must hold; decided at the first write at offset 0, recorded per buffer):
+#   XEON_Q4K_REPACK == "1" at device init, simd_width == 64 (decided once at init); else nothing
+#   tensor type Q4_K; ne[2] == 1 && ne[3] == 1 (not MUL_MAT_ID expert tensors);
+#   no ne00 gate (144*nb is 16 B aligned for any nb); buffer private (not shared/unified),
+#   usage & GGML_BACKEND_BUFFER_USAGE_WEIGHTS; not a DMoE arena (see marker); set_tensor offset
+#   == 0; per-tensor record keyed to the tensor offset in the buffer, so views that start on a
+#   repacked row boundary (whole-row multiple of the recorded row stride) still resolve to the
+#   tensor; any other view (non-whole-row) is rejected: ggml_metal_repack_is_rejected() ->
+#   supports_op false.
+#
+# Type gate (Q6_K stays byte-for-byte identical). ggml_metal_repack_type_on(t) returns
+# g_xq6k_repack for Q6_K and g_xq4k_repack for Q4_K; ggml_metal_repack_shape_ok(t) keeps the
+# Q6_K ne00%2048 && nb01%16 gate and adds no gate for Q4_K. With only XEON_Q4K_REPACK set,
+# g_xq6k_repack is false, so no Q6_K tensor is ever eligible, permuted or recorded; the Q6_K
+# path is the 0111 path unchanged. How known: the type gate is the only added branch and the
+# Q6_K permute branch is byte-identical to 0111; the CPU check replays a Q6_K-only set and
+# asserts identical records with and without XEON_Q4K_REPACK (Q6K_RECORDS_IDENTICAL_OK).
+#
+# Consumer table (every consumer of Q4_K on-card bytes; canonical = untouched):
+#   path                                                         file:line            handling
+#   MUL_MAT w64 n=1 decode                                       ggml-metal-ops.cpp    twin kernel_mul_mv_q4_K_f32_rb_w64
+#                                                                                       (value-2 shape: uint4 loads, 8 lanes/block;
+#                                                                                       nr0=16 wide, _r4 twin nr0=4 for small m,
+#                                                                                       matching the canonical V3=2 pick; used for
+#                                                                                       every n=1 repacked dispatch regardless of
+#                                                                                       XEON_MV_Q4K_V2/V3)
+#   MUL_MAT w64 n=2..8 (mul_mv_ext)                              ggml-metal-ops.cpp    twin kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_{2,3,4,5,8}
+#                                                                                       int row; r0ptg=1; r1ptg/nsg unchanged.
+#                                                                                       The ext gate bypasses the nc2 rows test for a
+#                                                                                       repacked src0 (nc2 has no rb twin), so n=2
+#                                                                                       reaches this twin instead of the canonical nc2
+#                                                                                       kernel that would read the repacked bytes as blocks.
+#   MUL_MAT prefill n>=threshold (mul_mm)                        ggml-metal-ops.cpp    twin kernel_mul_mm_q4_K_{f32,f16}_rb_w64
+#                                                                                       same tiling/threadgroup/smem as the default w64 tile;
+#                                                                                       only dequantize differs
+#   fused QKV (QVK q4_K q + Q6_K v + q4_K k)                     ggml-metal-ops.cpp    kernel_mul_mv_qvk_q4_K_q6_K_q4_K_layout<QRB,VRB,KRB>
+#                                                                                       8 static name literals (one per QRB/VRB/KRB
+#                                                                                       combo, no block-local buffer); each part its
+#                                                                                       own layout; Q6_K part independently 0111-repacked or not
+#   fused QKV (QVK q2_K q + q4_K v + q2_K k)                     ggml-metal-ops.cpp    kernel_mul_mv_qvk_q2_K_q4_K_rb_q2_K_f32
+#                                                                                       V (q4_K) branch twin; Q2_K never repacked
+#   GET_ROWS                                                     ggml-metal-ops.cpp    twin kernel_get_rows_q4_K_rb
+#   every other op reading a repacked tensor                     ggml-metal-device.m   supports_op false
+#   MUL_MAT_ID (3D Q4_K experts)                                 (not eligible)        canonical; ne[2]/ne[3] != 1 rejects repack
+#   DMoE arena (batched upload / memset / readback / cpy)        llama-xeon-dmoe.cpp   canonical via marker; never repacked
+#   SET_ROWS / MOE / quantize / flash-attn / conv / etc.         ggml-metal-device.m   supports_op false when a src is repacked
+#   cpy_tensor / blit / memcpy between tensors                   ggml-metal-device.m   host round trip through get/set at offset 0,
+#                                                                                       whole nbytes; never byte-blit a repacked row
+#   DMoE bank upload path (ggml_metal_dmoe_upload_* / bank)      ggml-metal-*.m        canonical; arena marked canonical
+#
+# Kernel names + selection hooks (line numbers refer to the file in this patch):
+#   dequantize_q4_K_rb()                                        kernels/dequantize.h   row-base twin helper
+#   kernel_mul_mv_q4_K_f32_rb_w64                               kernels/mul_mv_w64.metal  value-2 shape; nr0=16, _r4 nr0=4
+#   kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_{2,3,4,5,8}            kernels/mul_mv_w64.metal
+#   kernel_mul_mm_q4_K_f32_rb_w64 / _f16_rb_w64                 kernels/mul_mm_w64.metal
+#   kernel_mul_mv_q4_K_f32_rb                                   kernels/mul_mv.metal  (QVK Q/K branches; standalone);
+#                                                                                       faithful port of kernel_mul_mv_q4_K_f32_impl,
+#                                                                                       only the address computation reads repacked fields
+#   qvk_q4_K_q6_K_q4_K_body<QRB,VRB,KRB> + 7 rb host wrappers    kernels/mul_mv.metal
+#   kernel_mul_mv_qvk_q2_K_q4_K_rb_q2_K_f32                     kernels/mul_mv.metal
+#   kernel_get_rows_q4_K_rb                                     kernels/quantize.metal
+#   hook mul_mv:    ggml_metal_library_get_pipeline_mul_mv      ggml-metal-device.cpp  (runs before _r4/_r8 w64; needs n=1, 2D, w64)
+#   hook mul_mv_ext:ggml_metal_library_get_pipeline_mul_mv_ext  ggml-metal-device.cpp  (runs before kquant_ext; r0ptg=1)
+#   hook mul_mm:    ggml_metal_library_get_pipeline_mul_mm      ggml-metal-device.cpp  (use_mm_manual && !has_tensor w64; twin mirrors default tile)
+#   hook get_rows:  ggml_metal_library_get_pipeline_get_rows_rb ggml-metal-device.cpp  (now takes tsrc0)
+#   hook qvk:       ggml_metal_fuse_qvk                         ggml-metal-ops.cpp
+#   dispatch ext r0ptg:                                         ggml-metal-ops.cpp
+#   gate:           ggml_metal_repack_enabled / _is_tensor / _is_rejected (single predicate;
+#                                                                                       _is_tensor already checks the type flag)
+#   init:           XEON_Q4K_REPACK read once in ggml_metal_device_init; simd_width==64 only
+#
+# Arena marker. Same as 0111: ggml_backend_metal_mark_canonical sets repack_canonical = true and
+# clears the repack records (the field was renamed q6k_canonical -> repack_canonical); called
+# from llama-xeon-dmoe.cpp after the arena is marked WEIGHTS and before any arena write. The
+# marker is type-agnostic, so a Q4_K arena is excluded exactly as a Q6_K one.
+#
+# Upload/readback paths touched (every path that moves tensor bytes):
+#   ggml_metal_buffer_set_tensor            ggml-metal-device.m   row-granular RMW permute into on-card layout
+#   ggml_metal_buffer_set_tensor_2d         ggml-metal-device.m   GGML_ABORT on a repacked tensor (B6)
+#   ggml_metal_buffer_memset_tensor         ggml-metal-device.m   GGML_ABORT on a repacked tensor (B6)
+#   ggml_metal_buffer_get_tensor            ggml-metal-device.m   row-granular inverse permute (arbitrary range)
+#   ggml_metal_buffer_cpy_tensor            ggml-metal-device.m   host round trip get/set at 0, nbytes; exact
+#   ggml_metal_set_tensor_async             ggml-metal-context.m  routed to synchronous RMW set
+#   ggml_metal_get_tensor_async             ggml-metal-context.m  routed to synchronous RMW get
+#   DMoE uploader + bank upload             ggml-metal-device.m / ggml-metal-context.m  canonical; marker prevents repack
+#   RAWGET (test-only)                      ggml-metal-device.m   XEON_Q4K_REPACK_RAWGET=1 returns raw on-card bytes
+#
+# Reduction order changed. The repacked kernels keep the Q4_K algebra bit-identical per lane
+# (same nibbles/scales/d, same 1/16 and 1/256 folding). The n=1 decode sums via the value-2
+# v3ns tree (8 lanes/block, simd_sum); the QVK Q/K parts and the standalone rb twin are now a
+# faithful port of the canonical kernel_mul_mv_q4_K_f32_impl (same lane/row/reduction tree, only
+# the address computation differs), so their reduction order matches canonical. Last-bit
+# differences are possible on the n=1 decode; eval-mode tolerance decides. Unset or wave32:
+# unchanged.
+#
+# Decode gain is ~0 for Q4_K. The canonical block_q4_K already puts qs at +16 in a 144-byte
+# (=9*16) block, so the 16-byte qs loads are 16-B aligned in BOTH layouts; the repack groups the
+# fields but does not remove a cache miss the decode already avoided. The win, if any, is the
+# prefill (mul_mm) and n=2..8 (ext) paths, not n=1 decode.
+#
+# Off by default; unset or any other value leaves the default path byte-for-byte unchanged. The
+# hot path adds a single bool check (ggml_metal_repack_enabled()) when no tensor is repacked.
+# Nothing on 0109/0110 kernels or selection is altered; no new switch affects wave32.
+#
+# CPU-only verification (no GPU program, no engine build, no test-backend-ops run):
+#   .scratch/xeonllm-0-2/evidence/t07/q4k_repack_cpu_check.py
+#   - permutation round trip on whole-row spans (1 and 3 rows), several nb: max abs err 0,
+#     ROUNDTRIP_OK
+#   - dequantize_q4_K_rb replayed vs canonical dequantize_q4_K: max abs err 0.000e+00
+#   - decode twin synthetic (hdr,qv) loads equal the canonical block first uint4 + qs window for
+#     every (ib,it): DECODE_LOADS_OK
+#   - wave64 lane coverage (decode it 0..7 / ix stride 8; ext/mm il 0..15, ib=ip+4k): LANE_COVERAGE_OK
+#   - DISPATCH replay: decode m=2051, ext m=2051 n=2/n=8, mm m=1027 n=32/n=512; every output row
+#     reads its own src0 row exactly once: DECODE/EXT/MM_DISPATCH_REPLAY_OK
+#   - DISPATCH GATE replay: a repacked Q4_K src0 takes the ext path for every n (the nc2 rows
+#     test is bypassed), so n=2 never diverts to the canonical nc2 kernel; canonical n=2 still
+#     uses nc2: DISPATCH_GATE_REPLAY_OK
+#   - B3/B4 device model: ~1 MB random-size chunked upload at offset 0, partial get at a non-row
+#     offset crossing rows, partial RMW set, whole byte-exact get: RMW_CHUNKED_OK
+#   - Q6_K-only set gives identical 0111 records with and without XEON_Q4K_REPACK:
+#     Q6K_RECORDS_IDENTICAL_OK
+#   - xcrun -sdk macosx metal -c on every changed .metal; clang++/clang -fsyntax-only on every
+#     changed C/C++/ObjC file (from a clean series-applied tree); no GPU test run here.
+#   - test-backend-ops cases added (minimal, reach repacked path when env set): Q4_K 2D n=1
+#     m in {1,2,64,2051} at k in {2560,4096} (2560 = the 4B n_embd); n=2,n=8; prefill mul_mm
+#     n=32,n=512 m=1027; test_q4k_repack_rw: ~1 MB non-row-aligned chunked upload, non-row
+#     partial get crossing rows, partial RMW set, byte-exact whole get, raw device bytes check,
+#     then mul_mat on the repacked weight; m=1/m=2 use err() = max_j |a_j-b_j|/(E_j+F_j), E_j
+#     worst-case Q8_K rounding of src1 (Q4_K vec_dot_type is Q8_K), F_j=4e-5*sum|src0*src1|;
+#     max_nmse_err()=1.0. get_rows Q4_K is covered by the all_types loop (use_weight_context
+#     override). XEON_Q4K_REPACK_LOG=1 prints one 'q4k-repack: mark <name> ...' line per tensor.
+#     NOT RUN here (no cmake build, no test-backend-ops); compile-checked only.
+#   - mixed fused-QKV (q4_K/q6_K/q4_K): not added as a test-backend-ops case. The fused QKV path
+#     is reached only through a specific q/k/v graph with a shared src1 and single-token planes,
+#     which test-backend-ops does not build (it tests ops in isolation, not the fusion). The 7 rb
+#     host wrappers are compile-checked; correctness is left to the orchestrator's card run.
+#
+# Known blockers / unsure (honest):
+#   * ggml_metal_buffer_set_tensor_2d and ggml_metal_buffer_memset_tensor GGML_ABORT on a
+#     repacked tensor (B6). Nothing calls them on a repacked Q4_K tensor today, so the abort is a
+#     guard, not a live path.
+#   * no GPU correctness or perf numbers; reduction order changed (above).
+#   * ext twin keeps r0ptg=1 (one src0 row per threadgroup, R1 src1 rows); a multi-row src0 form
+#     is left as a known cost for n=2..8, same as 0111.
+#   * mixed fused-QKV has no automated test (see above).
+#
+# Measured by orchestrator, round 2 (engine v0.2.1-0112r2-avx1 = pin d81235049 + series through 0111 + 0111a + this
+# patch; card 1 only, GGML_METAL_DEVICE_INDEX=1; card 0 not run, needs the user's approval). Evidence
+# .scratch/xeonllm-0-2/evidence/t07/q4rb2. Arms: A default; B XEON_Q4K_REPACK=1; C XEON_MV_Q4K_V3=2 +
+# XEON_Q6K_REPACK=1 (best canonical set); D both repacks (V3 has no effect on a repacked tensor).
+#   Correctness: test-backend-ops -b MTL0 -o MUL_MAT 1859/1859 on A, B, D (B/D: 106 Q4_K tensors marked,
+#   incl. n=2 and n=8); -o GET_ROWS 232/232; raw device-bytes check OK. 256-token greedy text identical
+#   across A..D: Qwen3-4B 91b358aa, Qwen3-8B 3757ac38, LFM3-1.7B 82d29582 (216 Q4_K tensors marked on 4B/8B).
+#   Decode, llama-bench -ngl 99 -p 0 -n 128 -fa 1, 3 alternating rounds, warmup discarded by llama-bench:
+#     Qwen3-4B Q4_K_M: A 17.13  B 16.22  C 17.55-17.57  D 16.21 t/s
+#     Qwen3-8B Q4_K_M: A 10.58  B 11.78  C 14.74-14.75  D 13.78-13.79 t/s
+#   Prefill, llama-bench -p 512 -n 0, 2 rounds:
+#     Qwen3-4B: A 86.39-86.43  B 88.33-88.40  C 86.49-86.52  D 88.39-88.41 t/s
+#     Qwen3-8B: A 41.08  B 45.43-45.50  C 42.96  D 47.18-47.19 t/s
+#   test-backend-ops perf, Q4_K m=4096 n=512 k=14336: A 568 GFLOPS, B 657; m=4096 n=1 k=4096: A 174 us,
+#   B 159, C 135; m=6144 n=1 k=2560: A 192 us, B 223, C 194.
+# Reading: repack raises prefill on both models; on decode it loses to the canonical V3=2 kernel on both
+# (D below C) and to the default kernel on the 4B. Kept off by default. Not exercised: the fused QVK rb
+# variants (0111a skips the Q4_K/Q6_K/Q4_K fusion on wave64 unless XEON_QVK_Q4K_W64_FUSE=1; the Q2_K/Q4_K
+# pattern had no model here), and XEON_EXT_DISABLE=1 with a repacked tensor at n>1 (inherited from 0111:
+# the canonical mul_mv fallback would read repacked bytes; debug switch only).
+--- a/ggml/src/ggml-metal/ggml-metal-device.h
++++ b/ggml/src/ggml-metal/ggml-metal-device.h
+@@ -140,7 +140,7 @@
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_pool_1d           (ggml_metal_library_t lib, const struct ggml_tensor * op, enum ggml_op_pool op_pool);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_pool_2d           (ggml_metal_library_t lib, const struct ggml_tensor * op, enum ggml_op_pool op_pool);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_get_rows          (ggml_metal_library_t lib, enum ggml_type tsrc);
+-struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_get_rows_rb       (ggml_metal_library_t lib);
++struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_get_rows_rb       (ggml_metal_library_t lib, enum ggml_type tsrc0);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_set_rows          (ggml_metal_library_t lib, const struct ggml_tensor * op, bool wave64);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_diag              (ggml_metal_library_t lib, const struct ggml_tensor * op);
+ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_repeat            (ggml_metal_library_t lib, enum ggml_type tsrc);
+--- a/ggml/src/ggml-metal/ggml-metal-device.m
++++ b/ggml/src/ggml-metal/ggml-metal-device.m
+@@ -23,8 +23,9 @@
+ #include <stdio.h>
+ #include <unistd.h>
+ 
+-// XEON_Q6K_REPACK is decided once at device init; wave32 devices never take this path.
++// XEON_Q6K_REPACK / XEON_Q4K_REPACK are decided once at device init; wave32 devices never take this path.
+ static atomic_bool g_xq6k_repack = false;
++static atomic_bool g_xq4k_repack = false;
+ 
+ #import <IOKit/IOKitLib.h>
+ #import <CommonCrypto/CommonDigest.h>
+@@ -2000,6 +2001,8 @@
+ 
+                 const char * q6k_repack = XEON_ENV("XEON_Q6K_REPACK");
+                 atomic_store(&g_xq6k_repack, dev->props.simd_width == 64 && q6k_repack != NULL && strcmp(q6k_repack, "1") == 0);
++                const char * q4k_repack = XEON_ENV("XEON_Q4K_REPACK");
++                atomic_store(&g_xq4k_repack, dev->props.simd_width == 64 && q4k_repack != NULL && strcmp(q4k_repack, "1") == 0);
+ 
+                 dev->props.has_simdgroup_mm = [dev->mtl_device supportsFamily:MTLGPUFamilyApple7];
+ 
+@@ -2618,8 +2621,8 @@
+     const bool wave64_decode           = dev->props.wave64_decode;
+     const bool has_bfloat              = dev->props.has_bfloat;
+ 
+-    // repacked Q6_K bytes are valid only for the twins below; a view that cuts a row in half
+-    // has no valid row-base mapping and every other reader goes to the CPU through get_tensor
++    // repacked bytes (Q6_K or Q4_K) are valid only for the twins below; a view that cuts a row in
++    // half has no valid row-base mapping and every other reader goes to the CPU through get_tensor
+     if (ggml_metal_repack_is_rejected(op->src[0]) ||
+         ggml_metal_repack_is_rejected(op->src[1]) ||
+         ggml_metal_repack_is_rejected(op->src[2])) {
+@@ -3283,7 +3286,7 @@
+     id<MTLBuffer> metal;
+ };
+ 
+-struct ggml_metal_q6k_rec {
++struct ggml_metal_repack_rec {
+     size_t offs;   // tensor byte offset inside the Metal buffer
+     size_t size;   // ggml_nbytes of the whole tensor
+     size_t row;    // row stride in bytes (t->nb[1]) the record was made with
+@@ -3312,10 +3315,10 @@
+     ggml_metal_device_t dev;
+ 
+     // Q6_K byte-permuted tensors in this buffer, keyed by tensor offset
+-    struct ggml_metal_q6k_rec * q6k_recs;
+-    size_t q6k_nrecs;
+-    size_t q6k_crecs;
+-    bool q6k_canonical;
++    struct ggml_metal_repack_rec * repack_recs;
++    size_t repack_nrecs;
++    size_t repack_crecs;
++    bool repack_canonical;
+ };
+ 
+ static void ggml_metal_log_allocated_size(id<MTLDevice> device, size_t size_aligned) {
+@@ -3638,7 +3641,7 @@
+ #endif
+     }
+ 
+-    free(buf->q6k_recs);
++    free(buf->repack_recs);
+     free(buf);
+ }
+ 
+@@ -3650,11 +3653,35 @@
+     return buf->is_shared;
+ }
+ 
++// Repack is per type: Q6_K under XEON_Q6K_REPACK, Q4_K under XEON_Q4K_REPACK. A type is
++// eligible only when its own flag is set, so the two repacks never interfere.
++static bool ggml_metal_repack_type_on(const struct ggml_tensor * t) {
++    if (t->type == GGML_TYPE_Q6_K) {
++        return atomic_load(&g_xq6k_repack);
++    }
++    if (t->type == GGML_TYPE_Q4_K) {
++        return atomic_load(&g_xq4k_repack);
++    }
++    return false;
++}
++
++// Shape gate. Q6_K rows are 210*nb bytes, 16 B aligned only when nb % 8 == 0 (ne00 % 2048).
++// Q4_K rows are 144*nb bytes and 144 = 9*16, so every row start is 16 B aligned for any nb.
++static bool ggml_metal_repack_shape_ok(const struct ggml_tensor * t) {
++    if (t->ne[2] != 1 || t->ne[3] != 1) {
++        return false;
++    }
++    if (t->type == GGML_TYPE_Q6_K) {
++        return t->ne[0] % 2048 == 0 && t->nb[1] % 16 == 0;
++    }
++    return t->type == GGML_TYPE_Q4_K;
++}
++
+ bool ggml_metal_repack_enabled(void) {
+-    return atomic_load(&g_xq6k_repack);
++    return atomic_load(&g_xq6k_repack) || atomic_load(&g_xq4k_repack);
+ }
+ 
+-static bool ggml_metal_q6k_buffer_of(const struct ggml_tensor * t, ggml_metal_buffer_t * buf) {
++static bool ggml_metal_repack_buffer_of(const struct ggml_tensor * t, ggml_metal_buffer_t * buf) {
+     struct ggml_backend_buffer * b = t->view_src ? t->view_src->buffer : t->buffer;
+     if (b == NULL || !ggml_backend_metal_buffer_is_metal(b)) {
+         return false;
+@@ -3663,7 +3690,7 @@
+     return *buf != NULL;
+ }
+ 
+-static bool ggml_metal_q6k_offset(ggml_metal_buffer_t buf, const struct ggml_tensor * t, size_t * offs) {
++static bool ggml_metal_repack_offset(ggml_metal_buffer_t buf, const struct ggml_tensor * t, size_t * offs) {
+     const char * data = (const char *) t->data;
+     for (int i = 0; i < buf->n_buffers; ++i) {
+         const char * base = (const char *) buf->buffers[i].data;
+@@ -3675,9 +3702,9 @@
+     return false;
+ }
+ 
+-static struct ggml_metal_q6k_rec * ggml_metal_q6k_find(ggml_metal_buffer_t buf, size_t offs, size_t size) {
+-    for (size_t i = 0; i < buf->q6k_nrecs; ++i) {
+-        struct ggml_metal_q6k_rec * r = &buf->q6k_recs[i];
++static struct ggml_metal_repack_rec * ggml_metal_repack_find(ggml_metal_buffer_t buf, size_t offs, size_t size) {
++    for (size_t i = 0; i < buf->repack_nrecs; ++i) {
++        struct ggml_metal_repack_rec * r = &buf->repack_recs[i];
+         if (offs >= r->offs && offs + size <= r->offs + r->size) {
+             return r;
+         }
+@@ -3685,20 +3712,20 @@
+     return NULL;
+ }
+ 
+-static void ggml_metal_q6k_add(ggml_metal_buffer_t buf, size_t offs, size_t size, size_t row, int nb) {
+-    if (ggml_metal_q6k_find(buf, offs, size) != NULL) {
++static void ggml_metal_repack_add(ggml_metal_buffer_t buf, size_t offs, size_t size, size_t row, int nb) {
++    if (ggml_metal_repack_find(buf, offs, size) != NULL) {
+         return;
+     }
+-    if (buf->q6k_nrecs == buf->q6k_crecs) {
+-        size_t cap = buf->q6k_crecs ? buf->q6k_crecs*2 : 16;
+-        struct ggml_metal_q6k_rec * recs = (struct ggml_metal_q6k_rec *) realloc(buf->q6k_recs, cap*sizeof(*recs));
++    if (buf->repack_nrecs == buf->repack_crecs) {
++        size_t cap = buf->repack_crecs ? buf->repack_crecs*2 : 16;
++        struct ggml_metal_repack_rec * recs = (struct ggml_metal_repack_rec *) realloc(buf->repack_recs, cap*sizeof(*recs));
+         if (recs == NULL) {
+             return;
+         }
+-        buf->q6k_recs = recs;
+-        buf->q6k_crecs = cap;
++        buf->repack_recs = recs;
++        buf->repack_crecs = cap;
+     }
+-    struct ggml_metal_q6k_rec * r = &buf->q6k_recs[buf->q6k_nrecs++];
++    struct ggml_metal_repack_rec * r = &buf->repack_recs[buf->repack_nrecs++];
+     r->offs = offs;
+     r->size = size;
+     r->row  = row;
+@@ -3707,23 +3734,20 @@
+ 
+ // Mark decision, made on the first write at offset 0 from the tensor's own eligibility. The
+ // set_tensor offset (not the buffer offset) must be 0; size may be a loader chunk (< nbytes).
+-static bool ggml_metal_q6k_eligible(ggml_metal_buffer_t buf, const struct ggml_tensor * t, size_t set_off) {
+-    return atomic_load(&g_xq6k_repack) &&
+-           t->type == GGML_TYPE_Q6_K &&
+-           t->ne[2] == 1 && t->ne[3] == 1 &&
+-           t->ne[0] % 2048 == 0 && t->nb[1] % 16 == 0 &&
++static bool ggml_metal_repack_eligible(ggml_metal_buffer_t buf, const struct ggml_tensor * t, size_t set_off) {
++    return ggml_metal_repack_type_on(t) &&
++           ggml_metal_repack_shape_ok(t) &&
+            set_off == 0 &&
+-           !buf->is_shared && !buf->q6k_canonical &&
++           !buf->is_shared && !buf->repack_canonical &&
+            (t->buffer->usage & GGML_BACKEND_BUFFER_USAGE_WEIGHTS) != 0;
+ }
+ 
+ bool ggml_metal_repack_candidate(const struct ggml_tensor * t) {
+     ggml_metal_buffer_t buf = NULL;
+     size_t offs = 0;
+-    if (t == NULL || !atomic_load(&g_xq6k_repack) || t->type != GGML_TYPE_Q6_K ||
+-        t->ne[2] != 1 || t->ne[3] != 1 || t->ne[0] % 2048 != 0 || t->nb[1] % 16 != 0 ||
+-        !ggml_metal_q6k_buffer_of(t, &buf) || buf->q6k_canonical || buf->is_shared ||
+-        !ggml_metal_q6k_offset(buf, t, &offs) ||
++    if (t == NULL || !ggml_metal_repack_type_on(t) || !ggml_metal_repack_shape_ok(t) ||
++        !ggml_metal_repack_buffer_of(t, &buf) || buf->repack_canonical || buf->is_shared ||
++        !ggml_metal_repack_offset(buf, t, &offs) ||
+         (t->buffer->usage & GGML_BACKEND_BUFFER_USAGE_WEIGHTS) == 0) {
+         return false;
+     }
+@@ -3733,11 +3757,11 @@
+ bool ggml_metal_repack_is_tensor(const struct ggml_tensor * t) {
+     ggml_metal_buffer_t buf = NULL;
+     size_t offs = 0;
+-    if (!atomic_load(&g_xq6k_repack) || t == NULL || t->type != GGML_TYPE_Q6_K ||
+-        !ggml_metal_q6k_buffer_of(t, &buf) || !ggml_metal_q6k_offset(buf, t, &offs)) {
++    if (t == NULL || !ggml_metal_repack_type_on(t) ||
++        !ggml_metal_repack_buffer_of(t, &buf) || !ggml_metal_repack_offset(buf, t, &offs)) {
+         return false;
+     }
+-    struct ggml_metal_q6k_rec * r = ggml_metal_q6k_find(buf, offs, ggml_nbytes(t));
++    struct ggml_metal_repack_rec * r = ggml_metal_repack_find(buf, offs, ggml_nbytes(t));
+     if (r == NULL) {
+         return false;
+     }
+@@ -3748,23 +3772,64 @@
+ bool ggml_metal_repack_is_rejected(const struct ggml_tensor * t) {
+     ggml_metal_buffer_t buf = NULL;
+     size_t offs = 0;
+-    if (!atomic_load(&g_xq6k_repack) || t == NULL || t->type != GGML_TYPE_Q6_K ||
+-        !ggml_metal_q6k_buffer_of(t, &buf) || !ggml_metal_q6k_offset(buf, t, &offs)) {
++    if (t == NULL || !ggml_metal_repack_type_on(t) ||
++        !ggml_metal_repack_buffer_of(t, &buf) || !ggml_metal_repack_offset(buf, t, &offs)) {
+         return false;
+     }
+-    struct ggml_metal_q6k_rec * r = ggml_metal_q6k_find(buf, offs, ggml_nbytes(t));
++    struct ggml_metal_repack_rec * r = ggml_metal_repack_find(buf, offs, ggml_nbytes(t));
+     return r != NULL && (offs - r->offs) % r->row != 0;
+ }
+ 
+ // Permute whole rows [row0, row0+nrows) between canonical and repacked layout. dst and src are
+ // nrows*row buffers; offsets are relative to the row, never absolute tensor offsets, so a partial
+ // range never overruns. Callers expand the requested range to whole rows first.
++//   Q6_K block 210 B: [ql 128][qh 64][scales 16][d 2] -> [ql nb*128][qh nb*64][scales nb*16][d nb*2]
++//   Q4_K block 144 B: [d 2][dmin 2][scales 12][qs 128] -> [qs nb*128][scales nb*12][d nb*2][dmin nb*2]
+ void ggml_metal_repack_permute(const struct ggml_tensor * t, void * dst, const void * src, size_t row0, size_t nrows, bool to_repacked) {
+-    const int nb = t->ne[0]/256;
+     const size_t row = (size_t) t->nb[1];
+     char * d = (char *) dst;
+     const char * s = (const char *) src;
+     GGML_UNUSED(row0);
++    if (t->type == GGML_TYPE_Q4_K) {
++        const size_t nb = (size_t) t->ne[0]/256;
++        for (size_t rr = 0; rr < nrows; ++rr) {
++            char * drow = d + rr*row;
++            const char * srow = s + rr*row;
++            size_t pos = 0;
++            while (pos < row) {
++                size_t base, len, b, j, done;
++                if (to_repacked) {
++                    const size_t f = pos % 144;
++                    b = pos / 144;
++                    if      (f <   2) { base = 140; len =   2; j = f; }
++                    else if (f <   4) { base = 142; len =   2; j = f - 2; }
++                    else if (f <  16) { base = 128; len =  12; j = f - 4; }
++                    else              { base =   0; len = 128; j = f - 16; }
++                    // done is measured from pos to the end of this canonical field segment
++                    done = b*144 + (f < 2 ? 2 : (f < 4 ? 4 : (f < 16 ? 16 : 144))) - pos;
++                } else {
++                    size_t seg;
++                    if (pos < 128*nb) {
++                        base = 16; len = 128; b = pos/128; j = pos%128; seg = b*128;
++                    } else if (pos < 140*nb) {
++                        base = 4; len = 12; b = (pos - 128*nb)/12; j = (pos - 128*nb)%12; seg = 128*nb + b*12;
++                    } else if (pos < 142*nb) {
++                        base = 0; len =  2; b = (pos - 140*nb)/2; j = (pos - 140*nb)%2; seg = 140*nb + b*2;
++                    } else {
++                        base = 2; len =  2; b = (pos - 142*nb)/2; j = (pos - 142*nb)%2; seg = 142*nb + b*2;
++                    }
++                    done = seg + len - pos;
++                }
++                const size_t n = done < row - pos ? done : row - pos;
++                const size_t dst_off = to_repacked ? base*nb + b*len + j
++                                                   : b*144 + base + j;
++                memmove(drow + dst_off, srow + pos, n);
++                pos += n;
++            }
++        }
++        return;
++    }
++    const int nb = t->ne[0]/256;
+     for (size_t rr = 0; rr < nrows; ++rr) {
+         char * drow = d + rr*row;
+         const char * srow = s + rr*row;
+@@ -3802,8 +3867,8 @@
+ }
+ 
+ void ggml_metal_buffer_mark_canonical(ggml_metal_buffer_t buf) {
+-    buf->q6k_canonical = true;
+-    buf->q6k_nrecs = 0;
++    buf->repack_canonical = true;
++    buf->repack_nrecs = 0;
+ }
+ 
+ void ggml_metal_buffer_memset_tensor(ggml_metal_buffer_t buf, struct ggml_tensor * tensor, uint8_t value, size_t offset, size_t size) {
+@@ -3814,7 +3879,7 @@
+     // B6: a repacked tensor cannot be filled byte-wise; the row layout is not the canonical one.
+     // Nothing fills repacked weights today (read-only after load); refuse instead of corrupting.
+     if (ggml_metal_repack_is_tensor(tensor)) {
+-        GGML_ABORT("%s: memset on repacked Q6_K tensor '%s' is not supported\n", __func__, tensor->name);
++        GGML_ABORT("%s: memset on a repacked tensor '%s' is not supported\n", __func__, tensor->name);
+     }
+ 
+     @autoreleasepool {
+@@ -4318,7 +4383,7 @@
+     }
+     // B6: 2D strided writes on a repacked tensor are not row-granular; refuse instead of corrupting.
+     if (ggml_metal_repack_is_tensor(tensor)) {
+-        GGML_ABORT("%s: set_tensor_2d on repacked Q6_K tensor '%s' is not supported\n", __func__, tensor->name);
++        GGML_ABORT("%s: set_tensor_2d on a repacked tensor '%s' is not supported\n", __func__, tensor->name);
+     }
+ 
+     if (!buf->is_shared) {
+@@ -4349,8 +4414,8 @@
+ 
+     // B1: the mark decision uses the set_tensor offset (== 0), not the buffer offset.
+     size_t offs = 0;
+-    const bool mark = atomic_load(&g_xq6k_repack) && ggml_metal_q6k_offset(buf, tensor, &offs) &&
+-                      ggml_metal_q6k_eligible(buf, tensor, offset);
++    const bool mark = ggml_metal_repack_offset(buf, tensor, &offs) &&
++                      ggml_metal_repack_eligible(buf, tensor, offset);
+     const bool repacked = mark || ggml_metal_repack_is_tensor(tensor);
+     if (repacked) {
+         // B3/B4: row-granular read-modify-write. Edges read rows not yet written by a chunked
+@@ -4361,11 +4426,12 @@
+         ggml_metal_repack_write_canon(buf, tensor, canon, row0, nrows, span);
+         free(canon);
+         if (mark) {
+-            ggml_metal_q6k_add(buf, offs, ggml_nbytes(tensor), (size_t) tensor->nb[1], tensor->ne[0]/256);
+-            // F1 positive control: one line per tensor at mark time, off unless XEON_Q6K_REPACK_LOG=1.
+-            const bool log = getenv("XEON_Q6K_REPACK_LOG") != NULL;
++            ggml_metal_repack_add(buf, offs, ggml_nbytes(tensor), (size_t) tensor->nb[1], tensor->ne[0]/256);
++            // F1 positive control: one line per tensor at mark time, off unless the LOG env is set.
++            const bool log = getenv("XEON_Q6K_REPACK_LOG") != NULL || getenv("XEON_Q4K_REPACK_LOG") != NULL;
+             if (log) {
+-                fprintf(stderr, "q6k-repack: mark %s ne=%lld,%lld,%lld,%lld nb1=%lld\n",
++                const char * tag = tensor->type == GGML_TYPE_Q4_K ? "q4k-repack" : "q6k-repack";
++                fprintf(stderr, "%s: mark %s ne=%lld,%lld,%lld,%lld nb1=%lld\n", tag,
+                         tensor->name,
+                         (long long) tensor->ne[0], (long long) tensor->ne[1],
+                         (long long) tensor->ne[2], (long long) tensor->ne[3],
+@@ -4573,9 +4639,9 @@
+         atomic_fetch_add_explicit(&g_xeon_d2h_bytes, size, memory_order_relaxed);
+     }
+     if (ggml_metal_repack_is_tensor(tensor)) {
+-        // test-only: XEON_Q6K_REPACK_RAWGET=1 returns the raw device bytes without un-permuting,
+-        // so a test can compare the on-card repacked layout against an independent CPU permutation
+-        if (getenv("XEON_Q6K_REPACK_RAWGET") != NULL) {
++        // test-only: XEON_Q6K_REPACK_RAWGET / XEON_Q4K_REPACK_RAWGET=1 returns the raw device
++        // bytes without un-permuting, so a test can compare the on-card layout against a CPU permute
++        if (getenv("XEON_Q6K_REPACK_RAWGET") != NULL || getenv("XEON_Q4K_REPACK_RAWGET") != NULL) {
+             ggml_metal_buffer_get_tensor_impl(buf, tensor, data, offset, size);
+             return;
+         }
+--- a/ggml/src/ggml-metal/ggml-metal-device.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-device.cpp
+@@ -215,9 +215,10 @@
+     return res;
+ }
+ 
+-ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_get_rows_rb(ggml_metal_library_t lib) {
+-    const char * base = "kernel_get_rows_q6_K_rb";
+-    const char * name = "kernel_get_rows_q6_K_rb";
++ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_get_rows_rb(ggml_metal_library_t lib, enum ggml_type tsrc0) {
++    char base[64];
++    snprintf(base, sizeof(base), tsrc0 == GGML_TYPE_Q4_K ? "kernel_get_rows_q4_K_rb" : "kernel_get_rows_q6_K_rb");
++    const char * name = base;
+ 
+     ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
+     if (!res.pipeline) {
+@@ -963,7 +964,9 @@
+         ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode) {
+         char base_rb[256];
+         char name_rb[256];
+-        snprintf(base_rb, sizeof(base_rb), "kernel_mul_mv_ext_q6_K_f32_rb_w64_r1_%d", r1ptg);
++        const bool is_q4k = tsrc0 == GGML_TYPE_Q4_K;
++        snprintf(base_rb, sizeof(base_rb), is_q4k ? "kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_%d" :
++                                                    "kernel_mul_mv_ext_q6_K_f32_rb_w64_r1_%d", r1ptg);
+         snprintf(name_rb, sizeof(name_rb), "%s_nsg=%d_nxpsg=%d_ne12=%d_r2=%d_r3=%d", base_rb, nsg, nxpsg, ne12, r2, r3);
+         ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name_rb);
+         if (!res.pipeline) {
+@@ -1230,8 +1233,11 @@
+         ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->simd_width == 64 &&
+         ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode &&
+         (tsrc1 == GGML_TYPE_F32 || tsrc1 == GGML_TYPE_F16)) {
+-        const char * base_rb = tsrc1 == GGML_TYPE_F32 ? "kernel_mul_mm_q6_K_f32_rb_w64" :
+-                                                       "kernel_mul_mm_q6_K_f16_rb_w64";
++        const bool is_q4k = tsrc0 == GGML_TYPE_Q4_K;
++        const char * base_rb = is_q4k ? (tsrc1 == GGML_TYPE_F32 ? "kernel_mul_mm_q4_K_f32_rb_w64" :
++                                                                   "kernel_mul_mm_q4_K_f16_rb_w64") :
++                                       (tsrc1 == GGML_TYPE_F32 ? "kernel_mul_mm_q6_K_f32_rb_w64" :
++                                                                 "kernel_mul_mm_q6_K_f16_rb_w64");
+         const bool acc_f32 = use_mm_manual &&
+                              (!ggml_is_contiguous(op->src[0]) ||
+                               (tsrc0 == GGML_TYPE_BF16 && XEON_ENV("XEON_MM_BF16_ACC_F32") != nullptr)) &&
+@@ -1670,12 +1676,19 @@
+ 
+     if (ggml_metal_repack_is_tensor(op->src[0]) && ne11 == 1 && simd_width == 64 &&
+         ggml_metal_device_get_props(ggml_metal_library_get_device(lib))->wave64_decode) {
++        const bool is_q4k = tsrc0 == GGML_TYPE_Q4_K;
+         const char * kv = XEON_ENV("XEON_Q6K_REPACK_KERNEL");
+-        const int variant = kv == NULL ? 2 : atoi(kv);
+-        const int rows = variant == 1 ? 2 : (variant == 3 ? 8 : 4);
+-        const char * base_rb = variant == 1 ? "kernel_mul_mv_q6_K_f32_rb_w64_v1" :
++        // Q4_K twin: the value-2 shape (uint4 quant loads, 8 lanes per block). nr0 follows the
++        // canonical V3=2 pick: 16 rows for a wide matrix, 4 for a small one (m=1024 was 1.8x
++        // slower at 16). Used for every n=1 repacked dispatch regardless of XEON_MV_Q4K_V2/V3.
++        const bool q4k_small = ne00 <= 2048 || ne01 <= 2048;
++        const int variant = is_q4k ? 2 : (kv == NULL ? 2 : atoi(kv));
++        const int rows = is_q4k ? (q4k_small ? 4 : 16) : (variant == 1 ? 2 : (variant == 3 ? 8 : 4));
++        const char * base_rb = is_q4k ? (q4k_small ? "kernel_mul_mv_q4_K_f32_rb_w64_r4" :
++                                                       "kernel_mul_mv_q4_K_f32_rb_w64") :
++                               (variant == 1 ? "kernel_mul_mv_q6_K_f32_rb_w64_v1" :
+                                (variant == 3 ? "kernel_mul_mv_q6_K_f32_rb_w64_v3" :
+-                                               "kernel_mul_mv_q6_K_f32_rb_w64_v2");
++                                               "kernel_mul_mv_q6_K_f32_rb_w64_v2"));
+         const int16_t ne12 = (int16_t) op->src[1]->ne[2];
+         const int16_t ne13 = (int16_t) op->src[1]->ne[3];
+         const int16_t r2 = (int16_t) (ne12/op->src[0]->ne[2]);
+--- a/ggml/src/ggml-metal/ggml-metal-ops.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-ops.cpp
+@@ -1578,7 +1578,7 @@
+     GGML_TENSOR_LOCALS(uint64_t, nb,  op,         nb);
+ 
+     auto pipeline = (ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(op->src[0])) ?
+-        ggml_metal_library_get_pipeline_get_rows_rb(lib) :
++        ggml_metal_library_get_pipeline_get_rows_rb(lib, op->src[0]->type) :
+         ggml_metal_library_get_pipeline_get_rows(lib, op->src[0]->type);
+ 
+     ggml_metal_kargs_get_rows args = {
+@@ -3530,17 +3530,35 @@
+ 
+     const bool qvk_w64 = props_dev->simd_width == 64 && XEON_ENV("XEON_QVK_W64_DISABLE") == nullptr;
+ 
++    const bool q_rb = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(q->src[0]);
++    const bool v_rb = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(v->src[0]);
++    const bool k_rb = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(k->src[0]);
++
+     if (tq == GGML_TYPE_Q4_0 && tv == GGML_TYPE_Q4_0 && tk == GGML_TYPE_Q4_0) {
+         // the 64-lane twin carries the same decomposition as the standalone matvec, so the
+         // fusion keeps that win instead of trading it for the saved dispatches
+         pattern = qvk_w64 ? decltype(pattern){ "kernel_mul_mv_qvk_q4_0_q4_0_q4_0_f32_w64", 1, 4, 4, 4 }
+                           : decltype(pattern){ "kernel_mul_mv_qvk_q4_0_q4_0_q4_0_f32",     1, 4, 4, 4 };
+     } else if (tq == GGML_TYPE_Q2_K && tv == GGML_TYPE_Q4_K && tk == GGML_TYPE_Q2_K) {
+-        pattern = { "kernel_mul_mv_qvk_q2_K_q4_K_q2_K_f32", 2, 4, 2, 4 };
++        // only the Q4_K V part is repacked; Q2_K is never repacked
++        pattern = v_rb ? decltype(pattern){ "kernel_mul_mv_qvk_q2_K_q4_K_rb_q2_K_f32", 2, 4, 2, 4 }
++                       : decltype(pattern){ "kernel_mul_mv_qvk_q2_K_q4_K_q2_K_f32",     2, 4, 2, 4 };
+     } else if (tq == GGML_TYPE_Q4_K && tv == GGML_TYPE_Q6_K && tk == GGML_TYPE_Q4_K) {
+-        const bool v_rb = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(v->src[0]);
+-        pattern = v_rb ? decltype(pattern){ "kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32", 2, 2, 2, 4 }
+-                       : decltype(pattern){ "kernel_mul_mv_qvk_q4_K_q6_K_q4_K_f32",     2, 2, 2, 4 };
++        // each part reads its own layout: a Q4_K part may be repacked or not, and the Q6_K
++        // part may be 0111-repacked or not, independently. The name is a static literal per
++        // combination: a block-local buffer would dangle before pattern.kernel is read below.
++        static const char * const qvk_names[8] = {
++            "kernel_mul_mv_qvk_q4_K_q6_K_q4_K_f32",       // 0,0,0
++            "kernel_mul_mv_qvk_q4_K_q6_K_q4_K_rb_f32",    // 0,0,1
++            "kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32",    // 0,1,0
++            "kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_rb_f32", // 0,1,1
++            "kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_f32",    // 1,0,0
++            "kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_rb_f32", // 1,0,1
++            "kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_f32", // 1,1,0
++            "kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_rb_f32", // 1,1,1
++        };
++        const int qvk_idx = (q_rb ? 4 : 0) | (v_rb ? 2 : 0) | (k_rb ? 1 : 0);
++        pattern = { qvk_names[qvk_idx], 2, 2, 2, 4 };
+     } else {
+         return 0;
+     }
+@@ -3825,7 +3843,10 @@
+     if (!ext_disabled &&
+         (props_dev->simd_width == 32 || (props_dev->simd_width == 64 && props_dev->wave64_decode)) &&
+         !(props_dev->simd_width == 64 && ext_loses_w64(op->src[0]->type, ne11)) &&
+-        ggml_metal_mv_nc2_rows(op->src[0]->type, props_dev->simd_width, ne11, ne01, ne00) == 0 &&
++        // a repacked tensor has no nc2 twin (the nc2 kernel reads canonical blocks), so it must
++        // take the ext path whose rb twin handles every r1ptg; otherwise n=2 reads garbage
++        (ggml_metal_repack_is_tensor(op->src[0]) ||
++         ggml_metal_mv_nc2_rows(op->src[0]->type, props_dev->simd_width, ne11, ne01, ne00) == 0) &&
+         op->src[1]->type == GGML_TYPE_F32 && (ne00%128 == 0) &&
+         (
+          (
+@@ -3965,8 +3986,8 @@
+             r1ptg = 8;
+         }
+ 
+-        const bool ext_rb_q6k = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(op->src[0]);
+-        const int16_t r0ptg = ext_rb_q6k ? 1 : (ext_w64_q6k ? (r1ptg == 8 ? 2 : 4)*nsg : nypsg*nsg*nr0); // num src0 rows per threadgroup
++        const bool ext_rb = ggml_metal_repack_enabled() && ggml_metal_repack_is_tensor(op->src[0]);
++        const int16_t r0ptg = ext_rb ? 1 : (ext_w64_q6k ? (r1ptg == 8 ? 2 : 4)*nsg : nypsg*nsg*nr0); // num src0 rows per threadgroup
+ 
+         auto pipeline = ggml_metal_library_get_pipeline_mul_mv_ext(lib, op, nsg, nxpsg, r1ptg, nr0);
+ 
+--- a/ggml/src/ggml-metal/kernels/dequantize.h
++++ b/ggml/src/ggml-metal/kernels/dequantize.h
+@@ -643,6 +643,41 @@
+     dequantize_q4_K_impl<false>(xb, il, false, reg);
+ }
+ 
++// row-base twin for XEON_Q4K_REPACK: fields are grouped per row, not per block.
++// Row layout: [qs nb*128][scales nb*12][d nb*2][dmin nb*2]. qs is 16 B aligned per block;
++// scales are byte loads; d/dmin are half loads.
++template <typename type4x4>
++void dequantize_q4_K_rb(device const char * row, int nb, short ib, short il, thread type4x4 & reg) {
++    const int qoff = (int) (il/4) * 32 + 16 * ((int) il & 1);
++    device const uint4 * q = (device const uint4 *) (row + ib*128 + qoff);
++    const uint4 qsv = *q;
++
++    device const uchar * scb = (device const uchar *) (row + 128*nb + ib*12);
++    const uint w0 = (uint) scb[0] | ((uint) scb[1] << 8) | ((uint) scb[2] << 16) | ((uint) scb[3] << 24);
++    const uint w1 = (uint) scb[4] | ((uint) scb[5] << 8) | ((uint) scb[6] << 16) | ((uint) scb[7] << 24);
++    const uint w2 = (uint) scb[8] | ((uint) scb[9] << 8) | ((uint) scb[10] << 16) | ((uint) scb[11] << 24);
++    const half dh   = *(device const half *) (row + 140*nb + ib*2);
++    const half dmin = *(device const half *) (row + 142*nb + ib*2);
++
++    short is = (il/4) * 2;
++    il = il & 3;
++    const uchar2 sc = get_scale_min_k4_just2_w<false>(is, il/2, w0, w1, w2, false);
++    const float d   = il < 2 ? (float) dh : (float) (dh / 16.h);
++    const float min = dmin;
++    const float dl  = d * sc[0];
++    const float ml  = min * sc[1];
++
++    const ushort mask0 = il < 2 ? 0x000F : 0x00F0;
++    const ushort mask1 = mask0 << 8;
++    const float dl2 = dl / 256.f;
++
++    for (int i = 0; i < 8; ++i) {
++        const ushort qsi = (i & 1) ? (ushort)(qsv[i/2] >> 16) : (ushort)(qsv[i/2] & 0xFFFF);
++        reg[i/2][2*(i%2) + 0] = dl  * (qsi & mask0) - ml;
++        reg[i/2][2*(i%2) + 1] = dl2 * (qsi & mask1) - ml;
++    }
++}
++
+ template <bool uniform, typename type4x4>
+ void dequantize_q5_K_impl(device const block_q5_K *xb, short il, bool lo, thread type4x4 & reg) {
+     // 128-bit loads: the block is 176 bytes (11*16) and both windows land 16-byte aligned
+--- a/ggml/src/ggml-metal/kernels/mul_mv.metal
++++ b/ggml/src/ggml-metal/kernels/mul_mv.metal
+@@ -6112,37 +6112,153 @@
+     kernel_mul_mv_q6_K_f32_rb_impl<4, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, tgpig, tiisg, sgitg);
+ }
+ 
+-[[host_name("kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32")]]
+-kernel void kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32(
+-        constant ggml_metal_kargs_mul_mv_qvk & args,
+-        device const char * wq,
+-        device const char * wv,
+-        device const char * wk,
+-        device const char * src,
+-        device       char * dst_q,
+-        device       char * dst_v,
+-        device       char * dst_k,
+-        uint3  tgpig[[threadgroup_position_in_grid]],
+-        ushort tiisg[[thread_index_in_simdgroup]],
+-        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
+-    uint3 local = tgpig;
++// XEON_Q4K_REPACK twin used by the fused QVK Q/K branches (and available standalone).
++// Faithful port of kernel_mul_mv_q4_K_f32_impl: same lane/row/reduction structure, only the
++// address computation reads the repacked fields ([qs nb*128][scales nb*12][d nb*2][dmin nb*2])
++// instead of the canonical block.
++template<int nr0, typename args_t, short NSPLIT = 1>
++void kernel_mul_mv_q4_K_f32_rb_impl(
++        args_t args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        uint3  tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    const short NSG = FC_mul_mv_nsg;
++    const short NG = FC_mul_mv_nw/8;
++    const short GB = NG/NSPLIT;
+ 
+-    if (local.x < args.nwg_q) {
+-        kernel_mul_mv_q4_K_f32_impl<2, constant ggml_metal_kargs_mul_mv &>(
+-            args.q, wq, src, dst_q, nullptr, local, tiisg, sgitg);
+-        return;
++    constexpr uint16_t kmask1 = 0x3f3f;
++    constexpr uint16_t kmask2 = 0x0f0f;
++    constexpr uint16_t kmask3 = 0xc0c0;
++
++    const short ix  = (tiisg/8)%GB;
++    const short sub = (tiisg/8)/GB;
++    const short it  = tiisg%8;
++    const short iq = it/4;
++    const short ir = it%4;
++
++    const int nb = args.ne00/QK_K;
++
++    const int r0 = tgpig.x;
++    const int r1 = tgpig.y;
++    const int im = tgpig.z;
++
++    const int first_row = ((r0 * NSG + sgitg) * NSPLIT + sub) * nr0;
++
++    const uint i12 = im%FC_mul_mv_ne12;
++    const uint i13 = im/FC_mul_mv_ne12;
++
++    const uint64_t offset0 = first_row*args.nb01 + (i12/FC_mul_mv_r2)*args.nb02 + (i13/FC_mul_mv_r3)*args.nb03;
++    const uint64_t offset1 =        r1*args.nb11 + (i12        )*args.nb12 + (i13        )*args.nb13;
++
++    device const char  * row_base = src0 + offset0;
++    device const float * y        = (device const float *) (src1 + offset1);
++
++    float yl[16];
++    float yh[16];
++
++    float sumf[nr0]={0.f};
++
++    device const float * y4 = y + ix * QK_K + 64 * iq + 8 * ir;
++
++    uint16_t sc16[4];
++    thread const uint8_t * sc8 = (thread const uint8_t *)sc16;
++
++    const ushort shs = 16*iq;
++
++    for (int ib = ix; ib < nb; ib += GB) {
++        float4 sumy = {0.f, 0.f, 0.f, 0.f};
++
++        for (short i = 0; i < 8; ++i) {
++            yl[i+0] = y4[i+  0]; sumy[0] += yl[i+0];
++            yl[i+8] = y4[i+ 32]; sumy[1] += yl[i+8];
++            yh[i+0] = y4[i+128]; sumy[2] += yh[i+0];
++            yh[i+8] = y4[i+160]; sumy[3] += yh[i+8];
++        }
++
++        for (short row = 0; row < nr0; row++) {
++            device const char * r = row_base + (uint64_t)row*args.nb01;
++
++            device const uint16_t * q1 = (device const uint16_t *)(r + ib*128) + (16 * (int) iq + 4 * (int) ir);
++
++            device const uchar * scb = (device const uchar *) (r + 128*nb + ib*12);
++            const uint w0 = (uint) scb[0] | ((uint) scb[1] << 8) | ((uint) scb[2] << 16) | ((uint) scb[3] << 24);
++            const uint w1 = (uint) scb[4] | ((uint) scb[5] << 8) | ((uint) scb[6] << 16) | ((uint) scb[7] << 24);
++            const uint w2 = (uint) scb[8] | ((uint) scb[9] << 8) | ((uint) scb[10] << 16) | ((uint) scb[11] << 24);
++            const half hd   = *(device const half *) (r + 140*nb + ib*2);
++            const half hmin = *(device const half *) (r + 142*nb + ib*2);
++
++            uint4 hdr;
++            hdr.x = as_type<uint>(half2(hd, hmin));
++            hdr.y = w0; hdr.z = w1; hdr.w = w2;
++            const half2  dm  = as_type<half2>(hdr.x);
++
++            const uint16_t s0 = (uint16_t) (hdr.y >> shs);
++            const uint16_t s2 = (uint16_t) (hdr.z >> shs);
++            const uint16_t s4 = (uint16_t) (hdr.w >> shs);
++
++            sc16[0] = s0 & kmask1;
++            sc16[1] = s2 & kmask1;
++            sc16[2] = ((s4 >> 0) & kmask2) | ((s0 & kmask3) >> 2);
++            sc16[3] = ((s4 >> 4) & kmask2) | ((s2 & kmask3) >> 2);
++
++            const ushort4 qv1 = *(device const ushort4 *)(q1);
++            const ushort4 qv2 = *(device const ushort4 *)(q1 + 32);
++
++            float4 acc1 = {0.f, 0.f, 0.f, 0.f};
++            float4 acc2 = {0.f, 0.f, 0.f, 0.f};
++
++            FOR_UNROLL (short i = 0; i < 4; ++i) {
++                acc1[0] += yl[2*i + 0] * (qv1[i] & 0x000F);
++                acc1[1] += yl[2*i + 1] * (qv1[i] & 0x0F00);
++                acc1[2] += yl[2*i + 8] * (qv1[i] & 0x00F0);
++                acc1[3] += yl[2*i + 9] * (qv1[i] & 0xF000);
++                acc2[0] += yh[2*i + 0] * (qv2[i] & 0x000F);
++                acc2[1] += yh[2*i + 1] * (qv2[i] & 0x0F00);
++                acc2[2] += yh[2*i + 8] * (qv2[i] & 0x00F0);
++                acc2[3] += yh[2*i + 9] * (qv2[i] & 0xF000);
++            }
++
++            sumf[row] += dm[0] * ((acc1[0] + 1.f/256.f * acc1[1]) * sc8[0] +
++                                  (acc1[2] + 1.f/256.f * acc1[3]) * sc8[1] * 1.f/16.f +
++                                  (acc2[0] + 1.f/256.f * acc2[1]) * sc8[4] +
++                                  (acc2[2] + 1.f/256.f * acc2[3]) * sc8[5] * 1.f/16.f) -
++                         dm[1] * (sumy[0] * sc8[2] + sumy[1] * sc8[3] + sumy[2] * sc8[6] + sumy[3] * sc8[7]);
++        }
++
++        y4 += GB * QK_K;
+     }
+ 
+-    local.x -= args.nwg_q;
+-    if (local.x < args.nwg_v) {
+-        kernel_mul_mv_q6_K_f32_rb_impl<2, constant ggml_metal_kargs_mul_mv &>(
+-            args.v, wv, src, dst_v, local, tiisg, sgitg);
+-        return;
++    device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
++
++    for (short row = 0; row < nr0 && first_row + row < args.ne0; ++row) {
++        float sum_all;
++        if (NSPLIT == 1) {
++            sum_all = simd_sum(sumf[row]);
++        } else {
++            sum_all = sumf[row];
++            for (ushort o = 1; o < GB*8; o <<= 1) {
++                sum_all += simd_shuffle_xor(sum_all, o);
++            }
++        }
++        if (tiisg % (GB*8) == 0) {
++            dst_f32[first_row + row] = sum_all;
++        }
+     }
++}
+ 
+-    local.x -= args.nwg_v;
+-    kernel_mul_mv_q4_K_f32_impl<4, constant ggml_metal_kargs_mul_mv &>(
+-        args.k, wk, src, dst_k, nullptr, local, tiisg, sgitg);
++[[host_name("kernel_mul_mv_q4_K_f32_rb")]]
++kernel void kernel_mul_mv_q4_K_f32_rb(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_rb_impl<4, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, tgpig, tiisg, sgitg);
+ }
+ 
+ [[host_name("kernel_mul_mv_qvk_q4_K_q6_K_q4_K_f32")]]
+@@ -6233,6 +6349,70 @@
+     kernel_mul_mv_q2_K_f32_impl<4, constant ggml_metal_kargs_mul_mv &>(args.k, wk, src, dst_k, nullptr, local, tiisg, sgitg);
+ }
+ 
++// XEON_Q4K_REPACK fused QKV: each part reads its own layout. QRB/VRB/KRB select the row-base
++// twin for the Q, V (Q6_K) and K parts independently.
++template<bool QRB, bool VRB, bool KRB>
++void qvk_q4_K_q6_K_q4_K_body(
++        constant ggml_metal_kargs_mul_mv_qvk & args,
++        device const char * wq, device const char * wv, device const char * wk, device const char * src,
++        device char * dst_q, device char * dst_v, device char * dst_k,
++        uint3 tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    uint3 local = tgpig;
++    if (local.x < args.nwg_q) {
++        if (QRB) kernel_mul_mv_q4_K_f32_rb_impl<2, constant ggml_metal_kargs_mul_mv &>(args.q, wq, src, dst_q, local, tiisg, sgitg);
++        else     kernel_mul_mv_q4_K_f32_impl   <2, constant ggml_metal_kargs_mul_mv &>(args.q, wq, src, dst_q, nullptr, local, tiisg, sgitg);
++        return;
++    }
++    local.x -= args.nwg_q;
++    if (local.x < args.nwg_v) {
++        if (VRB) kernel_mul_mv_q6_K_f32_rb_impl<2, constant ggml_metal_kargs_mul_mv &>(args.v, wv, src, dst_v, local, tiisg, sgitg);
++        else     kernel_mul_mv_q6_K_f32_impl   <2, constant ggml_metal_kargs_mul_mv &>(args.v, wv, src, dst_v, nullptr, local, tiisg, sgitg);
++        return;
++    }
++    local.x -= args.nwg_v;
++    if (KRB) kernel_mul_mv_q4_K_f32_rb_impl<4, constant ggml_metal_kargs_mul_mv &>(args.k, wk, src, dst_k, local, tiisg, sgitg);
++    else     kernel_mul_mv_q4_K_f32_impl   <4, constant ggml_metal_kargs_mul_mv &>(args.k, wk, src, dst_k, nullptr, local, tiisg, sgitg);
++}
++
++[[host_name("kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<true,false,false>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<false,true,false>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_q6_K_q4_K_rb_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_q6_K_q4_K_rb_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<false,false,true>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<true,true,false>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_rb_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_rb_q6_K_q4_K_rb_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<true,false,true>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_rb_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_q6_K_rb_q4_K_rb_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<false,true,true>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++[[host_name("kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_rb_f32")]]
++kernel void kernel_mul_mv_qvk_q4_K_rb_q6_K_rb_q4_K_rb_f32(constant ggml_metal_kargs_mul_mv_qvk & args, device const char * wq, device const char * wv, device const char * wk, device const char * src, device char * dst_q, device char * dst_v, device char * dst_k, uint3 tgpig[[threadgroup_position_in_grid]], ushort tiisg[[thread_index_in_simdgroup]], ushort sgitg[[simdgroup_index_in_threadgroup]]) { qvk_q4_K_q6_K_q4_K_body<true,true,true>(args,wq,wv,wk,src,dst_q,dst_v,dst_k,tgpig,tiisg,sgitg); }
++
++[[host_name("kernel_mul_mv_qvk_q2_K_q4_K_rb_q2_K_f32")]]
++kernel void kernel_mul_mv_qvk_q2_K_q4_K_rb_q2_K_f32(
++        constant ggml_metal_kargs_mul_mv_qvk & args,
++        device const char * wq, device const char * wv, device const char * wk, device const char * src,
++        device char * dst_q, device char * dst_v, device char * dst_k,
++        uint3 tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    uint3 local = tgpig;
++    if (local.x < args.nwg_q) {
++        kernel_mul_mv_q2_K_f32_impl<4, constant ggml_metal_kargs_mul_mv &>(args.q, wq, src, dst_q, nullptr, local, tiisg, sgitg);
++        return;
++    }
++    local.x -= args.nwg_q;
++    if (local.x < args.nwg_v) {
++        kernel_mul_mv_q4_K_f32_rb_impl<2, constant ggml_metal_kargs_mul_mv &>(args.v, wv, src, dst_v, local, tiisg, sgitg);
++        return;
++    }
++    local.x -= args.nwg_v;
++    kernel_mul_mv_q2_K_f32_impl<4, constant ggml_metal_kargs_mul_mv &>(args.k, wk, src, dst_k, nullptr, local, tiisg, sgitg);
++}
++
+ [[host_name("kernel_mul_mv_iq3_xxs_f32_r8")]]
+ kernel void kernel_mul_mv_iq3_xxs_f32_r8(
+         constant ggml_metal_kargs_mul_mv & args,
+--- a/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
++++ b/ggml/src/ggml-metal/kernels/mul_mv_w64.metal
+@@ -2293,8 +2293,153 @@
+         const float tot = simd_sum(sumf[row]);
+         if (tiisg == 0) {
+             dst_f32[first_row + row] = tot;
++        }
++    }
++}
++
++// XEON_Q4K_REPACK decode: the 0110 value-2 shape (uint4 quant loads, 8 lanes per block), but
++// the quant bytes come from the field-major row layout. nr0=16 rows per simdgroup.
++template<short nr0, typename args_t>
++void kernel_mul_mv_q4_K_f32_rb_w64_impl(
++        args_t args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        threadgroup  char * shmem,
++        uint3  tgpig,
++        ushort tiisg,
++        ushort sgitg) {
++    const short NSG = FC_mul_mv_nsg;
++    const short NG  = FC_mul_mv_nw/8;
++    const short ix  = tiisg/8;
++    const short it  = tiisg%8;
++    const short p   = it/2;
++
++    const int nb = args.ne00/QK_K;
++
++    const int r0 = tgpig.x;
++    const int r1 = tgpig.y;
++    const int im = tgpig.z;
++
++    const int first_row = (r0 * NSG + sgitg) * nr0;
++
++    const uint i12 = im%FC_mul_mv_ne12;
++    const uint i13 = im/FC_mul_mv_ne12;
++
++    const uint64_t offset0 = first_row*args.nb01 + (i12/FC_mul_mv_r2)*args.nb02 + (i13/FC_mul_mv_r3)*args.nb03;
++    const uint64_t offset1 =        r1*args.nb11 + (i12        )*args.nb12 + (i13        )*args.nb13;
++
++    device const char  * row_base = src0 + offset0;
++    device const float * y        = (device const float *) (src1 + offset1);
++
++    float yl[16];
++    float yh[16];
++
++    float sumf[nr0] = { 0.f };
++
++    const int lo = 64*p + 16*(it%2);
++    device const float * yl4 = y + ix*QK_K + lo;
++    device const float * yh4 = y + ix*QK_K + lo + 32;
++
++    for (int ib = ix; ib < nb; ib += NG) {
++        float sy0 = 0.f, sy1 = 0.f;
++
++        FOR_UNROLL (short i = 0; i < 4; ++i) {
++            const float4 a = *(device const float4 *)(yl4 + 4*i);
++            yl[4*i+0] = a[0]; yl[4*i+1] = a[1]; yl[4*i+2] = a[2]; yl[4*i+3] = a[3];
++            sy0 += a[0] + a[1] + a[2] + a[3];
++
++            const float4 b = *(device const float4 *)(yh4 + 4*i);
++            yh[4*i+0] = b[0]; yh[4*i+1] = b[1]; yh[4*i+2] = b[2]; yh[4*i+3] = b[3];
++            sy1 += b[0] + b[1] + b[2] + b[3];
++        }
++
++        for (short row = 0; row < nr0; ++row) {
++            if (first_row + row >= args.ne0) {
++                break;
++            }
++
++            device const char * r = row_base + row*args.nb01;
++            device const uint4 * qp = (device const uint4 *) (r + ib*128 + 16*(int) it);
++            const uint4 qv = *qp;
++            thread const uint16_t * qh = (thread const uint16_t *) &qv;
++
++            device const uchar * scb = (device const uchar *) (r + 128*nb + ib*12);
++            const uint w0 = (uint) scb[0] | ((uint) scb[1] << 8) | ((uint) scb[2] << 16) | ((uint) scb[3] << 24);
++            const uint w1 = (uint) scb[4] | ((uint) scb[5] << 8) | ((uint) scb[6] << 16) | ((uint) scb[7] << 24);
++            const uint w2 = (uint) scb[8] | ((uint) scb[9] << 8) | ((uint) scb[10] << 16) | ((uint) scb[11] << 24);
++            const half hd   = *(device const half *) (r + 140*nb + ib*2);
++            const half hmin = *(device const half *) (r + 142*nb + ib*2);
++
++            uint4 hdr;
++            hdr.x = as_type<uint>(half2(hd, hmin));
++            hdr.y = w0; hdr.z = w1; hdr.w = w2;
++            const half2  dm = as_type<half2>(hdr.x);
++            const float4 sc = q4k_v3_scales(hdr, p);
++
++            float4 acc1 = {0.f, 0.f, 0.f, 0.f};
++            float4 acc2 = {0.f, 0.f, 0.f, 0.f};
++
++            FOR_UNROLL (short i = 0; i < 4; ++i) {
++                const uint16_t v1 = qh[i];
++                acc1[0] += yl[2*i+0] * (v1 & 0x000F);
++                acc1[1] += yl[2*i+1] * (v1 & 0x0F00);
++                acc1[2] += yh[2*i+0] * (v1 & 0x00F0);
++                acc1[3] += yh[2*i+1] * (v1 & 0xF000);
++
++                const uint16_t v2 = qh[i+4];
++                acc2[0] += yl[2*i+8] * (v2 & 0x000F);
++                acc2[1] += yl[2*i+9] * (v2 & 0x0F00);
++                acc2[2] += yh[2*i+8] * (v2 & 0x00F0);
++                acc2[3] += yh[2*i+9] * (v2 & 0xF000);
++            }
++
++            const float dl = (acc1[0] + 1.f/256.f*acc1[1]) +
++                             (acc2[0] + 1.f/256.f*acc2[1]);
++            const float dh = (acc1[2] + 1.f/256.f*acc1[3] +
++                              acc2[2] + 1.f/256.f*acc2[3]) * 1.f/16.f;
++
++            sumf[row] += dm[0] * (dl*sc[0] + dh*sc[1]) - dm[1] * (sy0*sc[2] + sy1*sc[3]);
+         }
++
++        yl4 += NG * QK_K;
++        yh4 += NG * QK_K;
+     }
++
++    device float * dst_f32 = (device float *) dst + (int64_t)im*args.ne0*args.ne1 + (int64_t)r1*args.ne0;
++
++    for (int row = 0; row < nr0 && first_row + row < args.ne0; ++row) {
++        float sum_all = simd_sum(sumf[row]);
++        if (tiisg == 0) {
++            dst_f32[first_row + row] = sum_all;
++        }
++    }
++}
++
++[[host_name("kernel_mul_mv_q4_K_f32_rb_w64")]]
++kernel void kernel_mul_mv_q4_K_f32_rb_w64(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_rb_w64_impl<16, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, nullptr, tgpig, tiisg, sgitg);
++}
++
++// small-matrix n=1 twin: same value-2 shape, four rows per simdgroup (matches the canonical
++// V3=2 small-m pick; 16 rows left the grid underfilled and was 1.8x slower at m=1024)
++[[host_name("kernel_mul_mv_q4_K_f32_rb_w64_r4")]]
++kernel void kernel_mul_mv_q4_K_f32_rb_w64_r4(
++        constant ggml_metal_kargs_mul_mv & args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]],
++        ushort sgitg[[simdgroup_index_in_threadgroup]]) {
++    kernel_mul_mv_q4_K_f32_rb_w64_impl<4, constant ggml_metal_kargs_mul_mv &>(args, src0, src1, dst, nullptr, tgpig, tiisg, sgitg);
+ }
+ 
+ template<int nr0, typename args_t>
+@@ -8817,3 +8962,62 @@
+ template [[host_name("kernel_mul_mv_ext_q6_K_f32_rb_w64_r1_4")]] kernel ext_q6_K_rb_4_t kernel_mul_mv_ext_q6_K_f32_rb_w64<4>;
+ template [[host_name("kernel_mul_mv_ext_q6_K_f32_rb_w64_r1_5")]] kernel ext_q6_K_rb_5_t kernel_mul_mv_ext_q6_K_f32_rb_w64<5>;
+ template [[host_name("kernel_mul_mv_ext_q6_K_f32_rb_w64_r1_8")]] kernel ext_q6_K_rb_8_t kernel_mul_mv_ext_q6_K_f32_rb_w64<8>;
++
++// XEON_Q4K_REPACK n=2..8 twin. Same shape as the Q6_K ext twin, reading the Q4_K row layout.
++template<short R1>
++kernel void kernel_mul_mv_ext_q4_K_f32_rb_w64(
++        constant ggml_metal_kargs_mul_mv_ext & args,
++        device const char * src0,
++        device const char * src1,
++        device       char * dst,
++        uint3  tgpig[[threadgroup_position_in_grid]],
++        ushort tiisg[[thread_index_in_simdgroup]]) {
++    const int nb = args.ne00/QK_K;
++    const int row = tgpig.x;
++    const short i11 = tgpig.y*R1;
++    const uint i12 = tgpig.z%args.ne12;
++    const uint i13 = tgpig.z/args.ne12;
++
++    device const char * x = src0 + (uint64_t) row*args.nb01 + (i12/args.r2)*args.nb02 + (i13/args.r3)*args.nb03;
++
++    float sum[R1] = { 0.f };
++    const short il = tiisg & 15;
++    const short ip = tiisg >> 4;
++
++    for (int ib = ip; ib < nb; ib += 4) {
++        const int k = ib*QK_K + il*16;
++        float4x4 q;
++        dequantize_q4_K_rb(x, nb, ib, il, q);
++        for (short n = 0; n < R1; ++n) {
++            if (i11 + n >= args.ne11) {
++                continue;
++            }
++            device const float * y = (device const float *) (src1
++                + (uint64_t)(i11 + n)*args.nb11 + (uint64_t)i12*args.nb12 + (uint64_t)i13*args.nb13
++                + k*sizeof(float));
++            for (short j = 0; j < 4; ++j) {
++                sum[n] += dot(q[j], *(device const float4 *)(y + 4*j));
++            }
++        }
++    }
++
++    device float * d = (device float *) dst + (uint64_t)i12*args.ne0*args.ne1 + (uint64_t)(i11)*args.ne0 + row;
++    for (short n = 0; n < R1; ++n) {
++        const float tot = simd_sum(sum[n]);
++        if (tiisg == 0 && i11 + n < args.ne11) {
++            d[n*args.ne0] = tot;
++        }
++    }
++}
++
++typedef decltype(kernel_mul_mv_ext_q4_K_f32_rb_w64<2>) ext_q4_K_rb_2_t;
++typedef decltype(kernel_mul_mv_ext_q4_K_f32_rb_w64<3>) ext_q4_K_rb_3_t;
++typedef decltype(kernel_mul_mv_ext_q4_K_f32_rb_w64<4>) ext_q4_K_rb_4_t;
++typedef decltype(kernel_mul_mv_ext_q4_K_f32_rb_w64<5>) ext_q4_K_rb_5_t;
++typedef decltype(kernel_mul_mv_ext_q4_K_f32_rb_w64<8>) ext_q4_K_rb_8_t;
++
++template [[host_name("kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_2")]] kernel ext_q4_K_rb_2_t kernel_mul_mv_ext_q4_K_f32_rb_w64<2>;
++template [[host_name("kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_3")]] kernel ext_q4_K_rb_3_t kernel_mul_mv_ext_q4_K_f32_rb_w64<3>;
++template [[host_name("kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_4")]] kernel ext_q4_K_rb_4_t kernel_mul_mv_ext_q4_K_f32_rb_w64<4>;
++template [[host_name("kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_5")]] kernel ext_q4_K_rb_5_t kernel_mul_mv_ext_q4_K_f32_rb_w64<5>;
++template [[host_name("kernel_mul_mv_ext_q4_K_f32_rb_w64_r1_8")]] kernel ext_q4_K_rb_8_t kernel_mul_mv_ext_q4_K_f32_rb_w64<8>;
+--- a/ggml/src/ggml-metal/kernels/mul_mm_w64.metal
++++ b/ggml/src/ggml-metal/kernels/mul_mm_w64.metal
+@@ -777,3 +777,10 @@
+ 
+ template [[host_name("kernel_mul_mm_q6_K_f32_rb_w64")]] kernel mm_q6_K_rb_f32_t kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q6_K, QK_NL, dequantize_q6_K, float, float4x4, float, float2x4, 4, true, dequantize_q6_K_rb<half4x4>>;
+ template [[host_name("kernel_mul_mm_q6_K_f16_rb_w64")]] kernel mm_q6_K_rb_f16_t kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q6_K, QK_NL, dequantize_q6_K, half,  half4x4,  half,  half2x4,  4, true, dequantize_q6_K_rb<half4x4>>;
++
++// XEON_Q4K_REPACK prefill twin: the default tiled w64 GEMM with the Q4_K row-base dequant.
++typedef decltype(kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, float, float4x4, float, float2x4, 4, true, dequantize_q4_K_rb<half4x4>>) mm_q4_K_rb_f32_t;
++typedef decltype(kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, half,  half4x4,  half,  half2x4,  4, true, dequantize_q4_K_rb<half4x4>>) mm_q4_K_rb_f16_t;
++
++template [[host_name("kernel_mul_mm_q4_K_f32_rb_w64")]] kernel mm_q4_K_rb_f32_t kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, float, float4x4, float, float2x4, 4, true, dequantize_q4_K_rb<half4x4>>;
++template [[host_name("kernel_mul_mm_q4_K_f16_rb_w64")]] kernel mm_q4_K_rb_f16_t kernel_mul_mm_w64<half, half4x4, simdgroup_half8x8, half, half2x4, simdgroup_half8x8, block_q4_K, QK_NL, dequantize_q4_K, half,  half4x4,  half,  half2x4,  4, true, dequantize_q4_K_rb<half4x4>>;
+--- a/ggml/src/ggml-metal/kernels/quantize.metal
++++ b/ggml/src/ggml-metal/kernels/quantize.metal
+@@ -726,3 +726,34 @@
+         break;
+     }
+ }
++
++// XEON_Q4K_REPACK get_rows twin.
++[[host_name("kernel_get_rows_q4_K_rb")]]
++kernel void kernel_get_rows_q4_K_rb(
++        constant ggml_metal_kargs_get_rows & args,
++        device const void * src0,
++        device const void * src1,
++        device       void * dst,
++        uint3               tgpig[[threadgroup_position_in_grid]],
++        ushort              tiitg[[thread_index_in_threadgroup]],
++        ushort3             ntg  [[threads_per_threadgroup]]) {
++    const int32_t iw0 = tgpig.x/args.ne10;
++    const int32_t i10 = tgpig.x%args.ne10;
++    const int32_t i11 = tgpig.y;
++    const int32_t i12 = tgpig.z;
++
++    const int32_t r = ((const device int32_t *) ((const device char *) src1 + i12*args.nb12 + i11*args.nb11 + i10*args.nb10))[0];
++    const int32_t i02 = i11;
++    const int32_t i03 = i12;
++    const int nb = args.ne00/QK_K;
++
++    device const char * x = (device const char *) src0 + i03*args.nb03 + i02*args.nb02 + r*args.nb01;
++    auto pdst = (device float4x4 *) ((device char *) dst + i12*args.nb3 + i11*args.nb2 + i10*args.nb1);
++
++    for (int ind = iw0*ntg.x + tiitg; ind < args.ne00t;) {
++        float4x4 temp;
++        dequantize_q4_K_rb(x, nb, ind/QK_NL, ind%QK_NL, temp);
++        pdst[ind] = temp;
++        break;
++    }
++}
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -2396,10 +2396,13 @@
+     test_get_rows(ggml_type type = GGML_TYPE_F32, int n = 10, int m = 5, int r = 3, int be1 = 1, int be2 = 1, bool v = false, bool vs0 = false, int offset_cols = 0)
+         : type(type), n(n), m(m), r(r), be1(be1), be2(be2), v(v), vs0(vs0), offset_cols(offset_cols) {}
+ 
+-    // XEON_Q6K_REPACK: a 2D Q6_K src0 in the WEIGHTS context reaches the get_rows twin.
++    // XEON_Q6K_REPACK / XEON_Q4K_REPACK: a 2D Q6_K/Q4_K src0 in the WEIGHTS context reaches
++    // the get_rows twin.
+     bool use_weight_context() override {
+         static const bool q6k_repack = getenv("XEON_Q6K_REPACK") != nullptr;
+-        return q6k_repack && type == GGML_TYPE_Q6_K && !vs0 && be2 == 1 && offset_cols == 0;
++        static const bool q4k_repack = getenv("XEON_Q4K_REPACK") != nullptr;
++        return ((q6k_repack && type == GGML_TYPE_Q6_K) || (q4k_repack && type == GGML_TYPE_Q4_K)) &&
++               !vs0 && be2 == 1 && offset_cols == 0;
+     }
+ 
+     ggml_tensor * build_graph(ggml_context * ctx) override {
+@@ -5111,11 +5114,13 @@
+         return build_graph(ctx, nullptr);
+     }
+ 
+-    // XEON_Q6K_REPACK: put a 2D Q6_K src0 in the WEIGHTS-usage context so the repack path is
+-    // reached. Only the plain 2D case (no permute/view/overlap) is eligible.
++    // XEON_Q6K_REPACK / XEON_Q4K_REPACK: put a 2D Q6_K/Q4_K src0 in the WEIGHTS-usage context so
++    // the repack path is reached. Only the plain 2D case (no permute/view/overlap) is eligible.
+     bool use_weight_context() override {
+         static const bool q6k_repack = getenv("XEON_Q6K_REPACK") != nullptr;
+-        return q6k_repack && type_a == GGML_TYPE_Q6_K && bs[1] == 1 && nr[1] == 1 &&
++        static const bool q4k_repack = getenv("XEON_Q4K_REPACK") != nullptr;
++        return ((q6k_repack && type_a == GGML_TYPE_Q6_K) || (q4k_repack && type_a == GGML_TYPE_Q4_K)) &&
++               bs[1] == 1 && nr[1] == 1 &&
+                per[0] == 0 && per[1] == 1 && per[2] == 2 && per[3] == 3 &&
+                k_v == 0 && m_v == 0 && !src_overlap;
+     }
+@@ -5418,6 +5423,220 @@
+                         else if (f < (size_t) 208*nb) { field = "sc"; blk = (int) ((f - 192*nb) / 16); }
+                         else                          { field = "d";  blk = (int) ((f - 208*nb) / 2); }
+                         printf("q6k-raw: MISMATCH first=%zu row=%zu field=%s blk=%d\n", bad, row, field, blk);
++                        raw_ok = false;
++                    }
++                }
++            }
++        }
++    }
++};
++
++// XEON_Q4K_REPACK: same row-granular RMW exercise as test_q6k_repack_rw, on a Q4_K weight.
++// Q4_K block = 144 B: d(half) | dmin(half) | scales[12] | qs[128]. Repacked row layout:
++//   [qs nb*128][scales nb*12][d nb*2][dmin nb*2]. err() is the Q8_K-aware bound (Q4_K's
++// vec_dot_type is Q8_K), identical to the Q6_K case.
++struct test_q4k_repack_rw : public test_case {
++    const int64_t m;
++    const int64_t n;
++    const int64_t k;
++    bool raw_ok = true;
++    ggml_tensor * weight = nullptr;
++    ggml_tensor * act = nullptr;
++
++    std::string vars() override { return VARS_TO_STR3(m, n, k); }
++
++    std::string op_desc(ggml_tensor * t) override {
++        GGML_UNUSED(t);
++        return ggml_op_name(GGML_OP_MUL_MAT);
++    }
++
++    double max_nmse_err() override { return 1.0; }
++
++    double err(const float * a, const float * b, size_t n) override {
++        if (weight == nullptr || act == nullptr || n != (size_t) (weight->ne[1]*act->ne[1])) {
++            return nmse(a, b, n);
++        }
++        const std::vector<float> wa = tensor_to_float(weight);
++        const std::vector<float> wb = tensor_to_float(act);
++        const size_t k = (size_t) weight->ne[0];
++        const size_t nb = k/256;
++        double worst = 0.0;
++        for (int64_t r0 = 0; r0 < weight->ne[1]; ++r0) {
++            const float * ar = wa.data() + (size_t) r0*k;
++            for (int64_t r1 = 0; r1 < act->ne[1]; ++r1) {
++                const float * br = wb.data() + (size_t) r1*k;
++                double E = 0.0;
++                double S = 0.0;
++                for (size_t blk = 0; blk < nb; ++blk) {
++                    float amax = 0.0f;
++                    for (size_t j = 0; j < 256; ++j) {
++                        const float ax = fabsf(br[blk*256 + j]);
++                        if (ax > amax) {
++                            amax = ax;
++                        }
++                    }
++                    const double db_half = (double) amax/127.0/2.0;
++                    for (size_t j = 0; j < 256; ++j) {
++                        const size_t i = blk*256 + j;
++                        const double ai = ar[i] < 0 ? -ar[i] : ar[i];
++                        E += ai*db_half;
++                        const double t = ar[i]*br[i];
++                        S += t < 0 ? -t : t;
++                    }
++                }
++                const double F = 4e-5*S;
++                const size_t j = (size_t) (r1*weight->ne[1] + r0);
++                const double diff = a[j] - b[j];
++                const double adiff = diff < 0 ? -diff : diff;
++                const double e = adiff/(E + F);
++                if (e > worst) {
++                    worst = e;
++                }
++            }
++        }
++        return worst;
++    }
++
++    bool initialized_ok() override { return raw_ok; }
++
++    bool use_weight_context() override { return true; }
++
++    test_q4k_repack_rw(int64_t m, int64_t n, int64_t k) : m(m), n(n), k(k) {}
++
++    ggml_tensor * build_graph(ggml_context * ctx) override {
++        GGML_ASSERT(!use_weight_context());
++        return build_graph(ctx, nullptr);
++    }
++
++    ggml_tensor * build_graph(ggml_context * ctx, ggml_context * ctx_weights) override {
++        GGML_ASSERT(ctx_weights);
++        ggml_tensor * a = ggml_new_tensor_2d(ctx_weights, GGML_TYPE_Q4_K, k, m);
++        ggml_set_name(a, "a");
++        ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++        ggml_set_name(b, "b");
++        weight = a;
++        act = b;
++        ggml_tensor * out = ggml_mul_mat(ctx, a, b);
++        ggml_set_name(out, "out");
++        return out;
++    }
++
++    void initialize_tensors(ggml_context * ctx) override {
++        for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != NULL; t = ggml_get_next_tensor(ctx, t)) {
++            if (t->type != GGML_TYPE_Q4_K) {
++                init_tensor_uniform(t);
++                continue;
++            }
++            // canonical bytes. Q4_K block = 144 B: d(half) | dmin(half) | scales[12] | qs[128].
++            // d and dmin are random finite halves in [-1,1]*2^-8 so the CPU dequant stays finite.
++            const size_t nbytes = ggml_nbytes(t);
++            const size_t row    = t->nb[1];
++            const size_t block  = 144;
++            std::vector<uint8_t> canon(nbytes);
++            {
++                std::random_device rd;
++                std::mt19937 gen(rd());
++                std::uniform_int_distribution<int> bdist(0, 255);
++                std::uniform_real_distribution<float> ddist(-1.0f/256.0f, 1.0f/256.0f);
++                for (size_t i = 0; i < nbytes; i++) {
++                    canon[i] = (uint8_t) bdist(gen);
++                }
++                const size_t nblocks = nbytes / block;
++                for (size_t b = 0; b < nblocks; b++) {
++                    const ggml_fp16_t d    = ggml_fp32_to_fp16(ddist(gen));
++                    const ggml_fp16_t dmin = ggml_fp32_to_fp16(ddist(gen));
++                    memcpy(canon.data() + b*block + 0, &d,    2);
++                    memcpy(canon.data() + b*block + 2, &dmin, 2);
++                }
++            }
++            // chunked upload in ~1 MB pieces, not aligned to rows, starting at offset 0
++            const size_t chunk_max = 1024*1024;
++            size_t off = 0;
++            while (off < nbytes) {
++                size_t len = std::min(nbytes - off, chunk_max);
++                if (len > 64 && (off + len) < nbytes) {
++                    len -= 37;
++                }
++                ggml_backend_tensor_set(t, canon.data() + off, off, len);
++                off += len;
++            }
++            // partial get at an offset that is not a row multiple, crossing several rows
++            const size_t p_off  = row + 37 < nbytes ? row + 37 : 37;
++            const size_t p_size = std::min(2*row + 123, nbytes - p_off);
++            std::vector<uint8_t> part(p_size);
++            ggml_backend_tensor_get(t, part.data(), p_off, p_size);
++            if (memcmp(part.data(), canon.data() + p_off, p_size) != 0) {
++                printf("q4k repack partial get mismatch at %zu (%s) ", p_off, t->name);
++                GGML_ABORT("q4k repack partial get mismatch");
++            }
++            // partial set (RMW) at the same non-row offset, then whole byte-exact get
++            std::vector<uint8_t> patch(p_size);
++            for (size_t i = 0; i < p_size; i++) {
++                patch[i] = (uint8_t) (canon[p_off + i] ^ 0xFF);
++            }
++            ggml_backend_tensor_set(t, patch.data(), p_off, p_size);
++            for (size_t i = 0; i < p_size; i++) {
++                canon[p_off + i] = patch[i];
++            }
++            // keep d/dmin finite after the patch so the final mul_mat is finite on both backends
++            {
++                const size_t nblocks = nbytes / block;
++                std::random_device rd;
++                std::mt19937 gen(rd());
++                std::uniform_real_distribution<float> ddist(-1.0f/256.0f, 1.0f/256.0f);
++                for (size_t b = 0; b < nblocks; b++) {
++                    const ggml_fp16_t d    = ggml_fp32_to_fp16(ddist(gen));
++                    const ggml_fp16_t dmin = ggml_fp32_to_fp16(ddist(gen));
++                    memcpy(canon.data() + b*block + 0, &d,    2);
++                    memcpy(canon.data() + b*block + 2, &dmin, 2);
++                }
++                ggml_backend_tensor_set(t, canon.data(), 0, nbytes);
++            }
++            std::vector<uint8_t> whole(nbytes);
++            ggml_backend_tensor_get(t, whole.data(), 0, nbytes);
++            if (memcmp(whole.data(), canon.data(), nbytes) != 0) {
++                printf("q4k repack whole get mismatch (%s) ", t->name);
++                GGML_ABORT("q4k repack whole get mismatch");
++            }
++            // discriminating raw check: on-card bytes WITHOUT un-permuting vs an independent CPU
++            // permutation of canon. Repacked row: [qs nb*128][scales nb*12][d nb*2][dmin nb*2].
++            {
++                const int nb = (int) (t->ne[0] / 256);
++                const size_t rowb = (size_t) nb * 144;
++                std::vector<uint8_t> exp(nbytes);
++                for (int64_t r = 0; r < t->ne[1]; r++) {
++                    const uint8_t * s = canon.data() + (size_t) r * rowb;
++                    uint8_t * d = exp.data() + (size_t) r * rowb;
++                    for (int b = 0; b < nb; b++) {
++                        memcpy(d + b*128,        s + b*144 +  16, 128); // qs
++                        memcpy(d + 128*nb + b*12, s + b*144 +   4,  12); // scales
++                        memcpy(d + 140*nb + b*2,  s + b*144 +   0,   2); // d
++                        memcpy(d + 142*nb + b*2,  s + b*144 +   2,   2); // dmin
++                    }
++                }
++                std::vector<uint8_t> raw(nbytes);
++                setenv("XEON_Q4K_REPACK_RAWGET", "1", 1);
++                ggml_backend_tensor_get(t, raw.data(), 0, nbytes);
++                unsetenv("XEON_Q4K_REPACK_RAWGET");
++                if (memcmp(raw.data(), canon.data(), nbytes) == 0) {
++                    printf("q4k-raw: SKIP (not repacked)\n");
++                } else {
++                    size_t bad = nbytes;
++                    for (size_t i = 0; i < nbytes; i++) {
++                        if (raw[i] != exp[i]) { bad = i; break; }
++                    }
++                    if (bad == nbytes) {
++                        printf("q4k-raw: OK\n");
++                    } else {
++                        const size_t row = bad / rowb;
++                        const size_t f = bad % rowb;
++                        const char * field;
++                        int blk;
++                        if (f < (size_t) 128*nb)      { field = "qs"; blk = (int) (f / 128); }
++                        else if (f < (size_t) 140*nb) { field = "sc"; blk = (int) ((f - 128*nb) / 12); }
++                        else if (f < (size_t) 142*nb) { field = "d";  blk = (int) ((f - 140*nb) / 2); }
++                        else                          { field = "dm"; blk = (int) ((f - 142*nb) / 2); }
++                        printf("q4k-raw: MISMATCH first=%zu row=%zu field=%s blk=%d\n", bad, row, field, blk);
+                         raw_ok = false;
+                     }
+                 }
+@@ -10771,6 +10990,23 @@
+     test_cases.emplace_back(new test_q6k_repack_rw(2, 1, 2048));
+     test_cases.emplace_back(new test_mul_mat_id(GGML_TYPE_Q6_K, GGML_TYPE_F32, 8, 2, false, 32, 32, 2048));
+ 
++    // XEON_Q4K_REPACK twins: 2D Q4_K weights. Q4_K rows are 144*nb (16 B aligned for any nb), so
++    // no ne00%2048 gate. n=1 tails m in {1,2,64,2051} at k in {2560,4096}, n=2/n=8, prefill
++    // mul_mm at n=32 and n=512, m=1027. 3D mul_mat_id weights stay canonical.
++    for (int64_t k : {2560, 4096}) {
++        for (int64_t m : {1, 2, 64, 2051}) {
++            test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 1, k, { 1, 1 }, { 1, 1 }));
++        }
++    }
++    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 2051, 2, 4096, { 1, 1 }, { 1, 1 }));
++    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 2051, 8, 4096, { 1, 1 }, { 1, 1 }));
++    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 1027, 32, 4096, { 1, 1 }, { 1, 1 }));
++    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, 1027, 512, 4096, { 1, 1 }, { 1, 1 }));
++    // XEON_Q4K_REPACK row-granular RMW on a Q4_K weight.
++    test_cases.emplace_back(new test_q4k_repack_rw(64, 1, 4096));
++    test_cases.emplace_back(new test_q4k_repack_rw(1, 1, 4096));
++    test_cases.emplace_back(new test_q4k_repack_rw(2, 1, 2560));
++
+     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
+     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
+     // q8_0 with three and four columns: few rows, a short row, and a large matrix
