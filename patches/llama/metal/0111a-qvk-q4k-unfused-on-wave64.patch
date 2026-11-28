@@ -1,0 +1,47 @@
+# 0111a: 64-lane cards skip the fused Q4_K/Q6_K/Q4_K QVK mat-vec (XEON_QVK_Q4K_W64_FUSE=1 restores it)
+#
+# What. ggml_metal_op_mul_mat_qvk returns 0 (no fusion) on a simd_width 64 device when q/k are Q4_K and v is
+# Q6_K, so Q, V and K run as three standalone mat-vecs. Every other QVK pattern and every 32-lane device is
+# unchanged. Q4_K_M models hit this pattern in the layers whose attn_v is Q6_K.
+#
+# Why. The fused kernel (from quant/0013) runs kernel_mul_mv_q4_K_f32_impl<2> / q6_K bodies written for 32
+# lanes; standalone, a 64-lane card uses the tuned w64 kernels (_r8 / _L16r8 / 0110 / 0111 twins). Saving two
+# dispatches does not pay for the slower bodies.
+#
+# Found by: a dangling kernel-name pointer in a 0112 draft silently disabled this fusion and the off arm sped up.
+#
+# Measured by orchestrator (engine v0.2.1-0111r6-avx1 = pin d81235049 + series through 0111, card 1 only,
+# GGML_METAL_DEVICE_INDEX=1; card 0 not run, needs the user's approval), via XEON_QKV_FUSION_DISABLE=1 which
+# disables this same fusion on these models. llama-bench -ngl 99 -p 0 -n 128 -r 5 -fa 1, default context,
+# fused/unfused alternating, 4 rounds, warmup discarded by llama-bench. Evidence .scratch/xeonllm-0-2/evidence/t07/qkvfuse.
+#   Qwen3-4B Q4_K_M: fused 16.641-16.644, unfused 17.124-17.132 t/s
+#   Qwen3-8B Q4_K_M: fused 10.222-10.224, unfused 10.579-10.580 t/s
+#   with XEON_MV_Q4K_V3=2 + XEON_Q6K_REPACK=1: 4B 16.876-16.897 -> 17.536-17.550; 8B 13.996-14.001 -> 14.741-14.748
+#   256-token greedy text identical fused/unfused: 4B 91b358aa, 8B 3757ac38.
+# Own build (engine v0.2.1-0112r2-avx1 = pin + series through 0111 + 0111a + 0112 r2, repacks off; card 1 only),
+# default (this patch) vs XEON_QVK_Q4K_W64_FUSE=1 (fused restored), same llama-bench line, 3 alternating rounds,
+# warmup discarded by llama-bench. Evidence .scratch/xeonllm-0-2/evidence/t07/q4rb2.
+#   Qwen3-4B Q4_K_M: unfused 17.132-17.137, fused 16.638-16.648 t/s
+#   Qwen3-8B Q4_K_M: unfused 10.579-10.581, fused 10.223-10.225 t/s
+#   256-token greedy text identical both arms: 4B 91b358aa, 8B 3757ac38, LFM3-1.7B 82d29582.
+#   test-backend-ops -b MTL0 -o MUL_MAT 1859/1859 and -o GET_ROWS 232/232 on the default arm.
+diff --git a/ggml/src/ggml-metal/ggml-metal-ops.cpp b/ggml/src/ggml-metal/ggml-metal-ops.cpp
+index a72954261..be9a754ed 100644
+--- a/ggml/src/ggml-metal/ggml-metal-ops.cpp
++++ b/ggml/src/ggml-metal/ggml-metal-ops.cpp
+@@ -3494,6 +3494,15 @@ static int ggml_metal_op_mul_mat_qvk(ggml_metal_op_t ctx, int idx) {
+         return 0;
+     }
+ 
++    // 64-lane cards: the fused Q4_K/Q6_K/Q4_K kernel runs the 32-lane nr0=2 mat-vec bodies, while the
++    // unfused path uses the tuned wave64 kernels. Measured on card 1 (t07/qkvfuse): unfused is faster on
++    // Qwen3-4B and 8B Q4_K_M, text identical. XEON_QVK_Q4K_W64_FUSE=1 restores the fused kernel.
++    if (props_dev->simd_width == 64 &&
++        q->src[0]->type == GGML_TYPE_Q4_K && v->src[0]->type == GGML_TYPE_Q6_K && k->src[0]->type == GGML_TYPE_Q4_K &&
++        XEON_ENV("XEON_QVK_Q4K_W64_FUSE") == nullptr) {
++        return 0;
++    }
++
+     // Avoid false-positive graph fusion: these must be the three independent
+     // decode projections over exactly the same activation. The quant pattern is
+     // selected separately below so every segment keeps its GGUF representation.
